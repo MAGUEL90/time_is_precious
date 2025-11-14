@@ -1,0 +1,16 @@
+[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://oek8x3y4q0er"]
+
+[ext_resource type="Texture2D" uid="uid://c5dnejepb4g8u" path="res://assets/temporer/game/tile_sets/tilled_dirt_v2.png" id="1_0j3r2"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0j3r2"]
+texture = ExtResource("1_0j3r2")
+1:1/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+2:5/0 = 0
+2:6/0 = 0
+1:6/0 = 0
+0:6/0 = 0
+
+[resource]
+sources/1 = SubResource("TileSetAtlasSource_0j3r2")
