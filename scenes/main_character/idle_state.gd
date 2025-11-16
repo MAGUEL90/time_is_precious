@@ -9,16 +9,17 @@ func _ready() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta: float) -> void:
-	if player_reff.base_direction == Vector2.LEFT:
-		animated_sprite_2d.play("idle_left")
-	elif player_reff.base_direction == Vector2.RIGHT:
-		animated_sprite_2d.play("idle_right")
+	GameInputEvents.movement_input()
 	
-	player_reff.base_direction = GameInputEvents.movement_input()
+	if not GameInputEvents.is_move():
+		if player_reff.base_sprite_direction == Vector2.LEFT:
+			animated_sprite_2d.play("idle_left")
+		elif player_reff.base_sprite_direction == Vector2.RIGHT:
+			animated_sprite_2d.play("idle_right")
 	
-
 func _on_next_transition() -> void:
 	GameInputEvents.movement_input()
+	
 	if GameInputEvents.is_move():
 		transition.emit("movementstate")
 

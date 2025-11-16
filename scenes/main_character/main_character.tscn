@@ -83,13 +83,13 @@ animations = [{
 "duration": 0.4,
 "texture": SubResource("AtlasTexture_6x5w4")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_67dqt")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_pc0h8")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_pbjj4")
 }],
 "loop": true,
@@ -100,13 +100,13 @@ animations = [{
 "duration": 0.4,
 "texture": SubResource("AtlasTexture_y6yl3")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_e8dlb")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_ox0pm")
 }, {
-"duration": 1.0,
+"duration": 0.8,
 "texture": SubResource("AtlasTexture_0tlxn")
 }],
 "loop": true,
@@ -123,14 +123,15 @@ script = ExtResource("2_d4mna")
 [node name="AnimatedSprite2D" parent="." index="0"]
 position = Vector2(0, -8)
 sprite_frames = SubResource("SpriteFrames_oidbm")
-animation = &"idle_right"
+animation = &"move_right"
+frame_progress = 0.339742
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(0, -4)
 shape = SubResource("CircleShape2D_x3ech")
 
 [node name="Camera2D" type="Camera2D" parent="." index="2"]
-zoom = Vector2(2, 2)
+zoom = Vector2(3, 3)
 
 [node name="StateMachine" type="Node" parent="." index="3" node_paths=PackedStringArray("initial_node_state")]
 script = ExtResource("4_0eris")

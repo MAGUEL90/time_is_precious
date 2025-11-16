@@ -9,18 +9,28 @@ func _ready() -> void:
 	pass # Replace with function body.
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
+func _on_physics_process(_delta: float) -> void:
 	
-	GameInputEvents.movement_input()
+	var direction = GameInputEvents.movement_input()
 	
-	if player_reff.base_direction == Vector2.LEFT:
+	if direction == Vector2.LEFT:
 		animated_sprite_2d.play("move_left")
-	elif player_reff.base_direction == Vector2.RIGHT:
+		player_reff.base_sprite_direction = direction
+	elif direction == Vector2.RIGHT:
 		animated_sprite_2d.play("move_right")
-	else:
-		player_reff.base_direction = Vector2.ZERO
+		player_reff.base_sprite_direction = direction
+	elif direction == Vector2.UP:
+		if player_reff.base_sprite_direction == Vector2.RIGHT:
+			animated_sprite_2d.play("move_right")
+		elif player_reff.base_sprite_direction == Vector2.LEFT:
+			animated_sprite_2d.play("move_left")
+	elif direction == Vector2.DOWN:
+		if player_reff.base_sprite_direction == Vector2.RIGHT:
+			animated_sprite_2d.play("move_right")
+		elif player_reff.base_sprite_direction == Vector2.LEFT:
+			animated_sprite_2d.play("move_left")
 	
-	player_reff.velocity = player_reff.base_direction * speed
+	player_reff.velocity = direction * speed
 	player_reff.move_and_slide()
 	
 
