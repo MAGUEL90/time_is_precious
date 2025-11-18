@@ -1,0 +1,54 @@
+[gd_scene load_steps=9 format=3 uid="uid://cwsby5kvnt7q8"]
+
+[ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_xdsrc"]
+[ext_resource type="Script" uid="uid://w1hqy5mmk52q" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.gd" id="2_r8fjs"]
+[ext_resource type="Texture2D" uid="uid://d1pt23txcpete" path="res://assets/characters/character animations/1_gabbi_animation_png/NPC_1_Gabbi_animation.png" id="3_r8fjs"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ry01d"]
+atlas = ExtResource("3_r8fjs")
+region = Rect2(128, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4vqfs"]
+atlas = ExtResource("3_r8fjs")
+region = Rect2(144, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b5124"]
+atlas = ExtResource("3_r8fjs")
+region = Rect2(160, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8eagj"]
+atlas = ExtResource("3_r8fjs")
+region = Rect2(176, 0, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_pvjd6"]
+animations = [{
+"frames": [{
+"duration": 10.0,
+"texture": SubResource("AtlasTexture_ry01d")
+}, {
+"duration": 5.0,
+"texture": SubResource("AtlasTexture_4vqfs")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 10.0,
+"texture": SubResource("AtlasTexture_b5124")
+}, {
+"duration": 5.0,
+"texture": SubResource("AtlasTexture_8eagj")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 5.0
+}]
+
+[node name="NPC_Gabbi" instance=ExtResource("1_xdsrc")]
+script = ExtResource("2_r8fjs")
+
+[node name="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = SubResource("SpriteFrames_pvjd6")
+animation = &"idle_right"
+autoplay = "idle_right"

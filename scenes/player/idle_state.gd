@@ -1,6 +1,6 @@
 extends NodeState
 
-@export var player_reff: BaseCharacter
+@export var player_reff: Player
 @export var animated_sprite_2d: AnimatedSprite2D
 
 # Called when the node enters the scene tree for the first time.
@@ -12,9 +12,9 @@ func _process(_delta: float) -> void:
 	GameInputEvents.movement_input()
 	
 	if not GameInputEvents.is_move():
-		if player_reff.base_sprite_direction == Vector2.LEFT:
+		if player_reff.player_sprite_direction == Vector2.LEFT:
 			animated_sprite_2d.play("idle_left")
-		elif player_reff.base_sprite_direction == Vector2.RIGHT:
+		elif player_reff.player_sprite_direction == Vector2.RIGHT:
 			animated_sprite_2d.play("idle_right")
 	
 func _on_next_transition() -> void:

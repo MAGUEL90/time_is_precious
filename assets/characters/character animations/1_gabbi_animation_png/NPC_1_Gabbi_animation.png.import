@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://7g0gh2tntfn0"
-path="res://.godot/imported/NPC_5_Bissaya_animation.png-b9766e04b6af5c8956c2d1e4732e2c52.ctex"
+uid="uid://d1pt23txcpete"
+path="res://.godot/imported/NPC_1_Gabbi_animation.png-d9b51afeb05bc599238a95322dad762d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/5_bissaya_animation_png/NPC_5_Bissaya_animation.png"
-dest_files=["res://.godot/imported/NPC_5_Bissaya_animation.png-b9766e04b6af5c8956c2d1e4732e2c52.ctex"]
+source_file="res://assets/characters/character animations/1_gabbi_animation_png/NPC_1_Gabbi_animation.png"
+dest_files=["res://.godot/imported/NPC_1_Gabbi_animation.png-d9b51afeb05bc599238a95322dad762d.ctex"]
 
 [params]
 

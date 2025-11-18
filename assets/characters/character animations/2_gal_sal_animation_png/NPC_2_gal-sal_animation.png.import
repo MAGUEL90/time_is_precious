@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dpa0ag54qk8g7"
-path="res://.godot/imported/player_animation.png-4b97f50c629069a4f3a0390fff4d6c60.ctex"
+uid="uid://c70u3phf74bcd"
+path="res://.godot/imported/NPC_2_gal-sal_animation.png-23c38dd887807ece0b49ef8b96c6815f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/main_character_animation_png/player_animation.png"
-dest_files=["res://.godot/imported/player_animation.png-4b97f50c629069a4f3a0390fff4d6c60.ctex"]
+source_file="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_gal-sal_animation.png"
+dest_files=["res://.godot/imported/NPC_2_gal-sal_animation.png-23c38dd887807ece0b49ef8b96c6815f.ctex"]
 
 [params]
 

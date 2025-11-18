@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://em4l355dx38q"
-path="res://.godot/imported/NPC_4_Huzalu_animation.png-6ca0ac5f7fbb2c17175f3e209e6485c5.ctex"
+uid="uid://7g0gh2tntfn0"
+path="res://.godot/imported/NPC_5_Bissaya_animation.png-25b05f7cd47731460daf97c586c62838.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/4_huzalu_animation_png/NPC_4_Huzalu_animation.png"
-dest_files=["res://.godot/imported/NPC_4_Huzalu_animation.png-6ca0ac5f7fbb2c17175f3e209e6485c5.ctex"]
+source_file="res://assets/characters/character animations/5_bissaya_animation_png/NPC_5_Bissaya_animation.png"
+dest_files=["res://.godot/imported/NPC_5_Bissaya_animation.png-25b05f7cd47731460daf97c586c62838.ctex"]
 
 [params]
 

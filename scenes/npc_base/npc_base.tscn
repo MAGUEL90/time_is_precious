@@ -1,10 +1,35 @@
-[gd_scene load_steps=2 format=3 uid="uid://c0ov4l7wxnset"]
+[gd_scene load_steps=6 format=3 uid="uid://c0ov4l7wxnset"]
 
 [ext_resource type="Script" uid="uid://diqbuo0pmn2pb" path="res://scenes/npc_base/npc_base.gd" id="1_sbbgq"]
+[ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_ykk6y"]
+[ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3_qfur7"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_almck"]
+radius = 4.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ydwj7"]
+radius = 14.0
 
 [node name="NPCBase" type="CharacterBody2D"]
 script = ExtResource("1_sbbgq")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -8)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("CircleShape2D_almck")
+debug_color = Color(0, 0.6, 0.69803923, 0.75686276)
+
+[node name="InteractableComponent" parent="." instance=ExtResource("2_ykk6y")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractableComponent"]
+position = Vector2(0, -8)
+shape = SubResource("CircleShape2D_ydwj7")
+debug_color = Color(0.6133299, 0.5379511, 9.62615e-07, 0.41960785)
+
+[node name="InteractableLabelComponent" parent="." instance=ExtResource("3_qfur7")]
+offset_left = -6.0
+offset_top = -33.0
+offset_right = -6.0
+offset_bottom = -33.0

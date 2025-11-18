@@ -1,6 +1,6 @@
 extends NodeState
 
-@export var player_reff: BaseCharacter
+@export var player_reff: Player
 @export var animated_sprite_2d: AnimatedSprite2D
 @export var speed: float = 50.0
 
@@ -15,19 +15,19 @@ func _on_physics_process(_delta: float) -> void:
 	
 	if direction == Vector2.LEFT:
 		animated_sprite_2d.play("move_left")
-		player_reff.base_sprite_direction = direction
+		player_reff.player_sprite_direction = direction
 	elif direction == Vector2.RIGHT:
 		animated_sprite_2d.play("move_right")
-		player_reff.base_sprite_direction = direction
+		player_reff.player_sprite_direction = direction
 	elif direction == Vector2.UP:
-		if player_reff.base_sprite_direction == Vector2.RIGHT:
+		if player_reff.player_sprite_direction == Vector2.RIGHT:
 			animated_sprite_2d.play("move_right")
-		elif player_reff.base_sprite_direction == Vector2.LEFT:
+		elif player_reff.player_sprite_direction == Vector2.LEFT:
 			animated_sprite_2d.play("move_left")
 	elif direction == Vector2.DOWN:
-		if player_reff.base_sprite_direction == Vector2.RIGHT:
+		if player_reff.player_sprite_direction == Vector2.RIGHT:
 			animated_sprite_2d.play("move_right")
-		elif player_reff.base_sprite_direction == Vector2.LEFT:
+		elif player_reff.player_sprite_direction == Vector2.LEFT:
 			animated_sprite_2d.play("move_left")
 	
 	player_reff.velocity = direction * speed

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d1pt23txcpete"
-path="res://.godot/imported/NPC_1_Gabbi_animation.png-5515113fb13623cd9f6c4cfc93998ef2.ctex"
+uid="uid://25h3acwcb68h"
+path="res://.godot/imported/NPC_3_sukkalgir_animation.png-09bc671400ba240b90fa7a2eea7d67d0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/1_gabbi_animation_png/NPC_1_Gabbi_animation.png"
-dest_files=["res://.godot/imported/NPC_1_Gabbi_animation.png-5515113fb13623cd9f6c4cfc93998ef2.ctex"]
+source_file="res://assets/characters/character animations/3_sukkalgir_animation_png/NPC_3_sukkalgir_animation.png"
+dest_files=["res://.godot/imported/NPC_3_sukkalgir_animation.png-09bc671400ba240b90fa7a2eea7d67d0.ctex"]
 
 [params]
 

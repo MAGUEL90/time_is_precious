@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c70u3phf74bcd"
-path="res://.godot/imported/NPC_2_gal-sal_animation.png-2a41ccafaa1f1ac98811c6a3655f91fb.ctex"
+uid="uid://c2lk7ws30nluu"
+path="res://.godot/imported/NPC_6_Enkidu_animationn.png-051129435fe90b39fa17aa87bfae0cdd.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/2_gal_sal_animation_png/NPC_2_gal-sal_animation.png"
-dest_files=["res://.godot/imported/NPC_2_gal-sal_animation.png-2a41ccafaa1f1ac98811c6a3655f91fb.ctex"]
+source_file="res://assets/characters/character animations/6_enkidu_animation_png/NPC_6_Enkidu_animationn.png"
+dest_files=["res://.godot/imported/NPC_6_Enkidu_animationn.png-051129435fe90b39fa17aa87bfae0cdd.ctex"]
 
 [params]
 

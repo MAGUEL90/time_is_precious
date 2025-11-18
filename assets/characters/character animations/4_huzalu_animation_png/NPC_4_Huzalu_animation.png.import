@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c2lk7ws30nluu"
-path="res://.godot/imported/NPC_6_Enkidu_animationn.png-67c1da498859caa3da6274b9e9eb1aee.ctex"
+uid="uid://em4l355dx38q"
+path="res://.godot/imported/NPC_4_Huzalu_animation.png-723e8b166317a2d9d6cc3dda7cd1d367.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/6_enkidu_animation_png/NPC_6_Enkidu_animationn.png"
-dest_files=["res://.godot/imported/NPC_6_Enkidu_animationn.png-67c1da498859caa3da6274b9e9eb1aee.ctex"]
+source_file="res://assets/characters/character animations/4_huzalu_animation_png/NPC_4_Huzalu_animation.png"
+dest_files=["res://.godot/imported/NPC_4_Huzalu_animation.png-723e8b166317a2d9d6cc3dda7cd1d367.ctex"]
 
 [params]
 

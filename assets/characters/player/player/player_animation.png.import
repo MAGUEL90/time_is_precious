@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://25h3acwcb68h"
-path="res://.godot/imported/NPC_3_sukkalgir_animation.png-0677a60045b111bbdfa4c0b71f6f08a5.ctex"
+uid="uid://dpa0ag54qk8g7"
+path="res://.godot/imported/player_animation.png-c2513fe8ef2baa403410425a3e2409d5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/main_character/3_sukkalgir_animation_png/NPC_3_sukkalgir_animation.png"
-dest_files=["res://.godot/imported/NPC_3_sukkalgir_animation.png-0677a60045b111bbdfa4c0b71f6f08a5.ctex"]
+source_file="res://assets/characters/player/player/player_animation.png"
+dest_files=["res://.godot/imported/player_animation.png-c2513fe8ef2baa403410425a3e2409d5.ctex"]
 
 [params]
 
