@@ -20,6 +20,16 @@ window/size/viewport_height=720
 window/size/window_width_override=960
 window/size/window_height_override=540
 
+[file_customization]
+
+folder_colors={
+"res://assets/": "pink",
+"res://dialouge/": "gray",
+"res://resources/": "yellow",
+"res://scenes/": "green",
+"res://scripts/": "purple"
+}
+
 [input]
 
 move_left={

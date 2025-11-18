@@ -1,11 +1,11 @@
 [gd_scene load_steps=21 format=3 uid="uid://ciayyvchqn6x6"]
 
-[ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/base_character/base_character.tscn" id="1_sb1tc"]
-[ext_resource type="Script" uid="uid://cmfah42afyvmi" path="res://scenes/main_character/main_character.gd" id="2_d4mna"]
+[ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_sb1tc"]
+[ext_resource type="Script" uid="uid://cmfah42afyvmi" path="res://scenes/player/player.gd" id="2_d4mna"]
 [ext_resource type="Texture2D" uid="uid://dpa0ag54qk8g7" path="res://assets/characters/main_character/main_character_animation_png/player_animation.png" id="3_d4mna"]
 [ext_resource type="Script" uid="uid://bi6uwelaaym2k" path="res://scripts/state_machine/node_state_machine.gd" id="4_0eris"]
-[ext_resource type="Script" uid="uid://d4jqhgkjdo0t4" path="res://scenes/main_character/idle_state.gd" id="5_tprna"]
-[ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/main_character/movement_state.gd" id="6_8x2wn"]
+[ext_resource type="Script" uid="uid://d4jqhgkjdo0t4" path="res://scenes/player/idle_state.gd" id="5_tprna"]
+[ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/player/movement_state.gd" id="6_8x2wn"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_0eris"]
 atlas = ExtResource("3_d4mna")
