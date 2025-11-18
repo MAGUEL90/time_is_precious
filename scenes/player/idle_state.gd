@@ -24,7 +24,7 @@ func _on_next_transition() -> void:
 		transition.emit("movementstate")
 
 func _on_enter() -> void:
-	pass
+	animated_sprite_2d.play("idle_right")
 
 func _on_exit() -> void:
 	animated_sprite_2d.stop()
