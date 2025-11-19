@@ -1,5 +1,7 @@
 class_name NPCBase extends CharacterBody2D
 
+const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
+
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 
@@ -15,3 +17,11 @@ func on_interactable_activated() -> void:
 
 func on_interactable_deactivated() -> void:
 	interactable_label_component.hide()
+
+
+
+#func _unhandled_input(event: InputEvent) -> void:
+	#if event.is_action_pressed("interact"):
+		#var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
+		#get_tree().current_scene.add_child(balloon)
+		#balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")

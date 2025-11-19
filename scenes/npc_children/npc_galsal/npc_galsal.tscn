@@ -1,0 +1,54 @@
+[gd_scene load_steps=9 format=3 uid="uid://oiihxv782kew"]
+
+[ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_vc6de"]
+[ext_resource type="Script" uid="uid://d336228rm34mq" path="res://scenes/npc_children/npc_galsal/npc_galsal.gd" id="2_by2p5"]
+[ext_resource type="Texture2D" uid="uid://c70u3phf74bcd" path="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_gal-sal_animation.png" id="2_fg8gx"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_by2p5"]
+atlas = ExtResource("2_fg8gx")
+region = Rect2(128, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ugla4"]
+atlas = ExtResource("2_fg8gx")
+region = Rect2(144, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_47g67"]
+atlas = ExtResource("2_fg8gx")
+region = Rect2(160, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ejrkc"]
+atlas = ExtResource("2_fg8gx")
+region = Rect2(176, 0, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_ks3gk"]
+animations = [{
+"frames": [{
+"duration": 10.0,
+"texture": SubResource("AtlasTexture_by2p5")
+}, {
+"duration": 5.0,
+"texture": SubResource("AtlasTexture_ugla4")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 10.0,
+"texture": SubResource("AtlasTexture_47g67")
+}, {
+"duration": 5.0,
+"texture": SubResource("AtlasTexture_ejrkc")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 5.0
+}]
+
+[node name="NPC_Galsal" instance=ExtResource("1_vc6de")]
+script = ExtResource("2_by2p5")
+
+[node name="AnimatedSprite2D" parent="." index="0"]
+position = Vector2(-1, -8)
+sprite_frames = SubResource("SpriteFrames_ks3gk")
+animation = &"idle_right"
