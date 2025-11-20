@@ -38,6 +38,11 @@ folder_colors={
 "res://scripts/": "purple"
 }
 
+[global_group]
+
+player=""
+npcs=""
+
 [input]
 
 move_left={

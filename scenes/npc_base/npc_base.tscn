@@ -10,7 +10,7 @@ radius = 4.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_ydwj7"]
 radius = 14.0
 
-[node name="NPCBase" type="CharacterBody2D"]
+[node name="NPCBase" type="CharacterBody2D" groups=["npcs"]]
 script = ExtResource("1_sbbgq")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]

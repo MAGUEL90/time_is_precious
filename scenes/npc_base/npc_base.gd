@@ -9,19 +9,16 @@ var base_sprite_direction: Vector2
 
 func _ready() -> void:
 	interactable_label_component.hide()
-	interactable_component.interactable_activated.connect(on_interactable_activated)
-	interactable_component.interactable_deactivated.connect(on_interactable_deactivated)
-
-func on_interactable_activated() -> void:
-	interactable_label_component.show()
-
-func on_interactable_deactivated() -> void:
-	interactable_label_component.hide()
-
-
-
-#func _unhandled_input(event: InputEvent) -> void:
-	#if event.is_action_pressed("interact"):
-		#var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
-		#get_tree().current_scene.add_child(balloon)
-		#balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")
+	var player = get_tree().get_first_node_in_group("player")
+	
+	if player:
+		# Connect signal dari InteractableComponent ke fungsi Player
+		interactable_component.interactable_activated.connect(
+			player._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
+		interactable_component.interactable_deactivated.connect(
+			player._on_interactable_deactivated.bind(self))
+	
+func start_dialouge() -> void:
+	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
+	get_tree().current_scene.add_child(balloon)
+	balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")

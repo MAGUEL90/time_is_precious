@@ -52,3 +52,4 @@ script = ExtResource("2_by2p5")
 position = Vector2(-1, -8)
 sprite_frames = SubResource("SpriteFrames_ks3gk")
 animation = &"idle_right"
+autoplay = "idle_right"

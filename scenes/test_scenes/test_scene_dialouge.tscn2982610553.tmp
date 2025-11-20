@@ -1,9 +1,8 @@
-[gd_scene load_steps=5 format=4 uid="uid://cudwi7trl76om"]
+[gd_scene load_steps=4 format=4 uid="uid://cudwi7trl76om"]
 
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="1_iofur"]
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="2_3lt10"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_p5jgu"]
-[ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="4_3lt10"]
 
 [node name="TestSceneDialouge" type="Node2D"]
 
@@ -16,6 +15,3 @@ position = Vector2(201, 112)
 
 [node name="Player" parent="." instance=ExtResource("3_p5jgu")]
 position = Vector2(168, 117)
-
-[node name="NPC_Galsal" parent="." instance=ExtResource("4_3lt10")]
-position = Vector2(124, 109)
