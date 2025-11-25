@@ -38,7 +38,7 @@ func _on_next_transition() -> void:
 	GameInputEvents.movement_input()
 	
 	if not GameInputEvents.is_move():
-		transition.emit("idlestate")
+		transition.emit("playeridlestate")
 
 func _on_enter() -> void:
 	pass

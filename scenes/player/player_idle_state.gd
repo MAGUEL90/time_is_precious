@@ -21,7 +21,7 @@ func _on_next_transition() -> void:
 	GameInputEvents.movement_input()
 	
 	if GameInputEvents.is_move():
-		transition.emit("movementstate")
+		transition.emit("playermovementstate")
 
 func _on_enter() -> void:
 	animated_sprite_2d.play("idle_right")

@@ -3,8 +3,8 @@
 [ext_resource type="Script" uid="uid://ce8ytot6ggkw" path="res://scenes/player/player.gd" id="2_d4mna"]
 [ext_resource type="Texture2D" uid="uid://dpa0ag54qk8g7" path="res://assets/characters/player/player/player_animation.png" id="3_d4mna"]
 [ext_resource type="Script" uid="uid://bi6uwelaaym2k" path="res://scripts/state_machine/node_state_machine.gd" id="4_0eris"]
-[ext_resource type="Script" uid="uid://d4jqhgkjdo0t4" path="res://scenes/player/idle_state.gd" id="5_tprna"]
-[ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/player/movement_state.gd" id="6_8x2wn"]
+[ext_resource type="Script" uid="uid://d4jqhgkjdo0t4" path="res://scenes/player/player_idle_state.gd" id="5_tprna"]
+[ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/player/player_movement_state.gd" id="6_8x2wn"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_p47bc"]
 radius = 5.0
@@ -132,18 +132,18 @@ animation = &"move_left"
 frame_progress = 0.83204514
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(6, 6)
+zoom = Vector2(4, 4)
 
-[node name="StateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_node_state")]
+[node name="PlayerStateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_node_state")]
 script = ExtResource("4_0eris")
-initial_node_state = NodePath("IdleState")
+initial_node_state = NodePath("PlayerIdleState")
 
-[node name="IdleState" type="Node" parent="StateMachine" node_paths=PackedStringArray("player_reff", "animated_sprite_2d")]
+[node name="PlayerIdleState" type="Node" parent="PlayerStateMachine" node_paths=PackedStringArray("player_reff", "animated_sprite_2d")]
 script = ExtResource("5_tprna")
 player_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 
-[node name="MovementState" type="Node" parent="StateMachine" node_paths=PackedStringArray("player_reff", "animated_sprite_2d")]
+[node name="PlayerMovementState" type="Node" parent="PlayerStateMachine" node_paths=PackedStringArray("player_reff", "animated_sprite_2d")]
 script = ExtResource("6_8x2wn")
 player_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")

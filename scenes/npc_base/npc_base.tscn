@@ -1,8 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://c0ov4l7wxnset"]
+[gd_scene load_steps=8 format=3 uid="uid://c0ov4l7wxnset"]
 
 [ext_resource type="Script" uid="uid://diqbuo0pmn2pb" path="res://scenes/npc_base/npc_base.gd" id="1_sbbgq"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_ykk6y"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3_qfur7"]
+[ext_resource type="Script" uid="uid://bi6uwelaaym2k" path="res://scripts/state_machine/node_state_machine.gd" id="4_t2fq0"]
+[ext_resource type="Script" uid="uid://ca1dog53h3aka" path="res://scenes/npc_base/npc_idle_state.gd" id="5_5ypgm"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_almck"]
 radius = 4.0
@@ -33,3 +35,21 @@ offset_left = -6.0
 offset_top = -33.0
 offset_right = -6.0
 offset_bottom = -33.0
+
+[node name="NPCStateMachine" type="Node" parent="."]
+script = ExtResource("4_t2fq0")
+
+[node name="NPCIdleState" type="Node" parent="NPCStateMachine"]
+script = ExtResource("5_5ypgm")
+
+[node name="NPCWalkState" type="Node" parent="NPCStateMachine"]
+
+[node name="NPCWorkingState" type="Node" parent="NPCStateMachine"]
+
+[node name="NPCSleepState" type="Node" parent="NPCStateMachine"]
+
+[node name="NPCWanderState" type="Node" parent="NPCStateMachine"]
+
+[node name="WalkCycleDuration" type="Timer" parent="."]
+one_shot = true
+autostart = true
