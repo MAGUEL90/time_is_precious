@@ -5,15 +5,19 @@ const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
+@onready var walk_cycle_duration: Timer = $WalkCycleDuration
+@onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
 
 var npc_sprite_direction: Vector2
 var on_dialouge: bool = false
 var player_reff
+var can_walk: bool = false
 
 func _ready() -> void:
-	print("node_name: ", self.name, " is_ready: ", is_node_ready())
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
+	walk_cycle_duration.wait_time = randf_range(3.0, 5.0)
+	walk_cycle_duration.start()
 	
 	if player_reff:
 		# Connect signal dari InteractableComponent ke fungsi Player
@@ -28,3 +32,7 @@ func start_dialouge() -> void:
 	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
 	balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")
+
+
+func _on_walk_cycle_duration_timeout() -> void:
+	can_walk = true

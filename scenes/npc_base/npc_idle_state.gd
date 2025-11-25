@@ -13,10 +13,11 @@ func _on_physics_process(_delta: float) -> void:
 	pass
 
 func _on_next_transition() -> void:
-	pass
+	if npc_reff.can_walk == true:
+		transition.emit("npcwalkstate")
 
 func _on_enter() -> void:
-	animated_sprite_2d.play("idle_right")
+	animated_sprite_2d.play("idle")
 
 func _on_exit() -> void:
 	animated_sprite_2d.stop()

@@ -13,6 +13,7 @@ radius = 4.0
 radius = 14.0
 
 [node name="NPCBase" type="CharacterBody2D" groups=["npcs"]]
+collision_layer = 0
 script = ExtResource("1_sbbgq")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
@@ -53,3 +54,7 @@ script = ExtResource("5_5ypgm")
 [node name="WalkCycleDuration" type="Timer" parent="."]
 one_shot = true
 autostart = true
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+
+[connection signal="timeout" from="WalkCycleDuration" to="." method="_on_walk_cycle_duration_timeout"]
