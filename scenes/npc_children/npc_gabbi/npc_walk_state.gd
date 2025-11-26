@@ -21,14 +21,13 @@ func _on_physics_process(_delta: float) -> void:
 
 	animated_sprite_2d.flip_h = target_direction.x < 0
 	
-	if npc_reff.can_walk:
+	if npc_reff.can_walk == true:
 		npc_reff.walk_cycle_duration.stop()
 		npc_reff.velocity = target_direction * speed
 		npc_reff.move_and_slide()
 
 func _on_next_transition() -> void:
 	if npc_reff.can_walk == false:
-		print("play idle")
 		transition.emit("npcidlestate")
 
 func _on_enter() -> void:
@@ -39,7 +38,6 @@ func _on_exit() -> void:
 
 func character_setup() -> void:
 	await get_tree().physics_frame
-	
 	set_movement_target()
 
 func set_movement_target() -> void:

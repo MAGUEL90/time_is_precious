@@ -1,14 +1,17 @@
 ~ start
+do BaseDialougeManager.dialouge_activated.emit()
 Nathan: [[Hi|Hello|Howdy]], this is some dialogue.
 Nathan: Here are some choices.
 - First one
-	Nathan: You picked the first one.
+	Nathan: You picked the first one. 
 - Second one
 	Nathan: You picked the second one.
 - Start again => start
-- End the conversation => END
-do BaseDialougeManager.dialouge_deactivated.emit()
+- End the conversation 
+	do BaseDialougeManager.dialouge_deactivated.emit() 
+	=> END
 	
 Nathan: For more information see the online documentation.
 
 => END
+	

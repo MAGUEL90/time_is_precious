@@ -9,14 +9,18 @@ var dialouge_finished: bool = false
 @onready var player_movement_state: Node = $PlayerStateMachine/PlayerMovementState
 
 func _ready() -> void:
-	# current_interactable = get_tree().get_first_node_in_group("npcs")
+	BaseDialougeManager.dialouge_activated.connect(on_dialouge_activated)
 	BaseDialougeManager.dialouge_deactivated.connect(on_dialouge_deactivated)
 	get_tree().call_group("npcs", "interactable_component.interactable_activated.connect(_on_interactable_activated)")
 	get_tree().call_group("npcs", "interactable_component.interactable_deactivated.connect(_on_interactable_deactivated)")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact") and can_dialouge:
+		current_interactable.can_walk = false
+		current_interactable.walk_cycle_duration.stop()
 		current_interactable.start_dialouge()
+		print("current_interactable can walk: ", current_interactable.can_walk)
+		
 		if current_interactable.global_position.x >= global_position.x:
 			current_interactable.animated_sprite_2d.flip_h = true
 		else:
@@ -24,14 +28,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_interactable.interactable_label_component.hide()
 		
 func _process(delta: float) -> void:
-	pass
+	print("dialouge finished: ", dialouge_finished)
 	
 func _on_interactable_activated(npc):
 	current_interactable = npc
-		
 	if dialouge_finished == false:
 		current_interactable.interactable_label_component.show()
-		dialouge_finished = true
 		can_dialouge = true
 		
 func _on_interactable_deactivated(npc):
@@ -43,5 +45,11 @@ func _on_interactable_deactivated(npc):
 	npc.interactable_label_component.hide()
 
 func on_dialouge_deactivated() -> void:
+	print("dialouge end")
 	dialouge_finished = true
+	current_interactable.can_walk = true
+	current_interactable.walk_cycle_duration.start()
 	
+func on_dialouge_activated() -> void:
+	print("dialouge start")
+	dialouge_finished = false
