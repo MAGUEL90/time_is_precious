@@ -1,0 +1,11 @@
+~ start_npc_gabbi
+Gabbi: Hi, would you like to help me?
+- Yes
+	Gabbi: You got a job for me?
+	- Yes
+		Gabbi: Cool, ill take that
+	- No
+		=> END
+- No
+	Gabbi: Too bad...
+	=> END

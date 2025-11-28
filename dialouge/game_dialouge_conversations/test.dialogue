@@ -1,6 +1,6 @@
 ~ start
 do BaseDialougeManager.dialouge_activated.emit()
-Nathan: [[Hi|Hello|Howdy]], this is some dialogue.
+Nathan: [[Hi|Hello|Howdy]], this is TEST dialogue.
 Nathan: Here are some choices.
 - First one
 	Nathan: You picked the first one. 
@@ -14,4 +14,18 @@ Nathan: Here are some choices.
 Nathan: For more information see the online documentation.
 
 => END
-	
+
+~ start_npc_gabbi
+do BaseDialougeManager.dialouge_activated.emit()
+Gabbi: Hi, would you like to help me?
+- Yes
+	Gabbi: You got a job for me?
+	- Yes
+		Gabbi: Cool, ill take that
+	- No
+		do BaseDialougeManager.dialouge_deactivated.emit() 
+		=> END
+- No
+	Gabbi: Too bad...
+	do BaseDialougeManager.dialouge_deactivated.emit() 
+	=> END

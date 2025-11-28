@@ -19,7 +19,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_interactable.can_walk = false
 		current_interactable.walk_cycle_duration.stop()
 		current_interactable.start_dialouge()
-		print("current_interactable can walk: ", current_interactable.can_walk)
 		
 		if current_interactable.global_position.x >= global_position.x:
 			current_interactable.animated_sprite_2d.flip_h = true
@@ -27,8 +26,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			current_interactable.animated_sprite_2d.flip_h = false
 		current_interactable.interactable_label_component.hide()
 		
-func _process(delta: float) -> void:
-	print("dialouge finished: ", dialouge_finished)
+func _process(_delta: float) -> void:
+	pass
 	
 func _on_interactable_activated(npc):
 	current_interactable = npc

@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://ca1dog53h3aka" path="res://scenes/npc_base/npc_idle_state.gd" id="5_5ypgm"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_almck"]
-radius = 4.0
+radius = 2.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ydwj7"]
 radius = 14.0
@@ -20,7 +20,7 @@ script = ExtResource("1_sbbgq")
 position = Vector2(0, -8)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -4)
+position = Vector2(0, -2)
 shape = SubResource("CircleShape2D_almck")
 debug_color = Color(0, 0.6, 0.69803923, 0.75686276)
 

@@ -10,8 +10,11 @@ const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 
 var npc_sprite_direction: Vector2
 var on_dialouge: bool = false
-var player_reff
 var can_walk: bool = false
+var npc_name: String
+var player_reff: Player
+
+@export var npc_unique_dialouge: DialogueResource
 
 func _ready() -> void:
 	interactable_label_component.hide()
@@ -24,14 +27,18 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 		
-func _process(delta: float) -> void:
+		
+func _process(_delta: float) -> void:
 	pass
 
 func start_dialouge() -> void:
 	
 	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
-	balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")
+	if npc_unique_dialouge:
+		balloon.start(npc_unique_dialouge, "start_%s" % [npc_name])
+	else:
+		balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")
 
 
 func _on_walk_cycle_duration_timeout() -> void:

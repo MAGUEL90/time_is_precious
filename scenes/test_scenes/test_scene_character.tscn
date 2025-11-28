@@ -30,6 +30,7 @@ navigation_polygon = SubResource("NavigationPolygon_nvn2h")
 [node name="NPC_Galsal" parent="NPC\'s" instance=ExtResource("5_nvn2h")]
 position = Vector2(137, 110)
 collision_layer = 1
+npc_unique_dialouge = null
 
 [node name="NPC_Gabbi" parent="NPC\'s" instance=ExtResource("3_tyliu")]
 position = Vector2(201, 112)
