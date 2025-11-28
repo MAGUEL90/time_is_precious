@@ -19,6 +19,7 @@ var player_reff: Player
 func _ready() -> void:
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
+	
 	walk_cycle_duration.wait_time = randf_range(3.0, 5.0)
 	walk_cycle_duration.start()
 	
@@ -26,8 +27,9 @@ func _ready() -> void:
 		# Connect signal dari InteractableComponent ke fungsi Player
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
-		
-		
+	
+	BaseDialougeManager.dialouge_deactivated.connect(on_dialouge_deactivated)	
+	
 func _process(_delta: float) -> void:
 	pass
 
@@ -43,3 +45,6 @@ func start_dialouge() -> void:
 
 func _on_walk_cycle_duration_timeout() -> void:
 	can_walk = true
+
+func on_dialouge_deactivated() -> void:
+	walk_cycle_duration.start()

@@ -1,4 +1,5 @@
 ~ start_npc_gabbi
+do BaseDialougeManager.dialouge_activated.emit()
 Gabbi: Hi, would you like to help me?
 - Yes
 	Gabbi: You got a job for me?
@@ -8,4 +9,5 @@ Gabbi: Hi, would you like to help me?
 		=> END
 - No
 	Gabbi: Too bad...
+do BaseDialougeManager.dialouge_deactivated.emit() 
 	=> END

@@ -30,7 +30,7 @@ func _on_physics_process(_delta: float) -> void:
 		elif player_reff.player_sprite_direction == Vector2.LEFT:
 			animated_sprite_2d.play("move_left")
 	
-	player_reff.velocity = direction * speed
+	player_reff.velocity = direction * player_reff.speed
 	player_reff.move_and_slide()
 	
 
