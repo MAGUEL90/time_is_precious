@@ -18,8 +18,9 @@ func _on_physics_process(_delta: float) -> void:
 	
 	var next_position: Vector2 = npc_reff.navigation_agent_2d.get_next_path_position()
 	var target_direction: Vector2 = npc_reff.global_position.direction_to(next_position)
-
-	animated_sprite_2d.flip_h = target_direction.x < 0
+	
+	if not npc_reff.on_dialouge:
+		animated_sprite_2d.flip_h = target_direction.x < 0
 	
 	if npc_reff.can_walk == true:
 		npc_reff.walk_cycle_duration.stop()

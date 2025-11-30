@@ -1,10 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://cwsby5kvnt7q8"]
+[gd_scene load_steps=14 format=3 uid="uid://cwsby5kvnt7q8"]
 
 [ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_xdsrc"]
 [ext_resource type="Script" uid="uid://w1hqy5mmk52q" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.gd" id="2_r8fjs"]
 [ext_resource type="Resource" uid="uid://cpp4a0tb7ea5d" path="res://dialouge/game_dialouge_conversations/gabbi/gabbi.dialogue" id="3_4vqfs"]
 [ext_resource type="Texture2D" uid="uid://d1pt23txcpete" path="res://assets/characters/character animations/1_gabbi_animation_png/NPC_1_Gabbi_animation.png" id="3_r8fjs"]
 [ext_resource type="Script" uid="uid://bdahht4ex46x" path="res://scenes/npc_children/npc_gabbi/npc_walk_state.gd" id="4_ry01d"]
+[ext_resource type="Script" uid="uid://bxj2ie4v54qqb" path="res://scenes/npc_children/npc_gabbi/npc_working_state.gd" id="6_b5124"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_b5124"]
 atlas = ExtResource("3_r8fjs")
@@ -80,6 +81,9 @@ animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 script = ExtResource("4_ry01d")
 npc_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")
+
+[node name="NPCWorkingState" parent="NPCStateMachine" index="2"]
+script = ExtResource("6_b5124")
 
 [node name="WalkCycleDuration" parent="." index="5"]
 one_shot = false

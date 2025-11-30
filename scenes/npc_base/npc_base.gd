@@ -8,7 +8,7 @@ const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 @onready var walk_cycle_duration: Timer = $WalkCycleDuration
 @onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
 
-var npc_sprite_direction: Vector2
+var npc_sprite_direction: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT]
 var on_dialouge: bool = false
 var can_walk: bool = false
 var npc_name: String
@@ -17,6 +17,8 @@ var player_reff: Player
 @export var npc_unique_dialouge: DialogueResource
 
 func _ready() -> void:
+	npc_sprite_direction.pick_random()
+	
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
 	
@@ -28,12 +30,14 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 	
-	BaseDialougeManager.dialouge_deactivated.connect(on_dialouge_deactivated)	
+	BaseDialougeManager.dialouge_activated.connect(on_dialouge_activated)
+	BaseDialougeManager.dialouge_deactivated.connect(on_dialouge_deactivated)
 	
 func _process(_delta: float) -> void:
 	pass
 
 func start_dialouge() -> void:
+	# can_walk = false
 	
 	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
@@ -42,9 +46,13 @@ func start_dialouge() -> void:
 	else:
 		balloon.start(load("res://dialouge/game_dialouge_conversations/test.dialogue"), "start")
 
-
 func _on_walk_cycle_duration_timeout() -> void:
 	can_walk = true
 
+func on_dialouge_activated() -> void:
+	on_dialouge = true
+	walk_cycle_duration.stop()
+
 func on_dialouge_deactivated() -> void:
+	on_dialouge = false
 	walk_cycle_duration.start()
