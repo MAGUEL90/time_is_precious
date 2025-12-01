@@ -13,6 +13,7 @@ func _on_physics_process(_delta: float) -> void:
 	pass
 
 func _on_next_transition() -> void:
+	
 	if npc_reff.can_walk == true:
 		transition.emit("npcwalkstate")
 

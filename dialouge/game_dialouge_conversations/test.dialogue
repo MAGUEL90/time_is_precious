@@ -12,5 +12,5 @@ Nathan: Here are some choices.
 	=> END
 	
 Nathan: For more information see the online documentation.
-
+do BaseDialougeManager.dialouge_deactivated.emit() 
 => END

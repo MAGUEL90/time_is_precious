@@ -2,6 +2,14 @@ class_name NPCBase extends CharacterBody2D
 
 const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 
+enum NPCState {
+	NPCIdleState,
+	NPCWalkState,
+	NPCWorkingState,
+	NPCSleepState,
+	NPCWanderState
+}
+
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
@@ -17,12 +25,11 @@ var player_reff: Player
 @export var npc_unique_dialouge: DialogueResource
 
 func _ready() -> void:
-	npc_sprite_direction.pick_random()
 	
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
 	
-	walk_cycle_duration.wait_time = randf_range(3.0, 5.0)
+	walk_cycle_duration.wait_time = randf_range(2.0, 3.5)
 	walk_cycle_duration.start()
 	
 	if player_reff:
@@ -30,14 +37,11 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 	
-	BaseDialougeManager.dialouge_activated.connect(on_dialouge_activated)
-	BaseDialougeManager.dialouge_deactivated.connect(on_dialouge_deactivated)
-	
 func _process(_delta: float) -> void:
 	pass
+	# print(walk_cycle_duration.time_left)
 
 func start_dialouge() -> void:
-	# can_walk = false
 	
 	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
@@ -48,11 +52,3 @@ func start_dialouge() -> void:
 
 func _on_walk_cycle_duration_timeout() -> void:
 	can_walk = true
-
-func on_dialouge_activated() -> void:
-	on_dialouge = true
-	walk_cycle_duration.stop()
-
-func on_dialouge_deactivated() -> void:
-	on_dialouge = false
-	walk_cycle_duration.start()

@@ -2,6 +2,7 @@ class_name Player extends CharacterBody2D
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
 var current_interactable: NPCBase
+var current_npc_dialouge: NPCBase
 
 var can_dialouge: bool = false
 var dialouge_finished: bool = false
@@ -17,13 +18,13 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("interact") and can_dialouge:
-		# print("npc position > player position: ", current_interactable.global_position.x >= global_position.x)
+	if event.is_action_pressed("interact") and can_dialouge and current_interactable != null:
+		current_npc_dialouge = current_interactable
 		
-		if current_interactable.global_position.x >= global_position.x:
-			current_interactable.animated_sprite_2d.flip_h = true
+		if current_npc_dialouge.global_position.x >= global_position.x:
+			current_npc_dialouge.animated_sprite_2d.flip_h = true
 		else:
-			current_interactable.animated_sprite_2d.flip_h = false
+			current_npc_dialouge.animated_sprite_2d.flip_h = false
 		
 		current_interactable.start_dialouge()
 		current_interactable.interactable_label_component.hide()
@@ -35,17 +36,27 @@ func _on_interactable_activated(npc):
 	current_interactable = npc
 	current_interactable.interactable_label_component.show()
 	can_dialouge = true
-		
+
 func _on_interactable_deactivated(npc):
-	if current_interactable == npc:
-		can_dialouge = false
-		current_interactable = null
+	current_interactable = null
+	can_dialouge = false
 	
 	npc.interactable_label_component.hide()
 
 func on_dialouge_activated() -> void:
-	current_interactable.can_walk = false
+	if current_npc_dialouge:
+		current_npc_dialouge.on_dialouge = true
+		current_npc_dialouge.can_walk = false
+		current_npc_dialouge.walk_cycle_duration.stop()
+		
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 func on_dialouge_deactivated() -> void:
+	if current_npc_dialouge:
+		current_npc_dialouge.on_dialouge = false
+		current_npc_dialouge.can_walk = true
+		current_npc_dialouge.walk_cycle_duration.start()
+	
+	current_npc_dialouge = null
 	process_mode = Node.PROCESS_MODE_INHERIT
+	

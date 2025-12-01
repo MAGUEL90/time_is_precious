@@ -10,6 +10,7 @@ func _ready() -> void:
 	call_deferred("character_setup")
 
 func _on_physics_process(_delta: float) -> void: 
+	
 	if npc_reff.navigation_agent_2d.is_navigation_finished():
 		set_movement_target()
 		npc_reff.can_walk = false

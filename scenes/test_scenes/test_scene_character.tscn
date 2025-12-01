@@ -7,10 +7,10 @@
 [ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="5_nvn2h"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_nvn2h"]
-vertices = PackedVector2Array(253.54688, 117.75, 109.39844, 121.50781, 135.25781, 80.390625, 277.10156, 90.328125, 277.89063, 163, 255.5625, 163)
-polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3), PackedInt32Array(0, 3, 4, 5)])
-outlines = Array[PackedVector2Array]([PackedVector2Array(244, 128, 91, 132, 130, 70, 287, 81, 288, 173, 246, 173)])
-agent_radius = 15.0
+vertices = PackedVector2Array(202, 119, 144.67188, 119, 155.77344, 80.921875, 194.84375, 80.09375)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(138, 124, 152, 76, 199, 75, 208, 124)])
+agent_radius = 5.0
 
 [node name="TestCharacterScene" type="Node2D"]
 script = ExtResource("1_lxrml")
@@ -29,8 +29,6 @@ navigation_polygon = SubResource("NavigationPolygon_nvn2h")
 
 [node name="NPC_Galsal" parent="NPC\'s" instance=ExtResource("5_nvn2h")]
 position = Vector2(137, 110)
-collision_layer = 1
-npc_unique_dialouge = null
 
 [node name="NPC_Gabbi" parent="NPC\'s" instance=ExtResource("3_tyliu")]
 position = Vector2(201, 112)
