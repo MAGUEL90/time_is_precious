@@ -21,6 +21,7 @@ var on_dialouge: bool = false
 var can_walk: bool = false
 var npc_name: String
 var player_reff: Player
+var satisfaction_param: float = randf_range(0, 1)
 
 @export var npc_unique_dialouge: DialogueResource
 

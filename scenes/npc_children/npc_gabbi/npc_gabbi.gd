@@ -1,9 +1,9 @@
 class_name Gabbi extends NPCBase
 
 func _ready() -> void:
-	npc_name = get_node(".").name.to_lower()
+	satisfaction_param = 0.5
+	
+	print(get_parent().name)
+	
+	print("satisfaction ", npc_name, " is ", self.satisfaction_param)
 	super._ready()
-	
-func _process(_delta: float) -> void:
-	super._process(_delta)
-	
