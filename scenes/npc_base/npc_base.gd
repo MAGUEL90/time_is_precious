@@ -2,13 +2,7 @@ class_name NPCBase extends CharacterBody2D
 
 const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 
-enum NPCState {
-	NPCIdleState,
-	NPCWalkState,
-	NPCWorkingState,
-	NPCSleepState,
-	NPCWanderState
-}
+@export var npc_data: Resource
 
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
@@ -16,17 +10,22 @@ enum NPCState {
 @onready var walk_cycle_duration: Timer = $WalkCycleDuration
 @onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
 
-var npc_sprite_direction: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT]
 var on_dialouge: bool = false
 var can_walk: bool = false
-var npc_name: String
 var player_reff: Player
-var satisfaction_param: float = randf_range(0, 1)
 
-@export var npc_unique_dialouge: DialogueResource
+var npc_name: String
+var npc_class: String
+var npc_role: String
+var npc_unique_dialouge: DialogueResource
 
 func _ready() -> void:
-	
+	if npc_data:
+		npc_name = npc_data.npc_name
+		npc_class = npc_data.npc_class
+		npc_role = npc_data.npc_role
+		npc_unique_dialouge = npc_data.unique_dialouge
+		
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
 	
@@ -40,7 +39,6 @@ func _ready() -> void:
 	
 func _process(_delta: float) -> void:
 	pass
-	# print(walk_cycle_duration.time_left)
 
 func start_dialouge() -> void:
 	

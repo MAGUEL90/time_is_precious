@@ -1,4 +1,4 @@
-~ start_npc_gabbi
+~ start_gabbi
 do BaseDialougeManager.dialouge_activated.emit()
 Gabbi: Hi, would you like to help me?
 - Yes

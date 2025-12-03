@@ -1,9 +1,10 @@
 extends NodeState
 
-var state: NPCBase.NPCState
-var quest_duration: int # dalam satuan hari
-var level_quest: float # mengukur kesulitan quest
-
+enum STATE {
+	IDLE,
+	WORKING,
+	RETURN
+}
 
 func _ready() -> void:
 	pass # Replace with function body.
