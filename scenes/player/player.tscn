@@ -132,6 +132,7 @@ animation = &"move_left"
 frame_progress = 0.83204514
 
 [node name="Camera2D" type="Camera2D" parent="."]
+visible = false
 zoom = Vector2(4, 4)
 
 [node name="PlayerStateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_node_state")]

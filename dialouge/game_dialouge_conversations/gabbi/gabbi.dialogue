@@ -5,7 +5,7 @@ Gabbi: Hi, would you like to help me?
 	Gabbi: You got a job for me?
 	- Yes
 		Gabbi: Cool, ill take that
-		do BaseDialougeManager.dialouge_deactivated.emit() 
+		# do NPCBase.proceed_contract()
 	- No
 		do BaseDialougeManager.dialouge_deactivated.emit() 
 		=> END

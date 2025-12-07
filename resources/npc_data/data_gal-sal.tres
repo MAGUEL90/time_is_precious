@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="NPCData" load_steps=3 format=3 uid="uid://4tgq7dxsuem"]
+
+[ext_resource type="Script" uid="uid://b5nthm3jr01og" path="res://resources/npc_data/npc_data.gd" id="1_dbv6m"]
+[ext_resource type="Resource" uid="uid://d0itxsaudux5o" path="res://dialouge/game_dialouge_conversations/test.dialogue" id="2_ycelm"]
+
+[resource]
+script = ExtResource("1_dbv6m")
+unique_dialouge = ExtResource("2_ycelm")
+name = "gal-sal"
+current_satisfaction = 0.2
+metadata/_custom_type_script = "uid://b5nthm3jr01og"

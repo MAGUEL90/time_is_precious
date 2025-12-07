@@ -82,8 +82,9 @@ script = ExtResource("4_ry01d")
 npc_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 
-[node name="NPCWorkingState" parent="NPCStateMachine" index="2"]
+[node name="NPCWorkingState" parent="NPCStateMachine" index="2" node_paths=PackedStringArray("npc_reff")]
 script = ExtResource("6_b5124")
+npc_reff = NodePath("../..")
 
 [node name="WalkCycleDuration" parent="." index="5"]
 one_shot = false

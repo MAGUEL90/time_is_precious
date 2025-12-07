@@ -1,10 +1,6 @@
 extends NodeState
 
-enum STATE {
-	IDLE,
-	WORKING,
-	RETURN
-}
+@export var npc_reff: NPCBase
 
 func _ready() -> void:
 	pass # Replace with function body.
@@ -23,6 +19,3 @@ func _on_enter() -> void:
 
 func _on_exit() -> void:
 	pass
-
-func do_quest() -> void:
-	print("do something")

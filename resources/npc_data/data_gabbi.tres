@@ -5,8 +5,7 @@
 
 [resource]
 script = ExtResource("1_flsga")
-npc_name = "gabbi"
-npc_class = "mushkenu"
-npc_role = "weaver"
 unique_dialouge = ExtResource("2_83yvy")
+name = "gabbi"
+current_satisfaction = 0.3
 metadata/_custom_type_script = "uid://b5nthm3jr01og"

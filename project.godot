@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.5", "GL Compatibility")
 
 DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 BaseDialougeManager="*res://scripts/autoload/base_dialouge_manager/base_dialouge_manager.gd"
+TimeComponentManager="*res://scripts/autoload/time_manager/time_component_manager.tscn"
 
 [display]
 
@@ -24,6 +25,7 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
+window/stretch/mode="viewport"
 
 [editor_plugins]
 
