@@ -1,4 +1,4 @@
-~ start_gabbi
+~ contract_gabbi_1
 do BaseDialougeManager.dialouge_activated.emit()
 Gabbi: Hi, would you like to help me?
 - Yes
@@ -12,4 +12,26 @@ Gabbi: Hi, would you like to help me?
 - No
 	Gabbi: Too bad...
 do BaseDialougeManager.dialouge_deactivated.emit() 
-	=> END
+
+=> END
+
+~ start_gabbi
+do BaseDialougeManager.dialouge_activated.emit()
+Gabbi: [[Hi|Hello|Howdy]], this is TEST dialogue.
+Gabbi: Here are some choices.
+- First one
+	Gabbi: You picked the first one. 
+- Second one
+	Gabbi: You picked the second one.
+- Start again => start_gabbi
+- End the conversation 
+	do BaseDialougeManager.dialouge_deactivated.emit() 
+		=> END
+
+~ all_not_required
+Gabbi: ...
+=> END
+
+~ ajaja
+aa
+=> END

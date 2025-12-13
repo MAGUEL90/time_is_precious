@@ -88,3 +88,7 @@ npc_reff = NodePath("../..")
 
 [node name="WalkCycleDuration" parent="." index="5"]
 one_shot = false
+
+[node name="DebugNPCLabel" parent="." index="7"]
+offset_top = -39.0
+offset_bottom = 49.0

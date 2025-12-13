@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://h4gf33yrlreo"
+path="res://.godot/imported/galsal.dialogue-5c5e785192a64104303de0f9d57a126c.tres"
+
+[deps]
+
+source_file="res://dialouge/game_dialouge_conversations/gal-sal/galsal.dialogue"
+dest_files=["res://.godot/imported/galsal.dialogue-5c5e785192a64104303de0f9d57a126c.tres"]
+
+[params]
+
+defaults=true

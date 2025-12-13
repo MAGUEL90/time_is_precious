@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_vc6de"]
 [ext_resource type="Script" uid="uid://d336228rm34mq" path="res://scenes/npc_children/npc_galsal/npc_galsal.gd" id="2_by2p5"]
-[ext_resource type="Texture2D" uid="uid://c70u3phf74bcd" path="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_gal-sal_animation.png" id="2_fg8gx"]
+[ext_resource type="Texture2D" uid="uid://c70u3phf74bcd" path="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_galsal_animation.png" id="2_fg8gx"]
 [ext_resource type="Resource" uid="uid://4tgq7dxsuem" path="res://resources/npc_data/data_gal-sal.tres" id="3_ugla4"]
 [ext_resource type="Script" uid="uid://bdahht4ex46x" path="res://scenes/npc_children/npc_gabbi/npc_walk_state.gd" id="4_by2p5"]
 
@@ -85,3 +85,7 @@ animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 
 [node name="NavigationAgent2D" parent="." index="6"]
 avoidance_mask = 0
+
+[node name="DebugNPCLabel" parent="." index="7"]
+offset_top = -40.0
+offset_bottom = 48.0

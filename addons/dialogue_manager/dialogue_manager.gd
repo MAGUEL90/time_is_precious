@@ -141,7 +141,7 @@ func _get_next_dialogue_line(resource: DialogueResource, key: String = "", extra
 ## Get a line by its ID
 func get_line(resource: DialogueResource, key: String, extra_game_states: Array) -> DialogueLine:
 	key = key.strip_edges()
-
+	print("key: ", key)
 	# See if we were given a stack instead of just the one key
 	var stack: Array = key.split("|")
 	key = stack.pop_front()

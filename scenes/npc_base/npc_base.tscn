@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://c0ov4l7wxnset"]
+[gd_scene load_steps=9 format=3 uid="uid://c0ov4l7wxnset"]
 
 [ext_resource type="Script" uid="uid://diqbuo0pmn2pb" path="res://scenes/npc_base/npc_base.gd" id="1_sbbgq"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_ykk6y"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3_qfur7"]
 [ext_resource type="Script" uid="uid://bi6uwelaaym2k" path="res://scripts/state_machine/node_state_machine.gd" id="4_t2fq0"]
 [ext_resource type="Script" uid="uid://ca1dog53h3aka" path="res://scenes/npc_base/npc_idle_state.gd" id="5_5ypgm"]
+[ext_resource type="PackedScene" uid="uid://c4evk70crykc" path="res://scenes/debug_npc/debug_npc_label.tscn" id="6_kba5p"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_almck"]
 radius = 2.0
@@ -56,5 +57,11 @@ one_shot = true
 autostart = true
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+
+[node name="DebugNPCLabel" parent="." instance=ExtResource("6_kba5p")]
+offset_right = 219.0
+offset_bottom = 88.0
+scale = Vector2(0.05, 0.05)
+theme_override_font_sizes/font_size = 64
 
 [connection signal="timeout" from="WalkCycleDuration" to="." method="_on_walk_cycle_duration_timeout"]

@@ -1,0 +1,33 @@
+~ contract_galsal_1
+do BaseDialougeManager.dialouge_activated.emit()
+Galsal: Hi, Do you have something to do??
+- Yes
+	Galsal: You got a job for me?
+	- Yes
+		Galsal: You can count me on it
+	- No
+		Galsal: Oh.. okey
+		do BaseDialougeManager.dialouge_deactivated.emit() 
+		=> END
+- No
+	Galsal: ...
+do BaseDialougeManager.dialouge_deactivated.emit() 
+=> END
+
+
+~ start_galsal
+do BaseDialougeManager.dialouge_activated.emit()
+Galsal: [[Hi|Hello|Howdy]], this is TEST dialogue.
+Galsal: Here are some choices.
+- First one
+	Galsal: You picked the first one. 
+- Second one
+	Galsal: You picked the second one.
+- Start again => start_galsal
+- End the conversation 
+	do BaseDialougeManager.dialouge_deactivated.emit() 
+	=> END
+	
+Galsal: For more information see the online documentation.
+do BaseDialougeManager.dialouge_deactivated.emit() 
+=> END

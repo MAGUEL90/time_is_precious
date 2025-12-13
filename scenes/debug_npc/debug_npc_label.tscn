@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c4evk70crykc"]
+
+[node name="DebugNPCLabel" type="Label"]
+offset_right = 1.0
+offset_bottom = 23.0
+text = "000000"

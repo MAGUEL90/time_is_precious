@@ -9,6 +9,7 @@ var dialouge_finished: bool = false
 var speed = 50
 
 @onready var player_movement_state: Node = $PlayerStateMachine/PlayerMovementState
+@onready var time_component_manager = TimeComponentManager
 
 func _ready() -> void:
 	get_tree().call_group("npcs", "interactable_component.interactable_activated.connect(_on_interactable_activated)")
@@ -44,15 +45,19 @@ func _on_interactable_deactivated(npc):
 	npc.interactable_label_component.hide()
 
 func on_dialouge_activated() -> void:
+	
 	if current_npc_dialouge:
+		time_component_manager.toggle_pause()
 		current_npc_dialouge.on_dialouge = true
 		current_npc_dialouge.can_walk = false
 		current_npc_dialouge.walk_cycle_duration.stop()
 		
+
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 func on_dialouge_deactivated() -> void:
 	if current_npc_dialouge:
+		time_component_manager.toggle_pause()
 		current_npc_dialouge.on_dialouge = false
 		current_npc_dialouge.can_walk = true
 		current_npc_dialouge.walk_cycle_duration.start()

@@ -1,7 +1,7 @@
 extends Node
 
-@export var seconds_per_minute: float = 0.01 # 1 detik real = 1 menit game
-@export var start_hour: int = 14
+@export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
+@export var start_hour: int = 17
 @export var start_day: int = 1
 
 var current_minute: float
@@ -16,8 +16,8 @@ var minute_per_hour: int = 60
 var hour_per_day: int = 24
 var is_paused: bool = false
 var morning_hour: int = 5
-var afternoon_hour: int = 11
-var night_hour: int = 19
+var afternoon_hour: int = 10
+var night_hour: int = 17
 
 signal time_changed(day: int, hour: int, minute: int)
 signal minute_changed(minute: int)
@@ -29,7 +29,7 @@ signal morning_shift
 signal afternoon_shift
 signal night_shift
 
-@onready var canvas_modulate: CanvasModulate = $CanvasModulate
+@onready var environment: CanvasModulate = $Environment
 
 var _timer: float = 0.0
 
@@ -70,6 +70,7 @@ func advance_one_minute() -> void:
 			current_day += 1
 			emit_signal("new_day_started", current_day)
 			emit_signal("day_changed", current_day)
+			print(current_weather)
 			on_new_day()
 		emit_signal("hour_changed", current_hour)
 		
@@ -80,12 +81,26 @@ func on_new_day() -> void:
 	emit_signal("day_changed", current_day)
 
 func day_cycle() -> void:
-	if current_hour >= morning_hour and current_hour < afternoon_hour:
+	var darkness: float = 0.0
+	if current_hour >= morning_hour and current_hour <= 7:
+		darkness = 1.0 - (current_hour - morning_hour + current_minute / 60.0) / 3.0
 		emit_signal("morning_shift")
-	elif current_hour >= afternoon_hour and current_hour < night_hour:
+	elif current_hour >= night_hour and current_hour < 19:
+		darkness = (current_hour - night_hour + current_minute / 60.0) / 2.0
 		emit_signal("afternoon_shift")
-	else:
+	elif current_hour >= 19 or current_hour < morning_hour:
+		darkness = 1.0
 		emit_signal("night_shift")
+	else:
+		darkness = 0.0
+		
+	
+	var night_tint: Color = Color(0.15, 0.15, 0.3)
+	var day_tint: Color = Color(1.0, 1.0, 1.0)
+	var base_color: Color = day_tint.lerp(night_tint, darkness)
+	
+	if environment:
+		environment.color = base_color
 
 func roll_daily_weather() -> void:
 	var roll: float = randf()
@@ -100,5 +115,5 @@ func roll_daily_weather() -> void:
 	
 	emit_signal("weather_changed", current_weather)
 
-func update_enviroment() -> void:
-	pass
+func toggle_pause() -> void:
+	is_paused = !is_paused

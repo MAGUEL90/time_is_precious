@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c70u3phf74bcd"
-path="res://.godot/imported/NPC_2_gal-sal_animation.png-23c38dd887807ece0b49ef8b96c6815f.ctex"
+path="res://.godot/imported/NPC_2_galsal_animation.png-5332670bb8dc39818ac23e2e8732509f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_gal-sal_animation.png"
-dest_files=["res://.godot/imported/NPC_2_gal-sal_animation.png-23c38dd887807ece0b49ef8b96c6815f.ctex"]
+source_file="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_galsal_animation.png"
+dest_files=["res://.godot/imported/NPC_2_galsal_animation.png-5332670bb8dc39818ac23e2e8732509f.ctex"]
 
 [params]
 
