@@ -1,6 +1,6 @@
-~ contract_gabbi_1
+~ contract_1
 do BaseDialougeManager.dialouge_activated.emit()
-Gabbi: Hi, would you like to help me?
+Gabbi: Hi, would you like to help me? I need some job. 
 - Yes
 	Gabbi: You got a job for me?
 	- Yes
@@ -15,21 +15,14 @@ do BaseDialougeManager.dialouge_deactivated.emit()
 
 => END
 
-~ start_gabbi
+~ casual_gabbi_1
 do BaseDialougeManager.dialouge_activated.emit()
-Gabbi: [[Hi|Hello|Howdy]], this is TEST dialogue.
-Gabbi: Here are some choices.
-- First one
-	Gabbi: You picked the first one. 
-- Second one
-	Gabbi: You picked the second one.
-- Start again => start_gabbi
-- End the conversation 
-	do BaseDialougeManager.dialouge_deactivated.emit() 
-		=> END
+Gabbi: [[I love this place so much | My Parents used to lived in here ... | Maybe someday i will have many gold]]  
+do BaseDialougeManager.dialouge_deactivated.emit() 
+=> END
 
 ~ all_not_required
-Gabbi: ...
+Gabbi: all not required
 => END
 
 ~ ajaja

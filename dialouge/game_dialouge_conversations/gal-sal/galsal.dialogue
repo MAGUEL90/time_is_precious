@@ -15,7 +15,7 @@ do BaseDialougeManager.dialouge_deactivated.emit()
 => END
 
 
-~ start_galsal
+~ casual_galsal_1
 do BaseDialougeManager.dialouge_activated.emit()
 Galsal: [[Hi|Hello|Howdy]], this is TEST dialogue.
 Galsal: Here are some choices.
@@ -23,7 +23,7 @@ Galsal: Here are some choices.
 	Galsal: You picked the first one. 
 - Second one
 	Galsal: You picked the second one.
-- Start again => start_galsal
+- Start again => casual_galsal_1
 - End the conversation 
 	do BaseDialougeManager.dialouge_deactivated.emit() 
 	=> END

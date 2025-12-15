@@ -28,12 +28,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			current_npc_dialouge.animated_sprite_2d.flip_h = false
 		
 		current_interactable.start_dialouge()
+		time_component_manager.toggle_pause()
 		current_interactable.interactable_label_component.hide()
 
 func _process(_delta: float) -> void:
 	pass
 	
 func _on_interactable_activated(npc):
+	if current_interactable:
+		return
+	
 	current_interactable = npc
 	current_interactable.interactable_label_component.show()
 	can_dialouge = true
@@ -47,17 +51,18 @@ func _on_interactable_deactivated(npc):
 func on_dialouge_activated() -> void:
 	
 	if current_npc_dialouge:
-		time_component_manager.toggle_pause()
 		current_npc_dialouge.on_dialouge = true
 		current_npc_dialouge.can_walk = false
 		current_npc_dialouge.walk_cycle_duration.stop()
 		
 
 	process_mode = Node.PROCESS_MODE_DISABLED
+	
 
 func on_dialouge_deactivated() -> void:
+	time_component_manager.toggle_pause()
 	if current_npc_dialouge:
-		time_component_manager.toggle_pause()
+		
 		current_npc_dialouge.on_dialouge = false
 		current_npc_dialouge.can_walk = true
 		current_npc_dialouge.walk_cycle_duration.start()

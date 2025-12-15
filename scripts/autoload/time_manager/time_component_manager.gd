@@ -41,7 +41,7 @@ func _ready() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	# print("current_hour: ", current_hour)
+	
 	if is_paused: return
 	
 	_timer += delta

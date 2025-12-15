@@ -87,7 +87,7 @@ func start_dialouge() -> void:
 				balloon.start(npc_unique_dialouge, contract_title)
 				break
 		else:	
-			balloon.start(npc_unique_dialouge, "start_%s" % npc_name)
+			balloon.start(npc_unique_dialouge, "casual_%s" % npc_name + "_1")
 				
 
 func _on_walk_cycle_duration_timeout() -> void:
