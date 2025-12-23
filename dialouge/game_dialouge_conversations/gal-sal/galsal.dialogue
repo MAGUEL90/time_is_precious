@@ -1,5 +1,5 @@
 ~ contract_galsal_1
-do BaseDialougeManager.dialouge_activated.emit()
+do BaseDialogueManager.dialogue_activated.emit()
 Galsal: Hi, Do you have something to do??
 - Yes
 	Galsal: You got a job for me?
@@ -7,16 +7,16 @@ Galsal: Hi, Do you have something to do??
 		Galsal: You can count me on it
 	- No
 		Galsal: Oh.. okey
-		do BaseDialougeManager.dialouge_deactivated.emit() 
+		do BaseDialogueManager.dialogue_deactivated.emit() 
 		=> END
 - No
 	Galsal: ...
-do BaseDialougeManager.dialouge_deactivated.emit() 
+do BaseDialogueManager.dialogue_deactivated.emit() 
 => END
 
 
 ~ casual_galsal_1
-do BaseDialougeManager.dialouge_activated.emit()
+do BaseDialogueManager.dialogue_activated.emit()
 Galsal: [[Hi|Hello|Howdy]], this is TEST dialogue.
 Galsal: Here are some choices.
 - First one
@@ -25,9 +25,9 @@ Galsal: Here are some choices.
 	Galsal: You picked the second one.
 - Start again => casual_galsal_1
 - End the conversation 
-	do BaseDialougeManager.dialouge_deactivated.emit() 
+	do BaseDialogueManager.dialogue_deactivated.emit() 
 	=> END
 	
 Galsal: For more information see the online documentation.
-do BaseDialougeManager.dialouge_deactivated.emit() 
+do BaseDialogueManager.dialogue_deactivated.emit() 
 => END

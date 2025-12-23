@@ -5,7 +5,7 @@
 
 [resource]
 script = ExtResource("1_dbv6m")
-unique_dialouge = ExtResource("2_ycelm")
+unique_dialogue = ExtResource("2_ycelm")
 name = "galsal"
 current_satisfaction = 0.2
 metadata/_custom_type_script = "uid://b5nthm3jr01og"

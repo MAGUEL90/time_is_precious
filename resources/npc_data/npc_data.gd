@@ -1,6 +1,6 @@
 class_name NPCData extends Resource
 
-@export var unique_dialouge: DialogueResource
+@export var unique_dialogue : DialogueResource
 
 @export var name: String #
 var current_position: Vector2 # Simpan Posisi Terkini

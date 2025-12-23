@@ -1,5 +1,5 @@
 ~ start
-do BaseDialougeManager.dialouge_activated.emit()
+do BaseDialogueManager.dialogue_activated.emit()
 Nathan: [[Hi|Hello|Howdy]], this is TEST dialogue.
 Nathan: Here are some choices.
 - First one
@@ -8,9 +8,9 @@ Nathan: Here are some choices.
 	Nathan: You picked the second one.
 - Start again => start
 - End the conversation 
-	do BaseDialougeManager.dialouge_deactivated.emit() 
+	do BaseDialougeManager.dialogue_deactivated.emit() 
 	=> END
 	
 Nathan: For more information see the online documentation.
-do BaseDialougeManager.dialouge_deactivated.emit() 
+do BaseDialougeManager.dialogue_deactivated.emit() 
 => END

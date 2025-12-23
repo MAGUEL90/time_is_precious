@@ -1,10 +1,9 @@
-[gd_scene load_steps=13 format=3 uid="uid://oiihxv782kew"]
+[gd_scene load_steps=12 format=3 uid="uid://oiihxv782kew"]
 
 [ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_vc6de"]
 [ext_resource type="Script" uid="uid://d336228rm34mq" path="res://scenes/npc_children/npc_galsal/npc_galsal.gd" id="2_by2p5"]
 [ext_resource type="Texture2D" uid="uid://c70u3phf74bcd" path="res://assets/characters/character animations/2_gal_sal_animation_png/NPC_2_galsal_animation.png" id="2_fg8gx"]
 [ext_resource type="Resource" uid="uid://4tgq7dxsuem" path="res://resources/npc_data/data_gal-sal.tres" id="3_ugla4"]
-[ext_resource type="Script" uid="uid://bdahht4ex46x" path="res://scenes/npc_children/npc_gabbi/npc_walk_state.gd" id="4_by2p5"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_47g67"]
 atlas = ExtResource("2_fg8gx")
@@ -62,7 +61,6 @@ animations = [{
 }]
 
 [node name="NPC_Galsal" instance=ExtResource("1_vc6de")]
-collision_layer = 1
 script = ExtResource("2_by2p5")
 npc_data = ExtResource("3_ugla4")
 
@@ -79,7 +77,12 @@ npc_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 
 [node name="NPCWalkState" parent="NPCStateMachine" index="1" node_paths=PackedStringArray("npc_reff", "animated_sprite_2d")]
-script = ExtResource("4_by2p5")
+npc_reff = NodePath("../..")
+animated_sprite_2d = NodePath("../../AnimatedSprite2D")
+min_speed = null
+max_speed = null
+
+[node name="NPCWorkingState" parent="NPCStateMachine" index="2" node_paths=PackedStringArray("npc_reff", "animated_sprite_2d")]
 npc_reff = NodePath("../..")
 animated_sprite_2d = NodePath("../../AnimatedSprite2D")
 

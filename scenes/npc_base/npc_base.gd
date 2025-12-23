@@ -1,6 +1,6 @@
 class_name NPCBase extends CharacterBody2D
 
-const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
+const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 
 @export var npc_data: NPCData
 
@@ -9,20 +9,19 @@ const GAME_DIALOUGE_BALLOON = preload("uid://73jm5qjy52vq")
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var walk_cycle_duration: Timer = $WalkCycleDuration
 @onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
-@onready var time_component_manager = TimeComponentManager
 @onready var debug_npc_label: Label = $DebugNPCLabel
 
-var on_dialouge: bool = false
+
+
+var on_dialogue : bool = false
 var can_walk: bool = false
 var player_reff: Player
 
 # ============= ATTRIBUTES
 var npc_name: String
 var npc_class: String
-var npc_unique_dialouge: DialogueResource
-var npc_container: Dictionary = {
-	
-}
+var npc_unique_dialogue : DialogueResource
+var npc_container: Dictionary = {}
 
 # ============= NPCPosition
 var npc_current_position: Vector2
@@ -33,23 +32,22 @@ var npc_initial_satisfaction: float
 var npc_current_satisfaction: float
 
 # ============= CONTRACT
-var npc_allow_contract: bool
+var npc_allow_contract: bool = false
+var is_contract_activated: bool = false
 
-var is_morning_shift: bool = false
-var is_afternoon_shift: bool = false
-var is_night_shift: bool = false
 var is_clear_day: bool = false
 
-
+# ============= SHIFT
+enum Shift { MORNING, AFTERNOON, NIGHT}
+var current_shift: Shift = Shift.MORNING
 
 func _ready() -> void:
-	for npc in get_parent().get_children():
-		if npc is NPCBase and not npc_container.has("name"):
-			npc_container["name"] = [str(npc.name)]
-		elif npc is NPCBase and npc_container.has("name"):
-			npc_container["name"].append(str(npc.name))
+	set_data_attribute()
+	_sync_shift_from_hour()
 	
-	call_deferred("set_data_attribute")
+	TimeComponentManager.morning_shift.connect(on_morning_shift)
+	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift)
+	TimeComponentManager.night_shift.connect(on_night_shift)
 	
 	interactable_label_component.hide()
 	player_reff = get_tree().get_first_node_in_group("player")
@@ -61,88 +59,84 @@ func _ready() -> void:
 		# Connect signal dari InteractableComponent ke fungsi Player
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
-		time_component_manager.connect("morning_shift", on_morning_shift)
-		time_component_manager.connect("afternoon_shift", on_afternoon_shift)
-		time_component_manager.connect("night_shift", on_night_shift)
 
-func _process(delta: float) -> void:
-
-	adjust_condition_contract_dialouge()
-	debug_npc()
-
-func start_dialouge() -> void:
+func _recalc_contract_state() -> void:
 	
-	if not npc_unique_dialouge:
+	var is_night: Shift = Shift.NIGHT
+	
+	npc_allow_contract = (not is_night and \
+	npc_current_satisfaction > 0.1 and \
+	TimeComponentManager.current_weather == "clear")
+	#print("current_shift: ", current_shift)
+	#print("allow_contract: ", npc_allow_contract)
+
+
+	
+func start_dialogue () -> void:
+	
+	if not npc_unique_dialogue :
 		return
-	
-	var balloon: BaseGameDialougeBalloon = GAME_DIALOUGE_BALLOON.instantiate()
+		
+	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
 	
+	var title_list: Array = npc_unique_dialogue .get_titles()
+	var contract_founded: bool = false
+	var npc_state: Array = [self]
 	
-	var title_list: Array = npc_unique_dialouge.get_titles()
 	for title in title_list:
 		if title.begins_with("contract") and npc_allow_contract:
 			var contract_title = title
-			if npc_unique_dialouge.titles.has(contract_title):
-				balloon.start(npc_unique_dialouge, contract_title)
+			if npc_unique_dialogue .titles.has(contract_title):
+				balloon.start(npc_unique_dialogue , contract_title, npc_state)
+				contract_founded = true
 				break
-		else:	
-			balloon.start(npc_unique_dialouge, "casual_%s" % npc_name + "_1")
-				
+	
+	if not contract_founded:
+		var casual_title: String = "casual_%s" % npc_name.to_lower() + "_1"
+		if title_list.has(casual_title):
+			balloon.start(npc_unique_dialogue , casual_title, npc_state)
+		elif title_list.size() > 0:
+			balloon.start(npc_unique_dialogue , title_list[0], npc_state)
+			
 
 func _on_walk_cycle_duration_timeout() -> void:
-	requirement_get_contract()
 	can_walk = true
 
 func on_morning_shift() -> void:
-	is_morning_shift = true
-	is_night_shift = false
+	current_shift = Shift.MORNING
+	call_deferred("_recalc_contract_state")
 	
 func on_afternoon_shift() -> void:
-	is_afternoon_shift = true
-	is_morning_shift = false
+	current_shift = Shift.AFTERNOON
+	call_deferred("_recalc_contract_state")
 
 func on_night_shift() -> void:
-	is_afternoon_shift = false
-	is_night_shift = true
+	current_shift = Shift.NIGHT
+	call_deferred("_recalc_contract_state")
+
+func _sync_shift_from_hour() -> void:
+	var hour: int = TimeComponentManager.current_hour
+	if hour >= TimeComponentManager.morning_hour and hour <= 7:
+		current_shift = Shift.MORNING
+	elif hour >= TimeComponentManager.afternoon_hour and hour < 19:
+		current_shift = Shift.AFTERNOON
+	elif hour >= 19 or hour < TimeComponentManager.morning_hour:
+		current_shift = Shift.NIGHT
+		
+	
 
 func set_data_attribute() -> void:
 	if npc_data:
 		npc_name = npc_data.name
 		npc_last_position = npc_data.last_position
 		npc_current_position = npc_data.current_position
-		npc_unique_dialouge = npc_data.unique_dialouge
+		npc_unique_dialogue  = npc_data.unique_dialogue 
 		npc_current_satisfaction = npc_data.current_satisfaction
 
-func requirement_get_contract() -> void:
-	pass
+func debug_npc() -> String:
+	debug_npc_label.text = "name: %s; allow_contract: %s" % [npc_name, npc_allow_contract] 
+	return debug_npc_label.text
 
-func adjust_condition_contract_dialouge() -> void:
-	#kondisi OK
-	#parameter cukup, cuaca bagus, dalam jam kerja
-	
-	#kondisi tidak OK
-	#tidak parameter cukup, tidak cuaca bagus, tidak dalam jam kerja
-	
-	#tidak parameter cukup, cuaca bagus, dalam jam kerja
-	#tidak parameter cukup, tidak cuaca bagus, dalam jam kerja
-	#tidak parameter cukup, tidak dalam jam kerja, cuaca bagus
-	
-	#tidak cuaca bagus, parameter cukup, dalam jam kerja
-	#tidak cuaca bagus, tidak parameter cukup, dalam jam kerja
-	#tidak cuaca bagus, tidak dalam jam kerja, cuaca bagus
-	
-	#tidak jam kerja, cuaca bagus, parameter cukup
-	
-	
-	if not is_night_shift and npc_current_satisfaction > 0.1:
-		if time_component_manager.current_weather == "clear":
-			npc_allow_contract = true
-				 
-	else:
-		npc_allow_contract = false
-		
-	
-
-func debug_npc() -> void:
-	debug_npc_label.text = "name: %s \n allow_contract: %s" % [npc_name, npc_allow_contract] 
+func proceed_contract() -> void:
+	is_contract_activated = true

@@ -2,7 +2,7 @@ class_name NodeStateMachine extends Node
 
 @export var initial_node_state: NodeState
 
-var node_states: Dictionary 
+var node_states: Dictionary = {}
 var current_node_state: NodeState
 var current_node_state_name: String
 var parent_node_name: String
@@ -33,7 +33,8 @@ func _physics_process(delta: float) -> void:
 		# print("parent_node_name: ", parent_node_name, " is: ", current_node_state)
 
 func transition_to(node_state_name: String) -> void:
-	if node_state_name == current_node_state_name.to_lower():
+	node_state_name = node_state_name.to_lower()
+	if node_state_name == current_node_state_name:
 		return
 	
 	var new_node_state: NodeState = node_states.get(node_state_name)

@@ -1,24 +1,42 @@
 ~ contract_1
-do BaseDialougeManager.dialouge_activated.emit()
+do BaseDialogueManager.dialogue_activated.emit()
+Gabbi: Hi, would you like to help me? I need some job. 
+- Ok...
+	Gabbi: You got a job for me? 
+	- Yes
+		Gabbi: Cool, ill take that
+		do => proceed_contract()
+		do BaseDialogueManager.dialogue_activated.emit() 
+	- No
+		do BaseDialogueManager.dialogue_deactivated.emit() 
+		=> END
+- No
+	Gabbi: Too bad...
+do BaseDialogueManager.dialogue_deactivated.emit() 
+
+=> END
+
+~ casual_2
+do BaseDialogueManager.dialogue_activated.emit()
 Gabbi: Hi, would you like to help me? I need some job. 
 - Yes
 	Gabbi: You got a job for me?
 	- Yes
 		Gabbi: Cool, ill take that
-		# do NPCBase.proceed_contract()
+		do BaseDialogueManager.contract_activated.emit() 
 	- No
-		do BaseDialougeManager.dialouge_deactivated.emit() 
+		do BaseDialogueManager.dialogue_deactivated.emit() 
 		=> END
 - No
 	Gabbi: Too bad...
-do BaseDialougeManager.dialouge_deactivated.emit() 
+do BaseDialogueManager.dialogue_deactivated.emit() 
 
 => END
 
 ~ casual_gabbi_1
-do BaseDialougeManager.dialouge_activated.emit()
+do BaseDialogueManager.dialogue_activated.emit()
 Gabbi: [[I love this place so much | My Parents used to lived in here ... | Maybe someday i will have many gold]]  
-do BaseDialougeManager.dialouge_deactivated.emit() 
+do BaseDialogueManager.dialogue_deactivated.emit() 
 => END
 
 ~ all_not_required

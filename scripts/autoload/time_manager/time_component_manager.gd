@@ -1,10 +1,10 @@
 extends Node
 
-@export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
-@export var start_hour: int = 17
+@export var seconds_per_minute: float = 0.01 # 1 detik real = 1 menit game
+@export var start_hour: int = 4
 @export var start_day: int = 1
 
-var current_minute: float
+var current_minute: int
 var current_hour: int 
 var current_day: int
 var current_weather: String = "clear" 
@@ -15,6 +15,7 @@ var current_weather: String = "clear"
 var minute_per_hour: int = 60
 var hour_per_day: int = 24
 var is_paused: bool = false
+
 var morning_hour: int = 5
 var afternoon_hour: int = 10
 var night_hour: int = 17
@@ -74,7 +75,7 @@ func advance_one_minute() -> void:
 			on_new_day()
 		emit_signal("hour_changed", current_hour)
 		
-	emit_signal("time_changed", current_minute, current_hour, current_day)
+	emit_signal("time_changed", current_day, current_hour, current_minute)
 
 func on_new_day() -> void:
 	roll_daily_weather()
@@ -85,10 +86,11 @@ func day_cycle() -> void:
 	if current_hour >= morning_hour and current_hour <= 7:
 		darkness = 1.0 - (current_hour - morning_hour + current_minute / 60.0) / 3.0
 		emit_signal("morning_shift")
-	elif current_hour >= night_hour and current_hour < 19:
-		darkness = (current_hour - night_hour + current_minute / 60.0) / 2.0
+	elif current_hour >= afternoon_hour and current_hour < 17:
+		darkness = (current_hour - afternoon_hour + current_minute / 60.0) / 6.0
+		print(darkness)
 		emit_signal("afternoon_shift")
-	elif current_hour >= 19 or current_hour < morning_hour:
+	elif current_hour >= 17 or current_hour < morning_hour:
 		darkness = 1.0
 		emit_signal("night_shift")
 	else:

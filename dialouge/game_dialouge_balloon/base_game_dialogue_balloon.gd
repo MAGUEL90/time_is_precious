@@ -1,4 +1,4 @@
-class_name BaseGameDialougeBalloon extends CanvasLayer
+class_name BaseGameDialogueBalloon extends CanvasLayer
 ## A basic dialogue balloon for use with Dialogue Manager.
 
 ## The dialogue resource

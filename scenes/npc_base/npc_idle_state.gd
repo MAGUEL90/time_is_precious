@@ -15,6 +15,8 @@ func _on_physics_process(_delta: float) -> void:
 func _on_next_transition() -> void:
 	if npc_reff.can_walk == true:
 		transition.emit("npcwalkstate")
+	#elif npc_reff.is_contract_activated == true:
+		#transition.emit("npcworkingstate")
 
 func _on_enter() -> void:
 	animated_sprite_2d.play("idle")
