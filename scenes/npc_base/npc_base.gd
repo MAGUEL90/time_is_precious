@@ -38,7 +38,7 @@ var is_contract_activated: bool = false
 var is_clear_day: bool = false
 
 # ============= SHIFT
-enum Shift { MORNING, AFTERNOON, NIGHT}
+enum Shift { MORNING, AFTERNOON, NOON, NIGHT}
 var current_shift: Shift = Shift.MORNING
 
 func _ready() -> void:
@@ -47,6 +47,7 @@ func _ready() -> void:
 	
 	TimeComponentManager.morning_shift.connect(on_morning_shift)
 	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift)
+	TimeComponentManager.noon_shift.connect(on_noon_shift)
 	TimeComponentManager.night_shift.connect(on_night_shift)
 	
 	interactable_label_component.hide()
@@ -60,15 +61,19 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 
+
 func _recalc_contract_state() -> void:
 	
-	var is_night: Shift = Shift.NIGHT
+	var is_night: bool = false
+	
+	if current_shift == Shift.NIGHT:
+		is_night = true
 	
 	npc_allow_contract = (not is_night and \
 	npc_current_satisfaction > 0.1 and \
 	TimeComponentManager.current_weather == "clear")
-	#print("current_shift: ", current_shift)
-	#print("allow_contract: ", npc_allow_contract)
+	print("is_night: ", is_night)
+	print("npc_allow_contract: ", npc_allow_contract)
 
 
 	
@@ -111,20 +116,25 @@ func on_afternoon_shift() -> void:
 	current_shift = Shift.AFTERNOON
 	call_deferred("_recalc_contract_state")
 
+func on_noon_shift() -> void:
+	current_shift = Shift.NOON
+	call_deferred("_recalc_contract_state")
+
 func on_night_shift() -> void:
 	current_shift = Shift.NIGHT
 	call_deferred("_recalc_contract_state")
 
 func _sync_shift_from_hour() -> void:
 	var hour: int = TimeComponentManager.current_hour
-	if hour >= TimeComponentManager.morning_hour and hour <= 7:
+	if hour >= TimeComponentManager.morning_hour and hour < TimeComponentManager.afternoon_hour:
 		current_shift = Shift.MORNING
-	elif hour >= TimeComponentManager.afternoon_hour and hour < 19:
+	elif hour >= TimeComponentManager.afternoon_hour and hour < TimeComponentManager.noon_hour:
 		current_shift = Shift.AFTERNOON
-	elif hour >= 19 or hour < TimeComponentManager.morning_hour:
+	elif hour >= TimeComponentManager.noon_hour and hour < TimeComponentManager.night_hour:
+		current_shift = Shift.NOON
+	elif hour >= TimeComponentManager.night_hour or hour < TimeComponentManager.morning_hour: 
 		current_shift = Shift.NIGHT
-		
-	
+
 
 func set_data_attribute() -> void:
 	if npc_data:

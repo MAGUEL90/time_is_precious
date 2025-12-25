@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://cc64umv3crw5c"]
-
-[ext_resource type="Script" uid="uid://bsy26ksscs6lh" path="res://scripts/autoload/time_manager/time_component_manager.gd" id="1_ny2g8"]
-
-[node name="TimeComponentManager" type="Node"]
-script = ExtResource("1_ny2g8")
-
-[node name="Environment" type="CanvasModulate" parent="."]

@@ -18,7 +18,7 @@ config/features=PackedStringArray("4.5", "GL Compatibility")
 
 DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 BaseDialogueManager="*res://scripts/autoload/base_dialouge_manager/base_dialogue_manager.gd"
-TimeComponentManager="*res://scripts/autoload/time_manager/time_component_manager.tscn"
+TimeComponentManager="*res://scripts/autoload/time_component_manager/time_component_manager.tscn"
 
 [display]
 

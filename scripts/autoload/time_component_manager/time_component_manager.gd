@@ -1,7 +1,7 @@
 extends Node
 
-@export var seconds_per_minute: float = 0.01 # 1 detik real = 1 menit game
-@export var start_hour: int = 4
+@export var seconds_per_minute: float = 0.05 # 1 detik real = 1 menit game
+@export var start_hour: int = 5
 @export var start_day: int = 1
 
 var current_minute: int
@@ -18,9 +18,10 @@ var is_paused: bool = false
 
 var morning_hour: int = 5
 var afternoon_hour: int = 10
-var night_hour: int = 17
+var noon_hour: int = 17
+var night_hour: int = 19
 
-signal time_changed(day: int, hour: int, minute: int)
+signal time_changed(day: int, hour: int, minute: int, weather: String)
 signal minute_changed(minute: int)
 signal day_changed(day: int)
 signal hour_changed(hour: int)
@@ -28,6 +29,7 @@ signal new_day_started(day)
 signal weather_changed(weather: String)
 signal morning_shift
 signal afternoon_shift
+signal noon_shift
 signal night_shift
 
 @onready var environment: CanvasModulate = $Environment
@@ -42,7 +44,7 @@ func _ready() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	
+	# print(current_hour)
 	if is_paused: return
 	
 	_timer += delta
@@ -57,8 +59,8 @@ func emit_time_signal() -> void:
 	emit_signal("minute_changed", minute_per_hour)
 	emit_signal("hour_changed", hour_per_day)
 	emit_signal("day_changed", current_day)
+	emit_signal("weather_changed", current_weather)
 	#emit_signal("season_changed", season)
-	#emit_signal("weather_changed", current_weather)
 	#emit_signal("time_scale_changed", time_scale)
 
 func advance_one_minute() -> void:
@@ -71,11 +73,10 @@ func advance_one_minute() -> void:
 			current_day += 1
 			emit_signal("new_day_started", current_day)
 			emit_signal("day_changed", current_day)
-			print(current_weather)
 			on_new_day()
 		emit_signal("hour_changed", current_hour)
 		
-	emit_signal("time_changed", current_day, current_hour, current_minute)
+	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather)
 
 func on_new_day() -> void:
 	roll_daily_weather()
@@ -83,19 +84,21 @@ func on_new_day() -> void:
 
 func day_cycle() -> void:
 	var darkness: float = 0.0
-	if current_hour >= morning_hour and current_hour <= 7:
-		darkness = 1.0 - (current_hour - morning_hour + current_minute / 60.0) / 3.0
+	if current_hour >= morning_hour and current_hour < afternoon_hour:
+		darkness = 1.0 - (current_hour - morning_hour + current_minute / 60.0) / 5
 		emit_signal("morning_shift")
-	elif current_hour >= afternoon_hour and current_hour < 17:
-		darkness = (current_hour - afternoon_hour + current_minute / 60.0) / 6.0
-		print(darkness)
+	elif current_hour >= afternoon_hour and current_hour < noon_hour:
 		emit_signal("afternoon_shift")
-	elif current_hour >= 17 or current_hour < morning_hour:
+	elif current_hour >= noon_hour and current_hour < night_hour:
+		darkness = (current_hour - noon_hour + current_minute / 60.0) / 2
+		emit_signal("noon_shift")
+	elif current_hour >= night_hour or current_hour < morning_hour:
 		darkness = 1.0
 		emit_signal("night_shift")
 	else:
 		darkness = 0.0
-		
+	
+	# print("hour: ", current_hour, " darkness: ", darkness)
 	
 	var night_tint: Color = Color(0.15, 0.15, 0.3)
 	var day_tint: Color = Color(1.0, 1.0, 1.0)
