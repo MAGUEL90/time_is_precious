@@ -11,8 +11,6 @@ const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 @onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
 @onready var debug_npc_label: Label = $DebugNPCLabel
 
-
-
 var on_dialogue : bool = false
 var can_walk: bool = false
 var player_reff: Player
@@ -45,17 +43,18 @@ func _ready() -> void:
 	set_data_attribute()
 	_sync_shift_from_hour()
 	
-	TimeComponentManager.morning_shift.connect(on_morning_shift)
-	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift)
-	TimeComponentManager.noon_shift.connect(on_noon_shift)
-	TimeComponentManager.night_shift.connect(on_night_shift)
-	
 	interactable_label_component.hide()
-	player_reff = get_tree().get_first_node_in_group("player")
 	
+	player_reff = get_tree().get_first_node_in_group("player")
+
 	walk_cycle_duration.wait_time = randf_range(2.0, 3.5)
 	walk_cycle_duration.start()
 	
+	TimeComponentManager.morning_shift.connect(on_morning_shift) # shift harus jalan walau player belum ada
+	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift) # shift harus jalan walau player belum ada
+	TimeComponentManager.noon_shift.connect(on_noon_shift) # noon dianggap bagian “afternoon” supaya state tetap update
+	TimeComponentManager.night_shift.connect(on_night_shift) # shift harus jalan walau player belum ada
+
 	if player_reff:
 		# Connect signal dari InteractableComponent ke fungsi Player
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
@@ -64,19 +63,17 @@ func _ready() -> void:
 
 func _recalc_contract_state() -> void:
 	
-	var is_night: bool = false
-	
-	if current_shift == Shift.NIGHT:
-		is_night = true
-	
+	var is_night: bool = (current_shift == Shift.NIGHT)
+
 	npc_allow_contract = (not is_night and \
 	npc_current_satisfaction > 0.1 and \
-	TimeComponentManager.current_weather == "clear")
-	print("is_night: ", is_night)
-	print("npc_allow_contract: ", npc_allow_contract)
-
-
+	TimeComponentManager.current_weather in ["clear", "cloudy"])
 	
+	if OS.is_debug_build(): # batasi spam log hanya saat debug build
+		print("is_night: ", is_night) # info debug
+		print("npc_allow_contract: ", npc_allow_contract) # info debug
+
+
 func start_dialogue () -> void:
 	
 	if not npc_unique_dialogue :
