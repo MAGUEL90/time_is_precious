@@ -1,10 +1,10 @@
 extends Node
 
-@export var seconds_per_minute: float = 0.05 # 1 detik real = 1 menit game
-@export var start_hour: int = 4
+@export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
+@export var start_hour: int = 11
 @export var start_day: int = 1
 
-var current_minute: int
+var current_minute: int = 0
 var current_hour: int 
 var current_day: int
 var current_weather: String = "clear" 
@@ -41,7 +41,6 @@ var _last_shift: String = "" # menyimpan shift terakhir supaya signal shift tida
 func _ready() -> void:
 	current_hour = start_hour
 	current_day = start_day
-	current_minute = 0
 	roll_daily_weather()
 	emit_time_signal()
 	day_cycle()
@@ -80,7 +79,7 @@ func advance_one_minute() -> void:
 			emit_signal("day_changed", current_day)
 			on_new_day()
 		emit_signal("hour_changed", current_hour)
-		
+	emit_signal("minute_changed", current_minute)
 	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather)
 
 func on_new_day() -> void:
@@ -104,13 +103,6 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 	else:
 		darkness = 0.0
 	
-	var night_tint: Color = Color(0.15, 0.15, 0.3)
-	var day_tint: Color = Color(1.0, 1.0, 1.0)
-	var base_color: Color = day_tint.lerp(night_tint, darkness)
-	
-	if environment:
-		environment.color = base_color
-
 	if force_emit or new_shift != _last_shift: # emit hanya kalau shift berubah (hemat performa)
 		_last_shift = new_shift # simpan shift terakhir
 		match new_shift:
@@ -118,7 +110,62 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 			"afternoon": emit_signal("afternoon_shift") # signal shift siang
 			"noon": emit_signal("noon_shift") # signal shift sore
 			"night": emit_signal("night_shift") # signal shift malam
-		
+	
+	var night_tint: Color = Color(0.15, 0.15, 0.3)
+	var day_tint: Color = Color(1.0, 1.0, 1.0)
+	var afternoon_tint: Color = Color(1.0, 0.961, 0.427, 1.0)
+	var noon_tint: Color = Color(0.993, 0.312, 0.0, 1.0)
+	var base_color: Color = day_tint.lerp(night_tint, darkness)
+	
+	var warm_strength: float = 0.0
+	
+	if new_shift == "afternoon":
+		warm_strength = 0.18 # blend tipis agar sprite tetap natural
+	elif new_shift == "noon":
+		warm_strength = 0.25
+	
+	# cuaca buruk mengurangi efek hangat supaya tidak “aneh” saat storm/rainy
+	if current_weather == "storm":
+		warm_strength *= 0.10 # badai: hampir tidak ada hangat
+	elif current_weather == "rainy": 
+		warm_strength *= 0.35 # hujan: hangat berkurang banyak
+	elif current_weather == "cloudy":
+		warm_strength *= 0.60 # mendung: hangat agak berkurang
+	
+	if new_shift == "afternoon":
+		base_color = base_color.lerp(afternoon_tint, warm_strength) # apply hangat setelah disesuaikan cuaca
+	elif new_shift == "noon":
+		base_color = base_color.lerp(noon_tint, warm_strength) # apply hangat setelah disesuaikan cuaca
+	
+	# weather tint: menggeser mood keseluruhan (storm/rainy/cloudy)
+	var weather_tint: Color = Color(1.0, 1.0, 1.0) # default: clear (tidak mengubah)
+	var weather_strength: float = 0.0 # seberapa kuat weather tint
+	var weather_dim: float = 1.0 # pengali brightness (1.0 = tidak dim)
+	
+	match current_weather:
+		"storm":
+			weather_tint = Color(0.65, 0.70, 0.85) # dingin kebiruan-abu
+			weather_strength = 0.55 # cukup kuat
+			weather_dim = 0.72 # lebih gelap
+		"rainy":
+			weather_tint = Color(0.78, 0.82, 0.92) # dingin tipis
+			weather_strength = 0.30 # sedang
+			weather_dim = 0.85 # sedikit gelap
+		"storm":
+			weather_tint = Color(0.90, 0.92, 0.98) # netral-agak dingin
+			weather_strength = 0.18 # ringan
+			weather_dim = 0.93 # sedikit dim
+		"storm":
+			weather_strength = 0.0
+			weather_dim = 1.0
+	
+	base_color = base_color.lerp(weather_tint, weather_strength) # geser warna sesuai cuaca
+	base_color *= Color(weather_dim, weather_dim, weather_dim, 1.0) # redupkan brightness sesuai cuaca
+	
+	if environment:
+		environment.color = base_color
+	
+	print(base_color)
 
 func roll_daily_weather() -> void:
 	var roll: float = randf()
