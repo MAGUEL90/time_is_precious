@@ -1,12 +1,14 @@
 extends Node
 
 @export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
-@export var start_hour: int = 11
+@export var start_hour: int = 4
 @export var start_day: int = 1
+@export var tint_transition_minutes: float = 30.0 # durasi transisi tint (menit) agar tidak patah di batas jam
+@export var env_transition_speed: float = 12.0 # kecepatan transisi warna environment (lebih besar = lebih cepat)
 
 var current_minute: int = 0
-var current_hour: int 
-var current_day: int
+var current_hour: int = 0
+var current_day: int = 0
 var current_weather: String = "clear" 
 
 @export var weather_chance_storm: float = 0.05
@@ -41,7 +43,8 @@ var _last_shift: String = "" # menyimpan shift terakhir supaya signal shift tida
 func _ready() -> void:
 	current_hour = start_hour
 	current_day = start_day
-	roll_daily_weather()
+	current_weather = "clear"
+	#roll_daily_weather()
 	emit_time_signal()
 	day_cycle()
 
@@ -83,7 +86,7 @@ func advance_one_minute() -> void:
 	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather)
 
 func on_new_day() -> void:
-	roll_daily_weather()
+	# roll_daily_weather()
 	emit_signal("day_changed", current_day)
 
 func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emit shift pertama kali di _ready()
@@ -151,7 +154,7 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 			weather_tint = Color(0.78, 0.82, 0.92) # dingin tipis
 			weather_strength = 0.30 # sedang
 			weather_dim = 0.85 # sedikit gelap
-		"storm":
+		"cloudy":
 			weather_tint = Color(0.90, 0.92, 0.98) # netral-agak dingin
 			weather_strength = 0.18 # ringan
 			weather_dim = 0.93 # sedikit dim
@@ -165,7 +168,8 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 	if environment:
 		environment.color = base_color
 	
-	print(base_color)
+	print("current_hour: ", current_hour, " , ", "base_color: " ,base_color)
+	# print("warm_strength; ", warm_strength)
 
 func roll_daily_weather() -> void:
 	var roll: float = randf()
