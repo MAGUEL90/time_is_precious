@@ -1,8 +1,11 @@
 class_name NPCBase extends CharacterBody2D
 
+# CHATGPT MENEMUKAN NPCBASE DALAM KOTAK PANDORA
+
 const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 
 @export var npc_data: NPCData
+@export var npc_state: NPCState
 
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
@@ -17,9 +20,9 @@ var player_reff: Player
 
 # ============= ATTRIBUTES
 var npc_name: String
-var npc_class: String
+var npc_role: String
+var npc_id: String
 var npc_unique_dialogue : DialogueResource
-var npc_container: Dictionary = {}
 
 # ============= NPCPosition
 var npc_current_position: Vector2
@@ -135,11 +138,11 @@ func _sync_shift_from_hour() -> void:
 
 func set_data_attribute() -> void:
 	if npc_data:
-		npc_name = npc_data.name
-		npc_last_position = npc_data.last_position
-		npc_current_position = npc_data.current_position
+		npc_name = npc_data.npc_name
+		npc_last_position = npc_state.last_position
+		npc_current_position = npc_state.current_position
 		npc_unique_dialogue  = npc_data.unique_dialogue 
-		npc_current_satisfaction = npc_data.current_satisfaction
+		npc_current_satisfaction = npc_state.current_satisfaction
 
 func debug_npc() -> String:
 	debug_npc_label.text = "name: %s; allow_contract: %s" % [npc_name, npc_allow_contract] 

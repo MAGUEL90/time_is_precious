@@ -1,22 +1,23 @@
 class_name NPCData extends Resource
 
+# CHATGPT MENEMUKAN NPCDATA DALAM TEMPURUNG
+
+@export var npc_name: String
+@export var role: String
+@export var id: String
 @export var unique_dialogue : DialogueResource
 
-@export var name: String #
-var current_position: Vector2 # Simpan Posisi Terkini
-var last_position: Vector2 # Simpan Posisi Terakhir
-
 # ============= PARAM
-var min_limit_satisfaction: float = 0.0
-var max_limit_satisfaction: float = 1.0
-var initial_satisfaction: float
-@export var current_satisfaction: float
+@export var min_limit_satisfaction: float = 0.0
+@export var max_limit_satisfaction: float = 1.0
+@export var initial_satisfaction: float
 
 # ============= CONTRACT
-var work_duration_day: int
-var contract_difficult: float
-var contract_list: Array[String] = ["collecting", "searching", "gardening"]
-var allow_contract: bool = false
+@export var base_wage: float
+@export var work_duration_day: int
+@export var contract_difficult: float
+@export var contract_list: Array[String] = ["collecting", "searching", "gardening"]
+@export var allow_contract: bool = false
 
 var needs: Dictionary = {
 	"food": {"grade_A": 0.0, "grade_B": 0.0, "grade_C": 0.0, "grade_D": 0.0},

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="NPCStates" load_steps=2 format=3 uid="uid://bhhlkjt132l4a"]
+
+[ext_resource type="Script" uid="uid://ckqiyfg17w51d" path="res://resources/npc_states/npc_state.gd" id="1_c2wxe"]
+
+[resource]
+script = ExtResource("1_c2wxe")
+current_satisfaction = 0.3
+metadata/_custom_type_script = "uid://ckqiyfg17w51d"
