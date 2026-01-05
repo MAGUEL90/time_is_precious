@@ -1,7 +1,5 @@
 class_name NPCBase extends CharacterBody2D
 
-# CHATGPT MENEMUKAN NPCBASE DALAM KOTAK PANDORA
-
 const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 
 @export var npc_data: NPCData
@@ -18,21 +16,21 @@ var on_dialogue : bool = false
 var can_walk: bool = false
 var player_reff: Player
 
-# ============= ATTRIBUTES
+# ============= IDENTITY =============
 var npc_name: String
 var npc_role: String
 var npc_id: String
 var npc_unique_dialogue : DialogueResource
 
-# ============= NPCPosition
+# ============= Position =============
 var npc_current_position: Vector2
 var npc_last_position: Vector2
 
-# ============= PARAM
+# ============= SATISFACTION =============
 var npc_initial_satisfaction: float
 var npc_current_satisfaction: float
 
-# ============= CONTRACT
+# ============= WORK & CONTRACT =============
 var npc_allow_contract: bool = false
 var is_contract_activated: bool = false
 
@@ -63,7 +61,7 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 
-
+# INI HINT, BARIS KE BERAPA AKU?
 func _recalc_contract_state() -> void:
 	
 	var is_night: bool = (current_shift == Shift.NIGHT)
@@ -87,22 +85,22 @@ func start_dialogue () -> void:
 	
 	var title_list: Array = npc_unique_dialogue .get_titles()
 	var contract_founded: bool = false
-	var npc_state: Array = [self]
+	var npc_states: Array = [self]
 	
 	for title in title_list:
 		if title.begins_with("contract") and npc_allow_contract:
 			var contract_title = title
 			if npc_unique_dialogue .titles.has(contract_title):
-				balloon.start(npc_unique_dialogue , contract_title, npc_state)
+				balloon.start(npc_unique_dialogue , contract_title, npc_states)
 				contract_founded = true
 				break
 	
 	if not contract_founded:
 		var casual_title: String = "casual_%s" % npc_name.to_lower() + "_1"
 		if title_list.has(casual_title):
-			balloon.start(npc_unique_dialogue , casual_title, npc_state)
+			balloon.start(npc_unique_dialogue , casual_title, npc_states)
 		elif title_list.size() > 0:
-			balloon.start(npc_unique_dialogue , title_list[0], npc_state)
+			balloon.start(npc_unique_dialogue , title_list[0], npc_states)
 			
 
 func _on_walk_cycle_duration_timeout() -> void:
@@ -137,15 +135,61 @@ func _sync_shift_from_hour() -> void:
 
 
 func set_data_attribute() -> void:
-	if npc_data:
-		npc_name = npc_data.npc_name
-		npc_last_position = npc_state.last_position
-		npc_current_position = npc_state.current_position
-		npc_unique_dialogue  = npc_data.unique_dialogue 
-		npc_current_satisfaction = npc_state.current_satisfaction
+	if not npc_data: # NPCData wajib ada sebagai template
+		return # tanpa NPCData, NPC tidak punya identitas/template
+	
+	if not npc_state: # kalau state belum di-assign dari inspector
+		npc_state = npc_state.new() # buat state runtime baru supaya NPC tetap bisa jalan
+	
+	# pastikan state punya npc_id yang cocok untuk save/load
+	var state_id: String = npc_state.npc_id # aman walau field npc_id belum ada
+	if state_id == "" and npc_data.id != "": # kalau belum ada id, set dari NPCData
+		npc_state.set("npc_id", npc_data.id) # mapping state -> NPCData (kunci save/load)
+	
+	# ===== ambil identitas dari NPCData (template) =====
+	npc_name = npc_data.npc_name # nama tampil NPC dari template
+	npc_unique_dialogue = npc_data.unique_dialogue # dialog unik dari template
+	npc_initial_satisfaction = npc_data.initial_satisfaction # nilai awal dari template (dipakai untuk init state baru)
+	
+	# ===== init satisfaction state kalau belum ada / belum pernah diisi =====
+	var state_satisfaction: float = npc_state.current_satisfaction # aman walau belum @export / belum ada field
+	if state_satisfaction == null: # jika belum pernah di-set sama sekali
+		npc_state.set("current_satisfaction", npc_initial_satisfaction) # isi state pertama kali pakai nilai initial
+	
+	# clamp satisfaction supaya selalu dalam batas NPCData
+	var satisfaction_value: float = float(npc_state.current_satisfaction) # baca satisfaction dari state
+	if npc_data.has_method("clamp_satisfaction"): # jika kamu sudah pakai helper clamp_satisfaction di NPCData
+		satisfaction_value = npc_data.clamp_satisfaction(satisfaction_value) # jaga agar tidak keluar limit
+	else:
+		satisfaction_value = clamp(satisfaction_value, npc_data.min_limit_satisfaction, npc_data.max_limit_satisfaction)
+	npc_state.set("current_satisfaction", satisfaction_value) # simpan balik ke state agar konsisten
+	npc_current_satisfaction = satisfaction_value # pakai untuk logic runtime (allow_contract, dll)
+	
+	# ===== posisi: ambil dari state, fallback ke posisi node saat ini =====
+	var current_position: Vector2 = npc_state.current_position # aman walau field belum ada
+	if current_position == null: # jika state belum punya posisi valid
+		current_position = global_position # fallback: ambil posisi node di scene
+		npc_state.set("current_position", current_position) # simpan posisi awal ke state
+	
+	var last_position: Vector2 = npc_state.last_position # aman walau field belum ada
+	if last_position == null or not (last_position is Vector2): # jika state belum punya last_position valid
+		last_position = current_position # set sama dengan current sebagai default awal
+		npc_state.set("last_position", last_position) # simpan default ke state
+	
+	npc_current_position = current_position # cache runtime
+	npc_last_position = last_position # cache runtime
+	global_position = npc_current_position # tempatkan NPC sesuai state (penting untuk konsistensi load)
 
 func debug_npc() -> String:
-	debug_npc_label.text = "name: %s; allow_contract: %s" % [npc_name, npc_allow_contract] 
+	var trust_value = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
+	debug_npc_label.text = "name: %s \n;
+	allow_contract: %s \n;
+	satisfaction: %.2f \n;
+	trust: %.2f" % [
+	npc_name, 
+	npc_allow_contract, 
+	npc_current_satisfaction, 
+	float(trust_value)] 
 	return debug_npc_label.text
 
 func proceed_contract() -> void:
