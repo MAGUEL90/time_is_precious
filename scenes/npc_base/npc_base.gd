@@ -40,13 +40,17 @@ var is_clear_day: bool = false
 enum Shift { MORNING, AFTERNOON, NOON, NIGHT}
 var current_shift: Shift = Shift.MORNING
 
+@export var state_pos_sync_threshold: float = 0.5 # jarak minimal (pixel/unit) sebelum posisi disimpan ke state (biar tidak update terus tiap frame)
+@export_range(0.0, 1.0, 0.01) var daily_satisfaction_decay: float = 0.0 # (opsional) test decay per hari; default 0 agar tidak mengubah gameplay
+
 func _ready() -> void:
 	set_data_attribute()
 	_sync_shift_from_hour()
+	_sync_state_position(true) # pastikan state langsung sinkron dengan posisi awal saat spawn/load
 	
 	interactable_label_component.hide()
 	
-	player_reff = get_tree().get_first_node_in_group("player")
+	player_reff = get_tree().get_first_node_in_group("player") as Player
 
 	walk_cycle_duration.wait_time = randf_range(2.0, 3.5)
 	walk_cycle_duration.start()
@@ -55,13 +59,18 @@ func _ready() -> void:
 	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift) # shift harus jalan walau player belum ada
 	TimeComponentManager.noon_shift.connect(on_noon_shift) # noon dianggap bagian “afternoon” supaya state tetap update
 	TimeComponentManager.night_shift.connect(on_night_shift) # shift harus jalan walau player belum ada
-
+	TimeComponentManager.new_day_started.connect(on_new_day_started) # daily tick: update NPC sekali per hari
+	_recalc_contract_state()
+	
 	if player_reff:
 		# Connect signal dari InteractableComponent ke fungsi Player
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 
-# INI HINT, BARIS KE BERAPA AKU?
+func _physics_process(_delta: float) -> void:
+	debug_npc()
+	_sync_state_position(false) # setiap frame fisika, cek apakah NPC pindah; kalau iya, simpan ke npc_state
+
 func _recalc_contract_state() -> void:
 	
 	var is_night: bool = (current_shift == Shift.NIGHT)
@@ -74,8 +83,26 @@ func _recalc_contract_state() -> void:
 		print("is_night: ", is_night) # info debug
 		print("npc_allow_contract: ", npc_allow_contract) # info debug
 
+func _sync_state_position(force: bool):
+	if not npc_state:
+		return
+	
+	# force dipakai untuk kasus spawn/load/teleport (langsung sinkron tanpa threshold)
+	if force:
+		npc_state.last_position = npc_state.current_position # simpan posisi sebelumnya (kalau ada)
+		npc_state.current_position = global_position # posisi sekarang dari noded
+		npc_last_position = npc_state.last_position # cache untuk logic NPCBase
+		npc_current_position = npc_state.current_position # cache untuk logic NPCBase
+		return
+	
+	# normal mode: hanya update kalau benar-benar pindah cukup jauh
+	if global_position.distance_to(npc_state.current_position) >= state_pos_sync_threshold:
+		npc_state.last_position = npc_state.current_position # geser current -> last
+		npc_state.current_position = global_position # simpan posisi terbaru
+		npc_last_position = npc_state.last_position # cache untuk logic NPCBase
+		npc_current_position = npc_state.current_position # cache untuk logic NPCBase
 
-func start_dialogue () -> void:
+func start_dialogue() -> void:
 	
 	if not npc_unique_dialogue :
 		return
@@ -101,7 +128,6 @@ func start_dialogue () -> void:
 			balloon.start(npc_unique_dialogue , casual_title, npc_states)
 		elif title_list.size() > 0:
 			balloon.start(npc_unique_dialogue , title_list[0], npc_states)
-			
 
 func _on_walk_cycle_duration_timeout() -> void:
 	can_walk = true
@@ -122,6 +148,28 @@ func on_night_shift() -> void:
 	current_shift = Shift.NIGHT
 	call_deferred("_recalc_contract_state")
 
+func on_new_day_started(day: int) -> void: # memastikan daily update hanya sekali per hari
+	print("[NPC]", npc_name, "new_day_started: ", day)
+	if not npc_state or not npc_data: #safety
+		return
+	
+	if npc_state.last_updated_day == day: # sudah di-update untuk hari ini
+		return
+	
+	npc_state.last_updated_day = day # tandai agar tidak double
+	daily_update(day) # isi logic harian di sini
+
+func daily_update(day: int) -> void: # placeholder: nanti isi needs/contract progression, dll
+	print("[NPC]: ", npc_name, ", daily_update_day: ", day, ", satisfaction_before: ", npc_state.current_satisfaction)
+
+	if daily_satisfaction_decay > 0.0: # kalau mau test decay, set angka di inspector (mis. 0.02)
+		npc_state.current_satisfaction = npc_data.clamp_satisfaction(npc_state.current_satisfaction - daily_satisfaction_decay)
+		npc_current_satisfaction = npc_state.current_satisfaction # sync cache untuk logic NPCBase
+		call_deferred("_recalc_contract_state") # kontrak bisa berubah karena satisfaction berubah
+	
+	print("[NPC]: ", npc_name, ", satisfaction_after: ", npc_state.current_satisfaction)
+
+
 func _sync_shift_from_hour() -> void:
 	var hour: int = TimeComponentManager.current_hour
 	if hour >= TimeComponentManager.morning_hour and hour < TimeComponentManager.afternoon_hour:
@@ -133,63 +181,53 @@ func _sync_shift_from_hour() -> void:
 	elif hour >= TimeComponentManager.night_hour or hour < TimeComponentManager.morning_hour: 
 		current_shift = Shift.NIGHT
 
-
 func set_data_attribute() -> void:
 	if not npc_data: # NPCData wajib ada sebagai template
 		return # tanpa NPCData, NPC tidak punya identitas/template
 	
+	var state_was_created: bool = false # penanda: state baru dibuat di runtime (supaya kita tidak overwrite progress save)
 	if not npc_state: # kalau state belum di-assign dari inspector
-		npc_state = npc_state.new() # buat state runtime baru supaya NPC tetap bisa jalan
+		npc_state = NPCState.new() # buat state runtime baru supaya NPC tetap bisa jalan
+		state_was_created = true # tandai bahwa ini state baru
 	
 	# pastikan state punya npc_id yang cocok untuk save/load
-	var state_id: String = npc_state.npc_id # aman walau field npc_id belum ada
-	if state_id == "" and npc_data.id != "": # kalau belum ada id, set dari NPCData
-		npc_state.set("npc_id", npc_data.id) # mapping state -> NPCData (kunci save/load)
+	if npc_state.npc_id == "" and npc_data.id != "": # kalau belum ada id, set dari NPCData
+		npc_state.npc_id = npc_data.id # mapping state -> NPCData (kunci save/load)
 	
 	# ===== ambil identitas dari NPCData (template) =====
 	npc_name = npc_data.npc_name # nama tampil NPC dari template
+	npc_role = npc_data.role # role dari template (supaya siap dipakai di UI/logic)
+	npc_id = npc_data.id # id dari template (berguna buat debug dan mapping)
 	npc_unique_dialogue = npc_data.unique_dialogue # dialog unik dari template
 	npc_initial_satisfaction = npc_data.initial_satisfaction # nilai awal dari template (dipakai untuk init state baru)
-	
-	# ===== init satisfaction state kalau belum ada / belum pernah diisi =====
-	var state_satisfaction: float = npc_state.current_satisfaction # aman walau belum @export / belum ada field
-	if state_satisfaction == null: # jika belum pernah di-set sama sekali
-		npc_state.set("current_satisfaction", npc_initial_satisfaction) # isi state pertama kali pakai nilai initial
-	
+
+	# ===== init satisfaction hanya jika state baru dibuat (jangan overwrite state hasil load) =====
+	if state_was_created: # hanya set nilai awal jika state baru
+		npc_state.current_satisfaction = npc_initial_satisfaction # isi state pertama kali pakai nilai initial
+		npc_state.last_updated_day = TimeComponentManager.current_day # tandai hari terakhir update (supaya logic daily jelas sejak awal)
+
 	# clamp satisfaction supaya selalu dalam batas NPCData
-	var satisfaction_value: float = float(npc_state.current_satisfaction) # baca satisfaction dari state
-	if npc_data.has_method("clamp_satisfaction"): # jika kamu sudah pakai helper clamp_satisfaction di NPCData
-		satisfaction_value = npc_data.clamp_satisfaction(satisfaction_value) # jaga agar tidak keluar limit
-	else:
-		satisfaction_value = clamp(satisfaction_value, npc_data.min_limit_satisfaction, npc_data.max_limit_satisfaction)
-	npc_state.set("current_satisfaction", satisfaction_value) # simpan balik ke state agar konsisten
+	var satisfaction_value: float = npc_data.clamp_satisfaction(npc_state.current_satisfaction) # clamp selalu lewat helper NPCData
+	npc_state.current_satisfaction = satisfaction_value # simpan balik ke state agar konsisten
 	npc_current_satisfaction = satisfaction_value # pakai untuk logic runtime (allow_contract, dll)
 	
 	# ===== posisi: ambil dari state, fallback ke posisi node saat ini =====
-	var current_position: Vector2 = npc_state.current_position # aman walau field belum ada
-	if current_position == null: # jika state belum punya posisi valid
-		current_position = global_position # fallback: ambil posisi node di scene
-		npc_state.set("current_position", current_position) # simpan posisi awal ke state
+	if state_was_created: # posisi hanya di-init jika state baru (jangan override posisi hasil load)
+		npc_state.current_position = global_position # set posisi awal sesuai scene
+		npc_state.last_position = global_position # set last_position awal sama dengan current
 	
-	var last_position: Vector2 = npc_state.last_position # aman walau field belum ada
-	if last_position == null or not (last_position is Vector2): # jika state belum punya last_position valid
-		last_position = current_position # set sama dengan current sebagai default awal
-		npc_state.set("last_position", last_position) # simpan default ke state
-	
-	npc_current_position = current_position # cache runtime
-	npc_last_position = last_position # cache runtime
+	npc_current_position = npc_state.current_position # cache runtime
+	npc_last_position = npc_state.last_position # cache runtime
 	global_position = npc_current_position # tempatkan NPC sesuai state (penting untuk konsistensi load)
 
 func debug_npc() -> String:
-	var trust_value = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
-	debug_npc_label.text = "name: %s \n;
-	allow_contract: %s \n;
-	satisfaction: %.2f \n;
-	trust: %.2f" % [
+	var trust_value: float = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
+	debug_npc_label.text = "name: %s\nallow_contract: %s\nsatisfaction: %.2f\ntrust: %.2f" % [
 	npc_name, 
 	npc_allow_contract, 
 	npc_current_satisfaction, 
-	float(trust_value)] 
+	trust_value
+	]
 	return debug_npc_label.text
 
 func proceed_contract() -> void:

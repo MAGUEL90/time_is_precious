@@ -65,6 +65,7 @@ animations = [{
 script = ExtResource("2_r8fjs")
 npc_data = ExtResource("3_8eagj")
 npc_state = ExtResource("4_4vqfs")
+daily_satisfaction_decay = 0.02
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_pvjd6")

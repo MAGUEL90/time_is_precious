@@ -1,5 +1,5 @@
 class_name NPCState extends Resource
-# INI HINT, BARIS KE BERAPA AKU?
+
 @export var npc_id: String = "" # ID unik NPC untuk mapping save/load (harus sama dengan NPCData.id)
 @export var current_position: Vector2 = Vector2.ZERO # Simpan Posisi Terkini
 @export var last_position: Vector2 = Vector2.ZERO # Simpan Posisi Terakhir
