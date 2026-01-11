@@ -149,7 +149,6 @@ func on_night_shift() -> void:
 	call_deferred("_recalc_contract_state")
 
 func on_new_day_started(day: int) -> void: # memastikan daily update hanya sekali per hari
-	print("[NPC]", npc_name, "new_day_started: ", day)
 	if not npc_state or not npc_data: #safety
 		return
 	
@@ -159,15 +158,12 @@ func on_new_day_started(day: int) -> void: # memastikan daily update hanya sekal
 	npc_state.last_updated_day = day # tandai agar tidak double
 	daily_update(day) # isi logic harian di sini
 
-func daily_update(day: int) -> void: # placeholder: nanti isi needs/contract progression, dll
-	print("[NPC]: ", npc_name, ", daily_update_day: ", day, ", satisfaction_before: ", npc_state.current_satisfaction)
-
+func daily_update(_day: int) -> void: # placeholder: nanti isi needs/contract progression, dll
+	
 	if daily_satisfaction_decay > 0.0: # kalau mau test decay, set angka di inspector (mis. 0.02)
 		npc_state.current_satisfaction = npc_data.clamp_satisfaction(npc_state.current_satisfaction - daily_satisfaction_decay)
 		npc_current_satisfaction = npc_state.current_satisfaction # sync cache untuk logic NPCBase
 		call_deferred("_recalc_contract_state") # kontrak bisa berubah karena satisfaction berubah
-	
-	print("[NPC]: ", npc_name, ", satisfaction_after: ", npc_state.current_satisfaction)
 
 
 func _sync_shift_from_hour() -> void:
