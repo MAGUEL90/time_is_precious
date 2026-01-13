@@ -7,9 +7,11 @@ var durability_max: int = 1
 
 
 func consume(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	
+	durability = max(durability- amount, 0) # durability tidak boleh negatif
 	return amount
 
 func is_broken() -> bool:
-	return false
-
-# INI HINT, BARIS KE BERAPA AKU
+	return durability <= 0 # tool rusak kalau durability 0
