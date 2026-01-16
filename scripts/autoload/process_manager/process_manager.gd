@@ -44,7 +44,7 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 	
 	_tick(delta)
 
-func _tick(delta_minutes: float) -> void:
+func _tick(delta_minutes: int) -> void:
 	# 1) Progress semua batch yang sedang Running 
 	for station_id in stations.keys():
 		var st: StationState = stations[station_id]
@@ -85,18 +85,52 @@ func _try_auto_pull() -> void:
 			
 		var take_qty: int = min(batch_size, available)
 		if Inventory.remove_item(process_dt.input_item_id, take_qty):
-			_start_batch(process_dt, station_st, free_slot)
+			_start_batch(process_dt, take_qty, station_st, free_slot)
 
-func _start_batch(process_dt: ProcessData, station_st: StationState, slot_idx: int) -> void:
-	pass 
+func _start_batch(process_dt: ProcessData, qty: int, station_st: StationState, slot_idx: int) -> void:
+	var batch: ProcessBatch = ProcessBatch.new()
+	batch.batch_id = str(Time.get_ticks_usec())
+	batch.process_id = process_dt.process_id
+	batch.input_item_id = process_dt.input_item_id
+	batch.output_item_id = process_dt.output_item_id
+	batch.quantity = qty
+	batch.start_total_time_minutes = _last_total_minutes
+	batch.duration_minutes = _calc_duration(process_dt)
+	batch.progress_minutes = 0
+	batch.slot_index = slot_idx
+	batch.status = ProcessBatch.BatchStatus.RUNNING
+	
+	station_st.set_slot(slot_idx, batch)
 
-func _finalize_batch(st: StationState, slot_idx: int, batch: ProcessBatch) -> void:
-	pass
+func _calc_duration(process_dt: ProcessData) -> int:
+	var base: int = max(process_dt.base_duration_minutes, 1)
+	var multiplier: float = 1.0
+	
+	if process_dt.weather_speed_multiplier.has(current_weather_key):
+		multiplier = float(process_dt.weather_speed_multiplier[current_weather_key])  # 1.0 = normal, 1.4 = lebih lama, dst
+
+	return int(ceil(base * multiplier)) # mult > 1 berarti lebih lama
+
+func _finalize_batch(station_st: StationState, slot_idx: int, batch: ProcessBatch) -> void:
+	# failure chance (opsional)
+	var failed: bool = false
+	var process_dt: ProcessData = processes.get(batch.process_id, null)
+	if process_dt != null and process_dt.failure_chance_by_weather.has(current_weather_key):
+		var chance: float = float(process_dt.failure_chance_by_weather[current_weather_key])
+		if chance > 0.0 and randf() < chance:
+			failed = true
 		
+	if failed:
+		batch.status = ProcessBatch.BatchStatus.FAILED
+		# Untuk MVP: kalau gagal, input dianggap hilang (sudah di-consume).
+		# Kamu bisa ubah nanti: sebagian kembali, atau jadi item "cracked_brick".
+	else:
+		batch.status = ProcessBatch.BatchStatus.DONE
+		Inventory.add_item(batch.output_item_id, batch.quantity)
 		
+	station_st.clear_slot(slot_idx)
 		
-		
-		
+# INI HINT, BARIS KE BERAPA AKU?
 		
 		
 		
