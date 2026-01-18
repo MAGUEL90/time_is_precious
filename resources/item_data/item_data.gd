@@ -11,5 +11,3 @@ var icon: Texture2D
 @export var base_value_shekel: int = 0
 @export var category: ItemEnums.ItemCategory = ItemEnums.ItemCategory.MATERIAL
 @export var rarity: ItemEnums.Rarity = ItemEnums.Rarity.COMMON
-
-# INI HINT, BARIS KE BERAPA AKU

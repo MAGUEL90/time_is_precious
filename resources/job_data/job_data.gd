@@ -13,5 +13,3 @@ var required_tool_id: String = "" # Kosong jika tidak ada standard
 @export var min_satisfaction: float = 0
 
 var allowed_roles: Array[String] = []
-
-# INI HINT, BARIS KE BERAPA AKU

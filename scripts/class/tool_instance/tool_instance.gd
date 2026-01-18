@@ -15,3 +15,5 @@ func consume(amount: int) -> int:
 
 func is_broken() -> bool:
 	return durability <= 0 # tool rusak kalau durability 0
+
+# INI HINT, BARIS KE BERAPA AKU ?

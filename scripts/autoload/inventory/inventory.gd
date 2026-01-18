@@ -29,7 +29,7 @@ func remove_item(id: String, qty: int) -> bool:
 	return true
 	
 	
-	
+	# INI HINT, BARIS KE BERAPA AKU ?
 	
 	
 	

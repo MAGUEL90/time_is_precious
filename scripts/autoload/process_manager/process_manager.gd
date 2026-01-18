@@ -130,7 +130,7 @@ func _finalize_batch(station_st: StationState, slot_idx: int, batch: ProcessBatc
 		
 	station_st.clear_slot(slot_idx)
 		
-# INI HINT, BARIS KE BERAPA AKU?
+# INI HINT, BARIS KE BERAPA AKU ?
 		
 		
 		

@@ -28,7 +28,7 @@ func clear_slot(idx: int) -> void:
 	
 	slots[idx] = null
 
-
+# INI HINT, BARIS KE BERAPA AKU ?
 
 
 
