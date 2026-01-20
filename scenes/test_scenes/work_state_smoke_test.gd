@@ -7,8 +7,16 @@ func _ready() -> void:
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
 
 	_print_header()
+	
+	if not _check_nodes():
+		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager.")
+		return
+	
+	_setup_process_data()
+	_setup_job_and_inventory()
+	_run_simulation()
 
-func check_nodes() -> bool:
+func _check_nodes() -> bool:
 	var ok: bool = true
 	ok = ok and has_node("/root/Inventory")
 	ok = ok and has_node("/root/WorkManager")
@@ -39,5 +47,65 @@ func _setup_process_data() -> void:
 	if process_manager.has_method("register_process"):
 		process_manager.call("register_process", drying_process, true, 20) # auto-pull wet_mudbrick
 
+func _setup_job_and_inventory() -> void:
+	var inventory: Node = get_node("/root/Inventory")
+	
+	# Siapkan input agar job bisa start (contoh item)
+	# Kamu boleh ganti id item sesuai yang kamu pakai di project
+	if inventory.has_method("add_item"):
+		inventory.call("add_item", "clay_lump", 10)
+		inventory.call("add_item", "straw_bundle", 10)
+		inventory.call("add_item", "water_jar", 10)
+
+func _run_simulation() -> void:
+	var work_manager: Node = get_node("/root/WorkManager")
+	# var inventory: Node = get_node("/root/Inventory")
+	
+	# Buat JobData runtime (mudbrick making) untuk tes
+	var mudbrick_job: Resource = JobData.new()
+	mudbrick_job.job_id = "mudbrick_make"
+	mudbrick_job.display_name = "Mudbrick Making"
+	mudbrick_job.base_duration_minutes = 10 # durasi job 10 menit untuk test
+	mudbrick_job.inputs = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
+	mudbrick_job.outputs = {"wet_mudbrick": 60}  # output intermediate 60 bata basah
+
+	# Mulai job sebagai PLAYER
+	var order_id: String = ""
+	if work_manager.has_method("start_job"):
+		# worker_kind 0 diasumsikan PLAYER
+		order_id = str(work_manager.call("start_job", mudbrick_job, 0, "player"))
+	print("Start_order_id: ", order_id)
+		
+	# Simulasi waktu: panggil on_time_changed secara manual
+	_call_time(0, 8, 0)
+	_call_time(0, 8, 10)
+		
+	_print_inventory("After Job Done (expect wet_mudbrick = 60)")
+		
+	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
+	# Durasi drying 60 menit, jadi selesai di 09:10
+	
+	_call_time(0, 9, 10)
+	_print_inventory("After Drying Done (expect sun_dried_mudbrick = 60)")
+		
+func _call_time(day: int, hour: int, minute: int) -> void:
+	if has_node("/root/WorkManager"):
+		var work_manager: Node = get_node("/root/WorkManager")
+		if work_manager.has_method("on_time_changed"):
+			work_manager.call("on_time_changed", day, hour, minute)
+	
+	if has_node("/root/ProcessManager"):
+		var process_manager: Node = get_node("/root/ProcessManager")
+		if process_manager.has_method("on_time_changed"):
+			process_manager.call("on_time_changed", day, hour, minute)
+
+func _print_inventory(label: String) -> void:
+	var inventory: Node = get_node("/root/Inventory")
+	if inventory.has_variable("items"):
+		print("----", label, "----")
+		print(inventory.items)
+
 func _print_header() -> void:
-	pass
+	print("====================================")
+	print("WorkStateSmokeTest START")
+	print("====================================")

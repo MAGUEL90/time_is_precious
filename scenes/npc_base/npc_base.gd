@@ -79,9 +79,7 @@ func _recalc_contract_state() -> void:
 	npc_current_satisfaction > 0.1 and \
 	TimeComponentManager.current_weather in ["clear", "cloudy"])
 	
-	if OS.is_debug_build(): # batasi spam log hanya saat debug build
-		print("is_night: ", is_night) # info debug
-		print("npc_allow_contract: ", npc_allow_contract) # info debug
+	
 
 func _sync_state_position(force: bool):
 	if not npc_state:

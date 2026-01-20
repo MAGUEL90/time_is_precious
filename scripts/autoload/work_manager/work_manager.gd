@@ -10,13 +10,13 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 		_last_total_minutes = now_total
 		return
 		
-		var delta: int = now_total - _last_total_minutes
-		_last_total_minutes = now_total
+	var delta: int = now_total - _last_total_minutes
+	_last_total_minutes = now_total
 		
-		if delta <= 0:
-			return
+	if delta <= 0:
+		return
 		
-		_tick(now_total)
+	_tick(now_total)
 
 func start_job(job: JobData, worker_kind: int, worker_id: String, tool: ToolInstance = null) -> String:
 	
