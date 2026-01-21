@@ -42,7 +42,7 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 	if delta <= 0:
 		return
 	
-	_tick(delta)
+	_tick(now_total)
 
 func _tick(delta_minutes: int) -> void:
 	# 1) Progress semua batch yang sedang Running 

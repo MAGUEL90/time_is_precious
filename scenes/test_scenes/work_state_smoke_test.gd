@@ -2,7 +2,6 @@ class_name WorkStateSmokeTest extends Node2D
 
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
 
@@ -24,20 +23,21 @@ func _check_nodes() -> bool:
 	return ok
 
 func _setup_process_data() -> void:
-	var process_manager: Node = get_node("/root/ProcessManager")
+	var process_manager: ProcessManager = get_node("/root/ProcessManager")
 	
 	# Registrasi station kalau belum
 	if process_manager.has_method("register_station"):
 		process_manager.call("register_station", "drying_yard", 3)
 	
 	# Buat ProcessData secara runtime untuk tes
-	var drying_process: Resource = ProcessData.new()
+	var drying_process: ProcessData = ProcessData.new()
 	drying_process.process_id = "drying_mudbrick" # id proses
 	drying_process.display_name = "Drying Mudbrick" # tampilan nama
 	drying_process.input_item_id = "wet_mudbrick" # input
 	drying_process.output_item_id = "sun_dried_mudbrick" # output
 	drying_process.base_duration_minutes = 60 # dipercepat untuk test 60 menit
 	drying_process.required_station_id = "drying_yard" # butuh drying yard
+	
 	
 	# Cuaca mempengaruhi durasi (opsional)
 	if "weather_speed_multiplier" in drying_process:
@@ -48,7 +48,7 @@ func _setup_process_data() -> void:
 		process_manager.call("register_process", drying_process, true, 20) # auto-pull wet_mudbrick
 
 func _setup_job_and_inventory() -> void:
-	var inventory: Node = get_node("/root/Inventory")
+	var inventory: Inventory = get_node("/root/Inventory")
 	
 	# Siapkan input agar job bisa start (contoh item)
 	# Kamu boleh ganti id item sesuai yang kamu pakai di project
@@ -58,11 +58,11 @@ func _setup_job_and_inventory() -> void:
 		inventory.call("add_item", "water_jar", 10)
 
 func _run_simulation() -> void:
-	var work_manager: Node = get_node("/root/WorkManager")
+	var work_manager: WorkManager = get_node("/root/WorkManager")
 	# var inventory: Node = get_node("/root/Inventory")
 	
 	# Buat JobData runtime (mudbrick making) untuk tes
-	var mudbrick_job: Resource = JobData.new()
+	var mudbrick_job: JobData = JobData.new()
 	mudbrick_job.job_id = "mudbrick_make"
 	mudbrick_job.display_name = "Mudbrick Making"
 	mudbrick_job.base_duration_minutes = 10 # durasi job 10 menit untuk test
@@ -78,7 +78,7 @@ func _run_simulation() -> void:
 		
 	# Simulasi waktu: panggil on_time_changed secara manual
 	_call_time(0, 8, 0)
-	_call_time(0, 8, 10)
+	_call_time(0, 8, 30)
 		
 	_print_inventory("After Job Done (expect wet_mudbrick = 60)")
 		
@@ -90,18 +90,18 @@ func _run_simulation() -> void:
 		
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
-		var work_manager: Node = get_node("/root/WorkManager")
+		var work_manager: WorkManager = get_node("/root/WorkManager")
 		if work_manager.has_method("on_time_changed"):
 			work_manager.call("on_time_changed", day, hour, minute)
 	
 	if has_node("/root/ProcessManager"):
-		var process_manager: Node = get_node("/root/ProcessManager")
+		var process_manager: ProcessManager = get_node("/root/ProcessManager")
 		if process_manager.has_method("on_time_changed"):
 			process_manager.call("on_time_changed", day, hour, minute)
 
 func _print_inventory(label: String) -> void:
-	var inventory: Node = get_node("/root/Inventory")
-	if inventory.has_variable("items"):
+	var inventory: Inventory = get_node("/root/Inventory")
+	if inventory.items:
 		print("----", label, "----")
 		print(inventory.items)
 
