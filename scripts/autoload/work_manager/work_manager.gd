@@ -1,5 +1,11 @@
 extends Node
 
+# simpan storage sumber per order agar finalize konsisten
+var source_item_store_by_order_id: Dictionary[String, Node] = {} 
+# simpan storage tujuan per order agar output masuk workshop (bukan selalu inventory player)
+var output_item_store_by_order_id: Dictionary[String, Node] = {}
+# simpan biaya jasa untuk escrow output NPC
+var service_fee_by_order: Dictionary[String, int] = {}
 
 var active_orders: Dictionary[String, WorkOrder] = {}
 var _last_total_minutes: int = -1
@@ -18,17 +24,24 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 		
 	_tick(now_total)
 
-func start_job(job: JobData, worker_kind: int, worker_id: String, tool: ToolInstance = null) -> String:
+func start_job(
+	job: JobData, worker_kind: int, worker_id: String, 
+	tool: ToolInstance = null, source_item_store: Node = Inventory,
+	output_item_store: Node = Inventory, service_fee_shekel: int = 0) -> String:
+	# tambah argumen storage agar bisa pakai WorkshopStorage
 	
-	# 1) cek & consume inputs
-	for item_id in job.inputs.keys():
-		var need: int = int(job.inputs[item_id])
-		if not Inventory.has_item(item_id, need):
-			return "" # Input Kurang
+	# fallback aman bila caller lupa mengirim storage
+	if source_item_store == null:
+		source_item_store = Inventory 
+	if output_item_store == null:
+		output_item_store = Inventory
 	
-	for item_id in job.inputs.keys():
-		var need: int = int(job.inputs[item_id])
-		Inventory.remove_item(item_id, need)
+	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
+		if not bool(source_item_store.call("has_item", item_identifier, int(job.inputs[item_identifier]))): # cek input di storage sumber (workshop atau inventory)
+			return "" # batal start bila input tidak cukup di storage sumber
+	
+	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
+		source_item_store.call("remove_item", item_identifier, int(job.inputs[item_identifier])) # consume input dari storage sumber (workshop atau inventory)
 	
 	# 2) tool durability (kalau ada)
 	if tool != null and job.required_tool_id != "":
@@ -74,5 +87,3 @@ func _finalize_order(order_id: String, order: WorkOrder) -> void:
 	
 	order.current_status = WorkOrder.Status.DONE
 	active_orders.erase(order_id)
-
-# INI HINT, BARIS KE BERAPA AKU ?

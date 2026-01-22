@@ -1,8 +1,10 @@
 class_name WorkStateSmokeTest extends Node2D
 
+var my_dict: Dictionary = {"usia": 20}
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
+	
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
 
 	_print_header()
