@@ -12,6 +12,3 @@ var duration_minutes: int = 0
 var slot_index: int = -1
 var progress_minutes: int = 0
 var status: int = BatchStatus.QUEUE
-
-
-# INI HINT, BARIS KE BERAPA AKU ?

@@ -27,7 +27,7 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 func start_job(
 	job: JobData, worker_kind: int, worker_id: String, 
 	tool: ToolInstance = null, source_item_store: Node = Inventory,
-	output_item_store: Node = Inventory, service_fee_shekel: int = 0) -> String:
+	output_item_store: Node = Inventory, _service_fee_shekel: int = 0) -> String:
 	# tambah argumen storage agar bisa pakai WorkshopStorage
 	
 	# fallback aman bila caller lupa mengirim storage
