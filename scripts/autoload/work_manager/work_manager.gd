@@ -12,7 +12,7 @@ var _last_total_minutes: int = -1
 
 func on_time_changed(day: int, hour: int, minute: int) -> void:
 	var now_total: int = (day * 24 * 60) + (hour * 60) + minute
-	if _last_total_minutes <= 0:
+	if _last_total_minutes < 0:
 		_last_total_minutes = now_total
 		return
 		
@@ -27,14 +27,19 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 func start_job(
 	job: JobData, worker_kind: int, worker_id: String, 
 	tool: ToolInstance = null, source_item_store: Node = Inventory,
-	output_item_store: Node = Inventory, _service_fee_shekel: int = 0) -> String:
+	output_item_store: Node = null, _service_fee_shekel: int = 0) -> String:
 	# tambah argumen storage agar bisa pakai WorkshopStorage
 	
 	# fallback aman bila caller lupa mengirim storage
 	if source_item_store == null:
 		source_item_store = Inventory 
 	if output_item_store == null:
-		output_item_store = Inventory
+		# default output diarahkan ke workshop bila ada (sesuai konsep terbaru) 
+		# output tidak langsung ke Inventory player
+		if has_node("/root/WorkShopStorage"):
+			output_item_store = get_node("/root/WorkShopStorage") # pakai workshop sebagai tujuan output
+		else:
+			output_item_store = Inventory # fallback kalau workshop belum ada
 	
 	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
 		if not bool(source_item_store.call("has_item", item_identifier, int(job.inputs[item_identifier]))): # cek input di storage sumber (workshop atau inventory)
@@ -57,13 +62,19 @@ func start_job(
 	
 	var start_total: int = _last_total_minutes if _last_total_minutes >= 0 else 0
 	order.start_time_total_minutes = start_total
-	order.end_time_total_minutes = start_total + max (job.base_duration_minutes, 1)
+	order.end_time_total_minutes = start_total + max(job.base_duration_minutes, 1)
 	
 	order.inputs_snapshot = job.inputs.duplicate(true)
 	order.outputs_snapshot = job.outputs.duplicate(true)
 	order.current_status = WorkOrder.Status.RUNNING
 	
 	active_orders[order.order_id] = order
+	# simpan mapping storage per order agar finalize konsisten 
+	# penting untuk workshop escrow
+	source_item_store_by_order_id[order.order_id] = source_item_store # storage sumber
+	output_item_store_by_order_id[order.order_id] = output_item_store # storage tujuan 
+	service_fee_by_order[order.order_id] = max(_service_fee_shekel, 0) # biaya jasa per order
+	
 	return order.order_id
 
 func _tick(now_total_minutes: int) -> void:
@@ -76,14 +87,45 @@ func _tick(now_total_minutes: int) -> void:
 			_finalize_order(order_id, order)
 
 func _finalize_order(order_id: String, order: WorkOrder) -> void:
-	# Untuk MVP: output langsung masuk inventory
-	# Waste rate: output dikurangi (opsional)
 	var job_outputs: Dictionary = order.outputs_snapshot
-	for item_id in job_outputs.keys():
-		var qty: int = int(job_outputs[item_id])
-		
-		# waste rate kalau kamu mau pakai (butuh ambil JobData lagi dari DB)
-		Inventory.add_item(item_id, qty)
+	# ambil tujuan output
+	var output_store: Node = output_item_store_by_order_id.get(order_id, Inventory)
+	# ambil biaya jasa
+	var fee: int = service_fee_by_order.get(order_id, 0)
+	
+	# 1) masuk ke storage tujuan (workshop/inventory) # sesuai konsep terbaru
+	if output_store != null and output_store.has_method("add_bulk_item"):
+		output_store.call("add_bulk_item", job_outputs.duplicate(true))
+	else:
+		for item_id in job_outputs.keys():
+			if output_store != null and output_store.has_method("add_item"): # add satuan (Inventory/Workshop sama-sama ada)
+				output_store.call("add_item", item_id, int(job_outputs[item_id]))
+			else:
+				Inventory.add_item(item_id, int(job_outputs[item_id]))
+	
+	# 2) catat sebagai claimable (kalau workshop support) # untuk sistem tebus nantinya
+	if output_store != null and output_store.has_method("add_claimable_output"):
+		output_store.call(
+			"add_claimable_output",
+			job_outputs.duplicate(true), # output siap di-claim
+			fee, # biaya jasa
+			order.worker_id, # siapa pekerjanya
+			order.end_time_total_minutes, # selesai kapan
+			-1 # belum kadaluarsa
+		)
 	
 	order.current_status = WorkOrder.Status.DONE
 	active_orders.erase(order_id)
+
+	# cleanup mapping agar tidak numpuk # penting untuk runtime panjang
+	source_item_store_by_order_id.erase(order_id) # hapus sumber
+	output_item_store_by_order_id.erase(order_id) # hapus tujuan
+	service_fee_by_order.erase(order_id) # hapus fee
+	
+	
+	
+	
+	
+	
+	
+	

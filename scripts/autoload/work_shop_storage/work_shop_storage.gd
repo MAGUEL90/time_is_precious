@@ -1,4 +1,4 @@
-class_name WorkShopStorage extends Node
+extends Node
 
 var items: Dictionary[String, int] = {} # stok item milik workshop (bukan inventory player)
 var claimable_outputs: Array[Dictionary] = [] # daftar output yang harus di-claim (escrow)
