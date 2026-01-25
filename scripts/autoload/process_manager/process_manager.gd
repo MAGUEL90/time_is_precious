@@ -15,6 +15,16 @@ var _last_total_minutes: int = -1
 # Auto-pull config: process_id -> batch_size
 var _auto_pull_batch_size: Dictionary[String, int] = {}
 
+# storage sumber & tujuan proses (default Inventory) # supaya bisa pakai WorkshopStorage
+var source_item_store: Node = Inventory # tempat ambil input auto-pull
+var output_item_store: Node = Inventory # tempat taruh output proses
+
+func set_source_item_store(store: Node) -> void:
+	source_item_store = store if store != null else Inventory # fallback aman
+	
+func set_output_item_store(store: Node) -> void:
+	output_item_store = store if store != null else Inventory
+
 func set_weather_key(weather_key: String) -> void:
 	current_weather_key = weather_key
 
@@ -42,7 +52,7 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 	if delta <= 0:
 		return
 	
-	_tick(now_total)
+	_tick(delta)
 
 func _tick(delta_minutes: int) -> void:
 	# 1) Progress semua batch yang sedang Running 
@@ -79,12 +89,14 @@ func _try_auto_pull() -> void:
 			continue
 		
 		var batch_size: int = _auto_pull_batch_size[process_id]
-		var available: int = Inventory.items.get(process_dt.input_item_id, 0)
+		var store_items: Dictionary = source_item_store.get("items") if source_item_store != null else {} # ambil dict items dari store
+		var available: int = int(store_items.get(process_dt.input_item_id, 0)) # stok dari storage sumber
+		
 		if available <= 0:
 			continue
 			
 		var take_qty: int = min(batch_size, available)
-		if Inventory.remove_item(process_dt.input_item_id, take_qty):
+		if bool(source_item_store.call("remove_item", process_dt.input_item_id, take_qty)): # consume dari storage sumber
 			_start_batch(process_dt, take_qty, station_st, free_slot)
 
 func _start_batch(process_dt: ProcessData, qty: int, station_st: StationState, slot_idx: int) -> void:
@@ -126,7 +138,11 @@ func _finalize_batch(station_st: StationState, slot_idx: int, batch: ProcessBatc
 		# Kamu bisa ubah nanti: sebagian kembali, atau jadi item "cracked_brick".
 	else:
 		batch.status = ProcessBatch.BatchStatus.DONE
-		Inventory.add_item(batch.output_item_id, batch.quantity)
+		# output proses masuk ke storage tujuan (workshop/inventory) # sesuai konsep workshop inventory
+		if output_item_store != null and output_item_store.has_method("add_item"):
+			output_item_store.call("add_item", batch.output_item_id, batch.quantity)
+		else:
+			Inventory.add_item(batch.output_item_id, batch.quantity) # fallback aman
 		
 	station_st.clear_slot(slot_idx)
 		
