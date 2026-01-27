@@ -1,6 +1,5 @@
 class_name WorkStateSmokeTest extends Node2D
 
-var my_dict: Dictionary = {"usia": 20}
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
@@ -10,7 +9,7 @@ func _ready() -> void:
 	_print_header()
 	
 	if not _check_nodes():
-		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager.")
+		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager, WorkShopStorage.")
 		return
 	
 	_setup_process_data()
@@ -22,10 +21,12 @@ func _check_nodes() -> bool:
 	ok = ok and has_node("/root/Inventory")
 	ok = ok and has_node("/root/WorkManager")
 	ok = ok and has_node("/root/ProcessManager")
+	ok = ok and has_node("/root/WorkShopStorage")
 	return ok
 
 func _setup_process_data() -> void:
 	var process_manager: ProcessManager = get_node("/root/ProcessManager")
+	var workshop_storage: WorkShopStorage = get_node("/root/WorkShopStorage")
 	
 	# Registrasi station kalau belum
 	if process_manager.has_method("register_station"):
@@ -40,14 +41,17 @@ func _setup_process_data() -> void:
 	drying_process.base_duration_minutes = 60 # dipercepat untuk test 60 menit
 	drying_process.required_station_id = "drying_yard" # butuh drying yard
 	
-	
 	# Cuaca mempengaruhi durasi (opsional)
-	if "weather_speed_multiplier" in drying_process:
-		drying_process.weather_speed_multiplier = {"clear": 1.0, "cloudy": 1.2, "storm": 2.0}
+	drying_process.weather_speed_multiplier = {"clear": 1.0, "cloudy": 1.2, "storm": 2.0}
 	
 	# Daftarkan proses, auto-pull ON, batch size 20
 	if process_manager.has_method("register_process"):
 		process_manager.call("register_process", drying_process, true, 20) # auto-pull wet_mudbrick
+	# penting: auto-pull harus melihat wet_mudbrick di workshop, bukan di inventory player
+	if process_manager.has_method("set_source_item_store"):
+		process_manager.call("set_source_item_store", workshop_storage)
+	if process_manager.has_method("set_output_item_store"):
+		process_manager.call("set_output_item_store", workshop_storage)
 
 func _setup_job_and_inventory() -> void:
 	var inventory: Inventory = get_node("/root/Inventory")
@@ -80,16 +84,18 @@ func _run_simulation() -> void:
 		
 	# Simulasi waktu: panggil on_time_changed secara manual
 	_call_time(0, 8, 0)
-	_call_time(0, 8, 30)
-		
-	_print_inventory("After Job Done (expect wet_mudbrick = 60)")
-		
+	_call_time(0, 8, 10)
+	
+	_print_workshop("After Job Done (expect workshop wet_mudbrick = 60)") # cek workshop, bukan inventory
+	_print_inventory("After Job Done (inventory should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
+	
 	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
 	# Durasi drying 60 menit, jadi selesai di 09:10
 	
 	_call_time(0, 9, 10)
-	_print_inventory("After Drying Done (expect sun_dried_mudbrick = 60)")
-		
+	_print_workshop("After Drying Done (expect workshop sun_dried_mudbrick = 60)") # output proses juga masuk workshop
+	_print_inventory("After Drying Done (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
+ 
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
 		var work_manager: WorkManager = get_node("/root/WorkManager")
@@ -106,6 +112,26 @@ func _print_inventory(label: String) -> void:
 	if inventory.items:
 		print("----", label, "----")
 		print(inventory.items)
+	#print("----", label, "----") # print selalu supaya kelihatan walau kosong
+	#print(inventory.items) # tampilkan dict inventory
+
+func _print_workshop(label: String) -> void:
+	# print isi workshop storage untuk memastikan output masuk ke sini 
+	# debug utama pemisahan inventory vs workshop
+	if not has_node("/root/WorkShopStorage"):
+		print("----", label, "----")
+		print("WorkShopStorage tidak ditemukan di /root (pastikan sudah Autoload & namanya benar).") # info error yang jelas
+		return
+	
+	var workshop: Node = get_node("/root/WorkShopStorage") # ambil autoload workshop
+	var workshop_items: Dictionary = workshop.get("items") if workshop != null else {} # ambil dict items workshop
+	print("----", label, "----")
+	print("Workshop items: ", workshop_items) # tampilkan stok workshop
+	var claimables: Array = workshop.get("claimable_outputs") if workshop != null else [] # ambil escrow list
+	print("Claimable outputs count: ", claimables.size()) # jumlah output yang bisa ditebus
+	if claimables.size() > 0:
+		print("Claimable[0]: ", claimables[0]) # tampilkan 1 contoh agar kelihatan fee + items
+
 
 func _print_header() -> void:
 	print("====================================")

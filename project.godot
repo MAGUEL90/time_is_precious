@@ -20,8 +20,9 @@ DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 BaseDialogueManager="*res://scripts/autoload/base_dialouge_manager/base_dialogue_manager.gd"
 TimeComponentManager="*res://scripts/autoload/time_component_manager/time_component_manager.tscn"
 Inventory="*res://scripts/autoload/inventory/inventory.gd"
-ProcessManager="*res://scripts/autoload/process_manager/process_manager.gd"
+WorkShopStorage="*res://scripts/autoload/work_shop_storage/work_shop_storage.gd"
 WorkManager="*res://scripts/autoload/work_manager/work_manager.gd"
+ProcessManager="*res://scripts/autoload/process_manager/process_manager.gd"
 
 [display]
 

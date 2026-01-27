@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://beab8w4gsj112"]
+
+[ext_resource type="Script" uid="uid://gx2m6146xkke" path="res://scenes/work_state_boot_strap/work_state_boot_strap.gd" id="1_pvwxo"]
+
+[node name="WorkStateBootStrap" type="Node2D"]
+script = ExtResource("1_pvwxo")
