@@ -8,6 +8,11 @@ func _ready() -> void:
 
 	_print_header()
 	
+	if has_node("/root/TimeComponentManager"):
+		var time_component_manager: Node = get_node("/root/TimeComponentManager")
+		if time_component_manager.has_method("toggle_pause"):
+			time_component_manager.call("toggle_pause")
+	
 	if not _check_nodes():
 		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager, WorkShopStorage.")
 		return
@@ -15,6 +20,11 @@ func _ready() -> void:
 	_setup_process_data()
 	_setup_job_and_inventory()
 	_run_simulation()
+	
+	if has_node("/root/TimeComponentManager"):
+		var time_component_manager: Node = get_node("/root/TimeComponentManager")
+		if time_component_manager.has_method("toggle_pause"):
+			time_component_manager.call("toggle_pause")
 
 func _check_nodes() -> bool:
 	var ok: bool = true
@@ -86,15 +96,15 @@ func _run_simulation() -> void:
 	_call_time(0, 8, 0)
 	_call_time(0, 8, 10)
 	
-	_print_workshop("After Job Done (expect workshop wet_mudbrick = 60)") # cek workshop, bukan inventory
-	_print_inventory("After Job Done (inventory should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
+	_print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
+	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
 	
 	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
 	# Durasi drying 60 menit, jadi selesai di 09:10
 	
 	_call_time(0, 9, 10)
-	_print_workshop("After Drying Done (expect workshop sun_dried_mudbrick = 60)") # output proses juga masuk workshop
-	_print_inventory("After Drying Done (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
+	_print_workshop("WorkShop Storage After Drying Done (expect workshop sun_dried_mudbrick = 60)") # output proses juga masuk workshop
+	_print_inventory("Inventory After Drying Done (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
  
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
@@ -123,11 +133,11 @@ func _print_workshop(label: String) -> void:
 		print("WorkShopStorage tidak ditemukan di /root (pastikan sudah Autoload & namanya benar).") # info error yang jelas
 		return
 	
-	var workshop: Node = get_node("/root/WorkShopStorage") # ambil autoload workshop
-	var workshop_items: Dictionary = workshop.get("items") if workshop != null else {} # ambil dict items workshop
+	var workshop_storage: Node = get_node("/root/WorkShopStorage") # ambil autoload workshop
+	var workshop_items: Dictionary = workshop_storage.get("items") if workshop_storage != null else {} # ambil dict items workshop
 	print("----", label, "----")
-	print("Workshop items: ", workshop_items) # tampilkan stok workshop
-	var claimables: Array = workshop.get("claimable_outputs") if workshop != null else [] # ambil escrow list
+	print("Workshop_storage items: ", workshop_items) # tampilkan stok workshop
+	var claimables: Array = workshop_storage.get("claimable_outputs") if workshop_storage != null else [] # ambil escrow list
 	print("Claimable outputs count: ", claimables.size()) # jumlah output yang bisa ditebus
 	if claimables.size() > 0:
 		print("Claimable[0]: ", claimables[0]) # tampilkan 1 contoh agar kelihatan fee + items
