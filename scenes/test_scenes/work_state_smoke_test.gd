@@ -103,9 +103,17 @@ func _run_simulation() -> void:
 	# Durasi drying 60 menit, jadi selesai di 09:10
 	
 	_call_time(0, 9, 10)
-	_print_workshop("WorkShop Storage After Drying Done (expect workshop sun_dried_mudbrick = 60)") # output proses juga masuk workshop
-	_print_inventory("Inventory After Drying Done (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
- 
+	_print_workshop("After Drying Tick 1 (09:10) - expect sun_dried_mudbrick = 20, wet_mudbrick = 20 (and 20 in progress)") # output proses juga masuk workshop
+	_print_inventory("After Drying Tick 1 (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
+
+	_call_time(0, 10, 10)
+	_print_workshop("After Drying Tick 2 (10:10) - expect sun_dried_mudbrick = 40, wet_mudbrick = 0 (and 20 in progress)")
+	_print_inventory("After Drying Tick 2 (inventory should NOT receive sun_dried_mudbrick)")
+
+	_call_time(0, 11, 10)
+	_print_workshop("After Drying Tick 3 (11:10) - expect sun_dried_mudbrick = 60, wet_mudbrick = 0")
+	_print_inventory("After Drying Tick 3 (inventory should NOT receive sun_dried_mudbrick)")
+
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
 		var work_manager: WorkManager = get_node("/root/WorkManager")

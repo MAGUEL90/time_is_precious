@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="time_is_precious"
-run/main_scene="uid://belvdvnje0on2"
+run/main_scene="uid://bpbtoaixxnfk0"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [autoload]

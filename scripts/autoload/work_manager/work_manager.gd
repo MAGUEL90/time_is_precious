@@ -84,35 +84,41 @@ func _tick(now_total_minutes: int) -> void:
 			continue
 		
 		if now_total_minutes >= order.end_time_total_minutes:
-			_finalize_order(order_id, order)
+			_finalize_order(order_id, order, now_total_minutes)
 
-func _finalize_order(order_id: String, order: WorkOrder) -> void:
+func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int) -> void:
 	var job_outputs: Dictionary = order.outputs_snapshot
 	# ambil tujuan output
 	var output_store: Node = output_item_store_by_order_id.get(order_id, Inventory)
 	# ambil biaya jasa
 	var fee: int = service_fee_by_order.get(order_id, 0)
+	var is_player_worker: bool = (order.worker_kind == WorkOrder.Worker_Type.PLAYER)
 	
-	# 1) masuk ke storage tujuan (workshop/inventory) # sesuai konsep terbaru
-	if output_store != null and output_store.has_method("add_bulk_item"):
-		output_store.call("add_bulk_item", job_outputs.duplicate(true))
+	# PLAYER (tanpa biaya jasa): output langsung masuk ke storage tujuan, tidak membuat claimable
+	if is_player_worker and fee <= 0:
+		if output_store != null and output_store.has_method("add_bulk_item"):
+			output_store.call("add_bulk_item", job_outputs.duplicate(true))
+		else:
+			for item_id in job_outputs.keys():
+				if output_store != null and output_store.has_method("add_item"):
+					output_store.call("add_item", item_id, int(job_outputs[item_id]))
+				else:
+					Inventory.add_item(item_id, int(job_outputs[item_id]))
+	# NPC atau ada biaya jasa: output masuk claimable (escrow), tidak masuk items dulu
 	else:
-		for item_id in job_outputs.keys():
-			if output_store != null and output_store.has_method("add_item"): # add satuan (Inventory/Workshop sama-sama ada)
-				output_store.call("add_item", item_id, int(job_outputs[item_id]))
-			else:
+		if output_store != null and output_store.has_method("add_claimable_output"):
+			output_store.call(
+				"add_claimable_output",
+				job_outputs.duplicate(true),
+				fee,
+				order.worker_id,
+				now_total_minutes,
+				-1
+			)
+		else:
+			# fallback aman kalau output_store tidak mendukung claimable
+			for item_id in job_outputs.keys():
 				Inventory.add_item(item_id, int(job_outputs[item_id]))
-	
-	# 2) catat sebagai claimable (kalau workshop support) # untuk sistem tebus nantinya
-	if output_store != null and output_store.has_method("add_claimable_output"):
-		output_store.call(
-			"add_claimable_output",
-			job_outputs.duplicate(true), # output siap di-claim
-			fee, # biaya jasa
-			order.worker_id, # siapa pekerjanya
-			order.end_time_total_minutes, # selesai kapan
-			-1 # belum kadaluarsa
-		)
 	
 	order.current_status = WorkOrder.Status.DONE
 	active_orders.erase(order_id)
