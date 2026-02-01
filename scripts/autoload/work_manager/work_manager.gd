@@ -94,8 +94,14 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	var fee: int = service_fee_by_order.get(order_id, 0)
 	var is_player_worker: bool = (order.worker_kind == WorkOrder.Worker_Type.PLAYER)
 	
-	# PLAYER (tanpa biaya jasa): output langsung masuk ke storage tujuan, tidak membuat claimable
-	if is_player_worker and fee <= 0:
+	# =============================
+	# RULE BARU (2026.02.01):
+	# PLAYER  -> langsung masuk inventory tujuan, tanpa claimable
+	# NPC     -> escrow murni: masuk claimable saja (belum masuk inventory tujuan)
+	# =============================
+	
+	if is_player_worker:
+		# PLAYER: output langsung masuk inventory tujuan
 		if output_store != null and output_store.has_method("add_bulk_item"):
 			output_store.call("add_bulk_item", job_outputs.duplicate(true))
 		else:
@@ -104,8 +110,8 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 					output_store.call("add_item", item_id, int(job_outputs[item_id]))
 				else:
 					Inventory.add_item(item_id, int(job_outputs[item_id]))
-	# NPC atau ada biaya jasa: output masuk claimable (escrow), tidak masuk items dulu
 	else:
+		# NPC: escrow murni -> claimable saja
 		if output_store != null and output_store.has_method("add_claimable_output"):
 			output_store.call(
 				"add_claimable_output",
@@ -116,10 +122,13 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 				-1
 			)
 		else:
-			# fallback aman kalau output_store tidak mendukung claimable
+			# fallback aman: kalau output_store tidak punya claimable, baru kita masukkan langsung
 			for item_id in job_outputs.keys():
-				Inventory.add_item(item_id, int(job_outputs[item_id]))
-	
+				if output_store != null and output_store.has_method("add_item"):
+					output_store.call("add_item", item_id, int(job_outputs[item_id]))
+				else:
+					Inventory.add_item(item_id, int(job_outputs[item_id]))
+					
 	order.current_status = WorkOrder.Status.DONE
 	active_orders.erase(order_id)
 
@@ -127,11 +136,3 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	source_item_store_by_order_id.erase(order_id) # hapus sumber
 	output_item_store_by_order_id.erase(order_id) # hapus tujuan
 	service_fee_by_order.erase(order_id) # hapus fee
-	
-	
-	
-	
-	
-	
-	
-	

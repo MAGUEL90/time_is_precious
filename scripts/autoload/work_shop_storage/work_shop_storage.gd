@@ -3,6 +3,8 @@ extends Node
 var items: Dictionary[String, int] = {} # stok item milik workshop (bukan inventory player)
 var claimable_outputs: Array[Dictionary] = [] # daftar output yang harus di-claim (escrow)
 
+var player_is_in_claim_area: bool = false # true jika player sedang berada di area workshop untuk claim
+
 func has_item(item_identifier: String, quantity: int) -> bool:
 	if quantity <= 0:
 		return true # qty 0 dianggap cukup agar aman untuk edge-case
@@ -48,10 +50,26 @@ func add_claimable_output(
 			"expires_total_minutes": expires_total_minutes # -1 = tidak kadaluarsa dulu
 		}
 	)
+
+func set_player_in_claim_area(is_inside: bool) -> void:
+	player_is_in_claim_area = is_inside
+
+func claim_output(claimable_index: int) -> bool:
+	# Claim hanya boleh kalau player sedang di area workshop
+	if not player_is_in_claim_area:
+		return false
+	if claimable_index < 0 or claimable_index >= claimable_outputs.size():
+		return false
 	
+	var entry: Dictionary = claimable_outputs[claimable_index]
+	var items_ready: Dictionary = entry.get("items", {})
 	
+	# Untuk saat ini: fee belum diproses karena sistem uang belum kamu pasang di kode ini
+ 	# Nanti jika sudah ada MoneyManager, kita tambahkan cek + potong fee di sini.
+ 
+ 	# Pindahkan barang ke Workshop Inventory
+	add_bulk_item(items_ready)
 	
-	
-	
-	
-	
+	# Hapus claimable entry
+	claimable_outputs.remove_at(claimable_index)
+	return true

@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://4yof1crcrd2u"]
+
+[ext_resource type="Script" uid="uid://bw2obdrmlhhah" path="res://work_shop_claim_area.gd" id="1_kcrou"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_isies"]
+radius = 33.0
+
+[node name="WorkShop" type="Node2D"]
+
+[node name="WorkShopClaimArea" type="Area2D" parent="."]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_kcrou")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WorkShopClaimArea"]
+shape = SubResource("CircleShape2D_isies")
+
+[connection signal="body_entered" from="WorkShopClaimArea" to="WorkShopClaimArea" method="_on_body_entered"]
+[connection signal="body_exited" from="WorkShopClaimArea" to="WorkShopClaimArea" method="_on_body_exited"]

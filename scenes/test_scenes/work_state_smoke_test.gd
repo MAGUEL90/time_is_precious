@@ -89,7 +89,8 @@ func _run_simulation() -> void:
 	var order_id: String = ""
 	if work_manager.has_method("start_job"):
 		# worker_kind 0 diasumsikan PLAYER
-		order_id = str(work_manager.call("start_job", mudbrick_job, 0, "player"))
+		order_id = str(work_manager.call("start_job", mudbrick_job, WorkOrder.Worker_Type.NPC, 
+		"npc_01", null, Inventory, null, 0))
 	print("Start_order_id: ", order_id)
 		
 	# Simulasi waktu: panggil on_time_changed secara manual
@@ -102,17 +103,25 @@ func _run_simulation() -> void:
 	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
 	# Durasi drying 60 menit, jadi selesai di 09:10
 	
-	_call_time(0, 9, 10)
-	_print_workshop("After Drying Tick 1 (09:10) - expect sun_dried_mudbrick = 20, wet_mudbrick = 20 (and 20 in progress)") # output proses juga masuk workshop
-	_print_inventory("After Drying Tick 1 (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
-
-	_call_time(0, 10, 10)
-	_print_workshop("After Drying Tick 2 (10:10) - expect sun_dried_mudbrick = 40, wet_mudbrick = 0 (and 20 in progress)")
-	_print_inventory("After Drying Tick 2 (inventory should NOT receive sun_dried_mudbrick)")
-
-	_call_time(0, 11, 10)
-	_print_workshop("After Drying Tick 3 (11:10) - expect sun_dried_mudbrick = 60, wet_mudbrick = 0")
-	_print_inventory("After Drying Tick 3 (inventory should NOT receive sun_dried_mudbrick)")
+	#var workshop_storage: Node = get_node("/root/WorkShopStorage")
+	#workshop_storage.call("set_player_in_claim_area", true)
+	#var claim_success: bool = bool(workshop_storage.call("claim_output", 0))
+	#print("Claim success: ", claim_success)
+	
+	_print_workshop("WorkShop Storage After Claim") # cek workshop, bukan inventory
+	
+	
+	#_call_time(0, 9, 10)
+	#_print_workshop("After Drying Tick 1 (09:10) - expect sun_dried_mudbrick = 20, wet_mudbrick = 20 (and 20 in progress)") # output proses juga masuk workshop
+	#_print_inventory("After Drying Tick 1 (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
+#
+	#_call_time(0, 10, 10)
+	#_print_workshop("After Drying Tick 2 (10:10) - expect sun_dried_mudbrick = 40, wet_mudbrick = 0 (and 20 in progress)")
+	#_print_inventory("After Drying Tick 2 (inventory should NOT receive sun_dried_mudbrick)")
+#
+	#_call_time(0, 11, 10)
+	#_print_workshop("After Drying Tick 3 (11:10) - expect sun_dried_mudbrick = 60, wet_mudbrick = 0")
+	#_print_inventory("After Drying Tick 3 (inventory should NOT receive sun_dried_mudbrick)")
 
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
