@@ -6,7 +6,6 @@ func _ready() -> void:
 	pass
 
 func _on_body_entered(body: Node2D) -> void:
-	# Cara paling aman: masukkan Player ke group "player"
 	if body != null and body.is_in_group("player"):
 		if has_node("/root/WorkShopStorage"):
 			var workshop_storage: Node = get_node("/root/WorkShopStorage")

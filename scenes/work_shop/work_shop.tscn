@@ -1,19 +1,23 @@
-[gd_scene load_steps=3 format=3 uid="uid://4yof1crcrd2u"]
+[gd_scene load_steps=5 format=3 uid="uid://4yof1crcrd2u"]
 
-[ext_resource type="Script" uid="uid://bw2obdrmlhhah" path="res://work_shop_claim_area.gd" id="1_kcrou"]
+[ext_resource type="Script" uid="uid://cmv6qr3uuhsyc" path="res://scenes/work_shop/work_shop.gd" id="1_spw5o"]
+[ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="3_2xuj5"]
+[ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="4_dv5t0"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_isies"]
-radius = 33.0
+[sub_resource type="CircleShape2D" id="CircleShape2D_3fmud"]
+radius = 26.019224
 
 [node name="WorkShop" type="Node2D"]
+script = ExtResource("1_spw5o")
 
-[node name="WorkShopClaimArea" type="Area2D" parent="."]
-collision_layer = 8
-collision_mask = 2
-script = ExtResource("1_kcrou")
+[node name="InteractableComponent" parent="." instance=ExtResource("3_2xuj5")]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="WorkShopClaimArea"]
-shape = SubResource("CircleShape2D_isies")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractableComponent"]
+shape = SubResource("CircleShape2D_3fmud")
 
-[connection signal="body_entered" from="WorkShopClaimArea" to="WorkShopClaimArea" method="_on_body_entered"]
-[connection signal="body_exited" from="WorkShopClaimArea" to="WorkShopClaimArea" method="_on_body_exited"]
+[node name="InteractableLabelComponent" parent="." instance=ExtResource("4_dv5t0")]
+visible = false
+offset_left = -5.0
+offset_top = -45.0
+offset_right = -5.0
+offset_bottom = -45.0
