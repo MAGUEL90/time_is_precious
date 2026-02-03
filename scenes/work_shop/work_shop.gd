@@ -13,5 +13,16 @@ func _ready() -> void:
 	
 	if player_reff:
 		# Connect signal dari InteractableComponent ke fungsi Player
-		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
+		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
+
+func on_player_interact(_player: Player) -> void:
+	var workshop_storage: Node = get_node("/root/WorkShopStorage")
+	if workshop_storage == null:
+		return
+	
+	# DEBUG: cek apakah claim kepanggil dan hasilnya
+	if workshop_storage.has_method("claim_output"):
+		var claim_success: bool = bool(workshop_storage.call("claim_output", 0))
+		print("Claim Success: ", claim_success)
+		

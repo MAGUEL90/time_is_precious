@@ -1,7 +1,7 @@
 class_name Player extends CharacterBody2D
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
-var current_interactable: NPCBase
+var current_interactable: Node2D
 var current_npc_dialogue: NPCBase
 
 var can_dialogue : bool = false
@@ -19,34 +19,43 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("interact") and can_dialogue  and current_interactable != null:
-		current_npc_dialogue  = current_interactable
-		
-		if current_npc_dialogue .global_position.x >= global_position.x:
-			current_npc_dialogue .animated_sprite_2d.flip_h = true
+	if event.is_action_pressed("interact"):
+		return
+	if not can_dialogue or current_interactable == null:
+		return
+	
+	if current_interactable is NPCBase:
+		if current_npc_dialogue.global_position.x >= global_position.x:
+			current_npc_dialogue.animated_sprite_2d.flip_h = true
 		else:
-			current_npc_dialogue .animated_sprite_2d.flip_h = false
-		
+			current_npc_dialogue.animated_sprite_2d.flip_h = false
+			
+		current_npc_dialogue = current_interactable as NPCBase
 		current_interactable.start_dialogue ()
 		time_component_manager.toggle_pause()
 		current_interactable.interactable_label_component.hide()
+		return
+		
+	# selain NPC: panggil method interact khusus kalau ada
+	if current_interactable.has_method("on_player_interact"):
+		current_interactable.call("on_player_interact", self)
 
 func _process(_delta: float) -> void:
 	pass
 	
-func _on_interactable_activated(npc):
+func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable:
 		return
 	
-	current_interactable = npc
+	current_interactable = interactable_owner
 	current_interactable.interactable_label_component.show()
 	can_dialogue  = true
 
-func _on_interactable_deactivated(npc):
-	current_interactable = null
-	can_dialogue  = false
-	
-	npc.interactable_label_component.hide()
+func _on_interactable_deactivated(interactable_owner: Node):
+	if current_interactable == interactable_owner:
+		current_interactable.interactable_label_component.hide()
+		current_interactable = null
+		can_dialogue  = false
 
 func on_dialogue_activated() -> void:
 	
