@@ -55,6 +55,7 @@ func set_player_in_claim_area(is_inside: bool) -> void:
 	player_is_in_claim_area = is_inside
 
 func claim_output(claimable_index: int) -> bool:
+	print("player_is_in_claim_area: ", player_is_in_claim_area)
 	# Claim hanya boleh kalau player sedang di area workshop
 	if not player_is_in_claim_area:
 		return false

@@ -108,7 +108,7 @@ func _run_simulation() -> void:
 	#var claim_success: bool = bool(workshop_storage.call("claim_output", 0))
 	#print("Claim success: ", claim_success)
 	
-	_print_workshop("WorkShop Storage After Claim") # cek workshop, bukan inventory
+	# _print_workshop("WorkShop Storage After Claim") # cek workshop, bukan inventory
 	
 	
 	#_call_time(0, 9, 10)

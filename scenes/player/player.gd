@@ -1,10 +1,10 @@
 class_name Player extends CharacterBody2D
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
-var current_interactable: Node2D
-var current_npc_dialogue: NPCBase
+var current_interactable: Node = null
+var current_npc_dialogue: NPCBase = null
 
-var can_dialogue : bool = false
+var can_interact: bool = false
 var dialogue_finished: bool = false
 var speed = 50
 
@@ -12,50 +12,50 @@ var speed = 50
 @onready var time_component_manager = TimeComponentManager
 
 func _ready() -> void:
-	# get_tree().call_group("npcs", "interactable_component.interactable_activated.connect(_on_interactable_activated)")
-	# get_tree().call_group("npcs", "interactable_component.interactable_deactivated.connect(_on_interactable_deactivated)")
 	BaseDialogueManager.dialogue_activated.connect(on_dialogue_activated)
 	BaseDialogueManager.dialogue_deactivated.connect(on_dialogue_deactivated)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("interact"):
+	if not event.is_action_pressed("interact"):
 		return
-	if not can_dialogue or current_interactable == null:
+	if not can_interact or current_interactable == null:
 		return
 	
 	if current_interactable is NPCBase:
-		if current_npc_dialogue.global_position.x >= global_position.x:
-			current_npc_dialogue.animated_sprite_2d.flip_h = true
+		var npc: NPCBase = current_npc_dialogue as NPCBase
+		current_npc_dialogue = npc
+		
+		if npc.global_position.x >= global_position.x:
+			npc.animated_sprite_2d.flip_h = true
 		else:
-			current_npc_dialogue.animated_sprite_2d.flip_h = false
+			npc.animated_sprite_2d.flip_h = false
 			
-		current_npc_dialogue = current_interactable as NPCBase
-		current_interactable.start_dialogue ()
+		npc.start_dialogue ()
 		time_component_manager.toggle_pause()
-		current_interactable.interactable_label_component.hide()
+		npc.interactable_label_component.hide()
 		return
 		
 	# selain NPC: panggil method interact khusus kalau ada
-	if current_interactable.has_method("on_player_interact"):
-		current_interactable.call("on_player_interact", self)
+	elif current_interactable is WorkShop:
+		var work_shop: WorkShop = current_interactable as WorkShop
+		
+		work_shop.on_player_interact(self)
+		work_shop.interactable_label_component.hide()
 
-func _process(_delta: float) -> void:
-	pass
-	
 func _on_interactable_activated(interactable_owner: Node):
-	if current_interactable:
+	if current_interactable != null:
 		return
 	
 	current_interactable = interactable_owner
 	current_interactable.interactable_label_component.show()
-	can_dialogue  = true
+	can_interact  = true
 
 func _on_interactable_deactivated(interactable_owner: Node):
 	if current_interactable == interactable_owner:
 		current_interactable.interactable_label_component.hide()
 		current_interactable = null
-		can_dialogue  = false
+		can_interact  = false
 
 func on_dialogue_activated() -> void:
 	
