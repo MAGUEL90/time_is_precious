@@ -5,6 +5,8 @@ var claimable_outputs: Array[Dictionary] = [] # daftar output yang harus di-clai
 
 var player_is_in_claim_area: bool = false # true jika player sedang berada di area workshop untuk claim
 
+enum ClaimAction {TAKE_TO_PLAYER, STORE_IN_WORKSHOP, CONTINUE_PROCESS}
+
 func has_item(item_identifier: String, quantity: int) -> bool:
 	if quantity <= 0:
 		return true # qty 0 dianggap cukup agar aman untuk edge-case
@@ -55,22 +57,63 @@ func set_player_in_claim_area(is_inside: bool) -> void:
 	player_is_in_claim_area = is_inside
 
 func claim_output(claimable_index: int) -> bool:
-	print("player_is_in_claim_area: ", player_is_in_claim_area)
+	# Backward compatible: default = simpan ke Inventory Workshop
+	return claim_output_with_action(claimable_index, ClaimAction.STORE_IN_WORKSHOP, null)
+
+func claim_output_with_action(claimable_index: int, claim_action: int, player_inventory: Node = null) -> bool:
 	# Claim hanya boleh kalau player sedang di area workshop
 	if not player_is_in_claim_area:
 		return false
+	
 	if claimable_index < 0 or claimable_index >= claimable_outputs.size():
 		return false
 	
 	var entry: Dictionary = claimable_outputs[claimable_index]
 	var items_ready: Dictionary = entry.get("items", {})
 	
-	# Untuk saat ini: fee belum diproses karena sistem uang belum kamu pasang di kode ini
- 	# Nanti jika sudah ada MoneyManager, kita tambahkan cek + potong fee di sini.
- 
- 	# Pindahkan barang ke Workshop Inventory
-	add_bulk_item(items_ready)
+	# TODO: fee / hutang / barter diproses disini
 	
-	# Hapus claimable entry
+	if claim_action == ClaimAction.TAKE_TO_PLAYER:
+		if player_inventory == null:
+			return false
+			
+		if player_inventory.has_method("add_bulk_item"):
+			player_inventory.call("add_bulk_item", items_ready)
+		else:
+			for item_identifier in items_ready.keys():
+				if player_inventory.has_method("add_item"):
+					player_inventory.call("add_item", item_identifier, int(items_ready[item_identifier]))
+				else:
+					return false
+		
+	elif claim_action == ClaimAction.STORE_IN_WORKSHOP:
+		add_bulk_item(items_ready)
+	
+	elif claim_action == ClaimAction.CONTINUE_PROCESS:
+		# Untuk sekarang: taruh dulu ke inventory workshop
+		# Lalu minta ProcessManager auto-pull (kalau tersedia)
+		add_bulk_item(items_ready)
+		var process_manager: Node = get_node("/root/ProcessManager")
+		if process_manager != null and process_manager.has_method("request_auto_pull"):
+			process_manager.call("request_auto_pull")
+	
+	else:
+		return false
+		
 	claimable_outputs.remove_at(claimable_index)
 	return true
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
