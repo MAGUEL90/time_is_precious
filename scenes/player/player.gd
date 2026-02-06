@@ -8,6 +8,10 @@ var can_interact: bool = false
 var dialogue_finished: bool = false
 var speed = 50
 
+var claim_menu_is_open: bool = false
+var claim_menu_workshop: WorkShop = null
+var claim_menu_claimable_index: int = 0
+
 @onready var player_movement_state: Node = $PlayerStateMachine/PlayerMovementState
 @onready var time_component_manager = TimeComponentManager
 
@@ -17,6 +21,18 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if claim_menu_is_open:
+		if event is InputEventKey and event.is_pressed() and not event.is_echo():
+			if event.keycode == KEY_1:
+				_confirm_claim_choice(0) # TAKE TO PLAYER
+			elif event.keycode == KEY_2:
+				_confirm_claim_choice(1) # STORE IN WORKSHOP
+			elif event.keycode == KEY_3:
+				_confirm_claim_choice(2) # CONTINUE_PROCESS
+			elif event.keycode == KEY_ESCAPE:
+				_close_claim_menu()
+		return
+	
 	if not event.is_action_pressed("interact"):
 		return
 	if not can_interact or current_interactable == null:
@@ -77,4 +93,25 @@ func on_dialogue_deactivated() -> void:
 	
 	current_npc_dialogue  = null
 	process_mode = Node.PROCESS_MODE_INHERIT
-	
+
+func open_workshop_claim_menu(workshop: WorkShop, claimable_index: int) -> void:
+	claim_menu_is_open = true
+	claim_menu_workshop = workshop
+	claim_menu_claimable_index = claimable_index
+	print("CLAIM MENU: ")
+	print("1) Ambil ke Inventory Player")
+	print("2) Simpan ke Inventory Workshop")
+	print("3) Lanjut Proses (auto-pull)")
+	print("ESC) Batal")
+
+func _confirm_claim_choice(claim_action: int) -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		return
+	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_action)
+	_close_claim_menu()
+
+func _close_claim_menu() -> void:
+	claim_menu_is_open = false
+	claim_menu_workshop = null
+	claim_menu_claimable_index = 0

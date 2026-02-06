@@ -30,15 +30,22 @@ func _on_claim_range_exited() -> void:
 	if workshop_storage != null and workshop_storage.has_method("set_player_in_claim_area"):
 		workshop_storage.call("set_player_in_claim_area", false)
 
-func on_player_interact(_player: Player) -> void:
+func on_player_interact(player: Player) -> void:
+	# buka mode pilihan 1/2/3 di player
+	if player != null and player.has_method("open_workshop_claim_menu"):
+		player.call("open_workshop_claim_menu", self, 0)
+
+func claim_with_action(player: Player, claimable_index: int, claim_action: int) -> bool:
 	var workshop_storage: Node = get_node("/root/WorkShopStorage")
 	if workshop_storage == null:
-		return
+		return false
 	
-	# DEBUG: cek apakah claim kepanggil dan hasilnya
-	if workshop_storage.has_method("claim_output"):
-		var claim_success: bool = bool(workshop_storage.call("claim_output", 0))
-		print("Claim Success: ", claim_success)
-		print("Workshop_storage items: ", workshop_storage.get("items"))
-		print("Claimable outputs count: ", workshop_storage.get("claimable_outputs").size())
-		
+	if not workshop_storage.has_method("claim_output_with_action"):
+		return false
+	
+	var player_inventory: Node = Inventory if claim_action == 0 else null
+	var claim_success: bool = bool(
+		workshop_storage.call("claim_output_with_action", claimable_index, claim_action, player_inventory)		
+	)
+	print("Claim Success: ", claim_success)
+	return claim_success

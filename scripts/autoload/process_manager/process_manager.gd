@@ -73,6 +73,10 @@ func _tick(delta_minutes: int) -> void:
 	# 2) Auto-pull dari inventory kalau ada slot kosong
 	_try_auto_pull()
 
+# Dipanggil dari WorkShopStorage saat player pilih "lanjut proses"
+func request_auto_pull() -> void:
+	_try_auto_pull()
+
 func _try_auto_pull() -> void:
 	# Auto-pull hanya untuk proses yang kamu set register_process(..., auto_pull = true)
 	for process_id in _auto_pull_batch_size.keys():
@@ -84,20 +88,32 @@ func _try_auto_pull() -> void:
 		if station_st == null:
 			continue
 		
-		var free_slot := station_st.find_free_slot()
-		if free_slot == -1:
-			continue
-		
 		var batch_size: int = _auto_pull_batch_size[process_id]
-		var store_items: Dictionary = source_item_store.get("items") if source_item_store != null else {} # ambil dict items dari store
-		var available: int = int(store_items.get(process_dt.input_item_id, 0)) # stok dari storage sumber
 		
-		if available <= 0:
-			continue
+		# (🔴 -) var free_slot: int = station_state.find_free_slot()
+		# (🔴 -) if free_slot == -1:
+		# (🔴 -) 	continue
+		# (🔴 -) ... lalu hanya start 1 batch
+
+		# (🟢 +) isi semua slot yang tersedia selama item masih ada
+		
+		while true:
+			var free_slot: int = station_st.find_free_slot()
+			if free_slot == -1:
+				continue
+		
+		
+			var store_items: Dictionary = source_item_store.get("items") if source_item_store != null else {} # ambil dict items dari store
+			var available: int = int(store_items.get(process_dt.input_item_id, 0)) # stok dari storage sumber
 			
-		var take_qty: int = min(batch_size, available)
-		if bool(source_item_store.call("remove_item", process_dt.input_item_id, take_qty)): # consume dari storage sumber
-			_start_batch(process_dt, take_qty, station_st, free_slot)
+			if available <= 0:
+				continue
+				
+			var take_qty: int = min(batch_size, available)
+			if bool(source_item_store.call("remove_item", process_dt.input_item_id, take_qty)): # consume dari storage sumber
+				_start_batch(process_dt, take_qty, station_st, free_slot)
+			else:
+				break
 
 func _start_batch(process_dt: ProcessData, qty: int, station_st: StationState, slot_idx: int) -> void:
 	var batch: ProcessBatch = ProcessBatch.new()
