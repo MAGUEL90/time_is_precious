@@ -100,14 +100,14 @@ func _try_auto_pull() -> void:
 		while true:
 			var free_slot: int = station_st.find_free_slot()
 			if free_slot == -1:
-				continue
+				break
 		
 		
 			var store_items: Dictionary = source_item_store.get("items") if source_item_store != null else {} # ambil dict items dari store
 			var available: int = int(store_items.get(process_dt.input_item_id, 0)) # stok dari storage sumber
 			
 			if available <= 0:
-				continue
+				break
 				
 			var take_qty: int = min(batch_size, available)
 			if bool(source_item_store.call("remove_item", process_dt.input_item_id, take_qty)): # consume dari storage sumber

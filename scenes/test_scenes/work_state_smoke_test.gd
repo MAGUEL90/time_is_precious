@@ -97,24 +97,17 @@ func _run_simulation() -> void:
 	_call_time(0, 8, 0)
 	_call_time(0, 8, 10)
 	
-	_print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
-	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
+	# _print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
+	# _print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
 	
 	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
 	# Durasi drying 60 menit, jadi selesai di 09:10
 	
-	#var workshop_storage: Node = get_node("/root/WorkShopStorage")
-	#workshop_storage.call("set_player_in_claim_area", true)
-	#var claim_success: bool = bool(workshop_storage.call("claim_output", 0))
-	#print("Claim success: ", claim_success)
-	
 	# _print_workshop("WorkShop Storage After Claim") # cek workshop, bukan inventory
 	
 	
-	#_call_time(0, 9, 10)
-	#_print_workshop("After Drying Tick 1 (09:10) - expect sun_dried_mudbrick = 20, wet_mudbrick = 20 (and 20 in progress)") # output proses juga masuk workshop
-	#_print_inventory("After Drying Tick 1 (inventory should NOT receive sun_dried_mudbrick)") # bandingkan inventory
-#
+	# _call_time(0, 9, 10)
+	
 	#_call_time(0, 10, 10)
 	#_print_workshop("After Drying Tick 2 (10:10) - expect sun_dried_mudbrick = 40, wet_mudbrick = 0 (and 20 in progress)")
 	#_print_inventory("After Drying Tick 2 (inventory should NOT receive sun_dried_mudbrick)")
