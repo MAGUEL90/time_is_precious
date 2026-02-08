@@ -60,19 +60,17 @@ func claim_output(claimable_index: int) -> bool:
 	# Backward compatible: default = simpan ke Inventory Workshop
 	return claim_output_with_action(claimable_index, ClaimAction.STORE_IN_WORKSHOP, null)
 
-func claim_output_with_action(claimable_index: int, claim_action: int, player_inventory: Node = null) -> bool:
+func claim_output_with_action(
+	claimable_index: int, 
+	claim_action: int, 
+	player_inventory: Node = null) -> bool:
 	# Claim hanya boleh kalau player sedang di area workshop
 	if not player_is_in_claim_area:
 		return false
 	
 	if claimable_index < 0 or claimable_index >= claimable_outputs.size():
 		return false
-	# (🟢 +) DEBUG OPSI 2
-	print("OPT2: player_is_in_claim_area=", player_is_in_claim_area)
-	print("OPT2: claimable_size(before)=", claimable_outputs.size())
-	print("OPT2: claimable_index=", claimable_index)
-	print("OPT2: entry(before)=", claimable_outputs[claimable_index])
-	
+		
 	var entry: Dictionary = claimable_outputs[claimable_index]
 	var items_ready: Dictionary = entry.get("items", {})
 	
@@ -92,23 +90,35 @@ func claim_output_with_action(claimable_index: int, claim_action: int, player_in
 					return false
 		
 	elif claim_action == ClaimAction.STORE_IN_WORKSHOP:
+		
+		# (🟢 +) DEBUG OPSI 2
+		print("OPT2: claimable_size(before)=", claimable_outputs.size())
+		print("OPT2: claimable_index=", claimable_index)
+		print("OPT2: entry(before)=", entry)
+		
 		add_bulk_item(items_ready)
+		
 		print("OPT2: workshop_items(after_add)=", items)
 	
 	elif claim_action == ClaimAction.CONTINUE_PROCESS:
+		print("OPT3: before: workshop items = ", items)
+		print("OPT3: before: claimable count = ", claimable_outputs.size())
 		# Untuk sekarang: taruh dulu ke inventory workshop
 		# Lalu minta ProcessManager auto-pull (kalau tersedia)
+		
 		add_bulk_item(items_ready)
 		
 		var process_manager: Node = get_node("/root/ProcessManager")
 		if process_manager != null and process_manager.has_method("request_auto_pull"):
 			process_manager.call("request_auto_pull")
-	
+		
+		print("OPT3: after: workshop items = ", items)
+		print("OPT3: after: claimable count = ", claimable_outputs.size())
+		
 	else:
 		return false
 		
 	claimable_outputs.remove_at(claimable_index)
-	print("OPT2: claimable_size(after_remove)=", claimable_outputs.size())
 	return true
 			
 			

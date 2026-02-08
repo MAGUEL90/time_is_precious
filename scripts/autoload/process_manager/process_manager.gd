@@ -102,7 +102,6 @@ func _try_auto_pull() -> void:
 			if free_slot == -1:
 				break
 		
-		
 			var store_items: Dictionary = source_item_store.get("items") if source_item_store != null else {} # ambil dict items dari store
 			var available: int = int(store_items.get(process_dt.input_item_id, 0)) # stok dari storage sumber
 			
@@ -129,6 +128,8 @@ func _start_batch(process_dt: ProcessData, qty: int, station_st: StationState, s
 	batch.status = ProcessBatch.BatchStatus.RUNNING
 	
 	station_st.set_slot(slot_idx, batch)
+	
+	print("Start_Batch qty = ", qty, " slot = ", slot_idx)
 
 func _calc_duration(process_dt: ProcessData) -> int:
 	var base: int = max(process_dt.base_duration_minutes, 1)
@@ -159,6 +160,8 @@ func _finalize_batch(station_st: StationState, slot_idx: int, batch: ProcessBatc
 			output_item_store.call("add_item", batch.output_item_id, batch.quantity)
 		else:
 			Inventory.add_item(batch.output_item_id, batch.quantity) # fallback aman
+		
+		print("batch_status: ", batch.status)
 		
 	station_st.clear_slot(slot_idx)
 		

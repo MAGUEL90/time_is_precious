@@ -35,7 +35,11 @@ func on_player_interact(player: Player) -> void:
 	if player != null and player.has_method("open_workshop_claim_menu"):
 		player.call("open_workshop_claim_menu", self, 0)
 
-func claim_with_action(_player: Player, claimable_index: int, claim_action: int) -> bool:
+func claim_with_action(
+	_player: Player, 
+	claimable_index: int, 
+	claim_action: int) -> bool:
+		
 	var workshop_storage: Node = get_node("/root/WorkShopStorage")
 	if workshop_storage == null:
 		return false
@@ -45,7 +49,10 @@ func claim_with_action(_player: Player, claimable_index: int, claim_action: int)
 	
 	var player_inventory: Node = Inventory if claim_action == 0 else null
 	var claim_success: bool = bool(
-		workshop_storage.call("claim_output_with_action", claimable_index, claim_action, player_inventory)		
-	)
+		workshop_storage.call(
+			"claim_output_with_action", 
+			claimable_index, 
+			claim_action, 
+			player_inventory))
 	print("Claim Success: ", claim_success)
 	return claim_success

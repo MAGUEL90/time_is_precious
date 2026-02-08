@@ -89,16 +89,20 @@ func _run_simulation() -> void:
 	var order_id: String = ""
 	if work_manager.has_method("start_job"):
 		# worker_kind 0 diasumsikan PLAYER
-		order_id = str(work_manager.call("start_job", mudbrick_job, WorkOrder.Worker_Type.NPC, 
-		"npc_01", null, Inventory, null, 0))
+		order_id = str(work_manager.call(
+			"start_job", 
+			mudbrick_job, 
+			WorkOrder.Worker_Type.NPC, 
+			"npc_01", null, Inventory, null, 0))
+	
 	print("Start_order_id: ", order_id)
 		
 	# Simulasi waktu: panggil on_time_changed secara manual
 	_call_time(0, 8, 0)
 	_call_time(0, 8, 10)
 	
-	# _print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
-	# _print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
+	_print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
+	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
 	
 	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
 	# Durasi drying 60 menit, jadi selesai di 09:10
