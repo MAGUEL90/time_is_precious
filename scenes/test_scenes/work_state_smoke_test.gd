@@ -1,30 +1,17 @@
 class_name WorkStateSmokeTest extends Node2D
 
+var started: bool = false
+
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
 	
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
-
-	_print_header()
 	
-	if has_node("/root/TimeComponentManager"):
-		var time_component_manager: Node = get_node("/root/TimeComponentManager")
-		if time_component_manager.has_method("toggle_pause"):
-			time_component_manager.call("toggle_pause")
-	
-	if not _check_nodes():
-		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager, WorkShopStorage.")
-		return
-	
-	_setup_process_data()
-	_setup_job_and_inventory()
-	_run_simulation()
-	
-	if has_node("/root/TimeComponentManager"):
-		var time_component_manager: Node = get_node("/root/TimeComponentManager")
-		if time_component_manager.has_method("toggle_pause"):
-			time_component_manager.call("toggle_pause")
+	#if has_node("/root/TimeComponentManager"):
+		#var time_component_manager: Node = get_node("/root/TimeComponentManager")
+		#if time_component_manager.has_method("toggle_pause"):
+			#time_component_manager.call("toggle_pause")
 
 func _check_nodes() -> bool:
 	var ok: bool = true
@@ -81,7 +68,7 @@ func _run_simulation() -> void:
 	var mudbrick_job: JobData = JobData.new()
 	mudbrick_job.job_id = "mudbrick_make"
 	mudbrick_job.display_name = "Mudbrick Making"
-	mudbrick_job.base_duration_minutes = 10 # durasi job 10 menit untuk test
+	mudbrick_job.base_duration_minutes = 60 # durasi job 10 menit untuk test
 	mudbrick_job.inputs = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
 	mudbrick_job.outputs = {"wet_mudbrick": 60}  # output intermediate 60 bata basah
 
@@ -96,29 +83,9 @@ func _run_simulation() -> void:
 			"npc_01", null, Inventory, null, 0))
 	
 	print("Start_order_id: ", order_id)
-		
-	# Simulasi waktu: panggil on_time_changed secara manual
-	_call_time(0, 8, 0)
-	_call_time(0, 8, 10)
 	
 	_print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
 	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
-	
-	# Sekarang ProcessManager auto-pull: 3 slot yard -> batch 20 + 20 + 20
-	# Durasi drying 60 menit, jadi selesai di 09:10
-	
-	# _print_workshop("WorkShop Storage After Claim") # cek workshop, bukan inventory
-	
-	
-	# _call_time(0, 9, 10)
-	
-	#_call_time(0, 10, 10)
-	#_print_workshop("After Drying Tick 2 (10:10) - expect sun_dried_mudbrick = 40, wet_mudbrick = 0 (and 20 in progress)")
-	#_print_inventory("After Drying Tick 2 (inventory should NOT receive sun_dried_mudbrick)")
-#
-	#_call_time(0, 11, 10)
-	#_print_workshop("After Drying Tick 3 (11:10) - expect sun_dried_mudbrick = 60, wet_mudbrick = 0")
-	#_print_inventory("After Drying Tick 3 (inventory should NOT receive sun_dried_mudbrick)")
 
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if has_node("/root/WorkManager"):
@@ -156,8 +123,22 @@ func _print_workshop(label: String) -> void:
 	if claimables.size() > 0:
 		print("Claimable[0]: ", claimables[0]) # tampilkan 1 contoh agar kelihatan fee + items
 
-
 func _print_header() -> void:
 	print("====================================")
 	print("WorkStateSmokeTest START")
 	print("====================================")
+
+func _start_test(worker_id: String) -> void:
+	_print_header()
+	
+	if not _check_nodes():
+		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager, WorkShopStorage.")
+		return
+	
+	if worker_id and started: return
+	
+	started = true
+	
+	_setup_process_data()
+	_setup_job_and_inventory()
+	_run_simulation()

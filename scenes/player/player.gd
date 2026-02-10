@@ -82,7 +82,6 @@ func on_dialogue_activated() -> void:
 		
 
 	process_mode = Node.PROCESS_MODE_DISABLED
-	
 
 func on_dialogue_deactivated() -> void:
 	time_component_manager.toggle_pause()

@@ -108,7 +108,7 @@ func start_dialogue() -> void:
 	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
 	
-	var title_list: Array = npc_unique_dialogue .get_titles()
+	var title_list: Array = npc_unique_dialogue.get_titles()
 	var contract_founded: bool = false
 	var npc_states: Array = [self]
 	
@@ -226,3 +226,4 @@ func debug_npc() -> String:
 
 func proceed_contract() -> void:
 	is_contract_activated = true
+	get_tree().call_group("smoke_test", "start_test", npc_id)

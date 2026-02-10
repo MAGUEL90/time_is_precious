@@ -18,6 +18,7 @@ var _auto_pull_batch_size: Dictionary[String, int] = {}
 # storage sumber & tujuan proses (default Inventory) # supaya bisa pakai WorkshopStorage
 var source_item_store: Node = Inventory # tempat ambil input auto-pull
 var output_item_store: Node = Inventory # tempat taruh output proses
+var process_batch: ProcessBatch = ProcessBatch.new()
 
 func set_source_item_store(store: Node) -> void:
 	source_item_store = store if store != null else Inventory # fallback aman
@@ -53,8 +54,10 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 		return
 	
 	_tick(delta)
+	
 
 func _tick(delta_minutes: int) -> void:
+
 	# 1) Progress semua batch yang sedang Running 
 	for station_id in stations.keys():
 		var st: StationState = stations[station_id]
@@ -129,7 +132,7 @@ func _start_batch(process_dt: ProcessData, qty: int, station_st: StationState, s
 	
 	station_st.set_slot(slot_idx, batch)
 	
-	print("Start_Batch qty = ", qty, " slot = ", slot_idx)
+	print("Start_Batch qty = ", qty, ", slot = ", slot_idx, ", Batch_Status =  ", batch.status)
 
 func _calc_duration(process_dt: ProcessData) -> int:
 	var base: int = max(process_dt.base_duration_minutes, 1)
@@ -161,7 +164,6 @@ func _finalize_batch(station_st: StationState, slot_idx: int, batch: ProcessBatc
 		else:
 			Inventory.add_item(batch.output_item_id, batch.quantity) # fallback aman
 		
-		print("batch_status: ", batch.status)
 		
 	station_st.clear_slot(slot_idx)
 		

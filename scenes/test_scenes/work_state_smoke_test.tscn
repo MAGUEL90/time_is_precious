@@ -14,7 +14,7 @@ polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
 outlines = Array[PackedVector2Array]([PackedVector2Array(138, 124, 152, 76, 199, 75, 208, 124)])
 agent_radius = 5.0
 
-[node name="WorkStateSmokeTest" type="Node2D"]
+[node name="WorkStateSmokeTest" type="Node2D" groups=["smoke_test"]]
 script = ExtResource("1_l4b4i")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="."]

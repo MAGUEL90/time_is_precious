@@ -98,36 +98,31 @@ func claim_output_with_action(
 		
 		add_bulk_item(items_ready)
 		
-		print("OPT2: workshop_items(after_add)=", items)
+		print("OPT2: items_after_adding_to_workshop_storage: workshop items = ", items)
 	
 	elif claim_action == ClaimAction.CONTINUE_PROCESS:
-		print("OPT3: before: workshop items = ", items)
+		print("OPT3: before_adding_to_workshop_storage: workshop items = ", items)
 		print("OPT3: before: claimable count = ", claimable_outputs.size())
 		# Untuk sekarang: taruh dulu ke inventory workshop
 		# Lalu minta ProcessManager auto-pull (kalau tersedia)
 		
 		add_bulk_item(items_ready)
+		print("OPT3: items_after_adding_to_workshop_storage: workshop items = ", items)
 		
 		var process_manager: Node = get_node("/root/ProcessManager")
 		if process_manager != null and process_manager.has_method("request_auto_pull"):
 			process_manager.call("request_auto_pull")
 		
-		print("OPT3: after: workshop items = ", items)
-		print("OPT3: after: claimable count = ", claimable_outputs.size())
+		print("OPT3: items_after_sending_to_continue_process: workshop items = ", items)
+		
 		
 	else:
 		return false
 		
 	claimable_outputs.remove_at(claimable_index)
+	print("Claimable count = ", claimable_outputs.size())
 	return true
-			
-			
-			
-			
-			
-			
-			
-			
+
 			
 			
 			

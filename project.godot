@@ -50,6 +50,7 @@ folder_colors={
 
 player=""
 npcs=""
+smoke_test=""
 
 [input]
 
