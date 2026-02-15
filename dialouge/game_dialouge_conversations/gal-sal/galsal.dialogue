@@ -5,7 +5,7 @@ Galsal: Hi, Do you have something to do??
 	Galsal: You got a job for me?
 	- Yes
 		Galsal: You can count me on it
-		do npc_states[0].proceed_contract()
+		do proceed_contract()
 	- No
 		Galsal: Oh.. okey
 		do BaseDialogueManager.dialogue_deactivated.emit() 

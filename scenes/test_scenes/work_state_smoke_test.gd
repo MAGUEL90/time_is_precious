@@ -2,29 +2,17 @@ class_name WorkStateSmokeTest extends Node2D
 
 var started: bool = false
 
+var inventory: Inventory = Inventory
+var work_manager: WorkManager = WorkManager
+var workshop_storage: WorkShopStorage = WorkShopStorage
+var process_manager: ProcessManager = ProcessManager
+
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
-	
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
-	
-	#if has_node("/root/TimeComponentManager"):
-		#var time_component_manager: Node = get_node("/root/TimeComponentManager")
-		#if time_component_manager.has_method("toggle_pause"):
-			#time_component_manager.call("toggle_pause")
-
-func _check_nodes() -> bool:
-	var ok: bool = true
-	ok = ok and has_node("/root/Inventory")
-	ok = ok and has_node("/root/WorkManager")
-	ok = ok and has_node("/root/ProcessManager")
-	ok = ok and has_node("/root/WorkShopStorage")
-	return ok
 
 func _setup_process_data() -> void:
-	var process_manager: ProcessManager = get_node("/root/ProcessManager")
-	var workshop_storage: WorkShopStorage = get_node("/root/WorkShopStorage")
-	
 	# Registrasi station kalau belum
 	if process_manager.has_method("register_station"):
 		process_manager.call("register_station", "drying_yard", 3)
@@ -51,7 +39,6 @@ func _setup_process_data() -> void:
 		process_manager.call("set_output_item_store", workshop_storage)
 
 func _setup_job_and_inventory() -> void:
-	var inventory: Inventory = get_node("/root/Inventory")
 	
 	# Siapkan input agar job bisa start (contoh item)
 	# Kamu boleh ganti id item sesuai yang kamu pakai di project
@@ -61,8 +48,6 @@ func _setup_job_and_inventory() -> void:
 		inventory.call("add_item", "water_jar", 10)
 
 func _run_simulation() -> void:
-	var work_manager: WorkManager = get_node("/root/WorkManager")
-	# var inventory: Node = get_node("/root/Inventory")
 	
 	# Buat JobData runtime (mudbrick making) untuk tes
 	var mudbrick_job: JobData = JobData.new()
@@ -88,18 +73,13 @@ func _run_simulation() -> void:
 	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
 
 func _call_time(day: int, hour: int, minute: int) -> void:
-	if has_node("/root/WorkManager"):
-		var work_manager: WorkManager = get_node("/root/WorkManager")
-		if work_manager.has_method("on_time_changed"):
-			work_manager.call("on_time_changed", day, hour, minute)
+	if work_manager.has_method("on_time_changed"):
+		work_manager.call("on_time_changed", day, hour, minute)
 	
-	if has_node("/root/ProcessManager"):
-		var process_manager: ProcessManager = get_node("/root/ProcessManager")
-		if process_manager.has_method("on_time_changed"):
-			process_manager.call("on_time_changed", day, hour, minute)
+	if process_manager.has_method("on_time_changed"):
+		process_manager.call("on_time_changed", day, hour, minute)
 
 func _print_inventory(label: String) -> void:
-	var inventory: Inventory = get_node("/root/Inventory")
 	if inventory.items:
 		print("----", label, "----")
 		print(inventory.items)
@@ -109,12 +89,11 @@ func _print_inventory(label: String) -> void:
 func _print_workshop(label: String) -> void:
 	# print isi workshop storage untuk memastikan output masuk ke sini 
 	# debug utama pemisahan inventory vs workshop
-	if not has_node("/root/WorkShopStorage"):
+	if not workshop_storage:
 		print("----", label, "----")
 		print("WorkShopStorage tidak ditemukan di /root (pastikan sudah Autoload & namanya benar).") # info error yang jelas
 		return
 	
-	var workshop_storage: Node = get_node("/root/WorkShopStorage") # ambil autoload workshop
 	var workshop_items: Dictionary = workshop_storage.get("items") if workshop_storage != null else {} # ambil dict items workshop
 	print("----", label, "----")
 	print("Workshop_storage items: ", workshop_items) # tampilkan stok workshop
@@ -130,10 +109,6 @@ func _print_header() -> void:
 
 func _start_test(worker_id: String) -> void:
 	_print_header()
-	
-	if not _check_nodes():
-		push_error("SmokeTest: node autoload belum lengkap. Cek /root Inventory, WorkManager, ProcessManager, WorkShopStorage.")
-		return
 	
 	if worker_id and started: return
 	

@@ -104,7 +104,7 @@ func start_dialogue() -> void:
 	
 	if not npc_unique_dialogue :
 		return
-		
+	
 	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
 	
@@ -163,7 +163,6 @@ func daily_update(_day: int) -> void: # placeholder: nanti isi needs/contract pr
 		npc_current_satisfaction = npc_state.current_satisfaction # sync cache untuk logic NPCBase
 		call_deferred("_recalc_contract_state") # kontrak bisa berubah karena satisfaction berubah
 
-
 func _sync_shift_from_hour() -> void:
 	var hour: int = TimeComponentManager.current_hour
 	if hour >= TimeComponentManager.morning_hour and hour < TimeComponentManager.afternoon_hour:
@@ -212,7 +211,7 @@ func set_data_attribute() -> void:
 	
 	npc_current_position = npc_state.current_position # cache runtime
 	npc_last_position = npc_state.last_position # cache runtime
-	global_position = npc_current_position # tempatkan NPC sesuai state (penting untuk konsistensi load)
+	global_position = Vector2(randi_range(50, 100), randi_range(50, 100)) # tempatkan NPC sesuai state (penting untuk konsistensi load)
 
 func debug_npc() -> String:
 	var trust_value: float = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
@@ -225,5 +224,7 @@ func debug_npc() -> String:
 	return debug_npc_label.text
 
 func proceed_contract() -> void:
+	var work_state_smoke_test: WorkStateSmokeTest = WorkStateSmokeTest.new()
+	work_state_smoke_test._start_test(npc_id)
 	is_contract_activated = true
-	get_tree().call_group("smoke_test", "start_test", npc_id)
+	# get_tree().call_group("smoke_test", "start_test", npc_id)

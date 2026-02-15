@@ -39,8 +39,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	
 	if current_interactable is NPCBase:
-		var npc: NPCBase = current_npc_dialogue as NPCBase
-		current_npc_dialogue = npc
+		var npc: NPCBase = current_interactable as NPCBase
+		current_interactable = npc
 		
 		if npc.global_position.x >= global_position.x:
 			npc.animated_sprite_2d.flip_h = true
@@ -55,7 +55,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	# selain NPC: panggil method interact khusus kalau ada
 	elif current_interactable is WorkShop:
 		var work_shop: WorkShop = current_interactable as WorkShop
-		
 		work_shop.on_player_interact(self)
 		work_shop.interactable_label_component.hide()
 
