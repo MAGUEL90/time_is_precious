@@ -6,8 +6,8 @@ class_name NPCData extends Resource
 @export var npc_name: String = "" # nama tampilan NPC
 @export var role: String = "" # peran/kelas NPC (pedagang, pekerja, dsb)
 
-# ============= DIALOUGE
-@export_category("Dialouge")
+# ============= DIALOGUE
+@export_category("Dialogue")
 @export var unique_dialogue : DialogueResource
 
 # ============= SATISFACTION

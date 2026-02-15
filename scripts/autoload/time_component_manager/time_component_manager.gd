@@ -174,7 +174,7 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 			weather_tint = Color(0.90, 0.92, 0.98) # netral-agak dingin
 			weather_strength = 0.18 # ringan
 			weather_dim = 0.93 # sedikit dim
-		"storm":
+		"clear":
 			weather_strength = 0.0
 			weather_dim = 1.0
 	
