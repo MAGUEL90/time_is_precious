@@ -69,9 +69,7 @@ func _run_simulation() -> void:
 	
 	print("Start_order_id: ", order_id)
 	
-	_print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
-	_print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
-
+	
 func _call_time(day: int, hour: int, minute: int) -> void:
 	if work_manager.has_method("on_time_changed"):
 		work_manager.call("on_time_changed", day, hour, minute)

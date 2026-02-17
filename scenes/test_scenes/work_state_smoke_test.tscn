@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=4 uid="uid://bpbtoaixxnfk0"]
+[gd_scene load_steps=10 format=4 uid="uid://bpbtoaixxnfk0"]
 
 [ext_resource type="Script" uid="uid://b7rlmo216580g" path="res://scenes/test_scenes/work_state_smoke_test.gd" id="1_l4b4i"]
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="2_s68m4"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="5_aikyy"]
 [ext_resource type="PackedScene" uid="uid://cbah3a6bty5bh" path="res://scenes/time_label/time_label.tscn" id="6_e4fne"]
 [ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="7_l4b4i"]
+[ext_resource type="PackedScene" uid="uid://beab8w4gsj112" path="res://scenes/work_state_boot_strap/work_state_boot_strap.tscn" id="8_s68m4"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_nvn2h"]
 vertices = PackedVector2Array(202, 119, 144.67188, 119, 155.77344, 80.921875, 194.84375, 80.09375)
@@ -44,3 +45,5 @@ offset_bottom = 100.0
 
 [node name="WorkShop" parent="." instance=ExtResource("7_l4b4i")]
 position = Vector2(305, 101)
+
+[node name="WorkStateBootStrap" parent="." instance=ExtResource("8_s68m4")]

@@ -85,6 +85,11 @@ func _tick(now_total_minutes: int) -> void:
 		
 		if now_total_minutes >= order.end_time_total_minutes:
 			_finalize_order(order_id, order, now_total_minutes)
+			var work_state_smoke_test: WorkStateSmokeTest = WorkStateSmokeTest.new()
+			work_state_smoke_test._print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
+			work_state_smoke_test._print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
+
+
 
 func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int) -> void:
 	var job_outputs: Dictionary = order.outputs_snapshot
