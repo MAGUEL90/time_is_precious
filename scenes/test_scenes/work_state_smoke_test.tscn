@@ -40,8 +40,8 @@ collision_layer = 1
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="TimeLabel" parent="CanvasLayer" instance=ExtResource("6_e4fne")]
-offset_right = 200.0
-offset_bottom = 100.0
+custom_minimum_size = Vector2(250, 50)
+offset_bottom = 0.0
 
 [node name="WorkShop" parent="." instance=ExtResource("7_l4b4i")]
 position = Vector2(305, 101)
