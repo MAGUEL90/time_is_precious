@@ -1,5 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://buluwpqeq5op"]
+[gd_scene load_steps=3 format=3 uid="uid://buluwpqeq5op"]
 
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_12jxq"]
 [ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/temporer/button_test_1.png" id="1_gtaos"]
 
 [node name="ItemSlot" type="Button"]
@@ -7,6 +8,7 @@ custom_minimum_size = Vector2(64, 64)
 offset_right = 8.0
 offset_bottom = 8.0
 focus_mode = 0
+theme = ExtResource("1_12jxq")
 theme_type_variation = &"InvSlot"
 
 [node name="Icon" type="TextureRect" parent="."]

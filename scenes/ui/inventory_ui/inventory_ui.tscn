@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://dgdwdg7jy3cho"]
+[gd_scene load_steps=3 format=3 uid="uid://dgdwdg7jy3cho"]
 
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_p70uk"]
+[ext_resource type="PackedScene" uid="uid://d0wn5ml4p5yv4" path="res://scenes/ui/item_grid/item_grid.tscn" id="2_6akk8"]
 
 [node name="InventoryUI" type="CanvasLayer"]
 
@@ -71,3 +72,14 @@ size_flags_horizontal = 3
 [node name="BagPanel" type="PanelContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="BagGrid" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel" instance=ExtResource("2_6akk8")]
+layout_mode = 2
+
+[node name="Title" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header" index="0"]
+text = "Inventory"
+
+[node name="InfoLabel" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header" index="2"]
+text = "16/40"
+
+[editable path="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid"]
