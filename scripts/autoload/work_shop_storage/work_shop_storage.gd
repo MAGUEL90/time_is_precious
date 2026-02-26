@@ -123,10 +123,23 @@ func claim_output_with_action(
 	print("Claimable count = ", claimable_outputs.size())
 	return true
 
-			
-			
-			
-			
-			
-			
-			
+func transfer_all_items_to_player(player_inventory: Node) -> bool:
+	if player_inventory == null:
+		return false
+	
+	if items.is_empty():
+		return false
+	
+	var workshop_items_snapshot: Dictionary = items.duplicate(true)
+	
+	if player_inventory.has_method("add_bulk_item"):
+		player_inventory.call("add_bulk_item", workshop_items_snapshot)
+	else:
+		for item_identifier in workshop_items_snapshot.keys():
+			if player_inventory.has_method("add_item"):
+				player_inventory.call("add_item", item_identifier, int(workshop_items_snapshot[item_identifier]))
+			else:
+				return false
+	
+	items.clear()
+	return true
