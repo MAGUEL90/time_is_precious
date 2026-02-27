@@ -40,16 +40,22 @@ func claim_with_action(
 	claimable_index: int, 
 	claim_action: int) -> bool:
 		
-	var workshop_storage: Node = get_node("/root/WorkShopStorage")
-	if workshop_storage == null:
+	if WorkShopStorage == null:
 		return false
 	
-	if not workshop_storage.has_method("claim_output_with_action"):
+	if claim_action == 0:
+		var claimables: Array = WorkShopStorage.get("claimable_outputs") if WorkShopStorage != null else []
+		if claimables.is_empty() and WorkShopStorage.has_method("transfer_all_items_to_player"):
+			var transfer_success: bool = bool(WorkShopStorage.call("transfer_all_items_to_player", Inventory))
+			print("Transfer workshop items to player inventory: ", transfer_success)
+			return transfer_success
+	
+	if not WorkShopStorage.has_method("claim_output_with_action"):
 		return false
 	
 	var player_inventory: Node = Inventory if claim_action == 0 else null
 	var claim_success: bool = bool(
-		workshop_storage.call(
+		WorkShopStorage.call(
 			"claim_output_with_action", 
 			claimable_index, 
 			claim_action, 

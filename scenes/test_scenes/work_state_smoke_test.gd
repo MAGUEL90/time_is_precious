@@ -53,19 +53,18 @@ func _run_simulation() -> void:
 	var mudbrick_job: JobData = JobData.new()
 	mudbrick_job.job_id = "mudbrick_make"
 	mudbrick_job.display_name = "Mudbrick Making"
-	mudbrick_job.base_duration_minutes = 60 # durasi job 10 menit untuk test
+	mudbrick_job.base_duration_minutes = 30 # durasi job 10 menit untuk test
 	mudbrick_job.inputs = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
 	mudbrick_job.outputs = {"wet_mudbrick": 60}  # output intermediate 60 bata basah
 
 	# Mulai job sebagai PLAYER
 	var order_id: String = ""
 	if work_manager.has_method("start_job"):
-		# worker_kind 0 diasumsikan PLAYER
 		order_id = str(work_manager.call(
 			"start_job", 
 			mudbrick_job, 
 			WorkOrder.Worker_Type.NPC, 
-			"npc_01", null, Inventory, null, 0))
+			"npc_01", null, Inventory, null, 5)) # service fee test 5r
 	
 	print("Start_order_id: ", order_id)
 	
