@@ -1,0 +1,178 @@
+[gd_scene format=3 uid="uid://bhbr0kha3wbms"]
+
+[node name="GameplayHUD" type="CanvasLayer"]
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="TopLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="TopLeftPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+layout_mode = 0
+offset_right = 260.0
+offset_bottom = 90.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+alignment = 1
+
+[node name="LabelDay" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "SAT 20"
+
+[node name="LabelTime" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "10:20 AM"
+
+[node name="LabelWeather" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "SUNNY"
+
+[node name="TopRightPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_bottom = 90.0
+grow_horizontal = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="LabelAlertTitle" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "STATUS"
+
+[node name="LabelAlertBody" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "NO ALERT"
+
+[node name="LeftLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="LeftMenuPanel" type="PanelContainer" parent="Root/MarginContainer/LeftLayer"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -110.0
+offset_right = 160.0
+offset_bottom = 110.0
+grow_vertical = 2
+pivot_offset = Vector2(80, 110)
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ButtonProgress" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "PROGRESS"
+
+[node name="ButtonContracts" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "CONTRACTS"
+
+[node name="ButtonWorkshop" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "WORKSHOP"
+
+[node name="ButtonClaims" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "CLAIMS"
+
+[node name="BottomLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="BottomMenuPanel" type="PanelContainer" parent="Root/MarginContainer/BottomLayer"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -210.0
+offset_top = -90.0
+offset_right = 210.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ButtonInventory" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "INVENTORY"
+
+[node name="ButtonQuest" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "QUEST"
+
+[node name="ButtonSkills" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "SKILLS"
+
+[node name="ButtonMap" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "MAP"
+
+[node name="ButtonSettings" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "SETTINGS"
