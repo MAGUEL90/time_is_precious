@@ -30,6 +30,7 @@ border_color = Color(5.2799434e-05, 0.7464934, 0.19877908, 1)
 
 [resource]
 InvSlot/base_type = &"Button"
+InvSlot/fonts/font = null
 InvSlot/styles/disabled = SubResource("StyleBoxFlat_j7vuk")
 InvSlot/styles/hover = SubResource("StyleBoxFlat_q27fo")
 InvSlot/styles/normal = SubResource("StyleBoxFlat_m5i5h")

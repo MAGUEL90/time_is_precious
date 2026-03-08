@@ -9,6 +9,7 @@ var dialogue_finished: bool = false
 var speed = 50
 
 var claim_menu_is_open: bool = false
+var inventory_is_open: bool = false
 var claim_menu_workshop: WorkShop = null
 var claim_menu_claimable_index: int = 0
 
