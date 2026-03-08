@@ -11,6 +11,8 @@ var speed = 50
 var claim_menu_is_open: bool = false
 var claim_menu_workshop: WorkShop = null
 var claim_menu_claimable_index: int = 0
+var claim_fee_confirm_is_open: bool = false
+var claim_fee_confirm_choice: int = 0
 
 @onready var player_movement_state: Node = $PlayerStateMachine/PlayerMovementState
 @onready var time_component_manager = TimeComponentManager
@@ -23,12 +25,23 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if claim_menu_is_open:
 		if event is InputEventKey and event.is_pressed() and not event.is_echo():
+			if claim_fee_confirm_is_open:
+				if event.keycode == KEY_Y:
+					_confirm_claim_choice_with_fee(true)
+				elif event.keycode == KEY_N:
+					_confirm_claim_choice_with_fee(false)
+				elif event.keycode == KEY_ESCAPE:
+					_close_claim_menu()
+				return
+
 			if event.keycode == KEY_1:
-				_confirm_claim_choice(0) # TAKE TO PLAYER
+				_open_fee_confirmation(0) # TAKE TO PLAYER
 			elif event.keycode == KEY_2:
 				_confirm_claim_choice(1) # STORE IN WORKSHOP
 			elif event.keycode == KEY_3:
 				_confirm_claim_choice(2) # CONTINUE_PROCESS
+			elif event.keycode == KEY_4:
+				_pay_workshop_unpaid_fee()
 			elif event.keycode == KEY_ESCAPE:
 				_close_claim_menu()
 		return
@@ -106,10 +119,42 @@ func _confirm_claim_choice(claim_action: int) -> void:
 	if claim_menu_workshop == null:
 		_close_claim_menu()
 		return
-	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_action)
+	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_action, true)
+	_close_claim_menu()
+
+func _open_fee_confirmation(claim_action: int) -> void:
+	claim_fee_confirm_is_open = true
+	claim_fee_confirm_choice = claim_action
+	print("Bayar Fee sekarang? [Y]=Bayar, [N]=TidakBayar (masuk workshop + hitung jatuh tempo hari)")
+
+func _confirm_claim_choice_with_fee(will_pay_fee: bool) -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		return
+	
+	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_fee_confirm_choice, will_pay_fee)
 	_close_claim_menu()
 
 func _close_claim_menu() -> void:
 	claim_menu_is_open = false
 	claim_menu_workshop = null
 	claim_menu_claimable_index = 0
+	claim_fee_confirm_is_open = false
+	claim_fee_confirm_choice = 0
+
+func _pay_workshop_unpaid_fee() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		return
+	if claim_menu_workshop.has_method("pay_all_unpaid_fees"):
+		var paid_success: bool = bool(claim_menu_workshop.call("pay_all_unpaid_fees", self))
+		print("Pay unpaid fee success: ", paid_success)
+	_close_claim_menu()
+	
+	
+	
+	
+	
+	
+	
+	

@@ -31,14 +31,27 @@ func _on_claim_range_exited() -> void:
 		workshop_storage.call("set_player_in_claim_area", false)
 
 func on_player_interact(player: Player) -> void:
+	if WorkShopStorage != null and WorkShopStorage.has_method("get_unpaid_fee_summary"):
+		var unpaid_summary: Dictionary = WorkShopStorage.call("get_unpaid_fee_summary")
+		print("Unpaid fee summary: ", unpaid_summary)
+		
 	# buka mode pilihan 1/2/3 di player
 	if player != null and player.has_method("open_workshop_claim_menu"):
 		player.call("open_workshop_claim_menu", self, 0)
 
+func pay_all_unpaid_fees(_player: Player) -> bool:
+	if WorkShopStorage == null:
+		return false
+	
+	if not WorkShopStorage.has_method("settle_unpaid_fees"):
+		return false
+	return bool(WorkShopStorage.call("settle_unpaid_fees", Inventory, false))
+
 func claim_with_action(
 	_player: Player, 
 	claimable_index: int, 
-	claim_action: int) -> bool:
+	claim_action: int,
+	will_pay_fee: bool = true) -> bool:
 		
 	if WorkShopStorage == null:
 		return false
@@ -59,6 +72,7 @@ func claim_with_action(
 			"claim_output_with_action", 
 			claimable_index, 
 			claim_action, 
-			player_inventory))
+			player_inventory,
+			will_pay_fee))
 	print("Claim Success: ", claim_success)
 	return claim_success
