@@ -291,7 +291,7 @@ func settle_unpaid_fees(player_inventory: Node, pay_overdue_only: bool = false) 
 	
 	for index in target_indices:
 		var paid_entry: Dictionary = unpaid_claims_ledger[index]
-		paid_entry[index] = true
+		paid_entry["is_paid"] = true
 		paid_entry["paid_day"] = day_now
 		unpaid_claims_ledger[index] = paid_entry
 	
