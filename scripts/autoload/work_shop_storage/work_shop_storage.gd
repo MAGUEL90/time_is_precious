@@ -216,7 +216,7 @@ func _apply_overdue_penalty(day_now: int) -> void:
 			continue
 		
 		var due_day: int = int(entry.get("due_day", day_now + 1))
-		if day_now < due_day:
+		if day_now <= due_day:
 			continue
 		
 		var last_penalty_day: int = int(entry.get("last_penalty_day", due_day))
@@ -291,7 +291,7 @@ func settle_unpaid_fees(player_inventory: Node, pay_overdue_only: bool = false) 
 	
 	for index in target_indices:
 		var paid_entry: Dictionary = unpaid_claims_ledger[index]
-		paid_entry[index] = true
+		paid_entry["is_paid"] = true
 		paid_entry["paid_day"] = day_now
 		unpaid_claims_ledger[index] = paid_entry
 	
