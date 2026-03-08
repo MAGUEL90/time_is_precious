@@ -5,7 +5,7 @@ var claimable_outputs: Array[Dictionary] = [] # daftar output yang harus di-clai
 var unpaid_claims_ledger: Array[Dictionary] = [] # catatan claim yang belum bayar fee
 var player_is_in_claim_area: bool = false # true jika player sedang berada di area workshop untuk claim
 
-@export var fee_currency_item_id: String = "Shekel"
+@export var fee_currency_item_id: String = "shekel"
 @export var unpaid_fee_due_days: int = 3
 @export var overdue_penalty_percent_per_day: int = 10
 

@@ -46,6 +46,7 @@ func _setup_job_and_inventory() -> void:
 		inventory.call("add_item", "clay_lump", 10)
 		inventory.call("add_item", "straw_bundle", 10)
 		inventory.call("add_item", "water_jar", 10)
+		inventory.call("add_item", "shekel", 10)
 
 func _run_simulation() -> void:
 	

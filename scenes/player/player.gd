@@ -42,6 +42,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_confirm_claim_choice(2) # CONTINUE_PROCESS
 			elif event.keycode == KEY_4:
 				_pay_workshop_unpaid_fee()
+			elif event.keycode == KEY_5:
+				_pay_workshop_overdue_fee()
 			elif event.keycode == KEY_ESCAPE:
 				_close_claim_menu()
 		return
@@ -113,7 +115,10 @@ func open_workshop_claim_menu(workshop: WorkShop, claimable_index: int) -> void:
 	print("1) Ambil ke Inventory Player")
 	print("2) Simpan ke Inventory Workshop")
 	print("3) Lanjut Proses (auto-pull)")
+	print("4) Bayar semua unpaid fee Workshop")
+	print("5) Bayar fee overdue saja")
 	print("ESC) Batal")
+	claim_fee_confirm_is_open = false
 
 func _confirm_claim_choice(claim_action: int) -> void:
 	if claim_menu_workshop == null:
@@ -150,9 +155,17 @@ func _pay_workshop_unpaid_fee() -> void:
 		var paid_success: bool = bool(claim_menu_workshop.call("pay_all_unpaid_fees", self))
 		print("Pay unpaid fee success: ", paid_success)
 	_close_claim_menu()
+
+func _pay_workshop_overdue_fee() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		return
 	
+	if claim_menu_workshop.has_method("pay_overdue_fees"):
+		var paid_success: bool = bool(claim_menu_workshop.call("pay_overdue_fees", self))
+		print("Pay overdue fee success", paid_success)
 	
-	
+	_close_claim_menu()
 	
 	
 	

@@ -16,6 +16,7 @@ script = ExtResource("1_spw5o")
 shape = SubResource("CircleShape2D_3fmud")
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("4_dv5t0")]
+process_mode = 3
 visible = false
 offset_left = -5.0
 offset_top = -45.0

@@ -47,6 +47,17 @@ func pay_all_unpaid_fees(_player: Player) -> bool:
 		return false
 	return bool(WorkShopStorage.call("settle_unpaid_fees", Inventory, false))
 
+func pay_overdue_fees(_player: Player) -> bool:
+	if WorkShopStorage == null:
+		return false
+	
+	if not WorkShopStorage.has_method("settle_unpaid_fees"):
+		return false
+	
+	return bool(WorkShopStorage.call("settle_unpaid_fees", Inventory, true))
+	
+	
+
 func claim_with_action(
 	_player: Player, 
 	claimable_index: int, 
@@ -75,4 +86,5 @@ func claim_with_action(
 			player_inventory,
 			will_pay_fee))
 	print("Claim Success: ", claim_success)
+	print(player_inventory.items)
 	return claim_success
