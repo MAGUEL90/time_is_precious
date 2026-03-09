@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://bhbr0kha3wbms"]
+[gd_scene load_steps=2 format=3 uid="uid://bhbr0kha3wbms"]
+
+[ext_resource type="PackedScene" uid="uid://cc0k42fwy7gwh" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
 
 [node name="GameplayHUD" type="CanvasLayer"]
 
@@ -67,9 +69,8 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -260.0
-offset_right = -183.0
-offset_bottom = 50.0
+offset_left = -200.0
+offset_bottom = 72.0
 grow_horizontal = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel"]
@@ -172,25 +173,45 @@ theme_override_constants/margin_bottom = 6
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="ButtonInventory" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+[node name="ShortcutInventory" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
-text = "INVENTORY"
 
-[node name="ButtonQuest" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory/MarginContainer/VBoxContainer" index="1"]
+text = "BAG"
+
+[node name="ShortcutQuest" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest/MarginContainer/VBoxContainer" index="1"]
 text = "QUEST"
 
-[node name="ButtonSkills" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+[node name="ShortcutSkills" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills/MarginContainer/VBoxContainer" index="1"]
 text = "SKILLS"
 
-[node name="ButtonMap" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+[node name="ShortcutMap" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutMap/MarginContainer/VBoxContainer" index="1"]
 text = "MAP"
 
-[node name="ButtonSettings" type="Button" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer"]
+[node name="ShortcutSettings" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
-text = "SETTINGS"
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSettings/MarginContainer/VBoxContainer" index="1"]
+text = "SET"
+
+[node name="HudShortcutSlot6" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutMap"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSettings"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/HudShortcutSlot6"]
