@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3 uid="uid://d0wn5ml4p5yv4"]
+
+[ext_resource type="PackedScene" uid="uid://buluwpqeq5op" path="res://scenes/ui/item_slot/item_slot.tscn" id="1_la4hm"]
+
+[node name="ItemGrid" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_type_variation = &"InvPanel"
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="MainVBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Margin/MainVBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/MainVBox/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InvLabelTitle"
+text = "Bag"
+
+[node name="Spacer" type="Control" parent="Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="InfoLabel" type="Label" parent="Margin/MainVBox/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0/0"
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Grid" type="GridContainer" parent="Margin/MainVBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 15
+theme_override_constants/v_separation = 12
+columns = 16
+
+[node name="ItemSlot" parent="Margin/MainVBox/Scroll/Grid" instance=ExtResource("1_la4hm")]
+layout_mode = 2
+
+[node name="ItemSlot2" parent="Margin/MainVBox/Scroll/Grid" instance=ExtResource("1_la4hm")]
+layout_mode = 2
