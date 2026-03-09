@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://bhbr0kha3wbms"]
 
-[ext_resource type="PackedScene" uid="uid://cc0k42fwy7gwh" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
 
 [node name="GameplayHUD" type="CanvasLayer"]
 
@@ -157,10 +157,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -210.0
-offset_top = -90.0
-offset_right = 186.0
-offset_bottom = -47.0
+offset_left = -254.0
+offset_top = -112.0
+offset_right = 254.0
 grow_horizontal = 2
 grow_vertical = 0
 
