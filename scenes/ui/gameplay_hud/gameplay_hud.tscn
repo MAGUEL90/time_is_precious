@@ -26,9 +26,10 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 
 [node name="TopLeftPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+custom_minimum_size = Vector2(280, 96)
 layout_mode = 0
-offset_right = 260.0
-offset_bottom = 90.0
+offset_right = 79.0
+offset_bottom = 85.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 
@@ -61,12 +62,14 @@ size_flags_horizontal = 4
 text = "SUNNY"
 
 [node name="TopRightPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+custom_minimum_size = Vector2(200, 72)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -260.0
-offset_bottom = 90.0
+offset_right = -183.0
+offset_bottom = 50.0
 grow_horizontal = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel"]
@@ -91,13 +94,14 @@ text = "NO ALERT"
 layout_mode = 2
 
 [node name="LeftMenuPanel" type="PanelContainer" parent="Root/MarginContainer/LeftLayer"]
+custom_minimum_size = Vector2(170, 220)
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
 offset_top = -110.0
-offset_right = 160.0
-offset_bottom = 110.0
+offset_right = 114.0
+offset_bottom = 56.0
 grow_vertical = 2
 pivot_offset = Vector2(80, 110)
 
@@ -110,29 +114,42 @@ theme_override_constants/margin_bottom = 6
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 alignment = 1
 
 [node name="ButtonProgress" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(125, 35)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 text = "PROGRESS"
 
 [node name="ButtonContracts" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(125, 35)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 text = "CONTRACTS"
 
 [node name="ButtonWorkshop" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(125, 35)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 text = "WORKSHOP"
 
 [node name="ButtonClaims" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(125, 35)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 text = "CLAIMS"
 
 [node name="BottomLayer" type="Control" parent="Root/MarginContainer"]
 layout_mode = 2
 
 [node name="BottomMenuPanel" type="PanelContainer" parent="Root/MarginContainer/BottomLayer"]
+custom_minimum_size = Vector2(460, 92)
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -141,7 +158,8 @@ anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -210.0
 offset_top = -90.0
-offset_right = 210.0
+offset_right = 186.0
+offset_bottom = -47.0
 grow_horizontal = 2
 grow_vertical = 0
 
