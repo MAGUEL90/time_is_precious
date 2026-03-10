@@ -1,0 +1,19 @@
+[gd_resource type="Theme" load_steps=7 format=3 uid="uid://cgbl8ufm3rl2n"]
+
+[ext_resource type="StyleBox" uid="uid://ddlguyefnuww" path="res://resources/ui_gameplay_theme/hud_shortcut_button_hover.tres" id="1_ar6jk"]
+[ext_resource type="StyleBox" uid="uid://bxat7iyyo815s" path="res://resources/ui_gameplay_theme/hud_shortcut_button_normal.tres" id="2_role8"]
+[ext_resource type="StyleBox" uid="uid://d01qrxocruy58" path="res://resources/ui_gameplay_theme/hud_shortcut_button_pressed.tres" id="3_plut7"]
+[ext_resource type="StyleBox" uid="uid://dp2nsw5y5dfv0" path="res://resources/ui_gameplay_theme/hud_side_action_button_hover.tres" id="4_k3e77"]
+[ext_resource type="StyleBox" uid="uid://yd1s5wjxeb2u" path="res://resources/ui_gameplay_theme/hud_side_action_button_normal.tres" id="5_08jpu"]
+[ext_resource type="StyleBox" uid="uid://dgibc8i4a1av0" path="res://resources/ui_gameplay_theme/hud_side_action_button_pressed.tres" id="6_5w6sm"]
+
+[resource]
+HudPanel/base_type = &"PanelContainer"
+HudShortcutButton/base_type = &"Button"
+HudShortcutButton/styles/hover = ExtResource("1_ar6jk")
+HudShortcutButton/styles/normal = ExtResource("2_role8")
+HudShortcutButton/styles/pressed = ExtResource("3_plut7")
+HudSideActionButton/base_type = &"Button"
+HudSideActionButton/styles/hover = ExtResource("4_k3e77")
+HudSideActionButton/styles/normal = ExtResource("5_08jpu")
+HudSideActionButton/styles/pressed = ExtResource("6_5w6sm")

@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bhbr0kha3wbms"]
+[gd_scene load_steps=4 format=3 uid="uid://bhbr0kha3wbms"]
 
-[ext_resource type="PackedScene" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_2l86p"]
+[ext_resource type="PackedScene" uid="uid://bcpauf7vubmem" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
+[ext_resource type="PackedScene" uid="uid://bqb1s4a8wf1o6" path="res://scenes/ui/hud_side_action/hud_side_action.tscn" id="2_p182m"]
 
 [node name="GameplayHUD" type="CanvasLayer"]
 
@@ -11,6 +13,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_2l86p")
 
 [node name="MarginContainer" type="MarginContainer" parent="Root"]
 layout_mode = 1
@@ -95,7 +98,7 @@ text = "NO ALERT"
 layout_mode = 2
 
 [node name="LeftMenuPanel" type="PanelContainer" parent="Root/MarginContainer/LeftLayer"]
-custom_minimum_size = Vector2(170, 220)
+custom_minimum_size = Vector2(150, 240)
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
@@ -115,36 +118,44 @@ theme_override_constants/margin_bottom = 6
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16
 alignment = 1
 
-[node name="ButtonProgress" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(125, 35)
+[node name="ActionProgress" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "PROGRESS"
 
-[node name="ButtonContracts" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(125, 35)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "CONTRACTS"
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="0"]
+text = "Progress"
 
-[node name="ButtonWorkshop" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(125, 35)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "WORKSHOP"
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="1"]
+text = "Daily Overview"
 
-[node name="ButtonClaims" type="Button" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(125, 35)
+[node name="ActionContracts" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "CLAIMS"
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="0"]
+text = "Contracts"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="1"]
+text = "Active Requests"
+
+[node name="ActionWorkShop" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="0"]
+text = "WorkShop"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="1"]
+text = "Stations & Jobs"
+
+[node name="ActionClaims" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="0"]
+text = "Claims"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="1"]
+text = "Ready Outputs"
 
 [node name="BottomLayer" type="Control" parent="Root/MarginContainer"]
 layout_mode = 2
@@ -208,6 +219,10 @@ text = "SET"
 [node name="HudShortcutSlot6" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
 
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills"]
