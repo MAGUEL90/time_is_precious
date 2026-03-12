@@ -40,6 +40,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_8y0qs")
 
 [node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme = ExtResource("1_blffd")
+theme_type_variation = &"HudLabelShortcut"
 text = "MENU"
 horizontal_alignment = 1
 vertical_alignment = 1

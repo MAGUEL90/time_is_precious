@@ -56,16 +56,22 @@ alignment = 1
 [node name="LabelDay" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "SAT 20"
 
 [node name="LabelTime" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "10:20 AM"
 
 [node name="LabelWeather" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "SUNNY"
 
 [node name="TopRightPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
@@ -91,11 +97,15 @@ size_flags_vertical = 4
 [node name="LabelAlertTitle" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "STATUS"
 
 [node name="LabelAlertBody" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "NO ALERT"
 
 [node name="LeftLayer" type="Control" parent="Root/MarginContainer"]
@@ -131,36 +141,52 @@ alignment = 1
 layout_mode = 2
 
 [node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "Progress"
 
 [node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
 text = "Daily Overview"
 
 [node name="ActionContracts" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
 layout_mode = 2
 
 [node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "Contracts"
 
 [node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
 text = "Active Requests"
 
 [node name="ActionWorkShop" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
 layout_mode = 2
 
 [node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "WorkShop"
 
 [node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
 text = "Stations & Jobs"
 
 [node name="ActionClaims" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
 layout_mode = 2
 
 [node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
 text = "Claims"
 
 [node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
 text = "Ready Outputs"
 
 [node name="BottomLayer" type="Control" parent="Root/MarginContainer"]

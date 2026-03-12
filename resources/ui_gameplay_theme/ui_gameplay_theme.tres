@@ -1,5 +1,6 @@
-[gd_resource type="Theme" load_steps=8 format=3 uid="uid://cgbl8ufm3rl2n"]
+[gd_resource type="Theme" load_steps=9 format=3 uid="uid://cgbl8ufm3rl2n"]
 
+[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="1_08jpu"]
 [ext_resource type="StyleBox" uid="uid://ddlguyefnuww" path="res://resources/ui_gameplay_theme/hud_shortcut_button_hover.tres" id="1_ar6jk"]
 [ext_resource type="StyleBox" uid="uid://bxat7iyyo815s" path="res://resources/ui_gameplay_theme/hud_shortcut_button_normal.tres" id="2_role8"]
 [ext_resource type="StyleBox" uid="uid://d01qrxocruy58" path="res://resources/ui_gameplay_theme/hud_shortcut_button_pressed.tres" id="3_plut7"]
@@ -26,6 +27,18 @@ shadow_color = Color(0, 0, 0, 0.3764706)
 shadow_size = 4
 
 [resource]
+HudLabelMain/base_type = &"Label"
+HudLabelMain/colors/font_color = Color(0.67481464, 0.67481464, 0.6748146, 1)
+HudLabelMain/font_sizes/font_size = 18
+HudLabelMain/fonts/font = ExtResource("1_08jpu")
+HudLabelShortcut/base_type = &"Label"
+HudLabelShortcut/colors/font_color = Color(1, 1, 1, 1)
+HudLabelShortcut/font_sizes/font_size = 10
+HudLabelShortcut/fonts/font = ExtResource("1_08jpu")
+HudLabelSub/base_type = &"Label"
+HudLabelSub/colors/font_color = Color(0.44291076, 0.44291076, 0.44291073, 1)
+HudLabelSub/font_sizes/font_size = 10
+HudLabelSub/fonts/font = ExtResource("1_08jpu")
 HudPanel/base_type = &"Panel"
 HudPanel/styles/panel = SubResource("StyleBoxFlat_k3e77")
 HudShortcutButton/base_type = &"Button"
