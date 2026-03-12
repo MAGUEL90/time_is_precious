@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=7 format=3 uid="uid://cgbl8ufm3rl2n"]
+[gd_resource type="Theme" load_steps=8 format=3 uid="uid://cgbl8ufm3rl2n"]
 
 [ext_resource type="StyleBox" uid="uid://ddlguyefnuww" path="res://resources/ui_gameplay_theme/hud_shortcut_button_hover.tres" id="1_ar6jk"]
 [ext_resource type="StyleBox" uid="uid://bxat7iyyo815s" path="res://resources/ui_gameplay_theme/hud_shortcut_button_normal.tres" id="2_role8"]
@@ -7,8 +7,27 @@
 [ext_resource type="StyleBox" uid="uid://yd1s5wjxeb2u" path="res://resources/ui_gameplay_theme/hud_side_action_button_normal.tres" id="5_08jpu"]
 [ext_resource type="StyleBox" uid="uid://dgibc8i4a1av0" path="res://resources/ui_gameplay_theme/hud_side_action_button_pressed.tres" id="6_5w6sm"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k3e77"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.38189965, 0.078835465, 0.016432054, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5774911, 0.13937372, 0.039626095, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0, 0, 0, 0.3764706)
+shadow_size = 4
+
 [resource]
-HudPanel/base_type = &"PanelContainer"
+HudPanel/base_type = &"Panel"
+HudPanel/styles/panel = SubResource("StyleBoxFlat_k3e77")
 HudShortcutButton/base_type = &"Button"
 HudShortcutButton/styles/hover = ExtResource("1_ar6jk")
 HudShortcutButton/styles/normal = ExtResource("2_role8")
