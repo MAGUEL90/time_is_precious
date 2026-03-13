@@ -1,34 +1,51 @@
-[gd_scene load_steps=4 format=3 uid="uid://cbah3a6bty5bh"]
+[gd_scene load_steps=3 format=3 uid="uid://cbah3a6bty5bh"]
 
-[ext_resource type="Texture2D" uid="uid://c0nk05f88wn3b" path="res://assets/temporer/ui/UI_chat_box_stone.png" id="1_e3edu"]
 [ext_resource type="Script" uid="uid://y6k3kkgb74ep" path="res://scenes/time_label/time_label.gd" id="1_f6cta"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_y0xxr"]
-font_color = Color(0.12591085, 0.12591085, 0.12591082, 1)
+font_color = Color(1, 0.8906003, 0.9915089, 1)
 
-[node name="TimeLabel" type="TextureRect"]
-custom_minimum_size = Vector2(250, 100)
-offset_right = 80.0
-offset_bottom = 32.0
-texture = ExtResource("1_e3edu")
+[node name="TimeLabel" type="ColorRect"]
+self_modulate = Color(0, 0.40784314, 0.4509804, 1)
+custom_minimum_size = Vector2(250, 0)
+offset_right = 250.0
+offset_bottom = 50.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0, 0.78948396, 0.794237, 1)
 script = ExtResource("1_f6cta")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -47.5
-offset_top = -17.0
-offset_right = 47.5
-offset_bottom = 17.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 2
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="DayLabel" type="Label" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+text = "1"
+label_settings = SubResource("LabelSettings_y0xxr")
+
+[node name="TimeLabel" type="Label" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
 text = "00:00:00"
 label_settings = SubResource("LabelSettings_y0xxr")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WeatherLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Weather: Storm"

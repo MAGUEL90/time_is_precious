@@ -1,0 +1,265 @@
+[gd_scene load_steps=4 format=3 uid="uid://bhbr0kha3wbms"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_2l86p"]
+[ext_resource type="PackedScene" uid="uid://bcpauf7vubmem" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
+[ext_resource type="PackedScene" uid="uid://bqb1s4a8wf1o6" path="res://scenes/ui/hud_side_action/hud_side_action.tscn" id="2_p182m"]
+
+[node name="GameplayHUD" type="CanvasLayer"]
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_2l86p")
+
+[node name="MarginContainer" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="TopLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="TopLeftPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+custom_minimum_size = Vector2(280, 96)
+layout_mode = 0
+offset_right = 79.0
+offset_bottom = 85.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudPanel"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+alignment = 1
+
+[node name="LabelDay" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "SAT 20"
+
+[node name="LabelTime" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "10:20 AM"
+
+[node name="LabelWeather" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "SUNNY"
+
+[node name="TopRightPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
+custom_minimum_size = Vector2(200, 72)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_bottom = 72.0
+grow_horizontal = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudPanel"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="LabelAlertTitle" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "STATUS"
+
+[node name="LabelAlertBody" type="Label" parent="Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "NO ALERT"
+
+[node name="LeftLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="LeftMenuPanel" type="PanelContainer" parent="Root/MarginContainer/LeftLayer"]
+custom_minimum_size = Vector2(150, 240)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -110.0
+offset_right = 114.0
+offset_bottom = 56.0
+grow_vertical = 2
+pivot_offset = Vector2(80, 110)
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudPanel"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="ActionProgress" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "Progress"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
+text = "Daily Overview"
+
+[node name="ActionContracts" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "Contracts"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
+text = "Active Requests"
+
+[node name="ActionWorkShop" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "WorkShop"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
+text = "Stations & Jobs"
+
+[node name="ActionClaims" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer" instance=ExtResource("2_p182m")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="0"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelMain"
+text = "Claims"
+
+[node name="Subtext" parent="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims/MarginContainer/VBoxContainer" index="1"]
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelSub"
+text = "Ready Outputs"
+
+[node name="BottomLayer" type="Control" parent="Root/MarginContainer"]
+layout_mode = 2
+
+[node name="BottomMenuPanel" type="PanelContainer" parent="Root/MarginContainer/BottomLayer"]
+custom_minimum_size = Vector2(460, 92)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -254.0
+offset_top = -112.0
+offset_right = 254.0
+grow_horizontal = 2
+grow_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudPanel"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="ShortcutInventory" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory/MarginContainer/VBoxContainer" index="1"]
+text = "BAG"
+
+[node name="ShortcutQuest" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest/MarginContainer/VBoxContainer" index="1"]
+text = "QUEST"
+
+[node name="ShortcutSkills" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills/MarginContainer/VBoxContainer" index="1"]
+text = "SKILLS"
+
+[node name="ShortcutMap" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutMap/MarginContainer/VBoxContainer" index="1"]
+text = "MAP"
+
+[node name="ShortcutSettings" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSettings/MarginContainer/VBoxContainer" index="1"]
+text = "SET"
+
+[node name="HudShortcutSlot6" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+layout_mode = 2
+
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop"]
+[editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutMap"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSettings"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/HudShortcutSlot6"]

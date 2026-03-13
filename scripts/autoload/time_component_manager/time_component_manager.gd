@@ -1,6 +1,6 @@
 extends Node
 
-@export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
+@export var seconds_per_minute: float = 0.001 # 1 detik real = 1 menit game
 @export var start_hour: int = 7
 @export var start_day: int 
 @export var tint_transition_minutes: float = 30.0 # durasi transisi tint (menit) agar tidak patah di batas jam
