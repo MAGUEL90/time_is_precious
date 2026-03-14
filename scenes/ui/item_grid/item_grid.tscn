@@ -1,6 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://d0wn5ml4p5yv4"]
-
-[ext_resource type="PackedScene" uid="uid://buluwpqeq5op" path="res://scenes/ui/item_slot/item_slot.tscn" id="1_la4hm"]
+[gd_scene format=3 uid="uid://d0wn5ml4p5yv4"]
 
 [node name="ItemGrid" type="PanelContainer"]
 anchors_preset = 15
@@ -51,9 +49,3 @@ size_flags_vertical = 3
 theme_override_constants/h_separation = 15
 theme_override_constants/v_separation = 12
 columns = 16
-
-[node name="ItemSlot" parent="Margin/MainVBox/Scroll/Grid" instance=ExtResource("1_la4hm")]
-layout_mode = 2
-
-[node name="ItemSlot2" parent="Margin/MainVBox/Scroll/Grid" instance=ExtResource("1_la4hm")]
-layout_mode = 2
