@@ -1,11 +1,11 @@
 [gd_scene load_steps=4 format=3 uid="uid://dyf8mdmpl00a"]
 
 [ext_resource type="Script" uid="uid://bh0ypkem632ff" path="res://scenes/components/interactable_label_component/interactable_label_component.gd" id="1_ba5q2"]
-[ext_resource type="Texture2D" uid="uid://b3j78xfndgw53" path="res://assets/temporer/ui/basic_ui_sprites.png" id="2_nq5xc"]
+[ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/ui/default_icon.png" id="2_nq5xc"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6ix38"]
 atlas = ExtResource("2_nq5xc")
-region = Rect2(709, 164, 22, 24)
+region = Rect2(0, 0, 16, 16)
 
 [node name="InteractableLabelComponent" type="Control"]
 layout_mode = 3
