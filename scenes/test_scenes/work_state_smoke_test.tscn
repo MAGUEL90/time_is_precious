@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=4 uid="uid://bpbtoaixxnfk0"]
+[gd_scene load_steps=12 format=4 uid="uid://bpbtoaixxnfk0"]
 
 [ext_resource type="Script" uid="uid://b7rlmo216580g" path="res://scenes/test_scenes/work_state_smoke_test.gd" id="1_l4b4i"]
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="2_s68m4"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="5_aikyy"]
 [ext_resource type="PackedScene" uid="uid://cbah3a6bty5bh" path="res://scenes/time_label/time_label.tscn" id="6_e4fne"]
 [ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="7_l4b4i"]
+[ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="7_p3cw6"]
 [ext_resource type="PackedScene" uid="uid://beab8w4gsj112" path="res://scenes/work_state_boot_strap/work_state_boot_strap.tscn" id="8_s68m4"]
 [ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="9_defl6"]
 
@@ -38,15 +39,18 @@ position = Vector2(137, 110)
 position = Vector2(375, 117)
 collision_layer = 1
 
+[node name="WorkShop" parent="." instance=ExtResource("7_l4b4i")]
+position = Vector2(305, 101)
+
+[node name="WorkStateBootStrap" parent="." instance=ExtResource("8_s68m4")]
+
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="TimeLabel" parent="CanvasLayer" instance=ExtResource("6_e4fne")]
 offset_right = 200.0
 offset_bottom = 100.0
 
-[node name="WorkShop" parent="." instance=ExtResource("7_l4b4i")]
-position = Vector2(305, 101)
-
-[node name="WorkStateBootStrap" parent="." instance=ExtResource("8_s68m4")]
+[node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("7_p3cw6")]
+layer = 2
 
 [node name="GameplayHUD" parent="." instance=ExtResource("9_defl6")]
