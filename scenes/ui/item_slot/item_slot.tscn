@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://buluwpqeq5op"]
 
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_12jxq"]
-[ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/temporer/button_test_1.png" id="1_gtaos"]
+[ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/ui/default_icon.png" id="1_gtaos"]
 
 [node name="ItemSlot" type="Button"]
 custom_minimum_size = Vector2(64, 64)
