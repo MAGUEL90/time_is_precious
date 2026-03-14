@@ -1,11 +1,9 @@
-extends Button
+class_name ItemSlot extends Button
 
+@onready var asset_icon: TextureRect = $MarginContainer/AssetIcon
+@onready var asset_qty: Label = $MarginContainer/AssetQty
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func set_item(item_id: String, quantity: int, icon: Texture2D) -> void:
+	asset_icon.texture = icon
+	asset_qty.text = str(max(quantity, 0))
+	tooltip_text = "%s x%s" % [item_id.replace("_", " ").capitalize(), asset_qty.text]
