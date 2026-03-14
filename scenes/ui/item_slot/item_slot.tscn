@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://buluwpqeq5op"]
+[gd_scene load_steps=4 format=3 uid="uid://buluwpqeq5op"]
 
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_12jxq"]
 [ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/ui/default_icon.png" id="1_gtaos"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="4_camno"]
 
 [node name="ItemSlot" type="Button"]
 custom_minimum_size = Vector2(64, 64)
@@ -30,13 +31,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 4
 
 [node name="Qty" type="Label" parent="MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 8
+theme = ExtResource("4_camno")
+theme_type_variation = &"HudLabelSub"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
 text = "99"
 horizontal_alignment = 2
 vertical_alignment = 1
