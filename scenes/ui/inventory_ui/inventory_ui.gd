@@ -16,7 +16,13 @@ const ITEM_ICON_BY_ID: Dictionary[String, Texture2D] = {
 
 func _ready() -> void:
 	visible = false
+	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
+		Inventory.items_changed.connect(_on_inventory_items_changed)
 	_refresh_inventory_grid()
+
+func _exit_tree() -> void:
+	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_inventory_items_changed):
+		Inventory.items_changed.disconnect(_on_inventory_items_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("open_inventory"):
@@ -34,6 +40,7 @@ func toggle_inventory() -> void:
 func open_inventory() -> void:
 	get_tree().paused = true
 	visible = true
+	_refresh_inventory_grid()
 
 func close_inventory() -> void:
 	get_tree().paused = false
@@ -56,13 +63,16 @@ func _refresh_inventory_grid():
 		var slot_scene: PackedScene = preload("res://scenes/ui/item_slot/item_slot.tscn")
 		var slot: Node = slot_scene.instantiate()
 	
+		grid.add_child(slot)
 		if slot.has_method("set_item"):
 			slot.call("set_item", item_id, qty, _get_item_icon(item_id))
-		grid.add_child(slot)
 		used_slots += 1
 		
 	if info_label != null:
 		info_label.text = "%d/%d" % [used_slots, 40]
 
 func _get_item_icon(item_id: String) -> Texture2D:
-	return ITEM_ICON_BY_ID.get(item_id)
+	return ITEM_ICON_BY_ID.get(item_id, DEFAULT_SLOT_ICON)
+
+func _on_inventory_items_changed() -> void:
+	_refresh_inventory_grid()
