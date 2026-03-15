@@ -1,4 +1,4 @@
-class_name ItemSlot extends Button
+extends Button
 
 @onready var asset_icon: TextureRect = $MarginContainer/AssetIcon
 @onready var asset_qty: Label = $MarginContainer/AssetQty

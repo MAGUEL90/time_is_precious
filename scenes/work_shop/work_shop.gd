@@ -86,5 +86,4 @@ func claim_with_action(
 			player_inventory,
 			will_pay_fee))
 	print("Claim Success: ", claim_success)
-	print(player_inventory.items)
 	return claim_success
