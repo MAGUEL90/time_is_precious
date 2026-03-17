@@ -12,9 +12,7 @@ func _ready() -> void:
 			int(TimeComponentManager.current_minute), TimeComponentManager.current_weather)
 
 func _on_time_changed(day:int, hour:int, minute:int, weather: String) -> void:
-	day_label.text = "Day: %02d " % [day]
-	time_label.text = "| Hour: %02d Minute: %02d " % [hour, minute]
-	weather_label.text = "Weather: %s" % [weather]
+	pass
 
 	
 	

@@ -20,8 +20,8 @@ func _ready() -> void:
 		Inventory.items_changed.connect(_on_inventory_items_changed)
 	_refresh_inventory_grid()
 
-func _exit_tree() -> void:
-	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_inventory_items_changed):
+func exit_tree() -> void:
+	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
 		Inventory.items_changed.disconnect(_on_inventory_items_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -30,6 +30,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	
 	elif visible and event.is_action_pressed("ui_cancel"):
 		close_inventory()
+
+func _on_inventory_items_changed() -> void:
+	_refresh_inventory_grid()
 
 func toggle_inventory() -> void:
 	if visible:
@@ -73,6 +76,3 @@ func _refresh_inventory_grid():
 
 func _get_item_icon(item_id: String) -> Texture2D:
 	return ITEM_ICON_BY_ID.get(item_id, DEFAULT_SLOT_ICON)
-
-func _on_inventory_items_changed() -> void:
-	_refresh_inventory_grid()
