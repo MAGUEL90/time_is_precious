@@ -1,13 +1,12 @@
 class_name ItemData extends Resource
 
-var id: String = ""
-var display_name: String = ""
-var stackable: bool = false
-var description: String = ""
-var icon: Texture2D
-
-@export var max_stack: int = 0
+@export var id: String = ""
+@export var display_name: String = ""
+@export var description: String = ""
+@export var icon: Texture2D
+@export var weight: float = 0.0
+@export var category: ItemEnums.ItemCategory = ItemEnums.ItemCategory.RESOURCE
+@export var max_stack: int = 99
 @export var durability_max: int = 0 # khusus TOOL; 0 untuk non-tool
 @export var base_value_shekel: int = 0
-@export var category: ItemEnums.ItemCategory = ItemEnums.ItemCategory.MATERIAL
 @export var rarity: ItemEnums.Rarity = ItemEnums.Rarity.COMMON
