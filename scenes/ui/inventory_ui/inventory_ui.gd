@@ -1,18 +1,10 @@
 class_name InventoryUI extends CanvasLayer
 
-const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
-const ITEM_ICON_BY_ID: Dictionary[String, Texture2D] = {
-	"clay_lump": preload("res://assets/items/clay_lump.png"),
-	"shekel": preload("res://assets/items/shekel.png"),
-	"straw_bundle": preload("res://assets/items/straw_bundle.png"),
-	"sun_dried_mudbrick": preload("res://assets/items/sun_dried_mudbrick.png"),
-	"water_jar": preload("res://assets/items/water_jar.png"),
-	"wet_mudbrick": preload("res://assets/items/wet_mudbrick.png")
-}
 
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var info_label: Label = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header/InfoLabel
 
+const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 
 func _ready() -> void:
 	visible = false
@@ -75,4 +67,10 @@ func _refresh_inventory_grid():
 		info_label.text = "%d/%d" % [used_slots, 40]
 
 func _get_item_icon(item_id: String) -> Texture2D:
-	return ITEM_ICON_BY_ID.get(item_id, DEFAULT_SLOT_ICON)
+	
+	if ItemDatabase != null:
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if item_data and item_data.icon:
+			return item_data.icon
+		return DEFAULT_SLOT_ICON
+	return DEFAULT_SLOT_ICON
