@@ -64,7 +64,8 @@ func _refresh_inventory_grid():
 		used_slots += 1
 		
 	if info_label != null:
-		info_label.text = "%d/%d" % [used_slots, 40]
+		var current_load: float = Inventory.get_total_inventory_weight()
+		info_label.text = "Current / Max Capacity: %.1f / %.1f | Slot: %d" % [current_load, Inventory.max_load, Inventory.items.size()]
 
 func _get_item_icon(item_id: String) -> Texture2D:
 	
