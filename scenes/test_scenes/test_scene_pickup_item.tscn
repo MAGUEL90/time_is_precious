@@ -226,6 +226,15 @@ collision_layer = 1
 
 [node name="PickupItem" parent="." instance=ExtResource("5_37oof")]
 position = Vector2(221, 146)
+item_id = "stone"
+
+[node name="PickupItem2" parent="." instance=ExtResource("5_37oof")]
+position = Vector2(185, 143)
+item_id = "straw_bundle"
+
+[node name="PickupItem3" parent="." instance=ExtResource("5_37oof")]
+position = Vector2(144, 144)
+item_id = "sun_dried_mudbrick"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
