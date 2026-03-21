@@ -8,7 +8,6 @@ var is_loaded: bool = false
 func _ready() -> void:
 	if not is_loaded:
 		_load_all_items(ITEMS_PATH)
-		print(items_by_id)
 
 
 func _load_all_items(path: String) -> void:
