@@ -42,6 +42,7 @@ HudLabelSub/fonts/font = ExtResource("1_08jpu")
 HudPanel/base_type = &"Panel"
 HudPanel/styles/panel = SubResource("StyleBoxFlat_k3e77")
 HudShortcutButton/base_type = &"Button"
+HudShortcutButton/fonts/font = ExtResource("1_08jpu")
 HudShortcutButton/styles/hover = ExtResource("1_ar6jk")
 HudShortcutButton/styles/normal = ExtResource("2_role8")
 HudShortcutButton/styles/pressed = ExtResource("3_plut7")
