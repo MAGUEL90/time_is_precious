@@ -1,0 +1,425 @@
+TIME IS PRECIOUS — KONSEP GAME (UPDATED)
+Tanggal: 2026-03-23
+Versi: v0.6 (NPC parameter MVP update)
+
+======================================================================
+1) HIGH CONCEPT
+======================================================================
+Judul            : Time is Precious
+Genre            : 2D Top-Down Management RPG / Delegation Sim
+Platform         : PC + Android (target)
+Engine           : Godot Engine 4.5.x
+Tema utama       : “Waktu = Uang”. Setiap aksi bisa dibayar dengan:
+                  (A) Shekel (uang) atau (B) Waktu (menunggu/advance time)
+
+Elevator pitch:
+Kota Mesopotamia yang dulu makmur runtuh. Kamu membangun kembali kejayaan kampung
+halaman dalam 100 hari dengan cara mengelola waktu, uang, pengetahuan, dan tenaga
+kerja NPC. Kamu bisa mengerjakan sendiri (hemat uang, mahal waktu), atau membayar
+NPC agar produksi berjalan di background dan waktumu bisa dipakai untuk keputusan
+yang lebih penting.
+
+Ringkasan identitas game:
+- Inti game adalah mengubah waktu menjadi nilai.
+- Uang bisa dipakai untuk menghemat waktu.
+- Waktu bisa dikorbankan untuk menghemat uang.
+- Player berkembang bukan sebagai pekerja paling kuat, tetapi sebagai tokoh yang
+  paling cerdas dalam mengatur orang, proses, dan peluang.
+
+======================================================================
+2) PLAYER FANTASY / IDENTITAS PLAYER
+======================================================================
+Player memiliki satu identitas utama: penggerak kampung yang cerdas.
+
+Fantasy utamanya:
+“Aku bukan yang paling kuat bekerja, tapi aku yang paling pandai membuat waktu,
+uang, dan orang lain bekerja lebih efisien.”
+
+Implikasi desain:
+- Player tetap bisa gathering, farming, building, crafting dasar, dan kerja manual.
+- Namun kerja manual bukan keunggulan utama player dalam jangka panjang.
+- Kekuatan utama player ada pada ilmu, strategi, negosiasi, pengelolaan modal,
+  analisis peluang, dan delegasi tenaga kerja.
+- Early game: player sering turun tangan sendiri.
+- Mid game: player mulai menyeimbangkan kerja manual dan delegasi.
+- Late game: player unggul lewat keputusan, sistem, dan pengelolaan kampung.
+
+======================================================================
+3) PILAR DESAIN
+======================================================================
+P1 — Time Economy:
+- Waktu adalah resource inti.
+- “Bayar uang untuk hemat waktu” vs “Bayar waktu untuk hemat uang”.
+
+P2 — Delegation-centric:
+- Inti game: kontrak / delegasi kerja ke NPC, lalu player mengatur rantai produksi,
+  prioritas, dan distribusi tenaga kerja.
+- Player tetap boleh kerja sendiri, tapi tradeoff-nya waktu.
+
+P3 — Workshop-centric storage:
+- Output kerja/proses tidak langsung masuk inventory player.
+- Output mengalir ke WorkshopStorage (bengkel/yard) agar bisa dipakai untuk proses
+  lanjutan, crafting, build, atau jual.
+
+P4 — Progress = Shekel + Legacy:
+- Chapter / unlock konten dibuka oleh kombinasi kekayaan (shekel) + pengaruh sosial
+  (legacy).
+
+P5 — Smart Growth over Raw Labor:
+- Game menekankan bahwa kemajuan tidak hanya datang dari kerja otot.
+- Nilai lebih besar datang dari keputusan cerdas: negosiasi, analisis, investasi,
+  pengelolaan worker, dan strategi jangka panjang.
+
+======================================================================
+4) ROOT SKILL PLAYER (ARAH DESAIN)
+======================================================================
+Player tidak memiliki banyak class terpisah. Player memiliki satu identitas utama
+namun dapat mengembangkan root skill berbasis ilmu/akal:
+
+Negotiator:
+- Bonus harga jual / diskon harga beli
+- Opsi kontrak lebih baik
+- Rekrut worker / kerja sama lebih efisien
+
+Strategist:
+- Prioritas kerja lebih efektif
+- Idle time worker berkurang
+- Rantai produksi dan penjadwalan lebih efisien
+
+Investor:
+- Modal berkembang lebih baik
+- Unlock peluang usaha / proyek yang lebih menguntungkan
+- ROI bangunan/usaha meningkat
+
+Analyst:
+- Membaca tren harga / kebutuhan kampung / peluang pasar
+- Membantu keputusan ekonomi dan alokasi resource
+- Mengurangi keputusan yang merugikan
+
+Administrator:
+- Delegasi lebih efektif
+- Worker lebih stabil dan lebih mudah dikelola
+- Mendukung skala usaha yang lebih besar
+
+Catatan penting:
+- Root skill ini adalah arah desain karakter player.
+- Aktivitas manual tetap ada dan penting, terutama di early game.
+- Namun efisiensi jangka panjang datang dari perkembangan skill intelektual di atas.
+
+======================================================================
+5) CORE LOOP HARIAN
+======================================================================
+1) Cek kebutuhan kampung / objective chapter / peluang ekonomi.
+2) Putuskan aksi: player kerja sendiri (bayar waktu) atau delegasi NPC (bayar shekel + tunggu).
+3) Output masuk WorkshopStorage.
+4) Rantai produksi lanjut (Process/Station) otomatis jika slot tersedia.
+5) Jual, gunakan, bangun, atau donasikan output untuk mendapat shekel dan/atau legacy.
+6) Kelola kebutuhan hidup, worker, dan prioritas kampung.
+7) Naik chapter -> unlock NPC/station/chain/sistem baru.
+
+======================================================================
+6) NEEDS SYSTEM (CURRENT MVP DIRECTION)
+======================================================================
+Untuk saat ini, parameter NPC disederhanakan menjadi 3 pilar utama:
+- Needs
+- Productivity
+- Loyalty
+
+Needs NPC saat ini hanya terdiri dari:
+- Food
+- Clothes
+- House
+
+Tujuan needs system:
+- Bukan sekadar survival bar.
+- Needs menjadi fondasi kondisi hidup NPC.
+- Needs harus terhubung langsung ke produktivitas kerja dan loyalty NPC.
+
+Arah desain:
+- Food mewakili kecukupan makan / kualitas konsumsi dasar.
+- Clothes mewakili kelayakan pakaian hidup/kerja (bukan consumable sekali pakai).
+- House mewakili kualitas tempat tinggal / rasa aman hidup.
+
+Catatan penting:
+- Untuk MVP, thirst / hydration belum menjadi parameter NPC terpisah.
+- Fokus awal adalah membuat sistem NPC yang ringan, jelas, dan mudah dibalance.
+
+======================================================================
+7) CONSUMABLES / ITEM KONSUMSI (CURRENT MVP DIRECTION)
+======================================================================
+Consumable bukan hanya item heal biasa.
+
+Fungsi utama consumable untuk MVP:
+- membantu memenuhi Food needs
+- menjaga kestabilan kerja worker
+- mendukung sistem delegasi secara sederhana
+
+Catatan desain:
+- Pada tahap awal, fokus consumable paling aman adalah makanan / konsumsi dasar.
+- Clothes bukan consumable; clothes masuk ke kategori equipment / outfit.
+- House dipenuhi melalui sistem tempat tinggal / kualitas hunian, bukan item konsumsi.
+- Sistem energy tradisional belum wajib dipakai.
+
+Arah implementasi sederhana:
+- makanan sederhana -> membantu menjaga Food dalam kondisi aman
+- makanan lebih baik -> membantu menjaga Productivity tetap stabil
+- konsumsi worker -> membantu mencegah penurunan Loyalty akibat kebutuhan dasar buruk
+
+======================================================================
+8) NPC PARAMETERS (CURRENT MVP)
+======================================================================
+Untuk saat ini, NPC hanya memakai 3 parameter utama:
+
+1. Needs
+- Terdiri dari Food, Clothes, dan House.
+- Menggambarkan apakah NPC hidup dalam kondisi buruk, cukup, atau layak.
+
+2. Productivity
+- Menggambarkan kemampuan NPC menghasilkan output kerja.
+- Dipengaruhi terutama oleh kondisi Needs.
+- Dapat dikembangkan lagi nanti dengan tools, knowledge, dan specialization.
+
+3. Loyalty
+- Menggambarkan kemauan NPC untuk tetap bekerja sama / tetap tinggal / tetap berpihak
+  pada player dan kampung.
+- Dipengaruhi oleh kondisi Needs dan kualitas perlakuan player secara umum.
+
+Alasan desain:
+- Sistem tetap ringan untuk MVP.
+- Mudah dibaca player.
+- Mudah dibalance sebelum menambah parameter lain seperti trust, morale, fatigue,
+  atau financial condition.
+
+======================================================================
+9) BASIC NEEDS EFFECT (AMAN UNTUK MVP)
+======================================================================
+Basic Needs NPC menggunakan evaluasi umum, misalnya:
+- Poor
+- Low
+- Stable
+- Good
+- Excellent
+
+Efek yang aman untuk diterapkan:
+
+Poor:
+- Productivity turun jelas
+- Loyalty turun lebih cepat
+- Chance menerima pekerjaan menurun
+- Risiko pergi / berhenti bekerja meningkat
+
+Low:
+- Productivity sedikit menurun
+- Loyalty perlahan menurun
+- NPC lebih sulit diajak kerja sama
+
+Stable:
+- Productivity normal
+- Loyalty relatif stabil
+- NPC bekerja dan hidup normal
+
+Good:
+- Productivity stabil dengan performa baik
+- Loyalty lebih mudah dipertahankan
+- Chance menerima pekerjaan / negosiasi sedikit lebih baik
+
+Excellent:
+- Productivity mendapat bonus kecil
+- Loyalty naik atau sangat stabil
+- NPC lebih kooperatif dan lebih betah tinggal di kampung
+
+Catatan penting:
+- Untuk MVP, hindari efek ekstrem seperti kriminalitas, riot, atau perilaku liar.
+- Efek needs sebaiknya fokus pada hal yang langsung relevan dengan loop game:
+  kerja, kerja sama, bertahan di kampung, dan stabilitas produksi.
+
+======================================================================
+10) EQUIPMENT / PAKAIAN
+======================================================================
+Pakaian bukan consumable sekali pakai.
+Pakaian adalah equipment / outfit yang dikenakan terus.
+
+Fungsi pakaian:
+- bonus kerja lapangan
+- bonus negosiasi / status sosial
+- perlindungan cuaca
+- bonus aktivitas tertentu
+
+Contoh arah outfit:
+- Work Clothes -> bonus gathering/building
+- Merchant Attire -> bonus negosiasi
+- Formal Outfit -> bonus prestige/sosial
+- Travel Gear -> bonus eksplorasi/mobilitas
+
+======================================================================
+11) PRODUKSI: JOB vs PROCESS (SISTEM SAAT INI)
+======================================================================
+JOB (WorkManager):
+- “Pekerjaan” input -> output, durasi base_duration_minutes.
+- Worker: PLAYER atau NPC.
+- Input diambil dari source storage.
+- Output diarahkan ke output storage.
+
+PROCESS (ProcessManager):
+- “Transformasi” item di station (mis: Drying Yard).
+- Jalan dalam batch per slot.
+- Auto-pull dari source storage kalau slot kosong.
+- Dipengaruhi cuaca:
+  - weather_speed_multiplier (durasi)
+  - failure_chance_by_weather (opsional)
+
+Keputusan batch (yang kita pakai):
+- 1 slot = 1 batch fixed quantity (tidak isi parsial saat sedang RUNNING).
+
+======================================================================
+12) CHAIN YANG SUDAH LULUS SMOKE TEST
+======================================================================
+Mudbrick chain:
+- JOB: Mudbrick Making
+  Input : clay_lump + straw_bundle + water_jar
+  Output: wet_mudbrick (contoh 60)
+  Durasi: 10 menit (test)
+
+- PROCESS: Drying Mudbrick
+  Station: drying_yard (slots=3)
+  Input  : wet_mudbrick
+  Output : sun_dried_mudbrick
+  Durasi : 60 menit (test)
+  Batch  : 20 per slot (auto-pull)
+
+Output valid:
+- Setelah job: workshop menerima wet_mudbrick, inventory player tidak bertambah.
+- Setelah 3 tick drying: sun_dried_mudbrick = 60 di workshop, wet_mudbrick = 0.
+
+======================================================================
+13) ESCROW / CLAIMABLE OUTPUT (KONSEP)
+======================================================================
+Escrow = “titipan sementara”:
+- Output hasil kerja NPC tidak otomatis jadi milik player.
+- Masuk claimable_outputs, lalu player tebus (mis. bayar fee shekel).
+- Player work tanpa fee: output langsung masuk workshop items (claimable = 0).
+
+expires_total_minutes = -1:
+- Artinya tidak kadaluarsa.
+
+======================================================================
+14) SISTEM WAKTU & CUACA (IMPLEMENTASI)
+======================================================================
+TimeComponentManager:
+- Tick menit, emit:
+  time_changed(day, hour, minute, weather)
+  weather_changed(weather)
+
+WorkStateBootStrap:
+- Connect time_changed -> WorkManager & ProcessManager
+- Lempar weather -> ProcessManager.set_weather_key(weather)
+
+SmokeTest:
+- Memanggil waktu manual untuk simulasi (bukan cara runtime normal).
+
+======================================================================
+15) ARSITEKTUR RUNTIME (HIRARKI)
+======================================================================
+Autoload:
+- TimeComponentManager
+- ItemDatabase
+- Inventory
+- WorkShopStorage
+- WorkManager
+- ProcessManager
+
+Class/Resource:
+- ItemData (Resource)
+- JobData (Resource)
+- ProcessData (Resource)
+- WorkOrder (Node/Class)
+- ProcessBatch (Node/Class)
+- StationState (Node/Class)
+- ToolInstance (Node/Class)
+
+Event flow:
+TimeComponentManager.time_changed(day,hour,minute,weather)
+ -> WorkStateBootStrap._on_time_changed(...)
+    -> WorkManager.on_time_changed(day,hour,minute)
+    -> ProcessManager.on_time_changed(day,hour,minute)
+    -> ProcessManager.set_weather_key(weather)
+
+======================================================================
+16) STATUS TEKNIS TERAKHIR (YANG SUDAH JALAN)
+======================================================================
+✅ Inventory vs WorkshopStorage dipisah
+✅ ItemData resource per item + ItemDatabase autoload (scan folder items)
+✅ Inventory player sudah memakai load/weight capacity (bukan sekadar slot)
+✅ Inventory.try_add_item() sudah menolak item jika melebihi kapasitas
+✅ Inventory UI sudah menampilkan current / max capacity berbasis weight
+✅ Generic pickup item di world sudah bisa:
+   - baca icon dari ItemData
+   - memakai item_id per instance
+   - masuk ke inventory player
+   - gagal diambil saat capacity tidak cukup
+✅ WorkManager: input consume dari storage sumber, output ke workshop
+✅ Player-work: tanpa claimable (claimable count = 0)
+✅ ProcessManager: auto-pull input dari workshop & output ke workshop
+✅ Station slot-based batch, no partial fill
+✅ Smoke test: mudbrick -> drying berjalan sesuai ekspektasi
+
+======================================================================
+17) NEXT STEPS (PRIORITAS)
+======================================================================
+S1 — Sistem Redeem Claimable (MVP)
+- UI list claimable
+- Tombol Redeem:
+  - cek shekel cukup
+  - pindahkan items ke workshop.items
+  - hapus entry claimable
+
+S2 — Loop NPC yang meaningful
+- Implementasi 3 parameter NPC: Needs, Productivity, Loyalty
+- Needs NPC awal: Food, Clothes, House
+- Integrasi efek basic needs ke acceptance, output, dan retention secara bertahap
+
+S3 — Save/Load
+- Simpan: waktu, cuaca, inventory, workshop, orders, batch/slots
+
+S4 — UI produksi
+- Panel station slots + progress + estimasi selesai
+- Panel job start + pilih worker + pilih storage input/output
+
+S5 — Konten chain baru
+- Grain -> Flour -> Bread/Beer
+- Wool -> Thread -> Cloth
+- Ore -> Smelt -> Tools
+- Clay -> Pottery
+- Construction/Irrigation sebagai sink untuk bricks/tools
+
+S6 — Needs / Consumable / Outfit MVP
+- Implementasi basic needs NPC: Food, Clothes, House
+- Consumable dasar terutama untuk memenuhi Food needs worker/player
+  Catatan progres: fondasi item/inventory/pickup sudah siap, langkah berikutnya
+  adalah flow "use consumable" dan integrasi ke NPC basic needs.
+- Outfit/equipment sederhana untuk clothes bonus fungsional
+- Housing sederhana sebagai pemenuh House needs
+
+S7 — Root Skill MVP
+- Tentukan sistem unlock / leveling root skill
+- Minimal 1-2 efek gameplay nyata per root di tahap awal
+
+======================================================================
+18) METRICS (DIRAPIKAN)
+======================================================================
+Development:
+- Prototipe playable (10 hari in-game) dalam 2 bulan
+- Legacy + branching quest stabil dalam 3 bulan
+- Android min 30 FPS (mid-range) + PC stabil dalam 4 bulan
+- Konten minimum: 5 quest branching (2–3 cabang) sebelum alpha
+
+Gameplay:
+- 1 run (100 hari) selesai 5–8 jam
+- Replayability: minimal 2 run untuk ending berbeda
+- Balancing: menang tidak bisa hanya grinding shekel (butuh legacy)
+- Engagement: “menantang tapi adil” dari manajemen waktu
+
+Post-release:
+- Rating target 4/5
+- 1.000 unduhan dalam 3 bulan (untuk indie gratis)
+- 50+ feedback komunitas untuk iterasi
