@@ -1,13 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://dyf8mdmpl00a"]
+[gd_scene load_steps=3 format=3 uid="uid://dyf8mdmpl00a"]
 
 [ext_resource type="Script" uid="uid://bh0ypkem632ff" path="res://scenes/components/interactable_label_component/interactable_label_component.gd" id="1_ba5q2"]
-[ext_resource type="Texture2D" uid="uid://dd00ccut2rtj7" path="res://assets/ui/default_icon.png" id="2_nq5xc"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_6ix38"]
-atlas = ExtResource("2_nq5xc")
-region = Rect2(0, 0, 16, 16)
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_nq5xc"]
 
 [node name="InteractableLabelComponent" type="Control"]
+z_index = 2
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_ba5q2")
@@ -20,10 +17,12 @@ scale = Vector2(0.2, 0.2)
 
 [node name="Label" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
-text = "press E"
+theme = ExtResource("2_nq5xc")
+theme_type_variation = &"HudShortcutButton"
+text = "press E
+to interact"
+horizontal_alignment = 1
 
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer"]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
-texture = SubResource("AtlasTexture_6ix38")
