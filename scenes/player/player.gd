@@ -77,15 +77,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif current_interactable is PickUpItem:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
 		pickup_item.on_player_interact(self)
-		pickup_item.interactable_label_component.hide()
-
-
 
 func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable != null:
 		return
 	
 	current_interactable = interactable_owner
+	if current_interactable is PickUpItem:
+		current_interactable.on_player_enter_interaction()
 	current_interactable.interactable_label_component.show()
 	can_interact  = true
 
