@@ -10,6 +10,8 @@ var player_reff: Player
 @onready var collision_shape_2d: CollisionShape2D = $InteractableComponent/CollisionShape2D
 
 var is_collecting: bool = false
+var collecting_tween: Tween
+var shake_tween: Tween
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -41,12 +43,50 @@ func on_player_interact(player: Player) -> void:
 			collision_shape_2d.disabled = true
 			interactable_label_component.hide()
 			
-			var tween: Tween = create_tween()
-			tween.tween_property(self, "global_position", player.global_position, 0.1).set_ease(Tween.EASE_IN_OUT)
-			tween.tween_property(self, "scale", Vector2.ZERO, 0.05)
-			await tween.tween_interval(0.2).finished
+			collecting_tween = create_tween()
+			collecting_tween.tween_property(self, "global_position", player.global_position, 0.1).set_ease(Tween.EASE_IN_OUT)
+			collecting_tween.tween_property(self, "scale", Vector2.ZERO, 0.05)
+			await collecting_tween.tween_interval(0.2).finished
 			queue_free()
 		else:
-			print("Inventory failed to add this item")
+			if not Inventory.has_capacity_for(item_id, quantity):
+				play_failed_pickup_shake()
+				
 	else:
 		print("Please double check")
+
+func on_player_enter_interaction() -> void:
+	if not Inventory.has_capacity_for(item_id, quantity):
+		interactable_label_component.label.add_theme_color_override("font_color", Color(1.0, 0.0, 0.18, 1.0))
+		interactable_label_component.set_text("Inventory Full")
+	
+	else:
+		interactable_label_component.label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+		interactable_label_component.set_text("press E \n to collect")
+
+func play_failed_pickup_shake() -> void:
+	var original_position: Vector2 = position
+	if shake_tween and shake_tween.is_valid():
+		shake_tween.kill()
+		
+	shake_tween = create_tween()
+	shake_tween.tween_property(self, "position", original_position + Vector2(4, 0), 0.04)
+	shake_tween.tween_property(self, "position", original_position + Vector2(-4, 0), 0.04)
+	shake_tween.tween_property(self, "position", original_position + Vector2(2, 0), 0.03)
+	shake_tween.tween_property(self, "position", original_position, 0.03)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
