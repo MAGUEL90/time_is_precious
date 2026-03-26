@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c71om2snvl62l"
-path="res://.godot/imported/test_tile_set.png-07cd1c163e69393c13c2531e02c6bacd.ctex"
+uid="uid://de5gkr30sf60y"
+path="res://.godot/imported/stones.png-2293437916c382515fc32e5d46312808.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/temporer/test_tile_set.png"
-dest_files=["res://.godot/imported/test_tile_set.png-07cd1c163e69393c13c2531e02c6bacd.ctex"]
+source_file="res://assets/objects/gathering/stones.png"
+dest_files=["res://.godot/imported/stones.png-2293437916c382515fc32e5d46312808.ctex"]
 
 [params]
 

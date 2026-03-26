@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://d2hl2phfq5ugy"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_8ru7d"]
+[ext_resource type="Texture2D" uid="uid://rruhofvf5xbn" path="res://assets/items/straw_bundle.png" id="1_nw3jp"]
+
+[resource]
+script = ExtResource("1_8ru7d")
+id = "straw_bundle"
+display_name = "Straw Bundle"
+description = "A bundle of dried straw, useful for mixing, weaving, and basic crafting."
+icon = ExtResource("1_nw3jp")
+weight = 1.0
+base_value_shekel = 1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
