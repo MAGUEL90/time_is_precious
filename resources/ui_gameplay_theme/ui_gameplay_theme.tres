@@ -28,7 +28,7 @@ shadow_size = 4
 
 [resource]
 HudLabelMain/base_type = &"Label"
-HudLabelMain/colors/font_color = Color(0.67481464, 0.67481464, 0.6748146, 1)
+HudLabelMain/colors/font_color = Color(1, 1, 1, 1)
 HudLabelMain/font_sizes/font_size = 18
 HudLabelMain/fonts/font = ExtResource("1_08jpu")
 HudLabelShortcut/base_type = &"Label"
