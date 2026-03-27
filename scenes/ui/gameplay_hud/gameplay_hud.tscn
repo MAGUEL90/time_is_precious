@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bhbr0kha3wbms"]
+[gd_scene load_steps=11 format=3 uid="uid://bhbr0kha3wbms"]
 
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_2l86p"]
 [ext_resource type="Script" uid="uid://ds6essb744w5h" path="res://scenes/ui/gameplay_hud/gameplay_hud.gd" id="1_i38as"]
@@ -6,11 +6,15 @@
 [ext_resource type="PackedScene" uid="uid://bqb1s4a8wf1o6" path="res://scenes/ui/hud_side_action/hud_side_action.tscn" id="2_p182m"]
 [ext_resource type="Texture2D" uid="uid://b8h7pdyknqkkv" path="res://assets/temporer/Noon.png" id="3_wa3o4"]
 [ext_resource type="Texture2D" uid="uid://ckcnumg1ev704" path="res://assets/temporer/ui/test panel 2 rapih.png" id="6_nugu8"]
-[ext_resource type="Texture2D" uid="uid://dl1pha7b8oifl" path="res://assets/temporer/ui/test panel 2.png" id="7_rltk6"]
+[ext_resource type="Texture2D" uid="uid://dq6lqlkaoe8h7" path="res://assets/temporer/ui/test-ui.png" id="7_nugu8"]
 [ext_resource type="Texture2D" uid="uid://krpg5qqsn0dv" path="res://assets/temporer/ui/test panel .png" id="8_h4cmo"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_rltk6"]
+atlas = ExtResource("7_nugu8")
+region = Rect2(0, 0, 106, 26)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_cj23v"]
-atlas = ExtResource("7_rltk6")
+atlas = SubResource("AtlasTexture_rltk6")
 region = Rect2(1, 1, 104, 24)
 
 [node name="GameplayHUD" type="CanvasLayer"]
@@ -278,11 +282,10 @@ text = "SET"
 layout_mode = 2
 
 [node name="QuickConsumableTray" type="PanelContainer" parent="Root/MarginContainer/BottomLayer"]
-custom_minimum_size = Vector2(360, 0)
 layout_mode = 0
 offset_left = 232.0
 offset_top = 486.0
-offset_right = 632.0
+offset_right = 582.0
 offset_bottom = 566.0
 
 [node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray"]
@@ -305,6 +308,8 @@ alignment = 1
 custom_minimum_size = Vector2(54, 38)
 layout_mode = 2
 focus_mode = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1"]
 layout_mode = 1
@@ -348,9 +353,10 @@ theme_type_variation = &"HudLabelShortcut"
 text = "1"
 
 [node name="ConsumableSlot2" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
-custom_minimum_size = Vector2(64, 0)
+custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2"]
 layout_mode = 1
@@ -394,9 +400,10 @@ theme_type_variation = &"HudLabelShortcut"
 text = "2"
 
 [node name="ConsumableSlot3" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
-custom_minimum_size = Vector2(64, 0)
+custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3"]
 layout_mode = 1
@@ -440,9 +447,10 @@ theme_type_variation = &"HudLabelShortcut"
 text = "3"
 
 [node name="ConsumableSlot4" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
-custom_minimum_size = Vector2(64, 0)
+custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4"]
 layout_mode = 1
@@ -486,9 +494,10 @@ theme_type_variation = &"HudLabelShortcut"
 text = "4"
 
 [node name="ConsumableSlot5" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
-custom_minimum_size = Vector2(64, 0)
+custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5"]
 layout_mode = 1
