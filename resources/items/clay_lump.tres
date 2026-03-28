@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://4a7kvcknbh2w"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_23kg5"]
+[ext_resource type="Texture2D" uid="uid://q3swflj178ja" path="res://assets/items/clay_lump.png" id="1_vmij4"]
+
+[resource]
+script = ExtResource("1_23kg5")
+id = "clay_lump"
+display_name = "Clay Lump"
+description = "A lump of raw clay, useful for shaping bricks and other simple goods."
+icon = ExtResource("1_vmij4")
+weight = 2.0
+max_stack = 15
+base_value_shekel = 1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

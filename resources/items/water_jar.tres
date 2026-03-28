@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://b0u17h884ypwu"]
+
+[ext_resource type="Texture2D" uid="uid://nwsvu4efrtya" path="res://assets/items/water_jar.png" id="1_hcttk"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_tf5vk"]
+
+[resource]
+script = ExtResource("1_tf5vk")
+id = "water_jar"
+display_name = "Water Jar"
+description = "A jar filled with water, used for crafting, mixing, and other daily needs."
+icon = ExtResource("1_hcttk")
+weight = 3.0
+max_stack = 5
+base_value_shekel = 1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

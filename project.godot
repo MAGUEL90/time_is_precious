@@ -23,6 +23,7 @@ Inventory="*res://scripts/autoload/inventory/inventory.gd"
 WorkShopStorage="*res://scripts/autoload/work_shop_storage/work_shop_storage.gd"
 WorkManager="*res://scripts/autoload/work_manager/work_manager.gd"
 ProcessManager="*res://scripts/autoload/process_manager/process_manager.gd"
+ItemDatabase="*res://scripts/autoload/item_database/item_database.gd"
 
 [display]
 

@@ -34,11 +34,14 @@ position = Vector2(0, -8)
 shape = SubResource("CircleShape2D_ydwj7")
 debug_color = Color(0.6133299, 0.5379511, 9.62615e-07, 0.41960785)
 
-[node name="InteractableLabelComponent" parent="." instance=ExtResource("3_qfur7")]
+[node name="InteractableLabelComponent" parent="." node_paths=PackedStringArray("parent_node") instance=ExtResource("3_qfur7")]
+visible = false
 offset_left = -6.0
 offset_top = -33.0
 offset_right = -6.0
 offset_bottom = -33.0
+parent_node = NodePath("..")
+position_offset = Vector2(-12, -28)
 
 [node name="NPCStateMachine" type="Node" parent="."]
 script = ExtResource("4_t2fq0")
