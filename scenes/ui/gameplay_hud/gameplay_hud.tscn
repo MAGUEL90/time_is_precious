@@ -1,9 +1,21 @@
-[gd_scene load_steps=5 format=3 uid="uid://bhbr0kha3wbms"]
+[gd_scene load_steps=11 format=3 uid="uid://bhbr0kha3wbms"]
 
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_2l86p"]
 [ext_resource type="Script" uid="uid://ds6essb744w5h" path="res://scenes/ui/gameplay_hud/gameplay_hud.gd" id="1_i38as"]
 [ext_resource type="PackedScene" uid="uid://bcpauf7vubmem" path="res://scenes/ui/hud_shortcut_slot/hud_shortcut_slot.tscn" id="1_x83fe"]
 [ext_resource type="PackedScene" uid="uid://bqb1s4a8wf1o6" path="res://scenes/ui/hud_side_action/hud_side_action.tscn" id="2_p182m"]
+[ext_resource type="Texture2D" uid="uid://b8h7pdyknqkkv" path="res://assets/temporer/Noon.png" id="3_wa3o4"]
+[ext_resource type="Texture2D" uid="uid://ckcnumg1ev704" path="res://assets/temporer/ui/test panel 2 rapih.png" id="6_nugu8"]
+[ext_resource type="Texture2D" uid="uid://dq6lqlkaoe8h7" path="res://assets/temporer/ui/test-ui.png" id="7_nugu8"]
+[ext_resource type="Texture2D" uid="uid://krpg5qqsn0dv" path="res://assets/temporer/ui/test panel .png" id="8_h4cmo"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rltk6"]
+atlas = ExtResource("7_nugu8")
+region = Rect2(0, 0, 106, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cj23v"]
+atlas = SubResource("AtlasTexture_rltk6")
+region = Rect2(1, 1, 104, 24)
 
 [node name="GameplayHUD" type="CanvasLayer"]
 script = ExtResource("1_i38as")
@@ -33,50 +45,59 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 
 [node name="TopLeftPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
-custom_minimum_size = Vector2(350, 96)
 layout_mode = 0
 offset_right = 79.0
 offset_bottom = 85.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 theme = ExtResource("1_2l86p")
-theme_type_variation = &"HudPanel"
+
+[node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/TopLayer/TopLeftPanel"]
+layout_mode = 2
+texture = ExtResource("6_nugu8")
+expand_mode = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 14
+
+[node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+texture = ExtResource("3_wa3o4")
+stretch_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 0
 size_flags_vertical = 4
-alignment = 1
 
 [node name="LabelDay" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 0
 theme = ExtResource("1_2l86p")
 theme_type_variation = &"HudLabelMain"
 text = "SAT 20"
 
 [node name="LabelTime" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 0
 size_flags_vertical = 6
 theme = ExtResource("1_2l86p")
 theme_type_variation = &"HudLabelMain"
-text = "10:20 AM"
+text = "Hour: 10 Minute: 20"
 horizontal_alignment = 1
 
 [node name="LabelWeather" type="Label" parent="Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 0
 theme = ExtResource("1_2l86p")
 theme_type_variation = &"HudLabelMain"
-text = "SUNNY"
+text = "Weather: sunny"
 
 [node name="TopRightPanel" type="PanelContainer" parent="Root/MarginContainer/TopLayer"]
 custom_minimum_size = Vector2(200, 72)
@@ -210,24 +231,27 @@ offset_right = 254.0
 grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("1_2l86p")
-theme_type_variation = &"HudPanel"
+
+[node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel"]
+layout_mode = 2
+texture = ExtResource("6_nugu8")
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 6
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 6
-theme_override_constants/margin_bottom = 6
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="ShortcutInventory" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
+[node name="ShortcutBag" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
 
-[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory/MarginContainer/VBoxContainer" index="1"]
+[node name="Title" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutBag/MarginContainer/VBoxContainer" index="1"]
 text = "BAG"
 
 [node name="ShortcutQuest" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
@@ -257,11 +281,278 @@ text = "SET"
 [node name="HudShortcutSlot6" parent="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer" instance=ExtResource("1_x83fe")]
 layout_mode = 2
 
+[node name="QuickConsumableTray" type="PanelContainer" parent="Root/MarginContainer/BottomLayer"]
+layout_mode = 0
+offset_left = 232.0
+offset_top = 486.0
+offset_right = 582.0
+offset_bottom = 566.0
+
+[node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray"]
+layout_mode = 2
+texture = SubResource("AtlasTexture_cj23v")
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="ConsumableSlotsContainer" type="HBoxContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="ConsumableSlot1" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
+custom_minimum_size = Vector2(54, 38)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudShortcutButton"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="IconPlaceHolder" type="PanelContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1/MarginContainer"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1/MarginContainer/IconPlaceHolder"]
+layout_mode = 2
+texture = ExtResource("8_h4cmo")
+
+[node name="QtyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "9"
+horizontal_alignment = 2
+
+[node name="HotkeyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot1/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "1"
+
+[node name="ConsumableSlot2" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
+custom_minimum_size = Vector2(54, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="IconPlaceHolder" type="PanelContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2/MarginContainer"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TextureRect2" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2/MarginContainer/IconPlaceHolder"]
+layout_mode = 2
+texture = ExtResource("8_h4cmo")
+
+[node name="QtyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "9"
+horizontal_alignment = 2
+
+[node name="HotkeyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot2/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "2"
+
+[node name="ConsumableSlot3" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
+custom_minimum_size = Vector2(54, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="IconPlaceHolder" type="PanelContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3/MarginContainer"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TextureRect3" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3/MarginContainer/IconPlaceHolder"]
+layout_mode = 2
+texture = ExtResource("8_h4cmo")
+
+[node name="QtyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "9"
+horizontal_alignment = 2
+
+[node name="HotkeyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot3/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "3"
+
+[node name="ConsumableSlot4" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
+custom_minimum_size = Vector2(54, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="IconPlaceHolder" type="PanelContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4/MarginContainer"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TextureRect4" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4/MarginContainer/IconPlaceHolder"]
+layout_mode = 2
+texture = ExtResource("8_h4cmo")
+
+[node name="QtyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "9"
+horizontal_alignment = 2
+
+[node name="HotkeyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot4/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "4"
+
+[node name="ConsumableSlot5" type="Button" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer"]
+custom_minimum_size = Vector2(54, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="IconPlaceHolder" type="PanelContainer" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5/MarginContainer"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TextureRect5" type="TextureRect" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5/MarginContainer/IconPlaceHolder"]
+layout_mode = 2
+texture = ExtResource("8_h4cmo")
+
+[node name="QtyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "9"
+horizontal_alignment = 2
+
+[node name="HotkeyLabel" type="Label" parent="Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer/ConsumableSlot5/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_2l86p")
+theme_type_variation = &"HudLabelShortcut"
+text = "5"
+
+[node name="ConsumableTrayHideTimer" type="Timer" parent="."]
+wait_time = 0.2
+one_shot = true
+
+[connection signal="mouse_entered" from="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutBag" to="." method="_on_shortcut_bag_mouse_entered"]
+[connection signal="mouse_exited" from="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutBag" to="." method="_on_shortcut_bag_mouse_exited"]
+[connection signal="timeout" from="ConsumableTrayHideTimer" to="." method="_on_consumable_tray_hide_timer_timeout"]
+
 [editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionProgress"]
 [editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionContracts"]
 [editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionWorkShop"]
 [editable path="Root/MarginContainer/LeftLayer/LeftMenuPanel/MarginContainer/VBoxContainer/ActionClaims"]
-[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutInventory"]
+[editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutBag"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutQuest"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutSkills"]
 [editable path="Root/MarginContainer/BottomLayer/BottomMenuPanel/MarginContainer/HBoxContainer/ShortcutMap"]

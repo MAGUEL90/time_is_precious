@@ -1,23 +1,31 @@
-[gd_scene load_steps=3 format=3 uid="uid://bcpauf7vubmem"]
+[gd_scene load_steps=5 format=3 uid="uid://bcpauf7vubmem"]
 
+[ext_resource type="Texture2D" uid="uid://btokpc721xeed" path="res://assets/temporer/ui/test panel 3.png" id="1_8y0qs"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_blffd"]
+[ext_resource type="Texture2D" uid="uid://w7m1la1ly2nl" path="res://assets/items/sun_dried_mudbrick.png" id="1_tomdw"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8y0qs"]
-bg_color = Color(0.6, 0.7882353, 0.6, 1)
+[sub_resource type="AtlasTexture" id="AtlasTexture_6svl1"]
+atlas = ExtResource("1_8y0qs")
 
 [node name="HudShortcutSlot" type="Button"]
 custom_minimum_size = Vector2(76, 100)
 offset_right = 8.0
 offset_bottom = 8.0
-theme = ExtResource("1_blffd")
-theme_type_variation = &"HudShortcutButton"
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("AtlasTexture_6svl1")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -32,11 +40,10 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="IconPlaceHolder" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 60)
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_8y0qs")
+texture = ExtResource("1_tomdw")
+expand_mode = 4
 
 [node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
