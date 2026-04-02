@@ -6,10 +6,10 @@ var current_npc_dialogue: NPCBase = null
 
 var can_interact: bool = false
 var dialogue_finished: bool = false
-var speed = 50
-var fatigue: float = 0.5 # << Hanya Tester
-var min_fatigue: float = 0.0
-var max_fatigue: float = 1.0
+@export var speed = 50
+@export var fatigue: float = 0.5 # << Hanya Tester
+@export var min_fatigue: float = 0.0
+@export var max_fatigue: float = 1.0
 
 var claim_menu_is_open: bool = false
 var inventory_is_open: bool = false

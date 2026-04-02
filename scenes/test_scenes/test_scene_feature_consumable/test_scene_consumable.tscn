@@ -230,6 +230,18 @@ collision_layer = 1
 position = Vector2(221, 146)
 item_id = "stone"
 
+[node name="PickupItem4" parent="." instance=ExtResource("4_2tlsb")]
+position = Vector2(152, 176)
+item_id = "roasted_drumstick"
+
+[node name="PickupItem5" parent="." instance=ExtResource("4_2tlsb")]
+position = Vector2(122, 185)
+item_id = "roasted_drumstick"
+
+[node name="PickupItem6" parent="." instance=ExtResource("4_2tlsb")]
+position = Vector2(195, 182)
+item_id = "roasted_drumstick"
+
 [node name="PickupItem2" parent="." instance=ExtResource("4_2tlsb")]
 position = Vector2(185, 143)
 item_id = "straw_bundle"
@@ -241,7 +253,6 @@ item_id = "sun_dried_mudbrick"
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("5_6xc3f")]
-layer = 2
 
 [node name="GameplayHUD" parent="." instance=ExtResource("6_5my3y")]
 

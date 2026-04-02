@@ -1,19 +1,24 @@
 class_name InventoryUI extends CanvasLayer
 
+const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
+
 
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var info_label: Label = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header/InfoLabel
 
-const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
+var player: Player
 
 func _ready() -> void:
+	
+	player = get_tree().get_first_node_in_group("player")
+	
 	visible = false
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
 		Inventory.items_changed.connect(_on_inventory_items_changed)
 	_refresh_inventory_grid()
 
-func exit_tree() -> void:
-	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
+func _exit_tree() -> void:
+	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_inventory_items_changed):
 		Inventory.items_changed.disconnect(_on_inventory_items_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -57,10 +62,14 @@ func _refresh_inventory_grid():
 	
 		var slot_scene: PackedScene = preload("res://scenes/ui/item_slot/item_slot.tscn")
 		var slot: Node = slot_scene.instantiate()
+		
 	
 		grid.add_child(slot)
 		if slot.has_method("set_item"):
 			slot.call("set_item", item_id, qty, _get_item_icon(item_id))
+		
+		if slot.has_signal("slot_clicked"):
+			slot.slot_clicked.connect(_on_item_slot_slot_clicked)
 		used_slots += 1
 		
 	if info_label != null:
@@ -75,3 +84,12 @@ func _get_item_icon(item_id: String) -> Texture2D:
 			return item_data.icon
 		return DEFAULT_SLOT_ICON
 	return DEFAULT_SLOT_ICON
+
+func _on_item_slot_slot_clicked(item_id: String) -> void:
+	var item_data: ItemData = Inventory.get_item_data(item_id)
+	if item_data != null:
+		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
+			if item_data.fatigue_restore > 0.0:
+				if player != null:
+					if player.reduce_fatigue(item_data.fatigue_restore) == true:
+						Inventory.remove_item(item_data.id, 1)
