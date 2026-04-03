@@ -1,12 +1,12 @@
-[gd_scene load_steps=5 format=3 uid="uid://dgdwdg7jy3cho"]
+[gd_scene load_steps=4 format=3 uid="uid://dgdwdg7jy3cho"]
 
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_p70uk"]
 [ext_resource type="Script" uid="uid://c0kyihk5hprba" path="res://scenes/ui/inventory_ui/inventory_ui.gd" id="1_tpijo"]
 [ext_resource type="PackedScene" uid="uid://d0wn5ml4p5yv4" path="res://scenes/ui/item_grid/item_grid.tscn" id="2_6akk8"]
-[ext_resource type="PackedScene" uid="uid://buluwpqeq5op" path="res://scenes/ui/item_slot/item_slot.tscn" id="4_5kg0u"]
 
 [node name="InventoryUI" type="CanvasLayer"]
 process_mode = 3
+layer = 2
 script = ExtResource("1_tpijo")
 
 [node name="Root" type="Control" parent="."]
@@ -85,17 +85,5 @@ text = "Inventory"
 
 [node name="InfoLabel" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header" index="2"]
 text = "16/40"
-
-[node name="ItemSlot" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid" index="0" instance=ExtResource("4_5kg0u")]
-layout_mode = 2
-
-[node name="ItemSlot2" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid" index="1" instance=ExtResource("4_5kg0u")]
-layout_mode = 2
-
-[node name="ItemSlot3" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid" index="2" instance=ExtResource("4_5kg0u")]
-layout_mode = 2
-
-[node name="ItemSlot4" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid" index="3" instance=ExtResource("4_5kg0u")]
-layout_mode = 2
 
 [editable path="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid"]

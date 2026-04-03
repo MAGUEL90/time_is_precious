@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://ijvccgxxg3ru"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_l3och"]
+[ext_resource type="Texture2D" uid="uid://c7832kv6x703i" path="res://assets/items/roasted_drumstick.png" id="1_pwyrs"]
+
+[resource]
+script = ExtResource("1_l3och")
+id = "roasted_drumstick"
+display_name = "Roasted Drumstick"
+description = "A freshly roasted drumstick that helps ease fatigue and restore strength."
+icon = ExtResource("1_pwyrs")
+weight = 1.0
+category = 1
+base_value_shekel = 1
+fatigue_restore = 0.05
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
