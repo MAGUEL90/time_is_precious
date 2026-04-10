@@ -1,6 +1,6 @@
-extends Button
+class_name ItemSlot extends Button
 
-signal slot_clicked(item_id: String)
+signal slot_clicked(item_id: String, quantity: int, node: Node)
 
 @onready var asset_icon: TextureRect = $MarginContainer/AssetIcon
 @onready var asset_qty: Label = $MarginContainer/AssetQty
@@ -20,4 +20,4 @@ func set_item(item_id: String, quantity: int, item_icon: Texture2D) -> void:
 		tooltip_text = "%s x%s" % [item_data.display_name.capitalize(), asset_qty.text]
 
 func _on_pressed() -> void:
-	slot_clicked.emit(_item_id)
+	slot_clicked.emit(_item_id, _quantity, self)
