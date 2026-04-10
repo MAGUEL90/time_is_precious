@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://ce8f44ayblwty"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_su637"]
+[ext_resource type="Texture2D" uid="uid://t1rh7d75fs0u" path="res://assets/items/pan_fried_egg.png" id="1_tcwcb"]
+
+[resource]
+script = ExtResource("1_su637")
+id = "pan_fried_egg"
+display_name = "Pan Fried Egg"
+description = "pan_fried_egg"
+icon = ExtResource("1_tcwcb")
+weight = 0.02
+category = 1
+base_value_shekel = 1
+fatigue_restore = 0.01
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

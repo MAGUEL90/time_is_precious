@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://b5g2df01i001u"]
+
+[ext_resource type="Texture2D" uid="uid://dian2vh4wmvjt" path="res://assets/items/fresh_loaf.png" id="1_hhaw1"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_uopwk"]
+
+[resource]
+script = ExtResource("1_uopwk")
+id = "fresh_loaf"
+display_name = "Fresh Loaf"
+description = "A loaf of bread baked at dawn. Soft at the center, crisp at the crust, and enough to ease an empty stomach."
+icon = ExtResource("1_hhaw1")
+weight = 0.08
+category = 1
+base_value_shekel = 1
+fatigue_restore = 0.02
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
