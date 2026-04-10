@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=4 uid="uid://d1sjb3eauq6xj"]
 
-[ext_resource type="Script" uid="uid://3a87u065blx6" path="res://scenes/test_scenes/test_scene_feature_consumable/test_scene_consumable.gd" id="1_jin54"]
+[ext_resource type="Script" uid="uid://3a87u065blx6" path="res://scenes/test_scenes/test_scene_feature_consumable-fatigue/test_scene_consumable.gd" id="1_jin54"]
 [ext_resource type="Texture2D" uid="uid://rymr6doa85vd" path="res://assets/temporer/tile_set/test_tile_set.png" id="1_re3w7"]
 [ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="2_1m81i"]
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="3_bkgnk"]

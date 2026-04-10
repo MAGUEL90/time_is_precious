@@ -22,6 +22,8 @@ const QUICK_SLOT_ACTION: Array[String] = [
 	"quick_slot_5"
 ]
 
+var quick_slot_item_ids: Array[String] = []
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	_cache_consumable_slots()
