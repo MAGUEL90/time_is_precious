@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://tfu2qcouyn3j"]
+
+[ext_resource type="Texture2D" uid="uid://o72602snmyfs" path="res://assets/items/orchard_apple.png" id="1_b6rim"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_lgkwg"]
+
+[resource]
+script = ExtResource("1_lgkwg")
+id = "orchard_apple"
+display_name = "Orchard Apple"
+description = "A ripe apple picked from the village orchard. Sweet, refreshing, and easy to carry on any journey."
+icon = ExtResource("1_b6rim")
+weight = 0.02
+category = 1
+base_value_shekel = 1
+fatigue_restore = 0.02
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

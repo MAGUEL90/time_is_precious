@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://caeuhgbha8eb4"]
+
+[ext_resource type="Texture2D" uid="uid://bwpdsitktdgth" path="res://assets/items/butcher’s_cut.png" id="1_ahcwa"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_y61sc"]
+
+[resource]
+script = ExtResource("1_y61sc")
+id = "butcher\\342\\200\\231s_cut"
+display_name = "Butcher’s Cut"
+description = "A fresh cut of meat from the butcher’s table. Best cooked before eating, but valuable for many hearty meals."
+icon = ExtResource("1_ahcwa")
+weight = 0.5
+category = 1
+base_value_shekel = 1
+fatigue_restore = 0.01
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
