@@ -12,5 +12,5 @@ icon = ExtResource("1_pwyrs")
 weight = 1.0
 category = 1
 base_value_shekel = 1
-fatigue_restore = 0.05
+fatigue_reduction = 0.05
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

@@ -2,7 +2,7 @@ class_name InventoryUI extends CanvasLayer
 
 signal consume_item_success(item_id,
 							item_display_name,
-							item_fatigue_restore,
+							item_fatigue_reduction,
 							item_old_quantity,
 							item_predict_new_quantity,
 							player_position,
@@ -97,15 +97,15 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 	var item_data: ItemData = Inventory.get_item_data(item_id)
 	if item_data != null:
 		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
-			if item_data.fatigue_restore > 0.0:
+			if item_data.fatigue_reduction > 0.0:
 				if player != null:
-					if player.reduce_fatigue(item_data.fatigue_restore) == true:
+					if player.reduce_fatigue(item_data.fatigue_reduction) == true:
 						var old_quantity: int = quantity
 						var predict_new_quantity: int = max(old_quantity - 1, 0)
 						consume_item_success.emit(
 							item_data.id,
 							item_data.display_name,
-							item_data.fatigue_restore,
+							item_data.fatigue_reduction,
 							old_quantity,
 							predict_new_quantity,
 							player.global_position,

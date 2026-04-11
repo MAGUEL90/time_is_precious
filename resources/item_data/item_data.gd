@@ -10,4 +10,5 @@ class_name ItemData extends Resource
 @export var durability_max: int = 0 # khusus TOOL; 0 untuk non-tool
 @export var base_value_shekel: int = 0
 @export var rarity: ItemEnums.Rarity = ItemEnums.Rarity.COMMON
-@export var fatigue_restore: float = 0.0
+@export var fatigue_reduction: float = 0.0
+@export var hunger_reduction: float = 0.0

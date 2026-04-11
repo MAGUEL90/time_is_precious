@@ -12,5 +12,5 @@ icon = ExtResource("1_1isa2")
 weight = 0.01
 category = 1
 base_value_shekel = 1
-fatigue_restore = 0.01
+fatigue_reduction = 0.01
 metadata/_custom_type_script = "uid://b21c8w6adaeov"
