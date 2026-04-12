@@ -3,6 +3,7 @@ class_name InventoryUI extends CanvasLayer
 signal consume_item_success(item_id,
 							item_display_name,
 							item_fatigue_reduction,
+							item_hunger_reduction,
 							item_old_quantity,
 							item_predict_new_quantity,
 							player_position,
@@ -15,6 +16,7 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 
 var player: Player
 var source_slot: Vector2
+
 
 func _ready() -> void:
 	
@@ -95,31 +97,40 @@ func _get_item_icon(item_id: String) -> Texture2D:
 
 func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSlot) -> void:
 	var item_data: ItemData = Inventory.get_item_data(item_id)
+	var does_fatigue_changed: bool = false
+	var does_hunger_changed: bool = false
+	
 	if item_data != null:
 		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
-			if item_data.fatigue_reduction > 0.0:
-				if player != null:
-					if player.reduce_fatigue(item_data.fatigue_reduction) == true:
-						var old_quantity: int = quantity
-						var predict_new_quantity: int = max(old_quantity - 1, 0)
-						consume_item_success.emit(
-							item_data.id,
-							item_data.display_name,
-							item_data.fatigue_reduction,
-							old_quantity,
-							predict_new_quantity,
-							player.global_position,
-							slot_ref.get_global_rect()
-						)
+			if player != null:
+				if player.reduce_fatigue(item_data.fatigue_reduction) == true:
+					does_fatigue_changed = true
+					
+				if player.reduce_hunger(item_data.hunger_reduction) == true:
+					does_hunger_changed = true
+					
+				if does_fatigue_changed or does_hunger_changed:
+					var old_quantity: int = quantity
+					var predict_new_quantity: int = max(old_quantity - 1, 0)
+					consume_item_success.emit(
+						item_data.id,
+						item_data.display_name,
+						item_data.fatigue_reduction,
+						item_data.hunger_reduction,
+						old_quantity,
+						predict_new_quantity,
+						player.global_position,
+						slot_ref.get_global_rect()
+					)
 						
-						var impact_tween = _play_slot_consume_effect(slot_ref)
+					var impact_tween = _play_slot_consume_effect(slot_ref)
 						
-						if impact_tween: 
-							_play_slot_quantity_preview(slot_ref, predict_new_quantity)
-							slot_ref.disabled = true
+					if impact_tween: 
+						_play_slot_quantity_preview(slot_ref, predict_new_quantity)
+						slot_ref.disabled = true
 							
-						await impact_tween.finished
-						Inventory.remove_item(item_data.id, 1)
+					await impact_tween.finished
+					Inventory.remove_item(item_data.id, 1)
 
 
 func _play_slot_consume_effect(slot_ref: ItemSlot) -> Tween:

@@ -10,6 +10,10 @@ var dialogue_finished: bool = false
 @export var fatigue: float = 0.5 # << Hanya Tester
 @export var min_fatigue: float = 0.0
 @export var max_fatigue: float = 1.0
+@export var hunger: float = 0.0
+@export var min_hunger: float = 0.0
+@export var max_hunger: float = 1.0
+
 
 var claim_menu_is_open: bool = false
 var inventory_is_open: bool = false
@@ -183,3 +187,13 @@ func reduce_fatigue(amount: float) -> bool:
 		return true
 		
 	return false
+
+func reduce_hunger(amount: float) -> bool:
+	if hunger > min_hunger and amount > 0.0:
+		hunger = clampf(hunger - amount, min_hunger, max_hunger)
+		return true
+	
+	return false
+
+func get_focus() -> float:
+	return 1.0 - ((fatigue + hunger) / 2.0)
