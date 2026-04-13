@@ -11,6 +11,7 @@ var dialogue_finished: bool = false
 @export var min_fatigue: float = 0.0
 @export var max_fatigue: float = 1.0
 @export var hunger: float = 0.0
+@export var hunger_increase_per_min: float = 0.001
 @export var min_hunger: float = 0.0
 @export var max_hunger: float = 1.0
 
@@ -28,7 +29,10 @@ var claim_fee_confirm_choice: int = 0
 func _ready() -> void:
 	BaseDialogueManager.dialogue_activated.connect(on_dialogue_activated)
 	BaseDialogueManager.dialogue_deactivated.connect(on_dialogue_deactivated)
+	TimeComponentManager.minute_changed.connect(on_minute_changed)
 
+func on_minute_changed(_minute: int) -> void:
+	increase_hunger(hunger_increase_per_min)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if claim_menu_is_open:
@@ -193,6 +197,12 @@ func reduce_hunger(amount: float) -> bool:
 		hunger = clampf(hunger - amount, min_hunger, max_hunger)
 		return true
 	
+	return false
+
+func increase_hunger(amount: float) -> bool:
+	if hunger < max_hunger and amount > 0.0:
+		hunger = clampf(hunger + amount, min_hunger, max_hunger)
+		return true
 	return false
 
 func get_focus() -> float:
