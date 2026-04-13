@@ -13,10 +13,12 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var info_label: Label = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header/InfoLabel
+@onready var label_fatigue: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFatigue
+@onready var label_hunger: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelHunger
+@onready var label_focus: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFocus
 
 var player: Player
 var source_slot: Vector2
-
 
 func _ready() -> void:
 	
@@ -50,6 +52,7 @@ func toggle_inventory() -> void:
 func open_inventory() -> void:
 	get_tree().paused = true
 	visible = true
+	_refresh_player_status()
 	_refresh_inventory_grid()
 
 func close_inventory() -> void:
@@ -131,7 +134,7 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 							
 					await impact_tween.finished
 					Inventory.remove_item(item_data.id, 1)
-
+					_refresh_player_status()
 
 func _play_slot_consume_effect(slot_ref: ItemSlot) -> Tween:
 	var tween: Tween = create_tween()
@@ -150,13 +153,12 @@ func _play_slot_quantity_preview(slot_ref: ItemSlot, new_predict_quantity: int) 
 	else:
 		slot_ref.asset_qty.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 
+func _refresh_player_status() -> void:
+	if player == null:
+		return
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	label_fatigue.text = "Fatigue: %d%%" % [int(player.fatigue * 100.0)]
+	label_hunger.text = "Hunger: %d%%" % [int(player.hunger * 100.0)]
+	label_focus.text = "Focus: %d%%" % [int(player.get_focus() * 100.0)]
+
 	

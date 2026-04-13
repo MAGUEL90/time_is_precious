@@ -69,6 +69,30 @@ layout_mode = 2
 [node name="StatsPanel" type="PanelContainer" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel"]
 layout_mode = 2
 
+[node name="MarginContainer" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="LabelTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Player Status:"
+
+[node name="LabelFatigue" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LabelHunger" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LabelFocus" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
 [node name="RightPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
