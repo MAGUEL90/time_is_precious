@@ -1,5 +1,13 @@
 class_name GameplayHUD extends CanvasLayer
 
+const QUICK_SLOT_ACTION: Array[String] = [
+	"quick_slot_1",
+	"quick_slot_2",
+	"quick_slot_3",
+	"quick_slot_4",
+	"quick_slot_5"
+]
+
 @onready var label_day: Label = $Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer/LabelDay
 @onready var label_time: Label = $Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer/LabelTime
 @onready var label_weather: Label = $Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer/LabelWeather
@@ -9,23 +17,22 @@ class_name GameplayHUD extends CanvasLayer
 @onready var consumable_tray_hide_timer: Timer = $ConsumableTrayHideTimer
 @onready var consumable_slots_container: HBoxContainer = $Root/MarginContainer/BottomLayer/QuickConsumableTray/MarginContainer/ConsumableSlotsContainer
 
+@onready var label_alert_title: Label = $Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer/LabelAlertTitle
+@onready var label_alert_body: Label = $Root/MarginContainer/TopLayer/TopRightPanel/MarginContainer/VBoxContainer/LabelAlertBody
+
 var is_mouse_over_bag: bool = false
 var is_mouse_over_consumable_tray: bool = false
 var is_ui_blocking_quick_slots: bool = false
 var consumable_slots: Array[Button] = []
-
-const QUICK_SLOT_ACTION: Array[String] = [
-	"quick_slot_1",
-	"quick_slot_2",
-	"quick_slot_3",
-	"quick_slot_4",
-	"quick_slot_5"
-]
-
 var quick_slot_item_ids: Array[String] = []
+var player_reff: Player
+
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	player_reff = get_tree().get_first_node_in_group("player")
+	
 	_cache_consumable_slots()
 	_connect_consumable_slots()
 	
@@ -37,7 +44,7 @@ func _ready() -> void:
 		TimeComponentManager.current_hour, 
 		int(TimeComponentManager.current_minute), 
 		TimeComponentManager.current_weather)
-
+	
 func _process(_delta: float) -> void:
 	if quick_consumable_tray.visible:
 		_update_consumable_hover_state()
@@ -47,11 +54,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed(QUICK_SLOT_ACTION[i]):
 			use_consumable_slot(i)
 			break
-	
+
 func _on_time_changed(day:int, hour:int, minute:int, weather: String) -> void:
 	label_day.text = "Day: %02d " % [day]
 	label_time.text = "Hour: %02d Minute: %02d " % [hour, minute]
 	label_weather.text = "Weather: %s" % [weather]
+	
+	_refresh_player_status()
 
 func _on_shortcut_bag_mouse_entered() -> void:
 	show_consumable_tray()
@@ -119,3 +128,20 @@ func use_consumable_slot(slot_index: int) -> void:
 		return
 		
 	print("Use consumable slot %d" % (slot_index + 1)) 
+
+func _refresh_player_status() -> void:
+	if player_reff == null:
+		player_reff = get_tree().get_first_node_in_group("player")
+		
+		if player_reff == null: 
+			return
+	
+	var player_fatigue = player_reff.fatigue
+	var player_hunger = player_reff.hunger
+	var player_focus = player_reff.get_focus()
+	
+	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
+		int(player_fatigue * 100.0),
+		int(player_hunger * 100.0),
+		int(player_focus * 100.0)
+	]
