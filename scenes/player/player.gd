@@ -207,3 +207,12 @@ func increase_hunger(amount: float) -> bool:
 
 func get_focus() -> float:
 	return 1.0 - ((fatigue + hunger) / 2.0)
+
+func get_fatigue_percent() -> int:
+	return int(fatigue * 100.0)
+
+func get_hunger_percent() -> int:
+	return int(hunger * 100.0)
+
+func get_focus_percent() -> int:
+	return int(get_focus() * 100.0)

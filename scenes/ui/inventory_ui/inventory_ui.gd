@@ -17,12 +17,12 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 @onready var label_hunger: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelHunger
 @onready var label_focus: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFocus
 
-var player: Player
+var player_ref: Player
 var source_slot: Vector2
 
 func _ready() -> void:
 	
-	player = get_tree().get_first_node_in_group("player")
+	player_ref = get_tree().get_first_node_in_group("player")
 	
 	visible = false
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -105,11 +105,11 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 	
 	if item_data != null:
 		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
-			if player != null:
-				if player.reduce_fatigue(item_data.fatigue_reduction) == true:
+			if player_ref != null:
+				if player_ref.reduce_fatigue(item_data.fatigue_reduction) == true:
 					does_fatigue_changed = true
 					
-				if player.reduce_hunger(item_data.hunger_reduction) == true:
+				if player_ref.reduce_hunger(item_data.hunger_reduction) == true:
 					does_hunger_changed = true
 					
 				if does_fatigue_changed or does_hunger_changed:
@@ -122,7 +122,7 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 						item_data.hunger_reduction,
 						old_quantity,
 						predict_new_quantity,
-						player.global_position,
+						player_ref.global_position,
 						slot_ref.get_global_rect()
 					)
 						
@@ -154,11 +154,11 @@ func _play_slot_quantity_preview(slot_ref: ItemSlot, new_predict_quantity: int) 
 		slot_ref.asset_qty.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 
 func _refresh_player_status() -> void:
-	if player == null:
+	if player_ref == null:
 		return
 	
-	label_fatigue.text = "Fatigue: %d%%" % [int(player.fatigue * 100.0)]
-	label_hunger.text = "Hunger: %d%%" % [int(player.hunger * 100.0)]
-	label_focus.text = "Focus: %d%%" % [int(player.get_focus() * 100.0)]
+	label_fatigue.text = "Fatigue: %d%%" % player_ref.get_fatigue_percent()
+	label_hunger.text = "Hunger: %d%%" % player_ref.get_hunger_percent()
+	label_focus.text = "Focus: %d%%" % player_ref.get_focus_percent()
 
 	

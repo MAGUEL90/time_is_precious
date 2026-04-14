@@ -25,13 +25,13 @@ var is_mouse_over_consumable_tray: bool = false
 var is_ui_blocking_quick_slots: bool = false
 var consumable_slots: Array[Button] = []
 var quick_slot_item_ids: Array[String] = []
-var player_reff: Player
+var player_ref: Player
 
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	player_reff = get_tree().get_first_node_in_group("player")
+	player_ref = get_tree().get_first_node_in_group("player")
 	
 	_cache_consumable_slots()
 	_connect_consumable_slots()
@@ -130,18 +130,14 @@ func use_consumable_slot(slot_index: int) -> void:
 	print("Use consumable slot %d" % (slot_index + 1)) 
 
 func _refresh_player_status() -> void:
-	if player_reff == null:
-		player_reff = get_tree().get_first_node_in_group("player")
+	if player_ref == null:
+		player_ref = get_tree().get_first_node_in_group("player")
 		
-		if player_reff == null: 
+		if player_ref == null: 
 			return
 	
-	var player_fatigue = player_reff.fatigue
-	var player_hunger = player_reff.hunger
-	var player_focus = player_reff.get_focus()
-	
 	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
-		int(player_fatigue * 100.0),
-		int(player_hunger * 100.0),
-		int(player_focus * 100.0)
+		player_ref.get_fatigue_percent(),
+		player_ref.get_hunger_percent(),
+		player_ref.get_focus_percent()
 	]
