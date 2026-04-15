@@ -102,16 +102,16 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 	var item_data: ItemData = Inventory.get_item_data(item_id)
 	var does_fatigue_changed: bool = false
 	var does_hunger_changed: bool = false
-	
+
 	if item_data != null:
 		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
 			if player_ref != null:
 				if player_ref.reduce_fatigue(item_data.fatigue_reduction) == true:
 					does_fatigue_changed = true
-					
+
 				if player_ref.reduce_hunger(item_data.hunger_reduction) == true:
 					does_hunger_changed = true
-					
+
 				if does_fatigue_changed or does_hunger_changed:
 					var old_quantity: int = quantity
 					var predict_new_quantity: int = max(old_quantity - 1, 0)
@@ -125,10 +125,10 @@ func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSl
 						player_ref.global_position,
 						slot_ref.get_global_rect()
 					)
-						
+
 					var impact_tween = _play_slot_consume_effect(slot_ref)
-						
-					if impact_tween: 
+
+					if impact_tween:
 						_play_slot_quantity_preview(slot_ref, predict_new_quantity)
 						slot_ref.disabled = true
 							

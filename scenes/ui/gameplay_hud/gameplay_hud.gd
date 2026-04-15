@@ -32,19 +32,19 @@ var player_ref: Player
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	player_ref = get_tree().get_first_node_in_group("player")
-	
+
 	_cache_consumable_slots()
 	_connect_consumable_slots()
-	
+
 	quick_consumable_tray.visible = false
-	
+
 	TimeComponentManager.time_changed.connect(_on_time_changed)
 	_on_time_changed(
 		TimeComponentManager.current_day, 
 		TimeComponentManager.current_hour, 
 		int(TimeComponentManager.current_minute), 
 		TimeComponentManager.current_weather)
-	
+
 func _process(_delta: float) -> void:
 	if quick_consumable_tray.visible:
 		_update_consumable_hover_state()
@@ -59,7 +59,7 @@ func _on_time_changed(day:int, hour:int, minute:int, weather: String) -> void:
 	label_day.text = "Day: %02d " % [day]
 	label_time.text = "Hour: %02d Minute: %02d " % [hour, minute]
 	label_weather.text = "Weather: %s" % [weather]
-	
+
 	_refresh_player_status()
 
 func _on_shortcut_bag_mouse_entered() -> void:
@@ -132,10 +132,10 @@ func use_consumable_slot(slot_index: int) -> void:
 func _refresh_player_status() -> void:
 	if player_ref == null:
 		player_ref = get_tree().get_first_node_in_group("player")
-		
-		if player_ref == null: 
+
+		if player_ref == null:
 			return
-	
+
 	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),

@@ -196,7 +196,7 @@ func reduce_hunger(amount: float) -> bool:
 	if hunger > min_hunger and amount > 0.0:
 		hunger = clampf(hunger - amount, min_hunger, max_hunger)
 		return true
-	
+
 	return false
 
 func increase_hunger(amount: float) -> bool:
