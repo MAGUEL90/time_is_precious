@@ -2,7 +2,8 @@ class_name InventoryUI extends CanvasLayer
 
 signal consume_item_success(item_id,
 							item_display_name,
-							item_fatigue_restore,
+							item_fatigue_reduction,
+							item_hunger_reduction,
 							item_old_quantity,
 							item_predict_new_quantity,
 							player_position,
@@ -12,13 +13,16 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var info_label: Label = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header/InfoLabel
+@onready var label_fatigue: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFatigue
+@onready var label_hunger: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelHunger
+@onready var label_focus: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFocus
 
-var player: Player
+var player_ref: Player
 var source_slot: Vector2
 
 func _ready() -> void:
 	
-	player = get_tree().get_first_node_in_group("player")
+	player_ref = get_tree().get_first_node_in_group("player")
 	
 	visible = false
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -48,6 +52,7 @@ func toggle_inventory() -> void:
 func open_inventory() -> void:
 	get_tree().paused = true
 	visible = true
+	_refresh_player_status()
 	_refresh_inventory_grid()
 
 func close_inventory() -> void:
@@ -95,32 +100,41 @@ func _get_item_icon(item_id: String) -> Texture2D:
 
 func _on_item_slot_slot_clicked(item_id: String, quantity: int, slot_ref: ItemSlot) -> void:
 	var item_data: ItemData = Inventory.get_item_data(item_id)
+	var does_fatigue_changed: bool = false
+	var does_hunger_changed: bool = false
+
 	if item_data != null:
 		if item_data.category == ItemEnums.ItemCategory.CONSUMABLE:
-			if item_data.fatigue_restore > 0.0:
-				if player != null:
-					if player.reduce_fatigue(item_data.fatigue_restore) == true:
-						var old_quantity: int = quantity
-						var predict_new_quantity: int = max(old_quantity - 1, 0)
-						consume_item_success.emit(
-							item_data.id,
-							item_data.display_name,
-							item_data.fatigue_restore,
-							old_quantity,
-							predict_new_quantity,
-							player.global_position,
-							slot_ref.get_global_rect()
-						)
-						
-						var impact_tween = _play_slot_consume_effect(slot_ref)
-						
-						if impact_tween: 
-							_play_slot_quantity_preview(slot_ref, predict_new_quantity)
-							slot_ref.disabled = true
-							
-						await impact_tween.finished
-						Inventory.remove_item(item_data.id, 1)
+			if player_ref != null:
+				if player_ref.reduce_fatigue(item_data.fatigue_reduction) == true:
+					does_fatigue_changed = true
 
+				if player_ref.reduce_hunger(item_data.hunger_reduction) == true:
+					does_hunger_changed = true
+
+				if does_fatigue_changed or does_hunger_changed:
+					var old_quantity: int = quantity
+					var predict_new_quantity: int = max(old_quantity - 1, 0)
+					consume_item_success.emit(
+						item_data.id,
+						item_data.display_name,
+						item_data.fatigue_reduction,
+						item_data.hunger_reduction,
+						old_quantity,
+						predict_new_quantity,
+						player_ref.global_position,
+						slot_ref.get_global_rect()
+					)
+
+					var impact_tween = _play_slot_consume_effect(slot_ref)
+
+					if impact_tween:
+						_play_slot_quantity_preview(slot_ref, predict_new_quantity)
+						slot_ref.disabled = true
+							
+					await impact_tween.finished
+					Inventory.remove_item(item_data.id, 1)
+					_refresh_player_status()
 
 func _play_slot_consume_effect(slot_ref: ItemSlot) -> Tween:
 	var tween: Tween = create_tween()
@@ -139,13 +153,12 @@ func _play_slot_quantity_preview(slot_ref: ItemSlot, new_predict_quantity: int) 
 	else:
 		slot_ref.asset_qty.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 
+func _refresh_player_status() -> void:
+	if player_ref == null:
+		return
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	label_fatigue.text = "Fatigue: %d%%" % player_ref.get_fatigue_percent()
+	label_hunger.text = "Hunger: %d%%" % player_ref.get_hunger_percent()
+	label_focus.text = "Focus: %d%%" % player_ref.get_focus_percent()
+
 	
