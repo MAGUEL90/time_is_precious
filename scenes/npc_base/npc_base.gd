@@ -227,4 +227,15 @@ func proceed_contract() -> void:
 	var work_state_smoke_test: WorkStateSmokeTest = WorkStateSmokeTest.new()
 	work_state_smoke_test._start_test(npc_id)
 	is_contract_activated = true
-	# get_tree().call_group("smoke_test", "start_test", npc_id)
+
+func try_negotiate_contract() -> void:
+	if player_reff == null:
+		var player: Player = get_tree().get_first_node_in_group("player")
+		if player == null:
+			return
+		
+		player_reff = player
+	
+	player_reff.increase_fatigue(0.03)
+	player_reff.increase_hunger(0.01)
+	
