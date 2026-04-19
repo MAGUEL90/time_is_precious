@@ -90,6 +90,17 @@ func advance_one_minute() -> void:
 	emit_signal("minute_changed", current_minute) # signal menit berubah setiap menit
 	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather) # broadcast waktu terbaru
 
+func advance_minutes(total_minutes: int) -> void:
+	if total_minutes <= 0:
+		return
+
+	for each_minute in range(total_minutes):
+		advance_one_minute()
+		day_cycle()
+
+	_timer = 0.0
+
+
 func on_new_day() -> void:
 	roll_daily_weather()
 	emit_signal("day_changed", current_day) # konfirmasi hari
