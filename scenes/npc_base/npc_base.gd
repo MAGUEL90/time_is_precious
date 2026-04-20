@@ -245,10 +245,10 @@ func try_negotiate_contract() -> void:
 	var player_focus: float = player_reff.get_focus()
 
 	var success_chance: float = clampf((player_focus - negotiation_difficulty) + 0.5, 0.01, 0.99)
-	var random_probability: float = randf_range(0.0, 1.0)
-	var negotiation_success: bool = success_chance > random_probability
+	var negotiation_roll: float = randf()
+	var negotiation_success: bool = negotiation_roll < success_chance
 
-	if random_probability < success_chance:
+	if negotiation_success:
 		proceed_contract()
 
-	print("Focus: %.1f, Chance: %.1f, Roll: %.1f, Success/Fail: %s" % [player_reff.get_focus(), success_chance, random_probability, negotiation_success])
+	print("Focus: %.1f, Chance: %.1f, Roll: %.1f, Success: %s" % [player_focus, success_chance, negotiation_roll, negotiation_success])
