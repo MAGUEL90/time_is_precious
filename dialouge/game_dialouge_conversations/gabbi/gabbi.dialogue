@@ -7,6 +7,12 @@ Gabbi: Hi, would you like to help me? I need some job.
 		Gabbi: Cool, ill take that
 		do => proceed_contract()
 		do BaseDialogueManager.dialogue_activated.emit() 
+	- Make it worth your time (Negotiate)
+		Gabbi: Hmm? Now that sounds more interesting.
+		Gabbi: I am listening... but please do not make it boring.
+		do try_negotiate_contract()
+		do BaseDialogueManager.dialogue_deactivated.emit()
+		=> END
 	- No
 		do BaseDialogueManager.dialogue_deactivated.emit() 
 		=> END
