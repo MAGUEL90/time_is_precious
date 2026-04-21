@@ -24,6 +24,9 @@ class_name NPCData extends Resource
 @export var work_start_hour: int = 8 # jam kerja mulai (rencana kamu: tiap NPC unik) — template
 @export var work_end_hour: int = 17 # jam kerja selesai — template
 @export_range(0.0, 1.0, 0.01) var contract_difficult: float = 0.0 # tingkat sulit kontrak (template)
+@export var contract_requires_start_fee: bool = false
+@export var contract_start_fee_shekel: int = 0
+
 
 # ============= NEEDS
 @export_category("Needs") 

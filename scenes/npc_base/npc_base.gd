@@ -33,6 +33,8 @@ var npc_current_satisfaction: float
 # ============= WORK & CONTRACT =============
 var npc_allow_contract: bool = false
 var is_contract_activated: bool = false
+var npc_contract_requires_start_fee: bool = false
+var npc_contract_start_fee_shekel: int = 0
 
 var is_clear_day: bool = false
 
@@ -195,6 +197,8 @@ func set_data_attribute() -> void:
 	npc_id = npc_data.id # id dari template (berguna buat debug dan mapping)
 	npc_unique_dialogue = npc_data.unique_dialogue # dialog unik dari template
 	npc_initial_satisfaction = npc_data.initial_satisfaction # nilai awal dari template (dipakai untuk init state baru)
+	npc_contract_requires_start_fee = npc_data.contract_requires_start_fee
+	npc_contract_start_fee_shekel = max(npc_data.contract_start_fee_shekel, 0)
 
 	# ===== init satisfaction hanya jika state baru dibuat (jangan overwrite state hasil load) =====
 	if state_was_created: # hanya set nilai awal jika state baru
@@ -217,16 +221,28 @@ func set_data_attribute() -> void:
 
 func debug_npc() -> String:
 	var trust_value: float = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
-	debug_npc_label.text = "name: %s\nallow_contract: %s\nsatisfaction: %.2f\ntrust: %.2f" % [
+	debug_npc_label.text = "name: %s\nallow_contract: %s\nsatisfaction: %.2f\ntrust: %.2f\nstart_fee_req? %s\nstart_fee: %d" % [
 	npc_name, 
 	npc_allow_contract, 
 	npc_current_satisfaction, 
-	trust_value
+	trust_value,
+	npc_contract_requires_start_fee,
+	npc_contract_start_fee_shekel
 	]
 	return debug_npc_label.text
 
 func proceed_contract() -> void:
 	var work_state_smoke_test: WorkStateSmokeTest = WorkStateSmokeTest.new()
+
+	if npc_contract_requires_start_fee:
+		if npc_contract_start_fee_shekel > 0:
+			if not Inventory.has_item("shekel", npc_contract_start_fee_shekel):
+				print("player doesnt have enough money")
+				return
+
+			Inventory.remove_item("shekel", npc_contract_start_fee_shekel)
+			print("player has money")
+
 	work_state_smoke_test._start_test(npc_id)
 	is_contract_activated = true
 
