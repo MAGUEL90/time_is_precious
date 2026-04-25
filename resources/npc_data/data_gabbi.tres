@@ -7,6 +7,4 @@
 script = ExtResource("1_flsga")
 npc_name = "gabbi"
 unique_dialogue = ExtResource("2_83yvy")
-contract_requires_start_fee = true
-contract_start_fee_shekel = 3
 metadata/_custom_type_script = "uid://b5nthm3jr01og"
