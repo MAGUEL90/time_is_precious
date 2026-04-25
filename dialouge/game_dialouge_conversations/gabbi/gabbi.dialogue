@@ -1,54 +1,25 @@
 ~ contract_1
 do BaseDialogueManager.dialogue_activated.emit()
-Gabbi: Hi, would you like to help me? I need some job. 
-- Ok...
-	Gabbi: You got a job for me? 
-	- Yes
-		Gabbi: Cool, ill take that
-		do => proceed_contract()
-		do BaseDialogueManager.dialogue_activated.emit() 
-	- Make it worth your time (Negotiate)
-		Gabbi: Hmm? Now that sounds more interesting.
-		Gabbi: I am listening... but please do not make it boring.
-		do try_negotiate_contract()
-		do BaseDialogueManager.dialogue_deactivated.emit()
-		=> END
-	- No
-		do BaseDialogueManager.dialogue_deactivated.emit() 
-		=> END
-- No
-	Gabbi: Too bad...
-do BaseDialogueManager.dialogue_deactivated.emit() 
-
-=> END
-
-~ casual_2
-do BaseDialogueManager.dialogue_activated.emit()
-Gabbi: Hi, would you like to help me? I need some job. 
-- Yes
-	Gabbi: You got a job for me?
-	- Yes
-		Gabbi: Cool, ill take that
-		do BaseDialogueManager.contract_activated.emit() 
-	- No
-		do BaseDialogueManager.dialogue_deactivated.emit() 
-		=> END
-- No
-	Gabbi: Too bad...
-do BaseDialogueManager.dialogue_deactivated.emit() 
-
-=> END
+Gabbi: You really came back for this place?
+- What should I do first?
+	Gabbi: Start small.
+	Gabbi: People do not need big promises right now. They need something real.
+	Gabbi: Food, work, a roof that does not fall apart. Start there.
+	do BaseDialogueManager.dialogue_deactivated.emit()
+	=> END
+- How are people doing?
+	Gabbi: Tired. Careful. Broke.
+	Gabbi: Some still want this city to stand again.
+	Gabbi: They just do not trust words anymore.
+	do BaseDialogueManager.dialogue_deactivated.emit()
+	=> END
+- I will come back later.
+	Gabbi: Do not take too long.
+	do BaseDialogueManager.dialogue_deactivated.emit()
+	=> END
 
 ~ casual_gabbi_1
 do BaseDialogueManager.dialogue_activated.emit()
 Gabbi: [[I love this place so much | My Parents used to lived in here ... | Maybe someday i will have many gold]]  
 do BaseDialogueManager.dialogue_deactivated.emit() 
-=> END
-
-~ all_not_required
-Gabbi: all not required
-=> END
-
-~ ajaja
-aa
 => END

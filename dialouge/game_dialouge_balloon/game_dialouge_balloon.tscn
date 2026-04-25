@@ -187,6 +187,7 @@ size_flags_vertical = 8
 theme_override_constants/separation = 2
 alignment = 1
 script = ExtResource("3_72ixx")
+hide_failed_responses = true
 response_template = NodePath("ResponseExample")
 
 [node name="ResponseExample" type="Button" parent="Balloon/ResponsesMenu"]
