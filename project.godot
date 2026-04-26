@@ -23,6 +23,7 @@ WorkShopStorage="*res://scripts/autoload/work_shop_storage/work_shop_storage.gd"
 WorkManager="*res://scripts/autoload/work_manager/work_manager.gd"
 ProcessManager="*res://scripts/autoload/process_manager/process_manager.gd"
 ItemDatabase="*res://scripts/autoload/item_database/item_database.gd"
+WorkerDatabase="*res://scripts/autoload/worker_database/worker_database.gd"
 
 [display]
 
