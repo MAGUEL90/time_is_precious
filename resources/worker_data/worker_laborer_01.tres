@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WorkerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/worker_data/worker_data.gd" id="1_1q8q0"]
+
+[resource]
+script = ExtResource("1_1q8q0")
+worker_id = "worker_laborer_01"
+display_name = "Laborer"
+profession = 0
+profession_xp = 0
+profession_star = 1
+efficiency = 1.0
+reliability = 1.0
+wage_shekel_per_day = 1
+food_fulfilled = false
+clothing_fulfilled = false
+shelter_fulfilled = false
