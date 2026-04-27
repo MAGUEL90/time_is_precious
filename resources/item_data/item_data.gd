@@ -12,3 +12,4 @@ class_name ItemData extends Resource
 @export var rarity: ItemEnums.Rarity = ItemEnums.Rarity.COMMON
 @export var fatigue_reduction: float = 0.0
 @export var hunger_reduction: float = 0.0
+@export var food_supply_value: int = 0
