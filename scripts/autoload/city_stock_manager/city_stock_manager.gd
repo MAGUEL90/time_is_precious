@@ -3,7 +3,7 @@ extends Node
 const MAX_STOCK: int = 9999
 const MAX_SHEKEL: int = 9999
 
-var food_stock: int
+var food_supply: int
 var clothing_stock: int
 var treasury_shekel: int
 
@@ -24,28 +24,28 @@ func deposit_food_item(item_id: String, amount: int, inventory: Inventory) -> bo
 	if not inventory.remove_item(item_id, amount):
 		return false
 
-	add_food(item_data.food_supply_value * amount)
+	add_food_supply(item_data.food_supply_value * amount)
 	return true
 
 
-func add_food(amount: int) -> bool:
+func add_food_supply(amount: int) -> bool:
 	if amount <= 0:
 		return false
 	
-	food_stock = clampi(food_stock + amount, 0, MAX_STOCK)
+	food_supply = clampi(food_supply + amount, 0, MAX_STOCK)
 	return true
 
-func consume_food(amount: int) -> bool:
-	if not has_food(amount):
+func consume_food_supply(amount: int) -> bool:
+	if not has_food_supply(amount):
 		return false
 	
-	food_stock -= amount
+	food_supply -= amount
 	return true
 
-func has_food(amount: int) -> bool:
+func has_food_supply(amount: int) -> bool:
 	if amount <= 0:
 		return false
-	if food_stock >= amount:
+	if food_supply >= amount:
 		return true
 	
 	return false

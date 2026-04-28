@@ -1,6 +1,6 @@
 extends Node
 
-const FOOD_PER_CITIZEN_PER_DAY: int = 1
+const FOOD_SUPPLY_PER_CITIZEN_PER_DAY: int = 1
 
 func _ready() -> void:
 	TimeComponentManager.new_day_started.connect(on_new_day_started)
@@ -18,5 +18,5 @@ func process_daily_food_needs() -> void:
 		if not (citizen is WorkerData):
 			continue
 		var citizen_worker: WorkerData = citizen as WorkerData
-		var consume_result: bool = CityStockManager.consume_food(FOOD_PER_CITIZEN_PER_DAY)
+		var consume_result: bool = CityStockManager.consume_food_supply(FOOD_SUPPLY_PER_CITIZEN_PER_DAY)
 		citizen_worker.food_fulfilled = consume_result
