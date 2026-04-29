@@ -136,8 +136,14 @@ func _refresh_player_status() -> void:
 		if player_ref == null:
 			return
 
-	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
+	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),
-		player_ref.get_focus_percent()
+		player_ref.get_focus_percent(),
+		CityStockManager.food_supply,
+		CitizenNeedsManager.get_daily_supply_need(),
+		_get_food_supply_status()
 	]
+
+func _get_food_supply_status() -> String:
+	return "OK" if CityStockManager.food_supply >= CitizenNeedsManager.get_daily_supply_need() else "LOW"

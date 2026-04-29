@@ -20,3 +20,11 @@ func process_daily_food_needs() -> void:
 		var citizen_worker: WorkerData = citizen as WorkerData
 		var consume_result: bool = CityStockManager.consume_food_supply(FOOD_SUPPLY_PER_CITIZEN_PER_DAY)
 		citizen_worker.food_fulfilled = consume_result
+
+func get_citizen_count() -> int:
+	var citizens: Array = WorkerDatabase.get_all_workers()
+
+	return citizens.size()
+
+func get_daily_supply_need() -> int:
+	return get_citizen_count() * FOOD_SUPPLY_PER_CITIZEN_PER_DAY
