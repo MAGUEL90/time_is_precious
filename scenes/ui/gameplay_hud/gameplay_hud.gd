@@ -136,18 +136,28 @@ func _refresh_player_status() -> void:
 		if player_ref == null:
 			return
 
-	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s" % [
+	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),
 		player_ref.get_focus_percent(),
 		CityStockManager.food_supply,
-		CitizenNeedsManager.get_daily_supply_need(),
+		CitizenNeedsManager.get_daily_food_supply_need(),
 		_get_food_supply_status(),
-		_get_last_food_result_text()
+		_get_last_food_result_text(),
+		CityStockManager.clothing_supply,
+		CitizenNeedsManager.get_daily_clothing_supply_need(),
+		_get_clothing_supply_status(),
+		_get_last_clothing_result_text()
 	]
 
 func _get_food_supply_status() -> String:
-	return "OK" if CityStockManager.food_supply >= CitizenNeedsManager.get_daily_supply_need() else "LOW"
+	return "OK" if CityStockManager.food_supply >= CitizenNeedsManager.get_daily_food_supply_need() else "LOW"
 
 func _get_last_food_result_text() -> String:
 	return "Fed: %d / %d" % [CitizenNeedsManager.last_food_fulfilled_count, CitizenNeedsManager.get_citizen_count()]
+
+func _get_clothing_supply_status() -> String:
+	return "OK" if CityStockManager.clothing_supply >= CitizenNeedsManager.get_daily_clothing_supply_need() else "LOW"
+
+func _get_last_clothing_result_text() -> String:
+	return "Clothed: %d / %d" % [CitizenNeedsManager.last_clothing_fulfilled_count, CitizenNeedsManager.get_citizen_count()]
