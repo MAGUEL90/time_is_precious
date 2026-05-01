@@ -13,3 +13,4 @@ class_name ItemData extends Resource
 @export var fatigue_reduction: float = 0.0
 @export var hunger_reduction: float = 0.0
 @export var food_supply_value: int = 0
+@export var clothing_supply_value: int = 0
