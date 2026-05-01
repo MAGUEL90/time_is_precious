@@ -4,7 +4,7 @@ const MAX_STOCK: int = 9999
 const MAX_SHEKEL: int = 9999
 
 var food_supply: int
-var clothing_stock: int
+var clothing_supply: int
 var treasury_shekel: int
 
 func deposit_food_item(item_id: String, amount: int, inventory: Inventory) -> bool:
@@ -50,24 +50,24 @@ func has_food_supply(amount: int) -> bool:
 	
 	return false
 
-func add_clothing(amount: int) -> bool:
+func add_clothing_supply(amount: int) -> bool:
 	if amount <= 0:
 		return false
 	
-	clothing_stock = clampi(clothing_stock + amount, 0, MAX_STOCK)
+	clothing_supply = clampi(clothing_supply + amount, 0, MAX_STOCK)
 	return true
 
-func consume_clothing(amount: int) -> bool:
-	if not has_clothing(amount):
+func consume_clothing_supply(amount: int) -> bool:
+	if not has_clothing_supply(amount):
 		return false
 	
-	clothing_stock -= amount
+	clothing_supply -= amount
 	return true
 
-func has_clothing(amount: int) -> bool:
+func has_clothing_supply(amount: int) -> bool:
 	if amount <= 0:
 		return false
-	if clothing_stock >= amount:
+	if clothing_supply >= amount:
 		return true
 	
 	return false
