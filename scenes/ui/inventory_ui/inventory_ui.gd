@@ -143,10 +143,17 @@ func _on_slot_deposit_requested(item_id: String, _quantity: int, _slot_ref: Item
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
 	if item_data == null:
 		return
-	if item_data.food_supply_value <= 0:
+
+	if item_data.food_supply_value <= 0 and item_data.clothing_supply_value <= 0:
 		return
-	if CityStockManager.deposit_food_item(item_id, 1, Inventory):
-		_refresh_inventory_grid()
+
+	if item_data.food_supply_value > 0:
+		if CityStockManager.deposit_food_item(item_id, 1, Inventory):
+			_refresh_inventory_grid()
+
+	if item_data.clothing_supply_value > 0:
+		if CityStockManager.deposit_clothing_item(item_id, 1, Inventory):
+			_refresh_inventory_grid()
 
 
 func _play_slot_consume_effect(slot_ref: ItemSlot) -> Tween:

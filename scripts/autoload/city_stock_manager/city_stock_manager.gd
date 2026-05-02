@@ -27,6 +27,26 @@ func deposit_food_item(item_id: String, amount: int, inventory: Inventory) -> bo
 	add_food_supply(item_data.food_supply_value * amount)
 	return true
 
+func deposit_clothing_item(item_id: String, amount: int, inventory: Inventory) -> bool:
+	if inventory == null:
+		return false
+
+	if amount <= 0:
+		return false
+
+	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+	if item_data == null or item_data.clothing_supply_value <= 0:
+		return false
+
+	if not inventory.has_item(item_id, amount):
+		return false
+
+	if not inventory.remove_item(item_id, amount):
+		return false
+
+	add_clothing_supply(item_data.clothing_supply_value * amount)
+	return true
+
 
 func add_food_supply(amount: int) -> bool:
 	if amount <= 0:
