@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=4 format=3 uid="uid://b8l2h641l2fr"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_nuxe6"]
+[ext_resource type="Texture2D" uid="uid://cccau0gkyeoe7" path="res://assets/items/simple_clothes.png" id="1_vrc0w"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vrc0w"]
+atlas = ExtResource("1_vrc0w")
+
+[resource]
+script = ExtResource("1_nuxe6")
+id = "simple_clothes"
+display_name = "Simple Clothes"
+icon = SubResource("AtlasTexture_vrc0w")
+weight = 1.0
+category = 1
+base_value_shekel = 1
+clothing_supply_value = 7
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

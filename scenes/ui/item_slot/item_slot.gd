@@ -19,7 +19,7 @@ func set_item(item_id: String, quantity: int, item_icon: Texture2D) -> void:
 	
 	if item_data and item_data.display_name:
 		tooltip_text = "%s x%s" % [item_data.display_name.capitalize(), asset_qty.text]
-		if item_data.food_supply_value > 0:
+		if item_data.food_supply_value > 0 or item_data.clothing_supply_value > 0:
 			tooltip_text += "\nRight click: Send to City Stock"
 
 func _on_pressed() -> void:
