@@ -2,10 +2,12 @@ extends Node
 
 const MAX_STOCK: int = 9999
 const MAX_SHEKEL: int = 9999
+const MAX_SHELTER_CAPACITY: int = 9999
 
 var food_supply: int
 var clothing_supply: int
 var treasury_shekel: int
+var shelter_capacity: int
 
 func deposit_food_item(item_id: String, amount: int, inventory: Inventory) -> bool:
 	if inventory == null:
@@ -112,4 +114,26 @@ func has_shekel(amount: int) -> bool:
 	if treasury_shekel >= amount:
 		return true
 	
+	return false
+
+func add_shelter_capacity(amount: int) -> bool:
+	if amount <= 0:
+		return false
+
+	shelter_capacity = clampi(shelter_capacity + amount, 0, MAX_SHELTER_CAPACITY)
+	return true
+
+func remove_shelter_capacity(amount: int) -> bool:
+	if not has_shelter_capacity(amount):
+		return false
+
+	shelter_capacity -= amount
+	return true
+
+func has_shelter_capacity(amount: int) -> bool:
+	if amount <= 0:
+		return false
+	if shelter_capacity >= amount:
+		return true
+
 	return false
