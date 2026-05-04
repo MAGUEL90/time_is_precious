@@ -21,6 +21,15 @@ func process_daily_needs() -> void:
 	process_daily_clothing_needs()
 	process_daily_shelter_capacity_needs()
 
+	var citizens: Array = WorkerDatabase.get_all_workers()
+	for citizen in citizens:
+		if not (citizen is WorkerData):
+			continue
+		if citizen.are_basic_needs_fulfilled():
+			citizen.satisfaction = clampf(citizen.satisfaction + 0.05, 0.01, 0.99)
+		else:
+			citizen.satisfaction = clampf(citizen.satisfaction - 0.10, 0.01, 0.99)
+
 func process_daily_food_needs() -> void:
 	last_food_fulfilled_count = 0
 	last_food_unfulfilled_count = 0
