@@ -136,7 +136,7 @@ func _refresh_player_status() -> void:
 		if player_ref == null:
 			return
 
-	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s" % [
+	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s\n%s" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),
 		player_ref.get_focus_percent(),
@@ -147,7 +147,9 @@ func _refresh_player_status() -> void:
 		CityStockManager.clothing_supply,
 		CitizenNeedsManager.get_daily_clothing_supply_need(),
 		_get_clothing_supply_status(),
-		_get_last_clothing_result_text()
+		_get_last_clothing_result_text(),
+		_get_shelter_capacity_status(),
+
 	]
 
 func _get_food_supply_status() -> String:
@@ -161,3 +163,6 @@ func _get_clothing_supply_status() -> String:
 
 func _get_last_clothing_result_text() -> String:
 	return "Clothed: %d / %d" % [CitizenNeedsManager.last_clothing_fulfilled_count, CitizenNeedsManager.get_citizen_count()]
+
+func _get_shelter_capacity_status() -> String:
+	return "Shelter Capacity: %d, Need: %d" % [CityStockManager.shelter_capacity, CitizenNeedsManager.get_daily_shelter_capacity_need()]
