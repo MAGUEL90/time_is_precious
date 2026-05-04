@@ -14,6 +14,7 @@ enum Profession {LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 @export var food_fulfilled: bool = false
 @export var clothing_fulfilled: bool = false
 @export var shelter_fulfilled: bool = false
+@export_range(0.0, 1.0, 0.01) var satisfaction: float = 0.5
 
 func are_basic_needs_fulfilled() -> bool:
 	return food_fulfilled and clothing_fulfilled and shelter_fulfilled
