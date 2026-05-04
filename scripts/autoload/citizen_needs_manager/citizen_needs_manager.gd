@@ -90,3 +90,6 @@ func get_daily_food_supply_need() -> int:
 
 func get_daily_clothing_supply_need() -> int:
 	return get_citizen_count() * CLOTHING_SUPPLY_PER_CITIZEN_PER_DAY
+
+func get_daily_shelter_capacity_need() -> int:
+	return get_citizen_count()
