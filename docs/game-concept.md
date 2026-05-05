@@ -1,10 +1,11 @@
 # Time is Precious - Game Concept
 
-Source of truth for high-level design decisions.
+Source of truth for high-level game design decisions.
 
-- Last updated: 2026-04-26
-- Working version: v0.7 draft
-- Legacy reference: `KONSEP GAME (UPDATED v0.6).txt` is kept temporarily until this document is reviewed and accepted as the main design doc.
+- Last updated: 2026-05-06
+- Working version: v0.8 draft
+- Focus: game idea, player experience, world logic, and long-term design direction.
+- Separate note: implementation progress and coding notes should live outside this concept document.
 
 ## 1. High Concept
 
@@ -24,8 +25,8 @@ The heart of the game is a constant tradeoff:
 - spend **time** to save **money**
 - spend **money** to save **time**
 
-The player does not become the strongest laborer, but the smartest organizer of labor,
-knowledge, opportunity, and long-term growth.
+The player does not become the strongest laborer.
+The player becomes the person who makes time, people, knowledge, and systems work better.
 
 ## 2. World Premise
 
@@ -38,7 +39,7 @@ That false prosperity eventually collapsed.
 The player is a young person trying to restore the city, not just into a rich city again,
 but into a livable and stable city.
 
-This matters because many systems in the game are not just economic.
+This matters because many systems in the game are not only economic.
 They are also social:
 
 - workers need to survive
@@ -55,9 +56,9 @@ The player's core fantasy is:
 
 ### Early / Mid / Late Direction
 
-- **Early game:** the player often works manually
-- **Mid game:** the player balances manual work and delegation
-- **Late game:** the player wins through planning, systems, negotiation, and city management
+- **Early game:** the player often works manually.
+- **Mid game:** the player balances manual work and delegation.
+- **Late game:** the player wins through planning, systems, negotiation, forecasting, and city management.
 
 ## 4. Core Design Pillars
 
@@ -77,8 +78,9 @@ The player is not only managing personal inventory.
 The player is also managing the city:
 
 - workforce
-- stock of daily needs
+- daily need supply
 - treasury
+- housing capacity
 - production flow
 - social stability
 
@@ -93,15 +95,25 @@ The city is not just an economy machine.
 Worker conditions, needs fulfillment, and trust in the city should shape how stable
 or unstable the settlement becomes over time.
 
+### P6. Guidance Through Forecast and Memory
+
+The game can eventually guide the player through systems that feel alive:
+
+- an Oracle-like forecast system that reads city conditions
+- an advisor character that remembers player behavior and gives context-aware advice
+
+This is a long-term identity direction, not an early MVP requirement.
+
 ## 5. Core Gameplay Loop
 
 1. Check city needs, chapter goals, quests, and economic opportunities.
 2. Decide what the player does manually and what gets delegated.
-3. Assign workers and resources.
+3. Assign workers, tools, and resources.
 4. Let jobs and processes run over time.
 5. Collect, use, sell, or reinvest outputs.
 6. Maintain worker conditions and city stability.
-7. Unlock new systems, districts, professions, and story progress.
+7. Read forecasts, warnings, and NPC advice.
+8. Unlock new systems, districts, professions, and story progress.
 
 ## 6. NPC Structure
 
@@ -149,6 +161,21 @@ Gabbi is the current reference model for a unique NPC.
 - story support character
 - emotional anchor for the city's human cost
 
+### Personality Direction
+
+Gabbi is cheerful, stubbornly hopeful, clever, and sometimes moody.
+She has seen poverty closely, so her optimism is not naive.
+She wants the city to recover, but she does not fully trust prosperity that is built without care.
+
+### Background Direction
+
+Gabbi comes from a lower-class family shaped by debt, illness, and instability.
+Her father may be rough, irresponsible, or trapped in debt.
+Her mother died from sickness after the family could not afford proper care.
+
+This background helps explain why Gabbi cares about ordinary citizens and why she can become
+a useful early guide for the player.
+
 ### Important Rule
 
 Gabbi is **not** a routine worker.
@@ -158,29 +185,69 @@ If she helps, it should be through:
 - event support
 - story involvement
 - special help tied to specific situations
+- guidance for player decision-making
 
 This keeps her role stable and prevents overlap between story presence and routine labor systems.
 
 ## 8. City Resource Layer
 
-The city should have its own shared resource pool, separate from the player's personal inventory.
+The city has its own shared resource pool, separate from the player's personal inventory.
 
 ### Early City Resources
 
-- `food_stock`
-- `clothing_stock`
-- `city_treasury_shekel`
+- `food_supply`
+- `clothing_supply`
+- `treasury_shekel`
+- `shelter_capacity`
 
-### Shelter
+### Food Supply
 
-Shelter is still a core need, but it should come from a **housing / capacity system**
-rather than from a simple stack of shelter items.
+Food is treated as **supply points**, not as a simple count of food items.
 
-So the early needs model becomes:
+This means:
 
-- food: fulfilled from city stock
-- clothing: fulfilled from city stock
-- shelter: fulfilled from housing capacity / living conditions
+- 1 loaf and 1 egg do not have to be equal.
+- each food item can contribute a different amount of food supply.
+- the city consumes food supply to fulfill citizens' daily food needs.
+
+Example:
+
+- a small food item may provide 1 food supply
+- a more filling meal may provide 2 or more food supply
+
+### Clothing Supply
+
+Clothing is also treated as **supply points**, not as one exact outfit per citizen.
+
+This represents wear, replacement, basic fabric availability, and the general ability of the city
+to keep citizens properly clothed.
+
+Higher-quality clothing can later provide:
+
+- more clothing supply
+- slower decay
+- comfort bonuses
+- satisfaction bonuses
+
+### Treasury
+
+City treasury is used for city-level development, wages, repairs, upgrades, and public decisions.
+
+For MVP, the game does not need to track full personal wealth for every regular NPC.
+That would make the simulation too heavy too early.
+
+### Shelter Capacity
+
+Shelter is treated as **housing capacity**, not consumable stock.
+
+Shelter capacity means:
+
+- how many citizens can be housed
+- whether the city has enough living space
+- a foundation for future housing quality
+
+Shelter capacity is not consumed each day.
+It is compared against population needs.
 
 ## 9. Worker System (Regular NPCs)
 
@@ -194,6 +261,7 @@ Regular workers are defined by:
 - reliability
 - wages
 - tools
+- satisfaction
 
 ### 9.1 Fixed Needs for All Regular NPCs
 
@@ -204,8 +272,8 @@ All regular NPCs share the same core needs in early game:
 - Shelter
 
 There is **no needs sensitivity difference** between regular NPCs in the current direction.
-The differentiation should come from profession, level, tools, and assignment, not from
-individual needs tuning.
+The differentiation should come from profession, level, tools, assignment, and satisfaction,
+not from individual needs tuning.
 
 ### 9.2 Professions
 
@@ -255,14 +323,54 @@ Current minimum direction for regular workers:
 - `food_fulfilled`
 - `clothing_fulfilled`
 - `shelter_fulfilled`
+- `satisfaction`
 
 Possible later additions:
 
-- `morale`
 - `absence_risk`
+- `theft_risk`
+- `leaving_risk`
 - `riot_risk`
 
-## 11. Work Output Rules
+## 11. Needs Fulfillment and Satisfaction
+
+Needs fulfillment is checked through the city systems:
+
+- food uses city food supply
+- clothing uses city clothing supply
+- shelter uses city shelter capacity
+
+Satisfaction is the early emotional / social result of needs fulfillment.
+
+### MVP Rule
+
+- if all basic needs are fulfilled, satisfaction rises slightly
+- if any basic need fails, satisfaction falls
+
+Satisfaction should not immediately cause extreme outcomes.
+It is a bridge system for future social consequences.
+
+## 12. Needs Failure Escalation
+
+Need failure should escalate gradually.
+Do not jump directly to extreme behavior.
+
+Recommended escalation:
+
+1. satisfaction falls
+2. output drops
+3. reliability falls
+4. workers reject assignments more often
+5. absence / skipping work
+6. theft
+7. leaving the city
+8. unrest
+9. riot
+
+For MVP, satisfaction and light output or reliability impact are enough.
+Riot can come later after the basic worker loop is stable.
+
+## 13. Work Output Rules
 
 Work output should be affected by:
 
@@ -271,11 +379,12 @@ Work output should be affected by:
 - star level
 - tool quality / suitability
 - needs fulfillment
+- satisfaction
 - efficiency
 
 ### Output Direction
 
-`final output = base job output x profession bonus x star bonus x tool bonus x needs multiplier x efficiency`
+`final output = base job output x profession bonus x star bonus x tool bonus x needs multiplier x satisfaction multiplier x efficiency`
 
 ### Profession Flavor
 
@@ -285,7 +394,7 @@ Work output should be affected by:
 - **Farmer:** better farming speed and crop handling
 - **Scavenger:** better salvage rate and lower risk in gathering uncertain materials
 
-## 12. Wages and Control
+## 14. Wages and Control
 
 The player controls:
 
@@ -299,30 +408,34 @@ Wages should mainly affect:
 - willingness to work
 - reliability
 - retention
+- satisfaction over time
 
 Wages should **not** be the main direct source of output power.
 Star level, tools, and fulfilled needs should matter more.
 
-## 13. Needs Failure Escalation
+## 15. Shelter and Population Direction
 
-Need failure should escalate gradually.
-Do not jump directly to extreme behavior.
+Shelter is a basic need and a soft population constraint.
 
-Recommended escalation:
+The player may eventually build housing on available land.
+One house can support multiple citizens depending on its size and quality.
 
-1. output drops
-2. reliability falls
-3. workers reject assignments more often
-4. absence / skipping work
-5. theft
-6. leaving the city
-7. unrest
-8. riot
+Possible early model:
 
-For MVP, the first few steps are enough.
-Riot can come later after the basic worker loop is stable.
+- simple shelter gives basic capacity
+- better housing increases capacity or quality
+- housing quality can later affect satisfaction
 
-## 14. Mid-Game Needs Expansion
+Incoming groups of people should not be fully automatic.
+The player should have a chance to accept or reject incoming groups.
+
+For MVP:
+
+- citizens can exist even if shelter is insufficient
+- lack of shelter lowers satisfaction
+- no individual rent or personal housing economy is required yet
+
+## 16. Mid-Game Needs Expansion
 
 Early game is intentionally simple:
 
@@ -335,10 +448,12 @@ Mid game can expand into:
 - comfort
 - household goods
 - luxury goods
+- education or knowledge access
+- public safety
 
 These should be layered in only after the early city loop is stable.
 
-## 15. Player Development Direction
+## 17. Player Development Direction
 
 The player does not need multiple hard classes.
 The current direction is closer to intellectual / managerial growth:
@@ -352,13 +467,77 @@ The current direction is closer to intellectual / managerial growth:
 These are not separate characters, but growth directions that reinforce the fantasy
 of rebuilding the city through smarter leadership.
 
-## 16. Production and Storage Direction
+## 18. Oracle Forecast and Advisor NPC
 
-The current technical direction remains:
+This is a long-term core feature direction.
+It should not be built large during early MVP.
+
+### 18.1 Oracle Forecast System
+
+The Oracle Forecast System reads city data and predicts future risks or opportunities.
+
+Example forecast topics:
+
+- food shortage risk
+- clothing shortage risk
+- shelter shortage risk
+- treasury pressure
+- worker dissatisfaction trend
+- demand for certain materials
+- risk of failed contracts or delayed production
+
+The Oracle understands the city as a system.
+It sees numbers, trends, shortages, and time pressure.
+
+### 18.2 Advisor NPC With Memory
+
+The Advisor NPC reads the player's behavior and remembers important choices.
+
+Example memory topics:
+
+- the player ignored food shortages several times
+- the player overbuilt housing before stabilizing food
+- the player accepted too many citizens too quickly
+- the player paid workers poorly
+- the player repeatedly solved problems manually instead of delegating
+
+The Advisor understands the player as a person.
+It sees habits, repeated mistakes, and decision style.
+
+### 18.3 Combined Identity
+
+The strongest direction is the combination:
+
+> Oracle sees city data.
+> Advisor remembers player behavior.
+
+Example:
+
+> "Last time you focused too much on housing, food supply collapsed within two days.
+> The Oracle now predicts another food shortage.
+> My advice: pause mudbrick production and move two workers to food."
+
+This can become one of the unique identities of **Time is Precious**:
+a management RPG where the city remembers, warns, and responds intelligently.
+
+### 18.4 MVP Boundary
+
+Do not build the full system early.
+
+First small version:
+
+- Oracle reads 3 main resources: food, clothing, shelter
+- Advisor remembers 3 to 5 important player events
+- advice is simple, readable, and grounded in current city problems
+
+## 19. Production and Storage Direction
+
+The current design direction remains:
 
 - jobs consume inputs and generate outputs
 - outputs should not automatically become personal player loot
 - workshop-oriented storage is preferred for production chains
+- city supply is separate from player inventory
 
 This supports chain-based gameplay:
 
@@ -368,20 +547,7 @@ This supports chain-based gameplay:
 - refine
 - use / sell / reinvest
 
-## 17. Current Prototype Foundations
-
-The following foundations already exist in the prototype:
-
-- player inventory with capacity / load logic
-- world pickup items using item data
-- workshop storage separated from player inventory
-- job and process pipeline foundations
-- time and weather hooks
-- basic NPC dialogue and negotiation groundwork
-
-These are implementation foundations, not final balancing.
-
-## 18. Current Design Priorities
+## 20. Current Design Priorities
 
 ### Priority A. Clarify NPC Identity
 
@@ -390,8 +556,8 @@ These are implementation foundations, not final balancing.
 
 ### Priority B. Build City Resource Loop
 
-- city food stock
-- city clothing stock
+- food supply
+- clothing supply
 - city treasury
 - housing / shelter fulfillment
 
@@ -399,6 +565,7 @@ These are implementation foundations, not final balancing.
 
 - assign worker
 - fulfill needs
+- adjust satisfaction
 - run jobs
 - gain profession XP
 - level up by star
@@ -411,26 +578,33 @@ Do not overload the system too early with:
 - too many needs
 - too many hidden modifiers
 - too many unique NPC exceptions
+- full AI advice before city systems are readable
 - riot-level consequences before the basic city loop is stable
 
-## 19. Open Questions
+## 21. Open Questions
 
 These are still intentionally open:
 
-- how exactly city stock is distributed to regular NPCs each day
+- how exactly food supply values should be balanced per item
+- how clothing quality and durability should affect clothing supply
 - how shelter quality is represented in early prototype
 - what exact formula connects wages to reliability and retention
 - how tools are assigned and degraded in the regular worker loop
-- which unique NPCs, if any, should keep direct money-based interactions
+- which unique NPCs should become advisors, merchants, or quest anchors
+- whether the Oracle is mystical, analytical, mechanical, or a blend of all three
 
-## 20. Immediate Reference Rules
+## 22. Immediate Reference Rules
 
 If future design choices feel messy, return to these rules first:
 
 1. Unique NPCs are not routine workers.
 2. Regular NPCs are the core workforce.
 3. Early regular worker needs are fixed: Food, Clothing, Shelter.
-4. Worker growth comes from profession XP and star progression.
-5. Leveling requires needs fulfillment.
-6. City management is separate from personal inventory.
-7. Long-term strength comes from systems, not from manual labor alone.
+4. Food and clothing use supply points, not raw item counts.
+5. Shelter uses capacity, not consumable stock.
+6. Worker satisfaction changes after needs are processed.
+7. Worker growth comes from profession XP and star progression.
+8. Leveling requires needs fulfillment.
+9. City management is separate from personal inventory.
+10. Long-term strength comes from systems, not from manual labor alone.
+11. Oracle and Advisor systems are long-term identity features, not early MVP requirements.
