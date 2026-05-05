@@ -46,6 +46,5 @@ position = Vector2(305, 101)
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("7_p3cw6")]
-layer = 2
 
 [node name="GameplayHUD" parent="." instance=ExtResource("9_defl6")]
