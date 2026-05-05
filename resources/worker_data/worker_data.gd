@@ -18,3 +18,11 @@ enum Profession {LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 
 func are_basic_needs_fulfilled() -> bool:
 	return food_fulfilled and clothing_fulfilled and shelter_fulfilled
+
+func get_satisfaction_work_multiplier() -> float:
+	if satisfaction >= 0.75:
+		return 1.05
+	elif satisfaction >= 0.4:
+		return 1.0
+	else:
+		return 0.85
