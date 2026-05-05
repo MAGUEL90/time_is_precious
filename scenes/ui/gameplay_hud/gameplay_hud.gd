@@ -136,7 +136,7 @@ func _refresh_player_status() -> void:
 		if player_ref == null:
 			return
 
-	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s\n%s" % [
+	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s\n%s\nSAT: %d%%" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),
 		player_ref.get_focus_percent(),
@@ -149,6 +149,7 @@ func _refresh_player_status() -> void:
 		_get_clothing_supply_status(),
 		_get_last_clothing_result_text(),
 		_get_shelter_capacity_status(),
+		CitizenNeedsManager.get_average_satisfaction() * 100.0
 
 	]
 
