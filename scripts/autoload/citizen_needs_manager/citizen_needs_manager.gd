@@ -102,3 +102,21 @@ func get_daily_clothing_supply_need() -> int:
 
 func get_daily_shelter_capacity_need() -> int:
 	return get_citizen_count()
+
+func get_average_satisfaction() -> float:
+	var citizens: Array = WorkerDatabase.get_all_workers()
+	var total_satisfaction: float = 0.0
+	var valid_citizen: int = 0
+	for citizen in citizens:
+		if not (citizen is WorkerData):
+			continue
+
+		var citizen_worker: WorkerData = citizen as WorkerData
+
+		valid_citizen += 1
+		total_satisfaction += citizen_worker.satisfaction
+
+	if valid_citizen == 0:
+		return 0.0
+	else:
+		return total_satisfaction / valid_citizen
