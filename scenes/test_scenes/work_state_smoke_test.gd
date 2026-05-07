@@ -65,7 +65,7 @@ func _run_simulation() -> void:
 			"start_job", 
 			mudbrick_job, 
 			WorkOrder.Worker_Type.NPC, 
-			"npc_01", null, Inventory, null, 5)) # service fee test 5r
+			"worker_laborer_01", null, Inventory, null, 5)) # service fee test 5r
 	
 	print("Start_order_id: ", order_id)
 	
