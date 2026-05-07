@@ -98,7 +98,7 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	# ambil biaya jasa
 	var fee: int = service_fee_by_order.get(order_id, 0)
 	var is_player_worker: bool = (order.worker_kind == WorkOrder.Worker_Type.PLAYER)
-	
+
 	# =============================
 	# RULE BARU (2026.02.01):
 	# PLAYER  -> langsung masuk inventory tujuan, tanpa claimable
@@ -116,11 +116,24 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 				else:
 					Inventory.add_item(item_id, int(job_outputs[item_id]))
 	else:
-		# NPC: escrow murni -> claimable saja
+		var worker_data: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
+		var multiplier: float = 1.0
+
+		if worker_data:
+			multiplier = worker_data.get_satisfaction_work_multiplier()
+
+		var final_outputs: Dictionary[String, int] = {}
+
+		for item_id in job_outputs.keys():
+			var item_id_string: String = str(item_id)
+			var base_amount: int = int(job_outputs[item_id_string])
+			var final_amount: int = roundi(base_amount * multiplier)
+			final_outputs[item_id_string] = final_amount
+
 		if output_store != null and output_store.has_method("add_claimable_output"):
 			output_store.call(
 				"add_claimable_output",
-				job_outputs.duplicate(true),
+				final_outputs,
 				fee,
 				order.worker_id,
 				now_total_minutes,
@@ -128,11 +141,11 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 			)
 		else:
 			# fallback aman: kalau output_store tidak punya claimable, baru kita masukkan langsung
-			for item_id in job_outputs.keys():
+			for item_id in final_outputs.keys():
 				if output_store != null and output_store.has_method("add_item"):
-					output_store.call("add_item", item_id, int(job_outputs[item_id]))
+					output_store.call("add_item", item_id, int(final_outputs[item_id]))
 				else:
-					Inventory.add_item(item_id, int(job_outputs[item_id]))
+					Inventory.add_item(item_id, int(final_outputs[item_id]))
 					
 	order.current_status = WorkOrder.Status.DONE
 	active_orders.erase(order_id)
