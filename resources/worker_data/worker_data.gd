@@ -9,7 +9,7 @@ enum Profession {LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 @export var profession_xp: int = 0
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
-@export_range(0.0, 2.0, 0.01) var reliability: float = 1.0
+@export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
 @export var wage_shekel_per_day: int = 0
 @export var food_fulfilled: bool = false
 @export var clothing_fulfilled: bool = false
@@ -26,3 +26,11 @@ func get_satisfaction_work_multiplier() -> float:
 		return 1.0
 	else:
 		return 0.85
+
+func get_reliability_success_chance() -> float:
+	if reliability >= 0.75:
+		return 0.95
+	elif reliability >= 0.4:
+		return 0.85
+	else:
+		return 0.65
