@@ -58,7 +58,12 @@ func start_job(
 	order.order_id = str(Time.get_ticks_usec())
 	order.job_id = job.job_id
 	order.worker_kind = worker_kind
-	order.worker_id = worker_id
+	var resolved_worker_id: String = _resolve_worker_id(worker_kind, worker_id)
+	
+	if worker_kind == WorkOrder.Worker_Type.NPC and resolved_worker_id == "":
+		return ""
+
+	order.worker_id = resolved_worker_id
 	
 	var start_total: int = _last_total_minutes if _last_total_minutes >= 0 else 0
 	order.start_time_total_minutes = start_total
@@ -163,3 +168,21 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	source_item_store_by_order_id.erase(order_id) # hapus sumber
 	output_item_store_by_order_id.erase(order_id) # hapus tujuan
 	service_fee_by_order.erase(order_id) # hapus fee
+
+func _resolve_worker_id(worker_kind: int, requested_worker_id: String) -> String:
+	if worker_kind == WorkOrder.Worker_Type.PLAYER:
+		return requested_worker_id
+	
+	if worker_kind == WorkOrder.Worker_Type.NPC:
+		if WorkerDatabase.has_worker_data(requested_worker_id):
+			return requested_worker_id
+		if not WorkerDatabase.has_worker_data(requested_worker_id):
+			for worker in WorkerDatabase.get_all_workers():
+				if not (worker is WorkerData):
+					continue
+				
+				var worker_data: WorkerData = worker as WorkerData
+				return worker_data.worker_id
+	
+	return ""
+		
