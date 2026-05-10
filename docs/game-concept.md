@@ -394,6 +394,33 @@ Work output should be affected by:
 - **Farmer:** better farming speed and crop handling
 - **Scavenger:** better salvage rate and lower risk in gathering uncertain materials
 
+### Worker Team / Mastermind Composition
+
+Long-term worker management should not only be about selecting the best single worker.
+The stronger fantasy is assigning the right combination of workers to the right site.
+
+A work site may eventually support multiple workers with different professions.
+The correct mix can create team efficiency bonuses.
+
+Example directions:
+
+- **Farming site:** Farmer improves crop work, Hauler improves movement, Laborer supports physical tasks.
+- **Mining site:** Laborer improves extraction, Hauler improves transport, Crafter helps tool handling.
+- **Crafting site:** Crafter improves production, Laborer prepares inputs, Hauler supports supply movement.
+
+This creates a "mastermind" style of play:
+
+> The player wins by composing teams, not just by hiring stronger individuals.
+
+This is not part of the earliest MVP.
+The recommended progression is:
+
+1. show worker list
+2. show worker detail
+3. assign one worker to a job or site
+4. assign multiple workers to a site
+5. add profession synergy bonuses
+
 ## 14. Wages and Control
 
 The player controls:
@@ -608,3 +635,4 @@ If future design choices feel messy, return to these rules first:
 9. City management is separate from personal inventory.
 10. Long-term strength comes from systems, not from manual labor alone.
 11. Oracle and Advisor systems are long-term identity features, not early MVP requirements.
+12. Worker team composition is a long-term site-management feature, not an early Worker Tab requirement.
