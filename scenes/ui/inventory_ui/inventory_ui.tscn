@@ -110,4 +110,20 @@ text = "Inventory"
 [node name="InfoLabel" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header" index="2"]
 text = "16/40"
 
+[node name="WorkerPanel" type="PanelContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel"]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="LabelTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Workers"
+
+[node name="WorkerList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
 [editable path="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid"]

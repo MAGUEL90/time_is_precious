@@ -16,6 +16,8 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 @onready var label_fatigue: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFatigue
 @onready var label_hunger: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelHunger
 @onready var label_focus: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFocus
+@onready var worker_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer/VBoxContainer/WorkerList
+
 
 var player_ref: Player
 var source_slot: Vector2
@@ -54,6 +56,7 @@ func open_inventory() -> void:
 	visible = true
 	_refresh_player_status()
 	_refresh_inventory_grid()
+	_refresh_worker_list()
 
 func close_inventory() -> void:
 	get_tree().paused = false
@@ -181,4 +184,37 @@ func _refresh_player_status() -> void:
 	label_hunger.text = "Hunger: %d%%" % player_ref.get_hunger_percent()
 	label_focus.text = "Focus: %d%%" % player_ref.get_focus_percent()
 
+func _refresh_worker_list() -> void:
+	var workers: Array = WorkerDatabase.get_all_workers()
+	for child in worker_list.get_children():
+		child.queue_free()
 	
+	for worker in workers:
+		if not (worker is WorkerData):
+			continue
+		var worker_data: WorkerData = worker as WorkerData
+		var label: Label = Label.new()
+		label.text = "%s - %s: %s★\nSAT %d%% | REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
+			worker_data.display_name,_get_worker_profession_name(worker_data.profession), worker_data.profession_star,
+			roundi(worker_data.satisfaction * 100.0), roundi(worker_data.reliability * 100.0),
+			_get_need_text(worker_data.food_fulfilled), _get_need_text(worker_data.clothing_fulfilled), _get_need_text(worker_data.shelter_fulfilled)
+		]
+		worker_list.add_child(label)
+
+func _get_worker_profession_name(profession: WorkerData.Profession) -> String:
+	match profession:
+		WorkerData.Profession.LABORER:
+			return "Laborer"
+		WorkerData.Profession.CRAFTER:
+			return "Crafter"
+		WorkerData.Profession.HAULER:
+			return "Hauler"
+		WorkerData.Profession.FARMER:
+			return "Farmer"
+		WorkerData.Profession.SCAVENGER:
+			return "Scavenger"
+		_:
+			return "Unknown"
+
+func _get_need_text(is_fulfilled: bool) -> String:
+	return "OK" if is_fulfilled else "NO"
