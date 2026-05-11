@@ -42,8 +42,17 @@ func start_job(
 			output_item_store = Inventory # fallback kalau workshop belum ada
 	
 	var resolved_worker_id: String = _resolve_worker_id(worker_kind, worker_id)
+	var worker_data: WorkerData = null
+
 	if worker_kind == WorkOrder.Worker_Type.NPC and resolved_worker_id == "":
 		return ""
+
+	if worker_kind == WorkOrder.Worker_Type.NPC:
+		worker_data = WorkerDatabase.get_worker_data(resolved_worker_id)
+		if worker_data == null:
+			return ""
+		if worker_data.is_working():
+			return ""
 
 	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
 		if not bool(source_item_store.call("has_item", item_identifier, int(job.inputs[item_identifier]))): # cek input di storage sumber (workshop atau inventory)
@@ -61,6 +70,9 @@ func start_job(
 	var order: WorkOrder = WorkOrder.new()
 	order.order_id = str(Time.get_ticks_usec())
 	order.job_id = job.job_id
+	if worker_data != null:
+		worker_data.start_work(order.order_id, job.job_id)
+
 	order.worker_kind = worker_kind
 	order.worker_id = resolved_worker_id
 
@@ -102,6 +114,8 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	# ambil biaya jasa
 	var fee: int = service_fee_by_order.get(order_id, 0)
 	var is_player_worker: bool = (order.worker_kind == WorkOrder.Worker_Type.PLAYER)
+	var is_npc_worker: bool = (order.worker_kind == WorkOrder.Worker_Type.NPC)
+	var worker_data: WorkerData = null
 
 	# =============================
 	# RULE BARU (2026.02.01):
@@ -119,12 +133,13 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 					output_store.call("add_item", item_id, int(job_outputs[item_id]))
 				else:
 					Inventory.add_item(item_id, int(job_outputs[item_id]))
-	else:
-		var worker_data: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
+	elif is_npc_worker:
 		var multiplier: float = 1.0
 		var success_chance: float = 1.0
 		var reliability_roll: float = randf()
 		var reliability_output_multiplier: float = 1.0
+
+		worker_data = WorkerDatabase.get_worker_data(order.worker_id)
 
 		if worker_data:
 			multiplier = worker_data.get_satisfaction_work_multiplier()
@@ -161,6 +176,12 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 					Inventory.add_item(item_id, int(final_outputs[item_id]))
 
 	order.current_status = WorkOrder.Status.DONE
+
+	if is_npc_worker:
+		worker_data = WorkerDatabase.get_worker_data(order.worker_id)
+		if worker_data != null:
+			worker_data.finish_work(order.order_id)
+
 	active_orders.erase(order_id)
 
 	# cleanup mapping agar tidak numpuk # penting untuk runtime panjang
