@@ -9,6 +9,7 @@ var service_fee_by_order: Dictionary[String, int] = {}
 
 var active_orders: Dictionary[String, WorkOrder] = {}
 var _last_total_minutes: int = -1
+var last_start_job_error: String = ""
 
 func on_time_changed(day: int, hour: int, minute: int) -> void:
 	var now_total: int = (day * 24 * 60) + (hour * 60) + minute
@@ -29,7 +30,9 @@ func start_job(
 	tool: ToolInstance = null, source_item_store: Node = Inventory,
 	output_item_store: Node = null, _service_fee_shekel: int = 0) -> String:
 	# tambah argumen storage agar bisa pakai WorkshopStorage
-	
+
+	last_start_job_error = ""
+
 	# fallback aman bila caller lupa mengirim storage
 	if source_item_store == null:
 		source_item_store = Inventory 
@@ -45,6 +48,8 @@ func start_job(
 	var worker_data: WorkerData = null
 
 	if worker_kind == WorkOrder.Worker_Type.NPC and resolved_worker_id == "":
+		if last_start_job_error.is_empty():
+			last_start_job_error = "No matching idle worker available."
 		return ""
 
 	if worker_kind == WorkOrder.Worker_Type.NPC:
@@ -56,6 +61,7 @@ func start_job(
 
 	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
 		if not bool(source_item_store.call("has_item", item_identifier, int(job.inputs[item_identifier]))): # cek input di storage sumber (workshop atau inventory)
+			last_start_job_error = "Not enough %s." % item_identifier
 			return "" # batal start bila input tidak cukup di storage sumber
 	
 	for item_identifier in job.inputs.keys(): # ganti nama variabel agar lebih jelas
@@ -195,8 +201,10 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 		if WorkerDatabase.has_worker_data(requested_worker_id):
 			var worker_data: WorkerData = WorkerDatabase.get_worker_data(requested_worker_id)
 			if not _worker_matches_job(worker_data, job):
+				last_start_job_error = "Worker Profession doesn't match"
 				return ""
 			if worker_data.is_working():
+				last_start_job_error = "Worker is already working"
 				return ""
 
 			return requested_worker_id
@@ -212,9 +220,14 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 
 				return worker_data.worker_id
 
+			last_start_job_error = "No matching idle worker available."
 			return ""
 
+	last_start_job_error = "Unsupported worker kind."
 	return ""
 
 func _worker_matches_job(worker_data: WorkerData, job: JobData) -> bool:
 	return worker_data.profession == job.requirement_profession
+
+func get_last_start_job_error() -> String:
+	return last_start_job_error
