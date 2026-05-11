@@ -11,5 +11,6 @@ var required_tool_id: String = "" # Kosong jika tidak ada standard
 @export var waste_rate: float = 0.1
 @export var min_trust: float = 0
 @export var min_satisfaction: float = 0
+@export var requirement_profession: WorkerData.Profession = WorkerData.Profession.LABORER
 
 var allowed_roles: Array[String] = []

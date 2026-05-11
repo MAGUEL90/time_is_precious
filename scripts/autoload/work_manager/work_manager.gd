@@ -41,7 +41,7 @@ func start_job(
 		else:
 			output_item_store = Inventory # fallback kalau workshop belum ada
 	
-	var resolved_worker_id: String = _resolve_worker_id(worker_kind, worker_id)
+	var resolved_worker_id: String = _resolve_worker_id(worker_kind, worker_id, job)
 	var worker_data: WorkerData = null
 
 	if worker_kind == WorkOrder.Worker_Type.NPC and resolved_worker_id == "":
@@ -187,20 +187,27 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 	output_item_store_by_order_id.erase(order_id) # hapus tujuan
 	service_fee_by_order.erase(order_id) # hapus fee
 
-func _resolve_worker_id(worker_kind: int, requested_worker_id: String) -> String:
+func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobData) -> String:
 	if worker_kind == WorkOrder.Worker_Type.PLAYER:
 		return requested_worker_id
 
 	if worker_kind == WorkOrder.Worker_Type.NPC:
 		if WorkerDatabase.has_worker_data(requested_worker_id):
+			var worker_data: WorkerData = WorkerDatabase.get_worker_data(requested_worker_id)
+			if not _worker_matches_job(worker_data, job):
+				return ""
+			if worker_data.is_working():
+				return ""
+
 			return requested_worker_id
 		if not WorkerDatabase.has_worker_data(requested_worker_id):
 			for worker in WorkerDatabase.get_all_workers():
 				if not (worker is WorkerData):
 					continue
-
 				var worker_data: WorkerData = worker as WorkerData
 				if worker_data.is_working():
+					continue
+				if not _worker_matches_job(worker_data, job):
 					continue
 
 				return worker_data.worker_id
@@ -208,3 +215,6 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String) -> String
 			return ""
 
 	return ""
+
+func _worker_matches_job(worker_data: WorkerData, job: JobData) -> bool:
+	return worker_data.profession == job.requirement_profession
