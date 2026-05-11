@@ -105,8 +105,6 @@ func _tick(now_total_minutes: int) -> void:
 			work_state_smoke_test._print_workshop("WorkShop Storage After Job Done (expect workshop storage wet_mudbrick = 60)") # cek workshop, bukan inventory
 			work_state_smoke_test._print_inventory("Inventory After Job Done (should NOT receive wet_mudbrick)") # bandingkan inventory (harusnya tidak bertambah)
 
-
-
 func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int) -> void:
 	var job_outputs: Dictionary = order.outputs_snapshot
 	# ambil tujuan output
@@ -202,6 +200,11 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String) -> String
 					continue
 
 				var worker_data: WorkerData = worker as WorkerData
+				if worker_data.is_working():
+					continue
+
 				return worker_data.worker_id
+
+			return ""
 
 	return ""
