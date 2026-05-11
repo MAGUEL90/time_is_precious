@@ -2,11 +2,15 @@ class_name WorkerData
 extends Resource
 
 enum Profession {LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
+enum WorkStatus {IDLE, WORKING}
 
 @export var worker_id: String = ""
 @export var display_name: String = ""
 @export var profession: Profession = Profession.LABORER
 @export var profession_xp: int = 0
+@export var current_order_id: String = ""
+@export var current_job_id: String = ""
+@export var current_work_status: WorkStatus = WorkStatus.IDLE
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
 @export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
@@ -34,3 +38,19 @@ func get_reliability_success_chance() -> float:
 		return 0.85
 	else:
 		return 0.65
+
+func is_working() -> bool:
+	return current_work_status == WorkStatus.WORKING
+
+func start_work(order_id: String, job_id: String) -> void:
+	current_order_id = order_id
+	current_job_id = job_id
+	current_work_status = WorkStatus.WORKING
+
+func finish_work(order_id: String) -> void:
+	if order_id != current_order_id:
+		return
+
+	current_job_id = ""
+	current_order_id = ""
+	current_work_status = WorkStatus.IDLE
