@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="JobData" load_steps=2 format=3 uid="uid://dtwxjv6s04vaa"]
+
+[ext_resource type="Script" uid="uid://mte3wqsqhem0" path="res://resources/job_data/job_data.gd" id="1_cfgsx"]
+
+[resource]
+script = ExtResource("1_cfgsx")
+job_id = "mudbrick_make"
+display_name = "Mudbrick Making"
+inputs = Dictionary[String, int]({
+"clay_lump": 3,
+"straw_bundle": 3,
+"water_jar": 3
+})
+outputs = Dictionary[String, int]({
+"wet_mudbrick": 60
+})
+base_duration_minutes = 30
+metadata/_custom_type_script = "uid://mte3wqsqhem0"
