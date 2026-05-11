@@ -89,6 +89,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
 		pickup_item.on_player_interact(self)
 
+	elif current_interactable is JobBoard:
+		var job_board: JobBoard = current_interactable as JobBoard
+		job_board.on_player_interact(self)
+		job_board.interactable_label_component.hide()
+
 func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable != null:
 		return
