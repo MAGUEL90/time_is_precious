@@ -194,8 +194,9 @@ func _refresh_worker_list() -> void:
 			continue
 		var worker_data: WorkerData = worker as WorkerData
 		var label: Label = Label.new()
-		label.text = "%s - %s: %s★\nSAT %d%% | REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
+		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%% | REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
 			worker_data.display_name,_get_worker_profession_name(worker_data.profession), worker_data.profession_star,
+			_get_worker_work_status_text(worker_data),
 			roundi(worker_data.satisfaction * 100.0), roundi(worker_data.reliability * 100.0),
 			_get_need_text(worker_data.food_fulfilled), _get_need_text(worker_data.clothing_fulfilled), _get_need_text(worker_data.shelter_fulfilled)
 		]
@@ -215,6 +216,15 @@ func _get_worker_profession_name(profession: WorkerData.Profession) -> String:
 			return "Scavenger"
 		_:
 			return "Unknown"
+
+func _get_worker_work_status_text(worker_data: WorkerData) -> String:
+	if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
+		if worker_data.current_job_id.is_empty():
+			return "Working"
+		else:
+			return "Working - " + worker_data.current_job_id
+	else:
+		return "Idle"
 
 func _get_need_text(is_fulfilled: bool) -> String:
 	return "OK" if is_fulfilled else "NO"
