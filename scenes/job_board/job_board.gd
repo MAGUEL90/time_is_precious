@@ -3,6 +3,8 @@ class_name JobBoard extends Node2D
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 
+@export var job_data: JobData
+
 var player_reff: Player
 
 # Called when the node enters the scene tree for the first time.
@@ -25,14 +27,9 @@ func _on_interact_range_exited() -> void:
 	interactable_label_component.hide()
 
 func on_player_interact(_player: Player) -> void:
-	var job_data: JobData = JobData.new()
-	
-	job_data.job_id = "mudbrick_make"
-	job_data.display_name = "Mudbrick Making"
-	job_data.base_duration_minutes = 30 # durasi job 10 menit untuk test
-	job_data.inputs = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
-	job_data.outputs = {"wet_mudbrick": 60}  # output intermediate 60 bata basah
-	job_data.requirement_profession = WorkerData.Profession.LABORER
+	if job_data == null:
+		print("Job Data is null")
+		return
 	
 	var order_id: String = ""
 	if WorkManager.has_method("start_job"):
