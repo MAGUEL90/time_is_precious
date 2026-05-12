@@ -92,7 +92,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif current_interactable is JobBoard:
 		var job_board: JobBoard = current_interactable as JobBoard
 		job_board.on_player_interact(self)
-		job_board.interactable_label_component.hide()
 
 func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable != null:
