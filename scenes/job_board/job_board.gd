@@ -4,6 +4,7 @@ class_name JobBoard extends Node2D
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 
 @export var job_data: JobData
+@export var service_fee_shekel: int = 5
 
 var player_reff: Player
 
@@ -36,16 +37,10 @@ func on_player_interact(_player: Player) -> void:
 		order_id = str(WorkManager.call("start_job",
 		job_data,
 		WorkOrder.Worker_Type.NPC,
-		"", null, Inventory, null, 5))
+		"", null, Inventory, null, service_fee_shekel))
 	
 	if order_id.is_empty():
 		print("Start job failed: ", WorkManager.get_last_start_job_error())
+		return
 		
-	print("Start_order_id: ", order_id)
-	
-	
-	
-	
-	
-	
-	
+	print("Job started: ", job_data.display_name, " order=", order_id)
