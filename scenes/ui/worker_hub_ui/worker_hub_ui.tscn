@@ -1,0 +1,109 @@
+[gd_scene load_steps=2 format=3 uid="uid://cmpnit5oopo"]
+
+[ext_resource type="Script" uid="uid://un6ofmrrc2td" path="res://scenes/ui/worker_hub_ui/worker_hub_ui.gd" id="1_b1dp4"]
+
+[node name="WorkerHubUI" type="CanvasLayer"]
+script = ExtResource("1_b1dp4")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Header"]
+layout_mode = 2
+text = "Worker Hub"
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Header"]
+layout_mode = 2
+text = "X"
+
+[node name="Body" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="SitePanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+layout_mode = 2
+
+[node name="SiteTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/SitePanel"]
+layout_mode = 2
+text = "Work Sites"
+
+[node name="SiteList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/SitePanel"]
+layout_mode = 2
+
+[node name="TeamPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+layout_mode = 2
+
+[node name="TeamTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/TeamPanel"]
+layout_mode = 2
+text = "Team Composition"
+
+[node name="TeamSlotGrid" type="GridContainer" parent="Root/Center/Window/Margin/MainVBox/Body/TeamPanel"]
+layout_mode = 2
+columns = 4
+
+[node name="TeamPreviewLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/TeamPanel"]
+layout_mode = 2
+text = "Team Preview: No Team Selected"
+
+[node name="WorkerPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WorkerTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/WorkerPanel"]
+layout_mode = 2
+text = "Available Workers"
+
+[node name="WorkerScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/Body/WorkerPanel"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="WorkerList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/WorkerPanel/WorkerScroll"]
+layout_mode = 2
+
+[node name="ActionPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+layout_mode = 2
+
+[node name="ActionTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/ActionPanel"]
+layout_mode = 2
+text = "Actions"
+
+[node name="StartJobButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Body/ActionPanel"]
+layout_mode = 2
+text = "Start Job"
+
+[node name="ClearTeamButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Body/ActionPanel"]
+layout_mode = 2
+text = "Clear Team"
+
+[node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/ActionPanel"]
+layout_mode = 2
+
+[connection signal="pressed" from="Root/Center/Window/Margin/MainVBox/Header/CloseButton" to="." method="_on_close_button_pressed"]
+[connection signal="pressed" from="Root/Center/Window/Margin/MainVBox/Body/ActionPanel/StartJobButton" to="." method="_on_start_job_button_pressed"]
+[connection signal="pressed" from="Root/Center/Window/Margin/MainVBox/Body/ActionPanel/ClearTeamButton" to="." method="_on_clear_team_button_pressed"]
