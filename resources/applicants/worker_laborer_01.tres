@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ApplicantOfferData" load_steps=3 format=3 uid="uid://dwqy6jxxib6ab"]
+
+[ext_resource type="Script" uid="uid://cj056n0m2g5lj" path="res://resources/applicant_offer_data/applicant_offer_data.gd" id="1_mtng2"]
+[ext_resource type="Resource" path="res://resources/worker_data/worker_laborer_01.tres" id="2_r8p1i"]
+
+[resource]
+script = ExtResource("1_mtng2")
+offer_id = "applicant_laborer_01"
+worker_data = ExtResource("2_r8p1i")
+daily_wage = 1
+contract_days = 7
+expires_day = 2
+requires_shelter = true
+is_negotiable = true
+metadata/_custom_type_script = "uid://cj056n0m2g5lj"
