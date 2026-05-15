@@ -2,8 +2,8 @@
 
 Source of truth for high-level game design decisions.
 
-- Last updated: 2026-05-06
-- Working version: v0.8 draft
+- Last updated: 2026-05-15
+- Working version: v0.9 draft
 - Focus: game idea, player experience, world logic, and long-term design direction.
 - Separate note: implementation progress and coding notes should live outside this concept document.
 
@@ -620,7 +620,140 @@ These are still intentionally open:
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
 
-## 22. Immediate Reference Rules
+## 22. Legacy and Multiple Ending Direction
+
+**Time is Precious** should not have only one simple win condition.
+
+The player can become wealthy, but the meaning of victory depends on how the city was rebuilt.
+The central question is not only:
+
+> Did the player become rich?
+
+The stronger question is:
+
+> What kind of city did the player create with the time, money, people, and systems available?
+
+This direction prevents the game from feeling like a fixed economic checklist.
+The player should be able to shape the city's future through repeated decisions, not through a single hard class selection.
+
+### 22.1 Ending Evaluation Values
+
+Endings should be determined by several long-term values:
+
+- personal / city wealth
+- city stability
+- citizen satisfaction
+- worker condition
+- trust
+- corruption / greed pressure
+- delegation maturity
+- time efficiency
+- reliance on manual labor versus systems
+
+The game can still have a clear main objective: rebuild the city and manage wealth wisely.
+However, the result should reflect the player's method, not only the final amount of money.
+
+### 22.2 Possible Ending Directions
+
+#### Golden Steward Ending
+
+The player achieves strong wealth, high city stability, high citizen satisfaction, and a mature delegation system.
+The city becomes prosperous without repeating the old pattern of greed and neglect.
+
+This is the ideal ending.
+The player proves that wealth, care, and systems can grow together.
+
+#### Rich but Rotten Ending
+
+The player becomes very wealthy and the city treasury may look strong, but worker conditions, trust, and satisfaction are poor.
+The city becomes productive, but cold and exploitative.
+
+This ending reflects the old city's mistake.
+The player wins economically, but fails morally and socially.
+
+#### Modest but Stable Ending
+
+The player does not maximize wealth, but the city survives with good stability, fulfilled basic needs, and decent trust.
+This is not the richest outcome, but it is still a respectable recovery.
+
+The city may not become golden, but ordinary people can live with dignity.
+
+#### Merchant King Ending
+
+The player focuses heavily on trade, contracts, market timing, treasury growth, and economic expansion.
+The city becomes a commercial power.
+
+This ending is not automatically bad.
+Its tone depends on whether the player also maintains worker conditions and social stability.
+
+#### People's Leader Ending
+
+The player prioritizes citizen needs, wages, trust, housing, food, clothing, and social care.
+Wealth may be moderate, but loyalty and public trust are high.
+
+This ending should feel emotionally warm and human-centered.
+The player becomes remembered as someone who rebuilt the city for its people.
+
+#### Collapse Ending
+
+The player repeatedly fails to maintain food, clothing, shelter, wages, or stability.
+Satisfaction falls, reliability drops, workers leave, theft rises, unrest grows, and the city eventually collapses.
+
+This ending should feel earned through ignored warnings, not sudden punishment.
+The city should collapse gradually because the player failed to respond to visible signals.
+
+#### Burnout Ending
+
+The player works hard manually but fails to build strong delegation, production systems, or city-level planning.
+The city may survive for a while, but it cannot scale.
+
+This ending reinforces the title's meaning.
+The player used effort, but failed to use time wisely.
+
+### 22.3 Soft Player Identity Routes
+
+The game should avoid forcing the player into hard classes at the beginning.
+Instead, the player's identity can emerge from repeated decisions.
+
+Possible soft routes:
+
+- frequent negotiation and deal-making pushes the player toward a **Negotiator** identity
+- frequent investment and treasury growth pushes the player toward an **Investor** identity
+- frequent forecast reading and data-led planning pushes the player toward an **Analyst** identity
+- frequent team composition and worker assignment pushes the player toward a **Strategist** identity
+- frequent city infrastructure and system building pushes the player toward an **Administrator** identity
+- frequent manual work without delegation can create a **Laborer-style fallback** identity
+
+These routes do not need to lock the player out of other systems.
+They are behavioral labels, advisor memory hooks, and ending influences.
+
+### 22.4 Advisor and Oracle Support for Endings
+
+The Oracle and Advisor systems can support multi-ending direction by warning the player about long-term patterns.
+
+Example advisor reactions:
+
+> "You keep solving every shortage with your own hands. That works today, but the city still has no system."
+
+> "Your treasury is rising, but satisfaction is falling. That is how the old city looked before it collapsed."
+
+> "Workers are loyal because you kept food, clothing, and shelter stable. You may not be the richest leader, but people trust you."
+
+The Advisor should not only explain numbers.
+The Advisor should help the player understand what kind of leader they are becoming.
+
+### 22.5 Design Rule
+
+Multiple endings should not feel random.
+They should be the natural result of visible player behavior over time.
+
+A good ending system for **Time is Precious** should answer three questions:
+
+1. Did the player build wealth?
+2. Did the player build a stable city?
+3. Did the player use time, people, and power wisely?
+
+## 23. Immediate Reference Rules
 
 If future design choices feel messy, return to these rules first:
 
@@ -636,3 +769,5 @@ If future design choices feel messy, return to these rules first:
 10. Long-term strength comes from systems, not from manual labor alone.
 11. Oracle and Advisor systems are long-term identity features, not early MVP requirements.
 12. Worker team composition is a long-term site-management feature, not an early Worker Tab requirement.
+13. The game should support multiple ending directions based on how the city is rebuilt, not only on final wealth.
+14. The player's identity should emerge from repeated behavior, not from a hard class selection at the start.
