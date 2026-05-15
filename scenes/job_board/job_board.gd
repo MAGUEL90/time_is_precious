@@ -1,6 +1,6 @@
 class_name JobBoard extends Node2D
 
-const DEFAULT_PROMPT_TEXT: String = "press E\nto manage workers"
+const DEFAULT_PROMPT_TEXT: String = "press E\nto access Job Board"
 
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
@@ -32,22 +32,28 @@ func _on_interact_range_exited() -> void:
 	interactable_label_component.hide()
 
 func on_player_interact(_player: Player) -> void:
-	if job_data == null:
-		interactable_label_component.set_text("Failed:\nJob data missing")
-		interactable_label_component.show()
-		return
+	var offers_text: String = _get_applicant_offers_text()
 
-	var order_id: String = ""
-	if WorkManager.has_method("start_job"):
-		order_id = str(WorkManager.call("start_job",
-		job_data,
-		WorkOrder.Worker_Type.NPC,
-		"", null, Inventory, null, service_fee_shekel))
-
-	if order_id.is_empty():
-		interactable_label_component.set_text("Failed:\n%s" % WorkManager.get_last_start_job_error())
-		interactable_label_component.show()
-		return
-
-	interactable_label_component.set_text("Started:\n%s" % job_data.display_name)
+	interactable_label_component.set_text(offers_text)
 	interactable_label_component.show()
+
+func _get_applicant_offers_text() -> String:
+	var offer_lines: Array[String] = []
+
+	for offer in ApplicantOfferDatabase.get_all_offers():
+		if not (offer is ApplicantOfferData):
+			continue
+
+		var offer_data: ApplicantOfferData = offer as ApplicantOfferData
+		if offer_data.worker_data == null:
+			continue
+
+		offer_lines.append("%s - %d/day" % [
+			offer_data.worker_data.display_name,
+			offer_data.daily_wage
+		])
+
+	if offer_lines.is_empty():
+		return "No applicant offers."
+
+	return "Applicants:\n" + "\n".join(offer_lines)
