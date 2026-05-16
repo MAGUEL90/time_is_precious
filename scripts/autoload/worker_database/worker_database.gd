@@ -72,3 +72,34 @@ func reload_workers() -> void:
 	
 func has_worker_data(worker_id: String) -> bool:
 	return workers_by_id.has(worker_id)
+
+func get_all_residents() -> Array:
+	var residents: Array[WorkerData] = []
+
+	for worker in workers_by_id.values():
+		if worker.population_status == WorkerData.PopulationStatus.RESIDENT:
+			residents.append(worker)
+
+	return residents
+
+func get_all_hired_workers() -> Array:
+	var hired_workers: Array[WorkerData] = []
+
+	for worker in workers_by_id.values():
+		if worker.employment_status == WorkerData.EmploymentStatus.HIRED:
+			hired_workers.append(worker)
+
+	return hired_workers
+
+func get_all_applicants() -> Array:
+	var applicants: Array[WorkerData] = []
+
+	for worker in workers_by_id.values():
+		if worker.population_status != WorkerData.PopulationStatus.RESIDENT:
+			continue
+		if worker.employment_status != WorkerData.EmploymentStatus.APPLICANT:
+			continue
+
+		applicants.append(worker)
+
+	return applicants

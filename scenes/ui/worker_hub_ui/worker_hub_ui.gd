@@ -63,7 +63,7 @@ func _refresh_worker_lists() -> void:
 	for child in worker_list.get_children():
 		child.queue_free()
 	
-	for worker in WorkerDatabase.get_all_workers():
+	for worker in WorkerDatabase.get_all_hired_workers():
 		if not (worker is WorkerData):
 			continue
 		var worker_data: WorkerData = worker as WorkerData

@@ -40,17 +40,15 @@ func on_player_interact(_player: Player) -> void:
 func _get_applicant_offers_text() -> String:
 	var offer_lines: Array[String] = []
 
-	for offer in ApplicantOfferDatabase.get_all_offers():
-		if not (offer is ApplicantOfferData):
+	for applicant in WorkerDatabase.get_all_applicants():
+		if not (applicant is WorkerData):
 			continue
 
-		var offer_data: ApplicantOfferData = offer as ApplicantOfferData
-		if offer_data.worker_data == null:
-			continue
+		var worker_data: WorkerData = applicant as WorkerData
 
 		offer_lines.append("%s - %d/day" % [
-			offer_data.worker_data.display_name,
-			offer_data.daily_wage
+			worker_data.display_name,
+			worker_data.wage_shekel_per_day
 		])
 
 	if offer_lines.is_empty():
