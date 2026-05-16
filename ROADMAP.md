@@ -1,6 +1,6 @@
 # ROADMAP — Time is Precious
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Development Principle
 Build a small playable prototype first.
@@ -79,7 +79,7 @@ Minimum success criteria:
 - Accepted migrant becomes resident.
 - Resident consumes food.
 - Eligible resident can appear on Job Board.
-- Player can hire applicant.
+- Player can hire applicant. (basic MVP flow implemented)
 - Hired worker can be assigned.
 
 ## Phase 3 — Prototype Asset Pass

@@ -32,9 +32,23 @@ func _on_interact_range_exited() -> void:
 	interactable_label_component.hide()
 
 func on_player_interact(_player: Player) -> void:
-	var offers_text: String = _get_applicant_offers_text()
+	var applicants: Array = WorkerDatabase.get_all_applicants()
 
-	interactable_label_component.set_text(offers_text)
+	if applicants.is_empty():
+		interactable_label_component.set_text("No applicant offers.")
+		interactable_label_component.show()
+		return
+
+	var worker_data: WorkerData = applicants[0] as WorkerData
+	if worker_data == null:
+		interactable_label_component.set_text("Invalid Applicant")
+		interactable_label_component.show()
+		return
+
+	if worker_data.hire_applicant():
+		interactable_label_component.set_text("Hired: %s" % worker_data.display_name)
+	else:
+		interactable_label_component.set_text("Cannot hire this applicant.")
 	interactable_label_component.show()
 
 func _get_applicant_offers_text() -> String:

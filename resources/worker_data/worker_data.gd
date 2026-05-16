@@ -58,3 +58,16 @@ func finish_work(order_id: String) -> void:
 	current_job_id = ""
 	current_order_id = ""
 	current_work_status = WorkStatus.IDLE
+
+func can_be_hired() -> bool:
+	if population_status == PopulationStatus.RESIDENT and employment_status == EmploymentStatus.APPLICANT:
+		return true
+
+	return false
+
+func hire_applicant() -> bool:
+	if not can_be_hired():
+		return false
+
+	employment_status = EmploymentStatus.HIRED
+	return true

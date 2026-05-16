@@ -1,6 +1,6 @@
 # DEVLOG — Time is Precious
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Project Identity
 **Time is Precious** is a 2D top-down management RPG with a Mesopotamian theme, built in Godot Engine 4 / 4.5.
@@ -77,3 +77,31 @@ When code changes are proposed, show them as diff:
 ```
 
 Do not make food consumption depend on `is_hired`.
+
+## Development Log
+
+### 2026-05-17 — Basic Applicant Hiring Flow
+
+What changed:
+- Added worker-side hiring helpers for applicant eligibility and status transition.
+- Updated Job Board interaction so the first available applicant can be hired for the MVP flow.
+
+Why it changed:
+- The prototype needs a clear transition from `resident + applicant` to `hired worker`.
+- Job Board should prove the population/employment split without requiring the full future hiring UI yet.
+
+Files touched:
+- `resources/worker_data/worker_data.gd`
+- `scenes/job_board/job_board.gd`
+
+Test result:
+- Manual gameplay test passed: first Job Board interaction hired `Laborer`; second interaction showed no applicant offers.
+- Worker appeared in Worker Hub after being hired.
+
+Known risks:
+- Job Board currently hires the first applicant automatically.
+- There is no applicant selection UI yet.
+- Hiring has no wage payment or contract duration logic yet.
+
+Next recommended task:
+- Add a small applicant selection/confirm flow before hiring, or keep moving toward assigned-worker flow if MVP speed is more important.
