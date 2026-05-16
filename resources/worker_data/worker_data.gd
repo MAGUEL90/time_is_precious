@@ -1,6 +1,8 @@
 class_name WorkerData
 extends Resource
 
+enum PopulationStatus {MIGRANT, RESIDENT, REJECTED, LEFT_CITY}
+enum EmploymentStatus {UNEMPLOYED, APPLICANT, HIRED, ASSIGNED}
 enum Profession {NONE, LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 enum WorkStatus {IDLE, WORKING}
 
@@ -11,6 +13,8 @@ enum WorkStatus {IDLE, WORKING}
 @export var current_order_id: String = ""
 @export var current_job_id: String = ""
 @export var current_work_status: WorkStatus = WorkStatus.IDLE
+@export var population_status: PopulationStatus = PopulationStatus.MIGRANT
+@export var employment_status: EmploymentStatus = EmploymentStatus.UNEMPLOYED
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
 @export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
