@@ -1,11 +1,13 @@
 # ROADMAP — Time is Precious
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 ## Development Principle
 Build a small playable prototype first.
 
 Do not expand into large systems before the core loop is stable.
+
+The game should also avoid becoming too deterministic. Long-term, player progression should vary between playthroughs through controlled randomness and system-driven variation.
 
 ## Current Main Priority — Playable Core Loop
 Status: The project has moved beyond concept planning and is now in the technical prototype stage.
@@ -46,6 +48,18 @@ Visible output / usable item
 The systems may exist technically, but the game is not yet validated as a fun playable slice.
 
 The next development work should focus on clarity, feedback, repeatability, and player-facing usability.
+
+### Design Risk: Too Predictable
+Time is Precious should not become a game where every player can easily predict the same best route.
+
+Future systems should support controlled variation, such as:
+- Migrant count variation.
+- Applicant quality variation.
+- Different resident traits.
+- Different opportunity timing.
+- Small production or needs-pressure variation.
+
+This should be added carefully after the core loop works. The early prototype may use fixed values for stability, but the architecture should not lock the game into fixed outcomes forever.
 
 ### Do Not Prioritize Yet
 Avoid expanding into these areas until the playable loop above feels stable:
@@ -160,6 +174,24 @@ Minimum success criteria:
 - Player can hire applicant.
 - Hired worker can be assigned.
 
+## Phase 2.5 — Controlled Variation Layer
+Goal: prepare the game to create different progression paths between players without breaking player agency.
+
+This phase should come after the basic population/worker flow is stable.
+
+Possible controlled variation systems:
+- Migrant arrival count range based on city prosperity.
+- Randomized resident/applicant traits within clear limits.
+- Slight differences in productivity, loyalty, or needs pressure.
+- Varying opportunity timing.
+- Small modifiers to production or city events.
+
+Minimum success criteria:
+- Variation is visible between playthroughs.
+- Player still understands why things happen.
+- Randomness does not feel unfair.
+- No important result is fully disconnected from player decisions.
+
 ## Phase 3 — Prototype Asset Pass
 Goal: replace rough placeholders with consistent minimum assets.
 
@@ -226,3 +258,5 @@ Future files may be added as needed.
 Do not overwrite design direction without explaining the reason.
 
 Codex should prioritize the playable core loop before expanding into new major systems.
+
+Codex should also avoid designing systems that are permanently fixed, fully predictable, or easy to solve. Use fixed values during early prototype only when needed for stability, then prepare the architecture for controlled variation later.
