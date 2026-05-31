@@ -1,6 +1,6 @@
 # DEVLOG — Time is Precious
 
-Last updated: 2026-05-16
+Last updated: 2026-06-01
 
 ## Project Identity
 **Time is Precious** is a 2D top-down management RPG with a Mesopotamian theme, built in Godot Engine 4 / 4.5.
@@ -11,6 +11,7 @@ Core pillars:
 - Worker / NPC delegation.
 - Production chains.
 - City and player home progression.
+- Variable progression between players.
 
 ## Current Development Focus
 The current focus is not adding big features. The focus is stabilizing the playable core loop.
@@ -23,6 +24,49 @@ Priority order:
 5. Production output.
 6. Basic progression impact.
 7. Minimum playable prototype.
+
+## 2026-06-01 — Variable Progression Pillar Added
+
+### What changed
+Added a design pillar stating that the game should not be too easy to predict from a gameplay/progression perspective.
+
+### Why
+The intended experience is that different players can develop different cities and progression paths. The game should not become a fixed spreadsheet with one obvious optimal route.
+
+### Design direction
+The game should use controlled randomness and system-driven variation.
+
+Examples:
+- Migrant count may vary based on city prosperity.
+- Applicant quality and traits may vary.
+- Timing of opportunities may vary.
+- Needs pressure may vary within readable limits.
+- Production or city events may include small controlled modifiers.
+
+### Important boundary
+Randomness should create strategic variation, not chaos.
+
+The player should still feel that decisions matter.
+
+Correct direction:
+```text
+Player decision
+↓
+System state
+↓
+Controlled random variation
+↓
+Readable result
+```
+
+Wrong direction:
+```text
+Pure random outcome
+↓
+Player cannot plan
+↓
+Result feels unfair
+```
 
 ## Current Design Issue: Worker vs Resident
 A key issue has been identified: the code/design must not treat `worker` and `resident` as the same concept.
