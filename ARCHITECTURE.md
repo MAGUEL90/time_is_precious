@@ -1,6 +1,6 @@
 # ARCHITECTURE — Time is Precious
 
-Last updated: 2026-05-16
+Last updated: 2026-06-01
 
 ## Purpose
 This document is the architectural source of truth for **Time is Precious**.
@@ -15,6 +15,40 @@ Time is Precious is a 2D top-down management RPG focused on:
 - Production chains.
 - City growth.
 - Player home / settlement progression.
+- Variable progression between players.
+
+## Design Pillar: Variable Progression
+Time is Precious should not be easily predictable from one playthrough to another.
+
+The game should avoid becoming a fixed spreadsheet where every player follows the same optimal path, uses the same exact numbers, and reaches the same progression pattern.
+
+The intended experience:
+- Player A and Player B may develop differently.
+- City growth should have controlled randomness.
+- Migrant arrival, applicant availability, needs pressure, and opportunity timing can vary.
+- The player should adapt to circumstances instead of memorizing one perfect route.
+- Randomness should create strategic variation, not chaos.
+
+Important rule:
+```text
+Use controlled randomness to create variation.
+Do not use randomness to remove player agency.
+```
+
+Good randomness examples:
+- Random migrant count within a controlled range when city prosperity is good.
+- Different applicant quality or traits from the resident pool.
+- Varying production opportunities or small efficiency modifiers.
+- Different timing for city events.
+- Slight variation in needs pressure or resource opportunity.
+
+Bad randomness examples:
+- Fully random outcomes that ignore player decisions.
+- Sudden punishment with no warning or counterplay.
+- Random systems that make planning impossible.
+- Hidden dice rolls that feel unfair.
+
+The game should feel alive, not arbitrary.
 
 ## Current Priority
 Do not expand into large systems too early.
@@ -109,6 +143,33 @@ if is_hired:
     consume_city_stock()
 ```
 
+## Randomness / System Variation Rule
+Randomness should be implemented as a support layer over clear systems.
+
+Recommended structure:
+```text
+Player decision
+↓
+System state check
+↓
+Controlled random variation
+↓
+Result with readable feedback
+```
+
+Example:
+```text
+If city prosperity is above threshold:
+    migrant_count = random value within a small range
+    migrant quality/traits may vary
+    player chooses accept/reject
+```
+
+The player should still understand why something happened.
+
+Do not hardcode every outcome into fixed numbers unless needed for early prototype stability.
+Use tunable ranges where appropriate.
+
 ## Existing/Expected Core Systems
 Codex should analyze and preserve the intent of these systems:
 - WorkManager
@@ -149,3 +210,7 @@ A single boolean cannot represent:
 - assigned active worker
 
 Use explicit state separation instead.
+
+Another major risk is making the game too deterministic.
+
+If every system uses fixed numbers, fixed timing, fixed applicants, and fixed outcomes, the gameplay will become too easy to solve. The design should preserve controlled variation so each player's city develops differently.
