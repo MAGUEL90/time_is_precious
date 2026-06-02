@@ -1,11 +1,84 @@
 # ROADMAP — Time is Precious
 
-Last updated: 2026-05-16
+Last updated: 2026-06-01
 
 ## Development Principle
 Build a small playable prototype first.
 
 Do not expand into large systems before the core loop is stable.
+
+The game should also avoid becoming too deterministic. Long-term, player progression should vary between playthroughs through controlled randomness and system-driven variation.
+
+## Current Main Priority — Playable Core Loop
+Status: The project has moved beyond concept planning and is now in the technical prototype stage.
+
+The current priority is **not** to add more large systems yet. The main goal is to turn the existing technical systems into one complete, repeatable, playable loop.
+
+Known implemented or partially implemented systems:
+- ItemDatabase
+- Inventory with weight handling
+- WorkshopStorage
+- WorkManager
+- ProcessManager
+- Mudbrick production smoke test
+- Drying process path
+
+### Target Playable Loop
+The first complete loop should be:
+
+```text
+Clay/Mud
+↓
+Player Inventory
+↓
+Inventory weight / capacity check
+↓
+WorkshopStorage deposit
+↓
+Mudbrick process
+↓
+Drying process
+↓
+Dried Mudbrick
+↓
+Visible output / usable item
+```
+
+### Current Risk
+The systems may exist technically, but the game is not yet validated as a fun playable slice.
+
+The next development work should focus on clarity, feedback, repeatability, and player-facing usability.
+
+### Design Risk: Too Predictable
+Time is Precious should not become a game where every player can easily predict the same best route.
+
+Future systems should support controlled variation, such as:
+- Migrant count variation.
+- Applicant quality variation.
+- Different resident traits.
+- Different opportunity timing.
+- Small production or needs-pressure variation.
+
+This should be added carefully after the core loop works. The early prototype may use fixed values for stability, but the architecture should not lock the game into fixed outcomes forever.
+
+### Do Not Prioritize Yet
+Avoid expanding into these areas until the playable loop above feels stable:
+- Large NPC behavior expansion
+- Complex economy balancing
+- More resource chains
+- Advanced AI Advisor NPC
+- Large content expansion
+- Steam/demo planning
+
+### Immediate Execution Checklist
+- [ ] Lock the MVP scope around one production chain.
+- [ ] Make the mudbrick loop playable from start to finish.
+- [ ] Add simple UI feedback for inventory, storage, process status, and output.
+- [ ] Confirm inventory weight affects the player meaningfully.
+- [ ] Confirm WorkshopStorage receives and spends materials correctly.
+- [ ] Confirm WorkManager and ProcessManager can run the full process without manual debugging.
+- [ ] Confirm the final item can be seen, stored, and used as a real output.
+- [ ] Create a small internal playtest checklist.
 
 ## Current Phase
 ### Phase 0 — Foundation Review
@@ -23,6 +96,27 @@ Focus:
 Deliverable:
 - Clear understanding of how resources, work, processing, storage, and workers connect.
 
+### Phase 0.5 — Playable Loop Stabilization
+Goal: connect the existing systems into one player-facing loop before expanding scope.
+
+Focus:
+- Inventory → WorkshopStorage transfer
+- WorkshopStorage → ProcessManager input spending
+- ProcessManager → output generation
+- Mudbrick → drying → dried mudbrick chain
+- Basic UI feedback for each step
+- Player clarity: what happened, what is missing, what finished
+
+Minimum success criteria:
+- Player can start with or collect clay/mud.
+- Player can carry it with weight/capacity respected.
+- Player can deposit it into WorkshopStorage.
+- Player can start the mudbrick process.
+- The process spends the correct input.
+- The drying process produces dried mudbrick.
+- The final output is visible to the player.
+- The loop can be repeated without manual debugging.
+
 ## Phase 1 — Core Loop Prototype
 Goal: make the game playable in a small loop.
 
@@ -34,8 +128,6 @@ Store resource
 ↓
 Process resource
 ↓
-Assign worker
-↓
 Produce output
 ↓
 Use output for progression
@@ -43,11 +135,11 @@ Use output for progression
 
 Minimum success criteria:
 - Player can collect at least one resource.
-- Resource enters storage.
+- Resource enters inventory and/or storage correctly.
 - Player can start one process.
-- Worker can be assigned.
 - Process produces output.
 - Output can be used for a visible progression step.
+- Worker assignment can be added after the manual player loop is stable.
 
 ## Phase 2 — Population and Worker Separation
 Goal: separate resident/citizen logic from worker/employment logic.
@@ -82,6 +174,24 @@ Minimum success criteria:
 - Player can hire applicant.
 - Hired worker can be assigned.
 
+## Phase 2.5 — Controlled Variation Layer
+Goal: prepare the game to create different progression paths between players without breaking player agency.
+
+This phase should come after the basic population/worker flow is stable.
+
+Possible controlled variation systems:
+- Migrant arrival count range based on city prosperity.
+- Randomized resident/applicant traits within clear limits.
+- Slight differences in productivity, loyalty, or needs pressure.
+- Varying opportunity timing.
+- Small modifiers to production or city events.
+
+Minimum success criteria:
+- Variation is visible between playthroughs.
+- Player still understands why things happen.
+- Randomness does not feel unfair.
+- No important result is fully disconnected from player decisions.
+
 ## Phase 3 — Prototype Asset Pass
 Goal: replace rough placeholders with consistent minimum assets.
 
@@ -102,9 +212,11 @@ Goal: make the prototype readable.
 
 Minimum UI:
 - Resource stock display.
+- Inventory weight/capacity display.
 - Time display.
 - Worker status display.
 - Process status display.
+- WorkshopStorage status display.
 - Job Board interface.
 - Basic population/needs display.
 
@@ -126,11 +238,13 @@ Delay these until the core loop is stable:
 - Marketing trailer.
 
 ## Immediate Next Tasks
-1. Audit current worker code.
-2. Identify where `is_hired` or equivalent logic is used.
-3. Check whether consumption is tied to worker status.
-4. Propose separation between population status and employment status.
-5. Keep code changes small and explain them before implementation.
+1. Verify the current mudbrick production path from input to output.
+2. Verify the drying process path and final dried mudbrick output.
+3. Verify inventory weight/capacity affects the loop meaningfully.
+4. Verify WorkshopStorage receives, stores, and spends materials correctly.
+5. Add or improve basic UI feedback for inventory, storage, process status, and output.
+6. Keep worker/NPC delegation secondary until the manual playable loop is stable.
+7. Keep code changes small and explain them before implementation.
 
 ## Codex Instruction
 When updating this project, Codex should maintain these files:
@@ -142,3 +256,7 @@ When updating this project, Codex should maintain these files:
 Future files may be added as needed.
 
 Do not overwrite design direction without explaining the reason.
+
+Codex should prioritize the playable core loop before expanding into new major systems.
+
+Codex should also avoid designing systems that are permanently fixed, fully predictable, or easy to solve. Use fixed values during early prototype only when needed for stability, then prepare the architecture for controlled variation later.
