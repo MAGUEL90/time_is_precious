@@ -15,7 +15,6 @@ var dialogue_finished: bool = false
 @export var min_hunger: float = 0.0
 @export var max_hunger: float = 1.0
 
-
 var claim_menu_is_open: bool = false
 var inventory_is_open: bool = false
 var claim_menu_workshop: WorkShop = null

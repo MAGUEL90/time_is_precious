@@ -1,7 +1,7 @@
 class_name WorkerData
 extends Resource
 
-enum Profession {LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
+enum Profession {NONE, LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 enum WorkStatus {IDLE, WORKING}
 
 @export var worker_id: String = ""

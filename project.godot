@@ -27,6 +27,9 @@ WorkerDatabase="*res://scripts/autoload/worker_database/worker_database.gd"
 CityStockManager="*res://scripts/autoload/city_stock_manager/city_stock_manager.gd"
 CitizenNeedsManager="*res://scripts/autoload/citizen_needs_manager/citizen_needs_manager.gd"
 ApplicantOfferDatabase="*res://scripts/autoload/applicant_offer_database/applicant_offer_database.gd"
+CitizenManager="*res://scripts/autoload/citizen_manager/citizen_manager.gd"
+CitizenGenerator="*res://scripts/autoload/citizen_generator/citizen_generator.gd"
+ImmigrationManager="*res://scripts/autoload/immigration_manager/immigration_manager.gd"
 
 [display]
 
