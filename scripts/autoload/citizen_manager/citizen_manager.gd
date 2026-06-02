@@ -1,0 +1,74 @@
+extends Node
+signal citizen_added(citizen_data: CitizenData)
+
+var citizens_by_id: Dictionary[String, CitizenData] = {}
+
+func _ready() -> void:
+	var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
+
+	add_citizen(_create_test_citizen(
+		"01", "Gabbi", CitizenData.CitizenStatus.CITIZEN, "black_female_01", "warm", "default"))
+	add_citizen(_create_test_citizen(
+		"02", "Gal-Sal", CitizenData.CitizenStatus.CITIZEN, "brown_male_02", "tan", "default"))
+	add_citizen(_create_test_citizen(
+		"03", "Sukkalgir", CitizenData.CitizenStatus.CITIZEN, "red_male_01", "dark", "default"))
+	add_citizen(generated_citizen)
+
+func _create_test_citizen(
+	id: String,
+	display_name: String,
+	status: CitizenData.CitizenStatus,
+	hair_style: String,
+	skin_tone: String,
+	accessory: String) -> CitizenData:
+	
+	var test_citizen: CitizenData = CitizenData.new()
+	test_citizen.citizen_id = id
+	test_citizen.display_name = display_name
+	test_citizen.status = status
+	var visual_profile: VisualProfile = VisualProfile.new()
+	visual_profile.hair_style = hair_style
+	visual_profile.skin_tone = skin_tone
+	visual_profile.accessory = accessory
+	test_citizen.visual_profile = visual_profile
+	return test_citizen
+
+func add_citizen(citizen_data: CitizenData) -> void:
+	if citizen_data == null:
+		return 
+		
+	var citizen_id: String = citizen_data.citizen_id
+	var clean_citizen_id: String = citizen_id.strip_edges()
+	
+	citizen_data.citizen_id = clean_citizen_id
+	
+	if clean_citizen_id.is_empty():
+		return
+	
+	if citizens_by_id.has(clean_citizen_id):
+		return
+	
+	citizens_by_id[clean_citizen_id] = citizen_data
+	citizen_added.emit(citizen_data)
+
+func get_citizen(citizen_id: String) -> CitizenData:
+	var clean_citizen_id: String = citizen_id.strip_edges()
+	
+	if clean_citizen_id.is_empty():
+		return null
+	
+	if not citizens_by_id.has(clean_citizen_id):
+		return null
+
+	return citizens_by_id[clean_citizen_id]
+
+func get_all_citizens() -> Array:
+	return citizens_by_id.values()
+
+func has_citizen(citizen_id: String) -> bool:
+	var clean_citizen_id: String = citizen_id.strip_edges()
+	
+	if clean_citizen_id.is_empty():
+		return false
+		
+	return citizens_by_id.has(clean_citizen_id)

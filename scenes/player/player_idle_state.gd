@@ -1,21 +1,7 @@
 extends NodeState
 
 @export var player_reff: Player
-@export var animated_sprite_2d: AnimatedSprite2D
-
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _on_process(_delta: float) -> void:
-	GameInputEvents.movement_input()
-	
-	if not GameInputEvents.is_move():
-		if player_reff.player_sprite_direction == Vector2.LEFT:
-			animated_sprite_2d.play("idle_left")
-		elif player_reff.player_sprite_direction == Vector2.RIGHT:
-			animated_sprite_2d.play("idle_right")
+@onready var player_visual: PlayerVisual = $"../../PlayerVisual"
 	
 func _on_next_transition() -> void:
 	GameInputEvents.movement_input()
@@ -24,7 +10,7 @@ func _on_next_transition() -> void:
 		transition.emit("playermovementstate")
 
 func _on_enter() -> void:
-	animated_sprite_2d.play("idle_right")
-
-func _on_exit() -> void:
-	animated_sprite_2d.stop()
+	if player_reff.player_sprite_direction == Vector2.LEFT:
+		player_visual.play_visual("idle", "left")
+	elif player_reff.player_sprite_direction == Vector2.RIGHT:
+		player_visual.play_visual("idle", "right")

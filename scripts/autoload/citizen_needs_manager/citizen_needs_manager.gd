@@ -21,9 +21,9 @@ func process_daily_needs() -> void:
 	process_daily_clothing_needs()
 	process_daily_shelter_capacity_needs()
 
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 	for citizen in citizens:
-		if not (citizen is WorkerData):
+		if not (citizen is CitizenData):
 			continue
 		if citizen.are_basic_needs_fulfilled():
 			citizen.satisfaction = clampf(citizen.satisfaction + 0.05, 0.01, 0.99)
@@ -36,14 +36,14 @@ func process_daily_food_needs() -> void:
 	last_food_fulfilled_count = 0
 	last_food_unfulfilled_count = 0
 
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 
 	for citizen in citizens:
-		if not (citizen is WorkerData):
+		if not (citizen is CitizenData):
 			continue
-		var citizen_worker: WorkerData = citizen as WorkerData
+		var citizen_data: CitizenData = citizen as CitizenData
 		var consume_result: bool = CityStockManager.consume_food_supply(FOOD_SUPPLY_PER_CITIZEN_PER_DAY)
-		citizen_worker.food_fulfilled = consume_result
+		citizen_data.food_fulfilled = consume_result
 
 		if consume_result:
 			last_food_fulfilled_count += 1
@@ -54,16 +54,16 @@ func process_daily_clothing_needs() -> void:
 	last_clothing_fulfilled_count = 0
 	last_clothing_unfulfilled_count = 0
 
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 
 	for citizen in citizens:
-		if not (citizen is WorkerData):
+		if not (citizen is CitizenData):
 			continue
 
-		var citizen_worker: WorkerData = citizen as WorkerData
+		var citizen_data: CitizenData = citizen as CitizenData
 		var consume_result: bool = CityStockManager.consume_clothing_supply(CLOTHING_SUPPLY_PER_CITIZEN_PER_DAY)
 
-		citizen_worker.clothing_fulfilled = consume_result
+		citizen_data.clothing_fulfilled = consume_result
 
 		if consume_result:
 			last_clothing_fulfilled_count += 1
@@ -74,25 +74,25 @@ func process_daily_shelter_capacity_needs() -> void:
 	last_shelter_capacity_fulfilled_count = 0
 	last_shelter_capacity_unfulfilled_count = 0
 	
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 	var remaining_capacity: int = CityStockManager.shelter_capacity
 	
 	for citizen in citizens:
-		if not (citizen is WorkerData):
+		if not (citizen is CitizenData):
 			continue
 		
-		var citizen_worker: WorkerData = citizen as WorkerData
+		var citizen_data: CitizenData = citizen as CitizenData
 		
 		if remaining_capacity <= 0:
 			last_shelter_capacity_unfulfilled_count += 1
-			citizen_worker.shelter_fulfilled = false
+			citizen_data.shelter_fulfilled = false
 		else:
 			last_shelter_capacity_fulfilled_count += 1
 			remaining_capacity -= 1
-			citizen_worker.shelter_fulfilled = true
+			citizen_data.shelter_fulfilled = true
 
 func get_citizen_count() -> int:
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 
 	return citizens.size()
 
@@ -106,17 +106,17 @@ func get_daily_shelter_capacity_need() -> int:
 	return get_citizen_count()
 
 func get_average_satisfaction() -> float:
-	var citizens: Array = WorkerDatabase.get_all_workers()
+	var citizens: Array = CitizenManager.get_all_citizens()
 	var total_satisfaction: float = 0.0
 	var valid_citizen: int = 0
 	for citizen in citizens:
-		if not (citizen is WorkerData):
+		if not (citizen is CitizenData):
 			continue
 
-		var citizen_worker: WorkerData = citizen as WorkerData
+		var citizen_data: CitizenData = citizen as CitizenData
 
 		valid_citizen += 1
-		total_satisfaction += citizen_worker.satisfaction
+		total_satisfaction += citizen_data.satisfaction
 
 	if valid_citizen == 0:
 		return 0.0

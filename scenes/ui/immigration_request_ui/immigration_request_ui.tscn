@@ -1,0 +1,86 @@
+[gd_scene load_steps=5 format=3 uid="uid://bh7wd54bwa3f"]
+
+[ext_resource type="Script" uid="uid://b3dqqdqh5gta" path="res://scenes/ui/immigration_request_ui/immigration_request_ui.gd" id="1_t537r"]
+[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="2_d816d"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_fk7dm"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_fk7dm"]
+font = ExtResource("2_d816d")
+
+[node name="ImmigrationRequestUI" type="CanvasLayer"]
+script = ExtResource("1_t537r")
+metadata/_edit_horizontal_guides_ = [317.0]
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -70.0
+offset_right = -160.0
+offset_bottom = -70.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Root"]
+layout_mode = 0
+offset_right = 320.0
+offset_bottom = 140.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 6
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Panel/VBoxContainer/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+text = "test"
+label_settings = SubResource("LabelSettings_fk7dm")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 36
+alignment = 1
+
+[node name="AcceptButton" type="Button" parent="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(65, 30)
+layout_mode = 2
+theme = ExtResource("3_fk7dm")
+theme_type_variation = &"HudShortcutButton"
+text = "Accept"
+
+[node name="RejectButton" type="Button" parent="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(65, 30)
+layout_mode = 2
+theme = ExtResource("3_fk7dm")
+theme_type_variation = &"HudShortcutButton"
+text = "Reject"
+
+[connection signal="pressed" from="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/AcceptButton" to="." method="_on_accept_button_pressed"]
+[connection signal="pressed" from="Root/Panel/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/RejectButton" to="." method="_on_reject_button_pressed"]

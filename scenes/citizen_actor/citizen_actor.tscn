@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://61l18ryobbrw"]
+
+[ext_resource type="Script" uid="uid://k4f6bod7v6" path="res://scenes/citizen_actor/citizen_actor.gd" id="1_01g8e"]
+[ext_resource type="PackedScene" uid="uid://bit0j10nuewy1" path="res://scenes/worker_visual/base_worker_visual.tscn" id="1_6r8wa"]
+
+[node name="CitizenActor" type="Node2D"]
+script = ExtResource("1_01g8e")
+
+[node name="BaseWorkerVisual" parent="." instance=ExtResource("1_6r8wa")]
