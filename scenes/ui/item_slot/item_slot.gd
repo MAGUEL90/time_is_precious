@@ -5,6 +5,7 @@ signal slot_deposit_requested(item_id: String, quantity: int, node: Node)
 
 @onready var asset_icon: TextureRect = $MarginContainer/AssetIcon
 @onready var asset_qty: Label = $MarginContainer/AssetQty
+@onready var selected_qty: Label = $SelectedQty
 
 var _item_id: String
 var _quantity: int
@@ -29,3 +30,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 			slot_deposit_requested.emit(_item_id, _quantity, self)
+
+func set_selected_quantity(quantity: int) -> void:
+	selected_qty.visible = quantity > 0
+	selected_qty.text = str(quantity)

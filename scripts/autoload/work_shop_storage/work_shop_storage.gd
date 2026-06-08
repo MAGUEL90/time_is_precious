@@ -1,9 +1,10 @@
-extends Node
+﻿extends Node
 
 var items: Dictionary[String, int] = {} # stok item milik workshop (bukan inventory player)
 var claimable_outputs: Array[Dictionary] = [] # daftar output yang harus di-claim (escrow)
 var unpaid_claims_ledger: Array[Dictionary] = [] # catatan claim yang belum bayar fee
 var player_is_in_claim_area: bool = false # true jika player sedang berada di area workshop untuk claim
+var max_load: float = 50.0
 
 @export var fee_currency_item_id: String = "shekel"
 @export var unpaid_fee_due_days: int = 3
@@ -25,19 +26,19 @@ func has_item(item_identifier: String, quantity: int) -> bool:
 func add_item(item_identifier: String, quantity: int) -> void:
 	if quantity <= 0:
 		return
-	
+
 	items[item_identifier] = items.get(item_identifier, 0) + quantity # tambah stok workshop
 
 func add_bulk_item(items_to_add: Dictionary) -> void:
 	for item_identifier in items_to_add.keys():
 		add_item(item_identifier, int(items_to_add[item_identifier])) # helper tambah banyak item sekaligus
-	
+
 func remove_item(item_identifier: String, quantity: int) -> bool:
 	if quantity <= 0:
 		return true # remove 0 dianggap sukses
-	
+
 	var current_quantity: int = items.get(item_identifier, 0) # aman walau item belum ada
-	if current_quantity < quantity: 
+	if current_quantity < quantity:
 		return false # stok workshop tidak cukup
 	var new_quantity: int = current_quantity - quantity # hitung sisa
 	if new_quantity <= 0:
@@ -47,12 +48,12 @@ func remove_item(item_identifier: String, quantity: int) -> bool:
 	return true
 
 func add_claimable_output(
-	items_ready: Dictionary[String, int], 
+	items_ready: Dictionary[String, int],
 	service_fee_shekel: int,
-	worker_identifier: String, 
-	completed_total_minutes: int, 
+	worker_identifier: String,
+	completed_total_minutes: int,
 	expires_total_minutes: int = -1) -> void:
-		
+
 	claimable_outputs.append(
 		{
 			"items": items_ready, # output yang siap diambil
@@ -71,25 +72,25 @@ func claim_output(claimable_index: int) -> bool:
 	return claim_output_with_action(claimable_index, ClaimAction.STORE_IN_WORKSHOP, null)
 
 func claim_output_with_action(
-	claimable_index: int, 
-	claim_action: int, 
+	claimable_index: int,
+	claim_action: int,
 	player_inventory: Node = null,
 	will_pay_fee: bool = true) -> bool:
 	# Claim hanya boleh kalau player sedang di area workshop
 	if not player_is_in_claim_area:
 		return false
-	
+
 	if claimable_index < 0 or claimable_index >= claimable_outputs.size():
 		return false
-		
+
 	var entry: Dictionary = claimable_outputs[claimable_index]
 	var items_ready: Dictionary = entry.get("items", {})
 	var service_fee_shekel: int = max(int(entry.get("service_fee_shekel", 0)), 0)
-	
+
 	if claim_action == ClaimAction.TAKE_TO_PLAYER:
 		if player_inventory == null:
 			return false
-		
+
 		if not will_pay_fee:
 			# Tidak bayar -> output disimpan ke workshop + catat hutang fee
 			add_bulk_item(items_ready)
@@ -98,11 +99,11 @@ func claim_output_with_action(
 			print("Claim di tunda bayar fee, item tersimpan di Workshop")
 			print("Claimable count = ", claimable_outputs.size())
 			return true
-		
+
 		if not _try_pay_service_fee(player_inventory, service_fee_shekel):
 			print("Fee tidak cukup, claim gagal!")
 			return false
-			
+
 		if player_inventory.has_method("add_bulk_item"):
 			player_inventory.call("add_bulk_item", items_ready)
 		else:
@@ -111,37 +112,37 @@ func claim_output_with_action(
 					player_inventory.call("add_item", item_identifier, int(items_ready[item_identifier]))
 				else:
 					return false
-		
+
 	elif claim_action == ClaimAction.STORE_IN_WORKSHOP:
-		
-		# (🟢 +) DEBUG OPSI 2
+
+		# (ðŸŸ¢ +) DEBUG OPSI 2
 		print("OPT2: claimable_size(before)=", claimable_outputs.size())
 		print("OPT2: claimable_index=", claimable_index)
 		print("OPT2: entry(before)=", entry)
-		
+
 		add_bulk_item(items_ready)
-		
+
 		print("OPT2: items_after_adding_to_workshop_storage: workshop items = ", items)
-	
+
 	elif claim_action == ClaimAction.CONTINUE_PROCESS:
 		print("OPT3: before_adding_to_workshop_storage: workshop items = ", items)
 		print("OPT3: before: claimable count = ", claimable_outputs.size())
 		# Untuk sekarang: taruh dulu ke inventory workshop
 		# Lalu minta ProcessManager auto-pull (kalau tersedia)
-		
+
 		add_bulk_item(items_ready)
 		print("OPT3: items_after_adding_to_workshop_storage: workshop items = ", items)
-		
+
 		var process_manager: Node = get_node("/root/ProcessManager")
 		if process_manager != null and process_manager.has_method("request_auto_pull"):
 			process_manager.call("request_auto_pull")
-		
+
 		print("OPT3: items_after_sending_to_continue_process: workshop items = ", items)
-		
-		
+
+
 	else:
 		return false
-		
+
 	claimable_outputs.remove_at(claimable_index)
 	print("Claimable count = ", claimable_outputs.size())
 	return true
@@ -149,12 +150,12 @@ func claim_output_with_action(
 func transfer_all_items_to_player(player_inventory: Node) -> bool:
 	if player_inventory == null:
 		return false
-	
+
 	if items.is_empty():
 		return false
-	
+
 	var workshop_items_snapshot: Dictionary = items.duplicate(true)
-	
+
 	if player_inventory.has_method("add_bulk_item"):
 		player_inventory.call("add_bulk_item", workshop_items_snapshot)
 	else:
@@ -163,23 +164,23 @@ func transfer_all_items_to_player(player_inventory: Node) -> bool:
 				player_inventory.call("add_item", item_identifier, int(workshop_items_snapshot[item_identifier]))
 			else:
 				return false
-	
+
 	items.clear()
 	return true
 
 func _try_pay_service_fee(player_inventory: Node, service_fee_shekel: int) -> bool:
 	if service_fee_shekel <= 0:
 		return true
-	
+
 	if not player_inventory.has_method("has_item"):
 		return false
-	
+
 	if not bool(player_inventory.call("has_item", fee_currency_item_id, service_fee_shekel)):
 		return false
-	
+
 	if not player_inventory.has_method("remove_item"):
 		return false
-	
+
 	return bool(player_inventory.call("remove_item", fee_currency_item_id, service_fee_shekel))
 
 func _register_unpaid_fee(entry: Dictionary) -> void:
@@ -200,51 +201,51 @@ func _register_unpaid_fee(entry: Dictionary) -> void:
 func _get_current_day() -> int:
 	if TimeComponentManager == null:
 		return 0
-	
+
 	return(int(TimeComponentManager.get("current_day")))
 
 func _on_day_changed(day_now: int) -> void:
 	_apply_overdue_penalty(day_now)
-	
+
 func _apply_overdue_penalty(day_now: int) -> void:
 	if unpaid_claims_ledger.is_empty():
 		return
-	
+
 	for i in range(unpaid_claims_ledger.size()):
 		var entry: Dictionary = unpaid_claims_ledger[i]
 		if bool(entry.get("is_paid", false)):
 			continue
-		
+
 		var due_day: int = int(entry.get("due_day", day_now + 1))
 		if day_now <= due_day:
 			continue
-		
+
 		var last_penalty_day: int = int(entry.get("last_penalty_day", due_day))
 		if day_now <= last_penalty_day:
 			continue
-		
+
 		var penalty_days: int = day_now - last_penalty_day
 		if penalty_days <= 0:
 			continue
-	
+
 		var current_fee: int = max(int(entry.get("final_fee_shekel", entry.get("service_fee_shekel", 0))), 0)
 		for _d in range(penalty_days):
 			var penalty_add: int = int(ceil(float(current_fee) * float(max(overdue_penalty_percent_per_day,0)) / 100.0))
 			current_fee += max(penalty_add, 0)
-	
+
 		entry["final_fee_shekel"] = current_fee
 		entry["last_penalty_day"] = day_now
 		entry["overdue_days"] = max(day_now - due_day, 0)
 		unpaid_claims_ledger[i] = entry
-	
+
 func get_unpaid_fee_summary() -> Dictionary:
 	var day_now: int = _get_current_day()
 	_apply_overdue_penalty(day_now)
-	
+
 	var total_unpaid: int = 0
 	var total_overdue: int = 0
 	var unpaid_count: int = 0
-	
+
 	for entry in unpaid_claims_ledger:
 		if bool(entry.get("is_paid", false)):
 			continue
@@ -255,7 +256,7 @@ func get_unpaid_fee_summary() -> Dictionary:
 		total_unpaid += final_fee
 		if day_now > int(entry.get("due_day", day_now + 1)):
 			total_overdue += final_fee
-		
+
 	return {
 			"unpaid_count": unpaid_count,
 			"total_unpaid_shekel": total_unpaid,
@@ -266,10 +267,10 @@ func get_unpaid_fee_summary() -> Dictionary:
 func settle_unpaid_fees(player_inventory: Node, pay_overdue_only: bool = false) -> bool:
 	if player_inventory == null:
 		return false
-	
+
 	var day_now: int = _get_current_day()
 	_apply_overdue_penalty(day_now)
-	
+
 	var target_indices: Array[int] = []
 	var total_fee: int = 0
 	for i in range(unpaid_claims_ledger.size()):
@@ -279,27 +280,62 @@ func settle_unpaid_fees(player_inventory: Node, pay_overdue_only: bool = false) 
 		var due_day: int = int(entry.get("due_day", day_now + 1))
 		if pay_overdue_only and day_now <= due_day:
 			continue
-		
+
 		target_indices.append(i)
 		total_fee += max(int(entry.get("final_fee_shekel", entry.get("service_fee_shekel", 0))), 0)
-		
+
 	if total_fee <= 0:
 		return false
-	
+
 	if not _try_pay_service_fee(player_inventory, total_fee):
 		return false
-	
+
 	for index in target_indices:
 		var paid_entry: Dictionary = unpaid_claims_ledger[index]
 		paid_entry["is_paid"] = true
 		paid_entry["paid_day"] = day_now
 		unpaid_claims_ledger[index] = paid_entry
-	
+
 	return true
-	
-	
-	
-	
-	
-	
-	
+
+func get_item_total_weight(item_id: String, qty: int) -> float:
+	return Inventory.get_item_total_weight(item_id, qty)
+
+func get_total_storage_weight() -> float:
+	var total_weight: float = 0.0
+	for item_id in items.keys():
+		total_weight += get_item_total_weight(item_id, items[item_id])
+	return total_weight
+
+func get_remaining_capacity() -> float:
+	return max_load - get_total_storage_weight()
+
+func has_capacity_for(item_id: String, qty: int) -> bool:
+	return get_remaining_capacity() >= get_item_total_weight(item_id, qty)
+
+func try_add_item(item_id: String, qty: int) -> bool:
+
+	if item_id == "" or qty <= 0:
+		return false
+
+	if not ItemDatabase.has_item_data(item_id):
+		return false
+
+	if get_item_total_weight(item_id, qty) <= 0:
+		return false
+
+	if not has_capacity_for(item_id, qty):
+		return false
+
+	add_item(item_id, qty)
+	return true
+
+func get_bulk_item_total_weight(items_to_check: Dictionary) -> float:
+	var total_weight: float = 0.0
+	for item_id in items_to_check.keys():
+		var qty: int = int(items_to_check[item_id])
+		total_weight += get_item_total_weight(item_id, qty)
+	return total_weight
+
+func has_capacity_for_bulk(items_to_check: Dictionary) -> bool:
+	return get_remaining_capacity() >= get_bulk_item_total_weight(items_to_check)

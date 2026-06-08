@@ -111,6 +111,7 @@ text = "Inventory"
 text = "16/40"
 
 [node name="WorkerPanel" type="PanelContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel"]
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel"]
