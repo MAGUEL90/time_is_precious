@@ -1,0 +1,90 @@
+[gd_scene load_steps=3 format=3 uid="uid://bymgt3ekm38k4"]
+
+[ext_resource type="Script" uid="uid://n4twin7e8inq" path="res://scenes/ui/workshop_storage_menu_ui/workshop_storage_menu_ui.gd" id="1_q38kr"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_ov06s"]
+
+[node name="WorkshopStorageMenuUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_q38kr")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.35000002)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(320, 180)
+layout_mode = 2
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudPanel"
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudLabelMain"
+text = "WORKSHOP STORAGE"
+horizontal_alignment = 1
+
+[node name="InfoLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudLabelSub"
+text = "Manage stored workshop items."
+horizontal_alignment = 1
+
+[node name="DepositButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudShortcutButton"
+text = "Deposit Items"
+
+[node name="WithdrawButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudShortcutButton"
+text = "Withdraw Items"
+
+[node name="BackButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudShortcutButton"
+text = "Back"

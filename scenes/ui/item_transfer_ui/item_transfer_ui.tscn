@@ -1,0 +1,93 @@
+[gd_scene load_steps=2 format=3 uid="uid://d34dky1ificrb"]
+
+[ext_resource type="Script" uid="uid://b3d0mmwbc2332" path="res://scenes/ui/item_transfer_ui/item_transfer_ui.gd" id="1_dhvkw"]
+
+[node name="ItemTransferUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_dhvkw")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.45000002)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(700, 420)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/MarginContainer"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
+layout_mode = 2
+text = "Transfer Items"
+
+[node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
+layout_mode = 2
+text = "X"
+
+[node name="InfoLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox"]
+layout_mode = 2
+text = "Select items to transfer"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="GridContainer" type="GridContainer" parent="Root/Center/Window/MarginContainer/MainVBox/ScrollContainer"]
+layout_mode = 2
+columns = 6
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
+layout_mode = 2
+
+[node name="SelectedSummaryLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+layout_mode = 2
+text = "Selected: 0"
+
+[node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CancelButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+layout_mode = 2
+text = "Cancel"
+
+[node name="ConfirmButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+layout_mode = 2
+text = "Deposit"

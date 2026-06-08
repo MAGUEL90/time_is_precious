@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://du2og4sfxfanq"]
+
+[ext_resource type="Script" uid="uid://duh5bdxeo5rq1" path="res://item_change_popup.gd" id="1_55uwe"]
+[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="2_xvxnw"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_k2oue"]
+font = ExtResource("2_xvxnw")
+font_size = 6
+
+[node name="ItemChangePopup" type="Node2D"]
+script = ExtResource("1_55uwe")
+
+[node name="Row" type="HBoxContainer" parent="."]
+offset_right = 23.0
+offset_bottom = 12.0
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="Row"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 4
+
+[node name="AmountLabel" type="Label" parent="Row"]
+layout_mode = 2
+text = "+1"
+label_settings = SubResource("LabelSettings_k2oue")

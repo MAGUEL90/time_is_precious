@@ -1,0 +1,126 @@
+[gd_scene load_steps=3 format=3 uid="uid://bg1u86wqe8p0f"]
+
+[ext_resource type="Script" uid="uid://1tg0avsocwud" path="res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd" id="1_3apnb"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_jbrp8"]
+
+[node name="WorkshopMenuUI" type="CanvasLayer"]
+process_mode = 3
+layer = 9
+script = ExtResource("1_3apnb")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.35)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(420, 330)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudLabelMain"
+text = "WORKSHOP"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudLabelShortcut"
+text = "Ready output: None
+Unpaid: 0 | Fee: 0 | Overdue: 0"
+horizontal_alignment = 1
+
+[node name="ActionGrid" type="GridContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="ClaimButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "1  Claim Output"
+alignment = 0
+
+[node name="ManageButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "2  Manage Storage"
+alignment = 0
+
+[node name="AssignButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "3  Assign Worker"
+alignment = 0
+
+[node name="PayAllButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "4  Pay All Fees"
+alignment = 0
+
+[node name="PayOverdueButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "5  Pay Overdue Fees"
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Root/Center/Window/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(90, 30)
+layout_mode = 2
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudShortcutButton"
+text = "Close"
