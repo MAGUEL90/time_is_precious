@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://cpp4a0tb7ea5d"
+path="res://.godot/imported/gabbi.dialogue-bf57370539fd79c2afd80a922a76a304.tres"
+
+[deps]
+
+source_file="res://dialogue/game_dialogue_conversations/gabbi/gabbi.dialogue"
+dest_files=["res://.godot/imported/gabbi.dialogue-bf57370539fd79c2afd80a922a76a304.tres"]
+
+[params]
+
+defaults=true

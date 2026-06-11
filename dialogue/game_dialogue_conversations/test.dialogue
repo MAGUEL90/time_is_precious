@@ -8,9 +8,9 @@ Nathan: Here are some choices.
 	Nathan: You picked the second one.
 - Start again => start
 - End the conversation 
-	do BaseDialougeManager.dialogue_deactivated.emit() 
+	do BaseDialogueManager.dialogue_deactivated.emit() 
 	=> END
 	
 Nathan: For more information see the online documentation.
-do BaseDialougeManager.dialogue_deactivated.emit() 
+do BaseDialogueManager.dialogue_deactivated.emit() 
 => END

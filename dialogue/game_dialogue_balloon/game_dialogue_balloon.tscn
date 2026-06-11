@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://73jm5qjy52vq"]
 
-[ext_resource type="Script" uid="uid://tj5r08eklatu" path="res://dialouge/game_dialouge_balloon/game_dialouge_balloon.gd" id="1_36de5"]
+[ext_resource type="Script" uid="uid://tj5r08eklatu" path="res://dialogue/game_dialogue_balloon/game_dialogue_balloon.gd" id="1_36de5"]
 [ext_resource type="PackedScene" uid="uid://ckvgyvclnwggo" path="res://addons/dialogue_manager/dialogue_label.tscn" id="2_a8ve6"]
 [ext_resource type="Script" uid="uid://bb52rsfwhkxbn" path="res://addons/dialogue_manager/dialogue_responses_menu.gd" id="3_72ixx"]
 
@@ -99,7 +99,7 @@ _data = {
 &"progress": SubResource("Animation_qkmqt")
 }
 
-[node name="GameDialougeBalloon" type="CanvasLayer"]
+[node name="GameDialogueBalloon" type="CanvasLayer"]
 layer = 100
 script = ExtResource("1_36de5")
 
@@ -187,8 +187,8 @@ size_flags_vertical = 8
 theme_override_constants/separation = 2
 alignment = 1
 script = ExtResource("3_72ixx")
-hide_failed_responses = true
 response_template = NodePath("ResponseExample")
+hide_failed_responses = true
 
 [node name="ResponseExample" type="Button" parent="Balloon/ResponsesMenu"]
 layout_mode = 2
