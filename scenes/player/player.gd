@@ -67,6 +67,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if current_interactable is NPCBase:
 		var npc: NPCBase = current_interactable as NPCBase
 		current_interactable = npc
+		current_npc_dialogue = npc
 
 		if npc.global_position.x >= global_position.x:
 			npc.animated_sprite_2d.flip_h = true
