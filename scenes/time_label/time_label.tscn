@@ -12,6 +12,7 @@ offset_right = 250.0
 offset_bottom = 50.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 2
 color = Color(0, 0.78948396, 0.794237, 1)
 script = ExtResource("1_f6cta")
 
@@ -22,12 +23,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_constants/separation = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 2
 
 [node name="DayLabel" type="Label" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2

@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=4 uid="uid://cudwi7trl76om"]
+[gd_scene load_steps=7 format=4 uid="uid://cudwi7trl76om"]
 
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="1_52j23"]
+[ext_resource type="PackedScene" uid="uid://cbah3a6bty5bh" path="res://scenes/time_label/time_label.tscn" id="1_c4jky"]
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="2_c4jky"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_qr4uh"]
 [ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="4_67dc2"]
@@ -13,7 +14,7 @@ tile_map_data = PackedByteArray("AAAAAAAAAQACAAYAAAAAAAEAAQABAAEAAAAAAAIAAQABAAE
 tile_set = ExtResource("1_52j23")
 
 [node name="NPC_Gabbi" parent="." instance=ExtResource("2_c4jky")]
-position = Vector2(201, 112)
+position = Vector2(110, 112)
 
 [node name="Player" parent="." instance=ExtResource("3_qr4uh")]
 position = Vector2(168, 117)
@@ -23,3 +24,13 @@ position = Vector2(124, 109)
 
 [node name="IntroDialogueTrigger" type="Node" parent="."]
 script = ExtResource("5_pt3ap")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="TimeLabel" parent="CanvasLayer" instance=ExtResource("1_c4jky")]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -250.0
+offset_right = 0.0
+grow_horizontal = 0
