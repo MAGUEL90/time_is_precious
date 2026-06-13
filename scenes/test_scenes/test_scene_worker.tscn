@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=4 uid="uid://0mhc8gr6qna7"]
+[gd_scene load_steps=12 format=4 uid="uid://0mhc8gr6qna7"]
 
 [ext_resource type="Script" uid="uid://bovovnq7kbcoy" path="res://scenes/test_scenes/test_scene_worker.gd" id="1_c84ir"]
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="2_q0h4i"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://qw2sc2h3urwo" path="res://scenes/city_spawner/city_spawner.tscn" id="9_esm0p"]
 [ext_resource type="PackedScene" uid="uid://b72ntkdkju1bx" path="res://scenes/job_board/job_board.tscn" id="10_odmqt"]
 [ext_resource type="PackedScene" uid="uid://bh7wd54bwa3f" path="res://scenes/ui/immigration_request_ui/immigration_request_ui.tscn" id="10_p2ul1"]
+[ext_resource type="PackedScene" uid="uid://beab8w4gsj112" path="res://scenes/work_state_boot_strap/work_state_boot_strap.tscn" id="11_m8l2g"]
 [ext_resource type="PackedScene" uid="uid://bit0j10nuewy1" path="res://scenes/worker_visual/base_worker_visual.tscn" id="11_pykga"]
 
 [node name="TestSceneWorker" type="Node2D" groups=["smoke_test"]]
@@ -40,3 +41,5 @@ spawn_position = Vector2(200, 200)
 position = Vector2(168, 117)
 
 [node name="ImmigrationRequestUI" parent="." instance=ExtResource("10_p2ul1")]
+
+[node name="WorkStateBootStrap" parent="." instance=ExtResource("11_m8l2g")]
