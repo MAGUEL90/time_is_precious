@@ -1,6 +1,6 @@
 # ARCHITECTURE - Time is Precious
 
-Last updated: 2026-06-09
+Last updated: 2026-06-14
 
 ## Purpose
 This document is the architectural source of truth for **Time is Precious**.
@@ -16,6 +16,7 @@ Time is Precious is a 2D top-down management RPG focused on:
 - City growth.
 - Player home / settlement progression.
 - Variable progression between players.
+- Long-term AI-assisted unique NPCs that stay controlled by game systems.
 
 ## Current Priority
 Do not expand into large systems too early.
@@ -221,6 +222,118 @@ The player should still understand why something happened.
 
 Do not hardcode every outcome into fixed numbers unless needed for early prototype stability. Use tunable ranges where appropriate.
 
+## AI NPC / Quest Integration Architecture
+AI-powered unique NPCs are a long-term feature layer. They should not replace the core game systems.
+
+The correct responsibility split is:
+
+```text
+AI NPC = character voice, personality, intent, contextual dialogue
+Quest System = rules, validation, objective tracking, reward approval
+Game State = source of truth for inventory, city data, trust, progress, and economy
+```
+
+AI can help important NPCs feel alive by responding through a defined profile instead of relying only on manually written dialogue branches.
+
+An AI-ready unique NPC profile should include:
+- identity and role
+- personality
+- speaking style
+- knowledge boundaries
+- hidden goals or motivations
+- relationship/trust state with the player
+- allowed quest categories
+- forbidden actions or forbidden knowledge
+
+Recommended AI usage:
+- Advisor NPC.
+- Village leader.
+- Merchant.
+- Mentor.
+- Rival.
+- Important quest giver.
+- Story-critical character.
+
+Do not use AI for every background villager or generic worker. Regular NPCs should remain system-driven unless there is a specific design reason.
+
+### AI Quest Flow
+AI NPCs may suggest quest intent, but the game must validate the final quest.
+
+Recommended flow:
+
+```text
+Player talks to unique NPC
+-> Game prepares NPC profile + relevant game state
+-> AI produces dialogue and/or quest intent
+-> Quest System validates type, item, quantity, reward, requirements, and timing
+-> Game creates the quest only if valid
+-> Game tracks progress and completion
+-> AI generates flavor dialogue after the system result is known
+```
+
+Example:
+
+```text
+NPC role: grain merchant
+World state: grain stock is low
+Player trust: neutral
+AI intent: request wheat supply
+Quest System validates: 10 wheat, 25 copper, +3 trust
+Result: valid quest offer
+```
+
+AI must not directly create money, items, rewards, inventory changes, trust changes, or progression flags.
+
+### Reward Authority
+Rewards should come from tunable quest rules, not from free AI generation.
+
+Possible reward types:
+- copper / money
+- trust increase
+- loyalty increase
+- village prosperity increase
+- discount unlock
+- skill XP
+- information access
+- trade access
+- special item
+
+Reward amount should depend on:
+- quest difficulty
+- item rarity
+- travel or time cost
+- player level/progress
+- NPC trust
+- city economic condition
+- urgency
+
+### Completion Flow
+When a quest is completed, the game should resolve the transaction before the AI responds.
+
+Recommended structure:
+
+```text
+Game checks objective
+-> If valid, update inventory/resources/rewards/trust/progress
+-> Mark quest completed
+-> Send result summary to AI
+-> AI produces character-specific reaction dialogue
+```
+
+This keeps the NPC expressive without letting AI break the economy or progression.
+
+### Development Boundary
+Do not build the full AI NPC system during early MVP.
+
+Recommended order:
+1. Basic dialogue system.
+2. Inventory and resource rules.
+3. Normal quest system.
+4. NPC trust / loyalty / relationship state.
+5. Quest templates and reward ranges.
+6. AI dialogue layer for selected unique NPCs.
+7. AI-assisted quest offering after validation rules are stable.
+
 ## Existing / Expected Core Systems
 Codex should analyze and preserve the intent of these systems:
 - WorkManager
@@ -231,6 +344,9 @@ Codex should analyze and preserve the intent of these systems:
 - Worker Hub
 - Job Board
 - Basic UI
+- Future Quest System
+- Future NPC trust / loyalty state
+- Future AI NPC dialogue layer
 - Save/load later, after core loop is stable
 
 ## Code Change Policy
@@ -261,3 +377,7 @@ Use explicit state separation instead.
 Another major risk is making the game too deterministic.
 
 If every system uses fixed numbers, fixed timing, fixed applicants, and fixed outcomes, the gameplay will become too easy to solve. The design should preserve controlled variation so each player's city develops differently.
+
+Future AI NPC risk: letting AI become the law of the world.
+
+Avoid any implementation where AI directly controls inventory, money, quest completion, reward distribution, or progression flags. AI should provide voice and intent. Game systems must remain authoritative.
