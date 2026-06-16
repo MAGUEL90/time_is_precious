@@ -1,4 +1,4 @@
-﻿extends Node
+extends Node
 
 signal items_changed()
 
@@ -108,7 +108,3 @@ func remove_item(id: String, qty: int) -> bool:
 	_emit_items_changed()
 
 	return true
-
-
-
-

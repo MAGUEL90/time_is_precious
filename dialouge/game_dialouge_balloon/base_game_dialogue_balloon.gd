@@ -64,7 +64,7 @@ var mutation_cooldown: Timer = Timer.new()
 @onready var responses_menu: DialogueResponsesMenu = %ResponsesMenu
 
 ## Indicator to show that player can progress dialogue.
-@onready var progress: Polygon2D = %Progress
+@onready var progress: CanvasItem = %Progress
 
 
 func _ready() -> void:

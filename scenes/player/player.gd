@@ -4,6 +4,7 @@ var player_sprite_direction: Vector2 = Vector2.RIGHT
 var current_interactable: Node = null
 var current_npc_dialogue: NPCBase = null
 
+var can_move: bool = true
 var can_interact: bool = false
 var dialogue_finished: bool = false
 @export var speed = 50
@@ -59,6 +60,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_close_claim_menu()
 		return
 
+	if not can_move:
+		return
+
 	if not event.is_action_pressed("interact"):
 		return
 	if not can_interact or current_interactable == null:
@@ -66,14 +70,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if current_interactable is NPCBase:
 		var npc: NPCBase = current_interactable as NPCBase
+
 		current_interactable = npc
+		current_npc_dialogue = npc
 
-		if npc.global_position.x >= global_position.x:
-			npc.animated_sprite_2d.flip_h = true
-		else:
-			npc.animated_sprite_2d.flip_h = false
-
-		npc.start_dialogue ()
+		npc.start_dialogue()
 		time_component_manager.toggle_pause()
 		npc.interactable_label_component.hide()
 		return
@@ -109,15 +110,18 @@ func _on_interactable_deactivated(interactable_owner: Node):
 		can_interact  = false
 
 func on_dialogue_activated() -> void:
+	can_move = false
+	velocity = Vector2.ZERO
 
 	if current_npc_dialogue:
 		current_npc_dialogue.on_dialogue  = true
 		current_npc_dialogue.can_walk = false
 		current_npc_dialogue.walk_cycle_duration.stop()
 
-	process_mode = Node.PROCESS_MODE_DISABLED
 
 func on_dialogue_deactivated() -> void:
+	can_move = true
+
 	time_component_manager.toggle_pause()
 	if current_npc_dialogue:
 		current_npc_dialogue.on_dialogue  = false
@@ -125,7 +129,6 @@ func on_dialogue_deactivated() -> void:
 		current_npc_dialogue.walk_cycle_duration.start()
 
 	current_npc_dialogue  = null
-	process_mode = Node.PROCESS_MODE_INHERIT
 
 func open_workshop_menu(workshop: WorkShop, claimable_index: int) -> void:
 	claim_menu_is_open = true

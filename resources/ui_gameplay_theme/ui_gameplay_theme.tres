@@ -27,6 +27,21 @@ shadow_color = Color(0, 0, 0, 0.3764706)
 shadow_size = 4
 
 [resource]
+DialogueBodyText/base_type = &"RichTextLabel"
+DialogueBodyText/colors/default_color = Color(0.19215687, 0.13333334, 0.0627451, 1)
+DialogueBodyText/font_sizes/normal_font_size = 12
+DialogueBodyText/fonts/normal_font = ExtResource("1_08jpu")
+DialogueNameText/base_type = &"RichTextLabel"
+DialogueNameText/colors/default_color = Color(1, 1, 1, 1)
+DialogueNameText/font_sizes/normal_font_size = 14
+DialogueNameText/fonts/normal_font = ExtResource("1_08jpu")
+DialogueResponseButton/base_type = &"Button"
+DialogueResponseButton/colors/font_color = Color(1, 1, 1, 1)
+DialogueResponseButton/font_sizes/font_size = 13
+DialogueResponseButton/fonts/font = ExtResource("1_08jpu")
+DialogueResponseButton/styles/hover = ExtResource("1_ar6jk")
+DialogueResponseButton/styles/normal = ExtResource("2_role8")
+DialogueResponseButton/styles/pressed = ExtResource("3_plut7")
 HudLabelMain/base_type = &"Label"
 HudLabelMain/colors/font_color = Color(1, 1, 1, 1)
 HudLabelMain/font_sizes/font_size = 18

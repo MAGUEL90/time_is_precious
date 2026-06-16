@@ -2,10 +2,13 @@ extends NodeState
 
 @export var player_reff: Player
 @onready var player_visual: PlayerVisual = $"../../PlayerVisual"
-	
+
 func _on_next_transition() -> void:
+	if not player_reff.can_move:
+		return
+
 	GameInputEvents.movement_input()
-	
+
 	if GameInputEvents.is_move():
 		transition.emit("playermovementstate")
 
