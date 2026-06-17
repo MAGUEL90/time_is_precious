@@ -74,7 +74,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_interactable = npc
 		current_npc_dialogue = npc
 
-		npc.start_dialogue()
+		if npc.global_position.x >= global_position.x:
+			npc.animated_sprite_2d.flip_h = true
+		else:
+			npc.animated_sprite_2d.flip_h = false
+
+		if not npc.start_dialogue():
+			current_npc_dialogue = null # dialog gagal mulai: jangan pause waktu, jangan simpan referensi stale
+			return
+
 		time_component_manager.toggle_pause()
 		npc.interactable_label_component.hide()
 		return
@@ -96,6 +104,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable != null:
 		return
+
+	if interactable_owner is NPCBase and not (interactable_owner as NPCBase).can_start_dialogue():
+		return # NPC tanpa dialog valid: jangan tampilkan prompt interact palsu, jangan jadikan interactable
 
 	current_interactable = interactable_owner
 	if current_interactable is PickUpItem:

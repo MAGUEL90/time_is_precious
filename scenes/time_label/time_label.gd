@@ -11,8 +11,8 @@ func _ready() -> void:
 	_on_time_changed(TimeComponentManager.current_day, TimeComponentManager.current_hour, 
 			int(TimeComponentManager.current_minute), TimeComponentManager.current_weather)
 
-func _on_time_changed(day:int, hour:int, minute:int, weather: String) -> void:
-	pass
+func _on_time_changed(day:int, hour:int, minute:int, _weather: String) -> void:
+	time_label.text = "Day: %d, Hour: %d, Minute: %d" % [day, hour, minute]
 
 	
 	

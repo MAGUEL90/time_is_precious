@@ -105,15 +105,21 @@ func _sync_state_position(force: bool):
 		npc_last_position = npc_state.last_position # cache untuk logic NPCBase
 		npc_current_position = npc_state.current_position # cache untuk logic NPCBase
 
-func start_dialogue() -> void:
+func can_start_dialogue() -> bool: # satu sumber validasi dialog: dipakai start_dialogue() dan Player (label interact)
+	if not npc_unique_dialogue:
+		return false
+	return not npc_unique_dialogue.get_titles().is_empty()
 
-	if not npc_unique_dialogue :
-		return
+func start_dialogue() -> bool:
+
+	if not can_start_dialogue(): # tanpa dialog valid, jangan buat balloon (balloon yatim menelan semua input)
+		return false
+
+	var title_list: Array = npc_unique_dialogue.get_titles()
 
 	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
 
-	var title_list: Array = npc_unique_dialogue.get_titles()
 	var contract_founded: bool = false
 	var npc_states: Array = [self]
 	var intro_title: String = "intro_%s_1" % npc_name.to_lower()
@@ -121,7 +127,7 @@ func start_dialogue() -> void:
 	if not has_played_intro_dialogue and title_list.has(intro_title):
 		has_played_intro_dialogue = true
 		balloon.start(npc_unique_dialogue, intro_title, npc_states)
-		return
+		return true
 
 	for title in title_list:
 		if title.begins_with("contract") and npc_allow_contract:
@@ -135,8 +141,10 @@ func start_dialogue() -> void:
 		var casual_title: String = "casual_%s" % npc_name.to_lower() + "_1"
 		if title_list.has(casual_title):
 			balloon.start(npc_unique_dialogue , casual_title, npc_states)
-		elif title_list.size() > 0:
+		else: # title_list dijamin tidak kosong oleh guard di atas
 			balloon.start(npc_unique_dialogue , title_list[0], npc_states)
+
+	return true
 
 func _on_walk_cycle_duration_timeout() -> void:
 	if allow_random_walk == false:

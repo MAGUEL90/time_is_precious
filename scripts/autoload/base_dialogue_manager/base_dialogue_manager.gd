@@ -6,6 +6,8 @@ signal dialogue_deactivated()
 signal contract_activated()
 signal contract_deactivated()
 
+var intro_seen: bool = false # runtime/session saja; reset saat game restart (belum ada save/load)
+
 func on_dialogue_activated():
 	dialogue_activated.emit()
 

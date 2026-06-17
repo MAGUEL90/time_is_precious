@@ -1,0 +1,9 @@
+~ intro_1
+do BaseDialogueManager.dialogue_activated.emit()
+Narrator: Time is precious.
+Narrator: Every morning gives you a choice.
+Narrator: Spend your time carelessly, and the village will remain the same.
+Narrator: Use your time wisely, and even one small action can change your future.
+Narrator: Your journey begins now.
+do BaseDialogueManager.dialogue_deactivated.emit()
+=> END

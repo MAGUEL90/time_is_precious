@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="NPCData" load_steps=3 format=3 uid="uid://b472ffcdbw10m"]
 
 [ext_resource type="Script" uid="uid://b5nthm3jr01og" path="res://resources/npc_data/npc_data.gd" id="1_flsga"]
-[ext_resource type="Resource" uid="uid://dyevgow0mo38n" path="res://dialouge/game_dialouge_conversations/gabbi/gabbi.dialogue" id="2_83yvy"]
+[ext_resource type="Resource" uid="uid://cpp4a0tb7ea5d" path="res://dialogue/game_dialogue_conversations/gabbi/gabbi.dialogue" id="2_83yvy"]
 
 [resource]
 script = ExtResource("1_flsga")
