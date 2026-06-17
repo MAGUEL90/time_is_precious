@@ -1,10 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://cwsby5kvnt7q8"]
+[gd_scene load_steps=14 format=3 uid="uid://cwsby5kvnt7q8"]
 
 [ext_resource type="PackedScene" uid="uid://c0ov4l7wxnset" path="res://scenes/npc_base/npc_base.tscn" id="1_xdsrc"]
 [ext_resource type="Script" uid="uid://w1hqy5mmk52q" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.gd" id="2_r8fjs"]
 [ext_resource type="Resource" uid="uid://b472ffcdbw10m" path="res://resources/npc_data/data_gabbi.tres" id="3_8eagj"]
 [ext_resource type="Texture2D" uid="uid://d1pt23txcpete" path="res://assets/characters/character animations/1_gabbi_animation_png/NPC_1_Gabbi_animation.png" id="3_r8fjs"]
 [ext_resource type="Resource" uid="uid://bs8yffbvwxrdp" path="res://resources/npc_states/npc_state_gabbi.tres" id="4_4vqfs"]
+[ext_resource type="PackedScene" uid="uid://o6w0l75t6qiv" path="res://scenes/base_character_visual/gabbi_visual.tscn" id="6_b5124"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_b5124"]
 atlas = ExtResource("3_r8fjs")
@@ -68,29 +69,39 @@ npc_state = ExtResource("4_4vqfs")
 daily_satisfaction_decay = 0.02
 
 [node name="AnimatedSprite2D" parent="." index="0"]
+visible = false
 sprite_frames = SubResource("SpriteFrames_pvjd6")
 animation = &"walk"
 
-[node name="NPCStateMachine" parent="." index="4" node_paths=PackedStringArray("initial_node_state")]
+[node name="GabbiVisual" parent="." index="1" instance=ExtResource("6_b5124")]
+
+[node name="CollisionShape2D" parent="." index="2"]
+visible = false
+position = Vector2(0, 14)
+
+[node name="InteractableComponent" parent="." index="3"]
+visible = false
+position = Vector2(0, 12)
+
+[node name="NPCStateMachine" parent="." index="5" node_paths=PackedStringArray("initial_node_state")]
 initial_node_state = NodePath("NPCIdleState")
 
-[node name="NPCIdleState" parent="NPCStateMachine" index="0" node_paths=PackedStringArray("npc_reff", "animated_sprite_2d")]
+[node name="NPCIdleState" parent="NPCStateMachine" index="0" node_paths=PackedStringArray("npc_reff", "character_visual")]
 npc_reff = NodePath("../..")
-animated_sprite_2d = NodePath("../../AnimatedSprite2D")
+character_visual = NodePath("../../GabbiVisual")
 
-[node name="NPCWalkState" parent="NPCStateMachine" index="1" node_paths=PackedStringArray("npc_reff", "animated_sprite_2d")]
+[node name="NPCWalkState" parent="NPCStateMachine" index="1" node_paths=PackedStringArray("npc_reff", "character_visual")]
 npc_reff = NodePath("../..")
-animated_sprite_2d = NodePath("../../AnimatedSprite2D")
-min_speed = null
-max_speed = null
+character_visual = NodePath("../../GabbiVisual")
 
-[node name="NPCWorkingState" parent="NPCStateMachine" index="2" node_paths=PackedStringArray("npc_reff", "animated_sprite_2d")]
+[node name="NPCWorkingState" parent="NPCStateMachine" index="2" node_paths=PackedStringArray("npc_reff", "character_visual")]
 npc_reff = NodePath("../..")
-animated_sprite_2d = NodePath("../../AnimatedSprite2D")
+character_visual = NodePath("../../GabbiVisual")
 
-[node name="WalkCycleDuration" parent="." index="5"]
+[node name="WalkCycleDuration" parent="." index="6"]
 one_shot = false
 
-[node name="DebugNPCLabel" parent="." index="7"]
+[node name="DebugNPCLabel" parent="." index="8"]
+visible = false
 offset_top = -39.0
 offset_bottom = 49.0

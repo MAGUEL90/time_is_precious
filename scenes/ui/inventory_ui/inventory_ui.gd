@@ -9,7 +9,7 @@ signal consume_item_success(item_id,
 							player_position,
 							slot_ref_global_rect)
 
-const DEFAULT_SLOT_ICON: Texture2D = preload("uid://dd00ccut2rtj7")
+const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var info_label: Label = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Header/InfoLabel
 @onready var label_fatigue: Label = $Root/Center/Window/Margin/MainVBox/Body/LeftPanel/StatsPanel/MarginContainer/VBoxContainer/LabelFatigue

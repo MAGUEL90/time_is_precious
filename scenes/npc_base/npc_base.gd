@@ -15,6 +15,7 @@ const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 var on_dialogue : bool = false
 var can_walk: bool = false
 var player_reff: Player
+var has_played_intro_dialogue: bool = false
 
 # ============= IDENTITY =============
 var npc_name: String
@@ -41,6 +42,7 @@ var is_clear_day: bool = false
 # ============= SHIFT
 enum Shift { MORNING, AFTERNOON, NOON, NIGHT}
 var current_shift: Shift = Shift.MORNING
+@export var allow_random_walk: bool = true
 
 @export var state_pos_sync_threshold: float = 0.5 # jarak minimal (pixel/unit) sebelum posisi disimpan ke state (biar tidak update terus tiap frame)
 @export var negotiation_base_duration_minutes: int = 15
@@ -51,44 +53,43 @@ func _ready() -> void:
 	set_data_attribute()
 	_sync_shift_from_hour()
 	_sync_state_position(true) # pastikan state langsung sinkron dengan posisi awal saat spawn/load
-	
+
 	interactable_label_component.hide()
-	
+
 	player_reff = get_tree().get_first_node_in_group("player") as Player
 
-	walk_cycle_duration.wait_time = randf_range(2.0, 3.5)
-	walk_cycle_duration.start()
-	
+	if allow_random_walk:
+		walk_cycle_duration.wait_time = randf_range(2.0, 3.5)
+		walk_cycle_duration.start()
+
 	TimeComponentManager.morning_shift.connect(on_morning_shift) # shift harus jalan walau player belum ada
 	TimeComponentManager.afternoon_shift.connect(on_afternoon_shift) # shift harus jalan walau player belum ada
 	TimeComponentManager.noon_shift.connect(on_noon_shift) # noon dianggap bagian “afternoon” supaya state tetap update
 	TimeComponentManager.night_shift.connect(on_night_shift) # shift harus jalan walau player belum ada
 	TimeComponentManager.new_day_started.connect(on_new_day_started) # daily tick: update NPC sekali per hari
 	_recalc_contract_state()
-	
+
 	if player_reff:
 		# Connect signal dari InteractableComponent ke fungsi Player
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))  # "self" = NPC ini sendiri)
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 
 func _physics_process(_delta: float) -> void:
-	debug_npc()
+	# debug_npc()
 	_sync_state_position(false) # setiap frame fisika, cek apakah NPC pindah; kalau iya, simpan ke npc_state
 
 func _recalc_contract_state() -> void:
-	
+
 	var is_night: bool = (current_shift == Shift.NIGHT)
 
 	npc_allow_contract = (not is_night and \
 	npc_current_satisfaction > 0.1 and \
 	TimeComponentManager.current_weather in ["clear", "cloudy"])
-	
-	
 
 func _sync_state_position(force: bool):
 	if not npc_state:
 		return
-	
+
 	# force dipakai untuk kasus spawn/load/teleport (langsung sinkron tanpa threshold)
 	if force:
 		npc_state.last_position = npc_state.current_position # simpan posisi sebelumnya (kalau ada)
@@ -96,7 +97,7 @@ func _sync_state_position(force: bool):
 		npc_last_position = npc_state.last_position # cache untuk logic NPCBase
 		npc_current_position = npc_state.current_position # cache untuk logic NPCBase
 		return
-	
+
 	# normal mode: hanya update kalau benar-benar pindah cukup jauh
 	if global_position.distance_to(npc_state.current_position) >= state_pos_sync_threshold:
 		npc_state.last_position = npc_state.current_position # geser current -> last
@@ -121,6 +122,12 @@ func start_dialogue() -> bool:
 
 	var contract_founded: bool = false
 	var npc_states: Array = [self]
+	var intro_title: String = "intro_%s_1" % npc_name.to_lower()
+
+	if not has_played_intro_dialogue and title_list.has(intro_title):
+		has_played_intro_dialogue = true
+		balloon.start(npc_unique_dialogue, intro_title, npc_states)
+		return true
 
 	for title in title_list:
 		if title.begins_with("contract") and npc_allow_contract:
@@ -140,12 +147,15 @@ func start_dialogue() -> bool:
 	return true
 
 func _on_walk_cycle_duration_timeout() -> void:
-	can_walk = true
+	if allow_random_walk == false:
+		can_walk = false
+	else:
+		can_walk = true
 
 func on_morning_shift() -> void:
 	current_shift = Shift.MORNING
 	call_deferred("_recalc_contract_state")
-	
+
 func on_afternoon_shift() -> void:
 	current_shift = Shift.AFTERNOON
 	call_deferred("_recalc_contract_state")
@@ -161,15 +171,15 @@ func on_night_shift() -> void:
 func on_new_day_started(day: int) -> void: # memastikan daily update hanya sekali per hari
 	if not npc_state or not npc_data: #safety
 		return
-	
+
 	if npc_state.last_updated_day == day: # sudah di-update untuk hari ini
 		return
-	
+
 	npc_state.last_updated_day = day # tandai agar tidak double
 	daily_update(day) # isi logic harian di sini
 
 func daily_update(_day: int) -> void: # placeholder: nanti isi needs/contract progression, dll
-	
+
 	if daily_satisfaction_decay > 0.0: # kalau mau test decay, set angka di inspector (mis. 0.02)
 		npc_state.current_satisfaction = npc_data.clamp_satisfaction(npc_state.current_satisfaction - daily_satisfaction_decay)
 		npc_current_satisfaction = npc_state.current_satisfaction # sync cache untuk logic NPCBase
@@ -183,22 +193,22 @@ func _sync_shift_from_hour() -> void:
 		current_shift = Shift.AFTERNOON
 	elif hour >= TimeComponentManager.noon_hour and hour < TimeComponentManager.night_hour:
 		current_shift = Shift.NOON
-	elif hour >= TimeComponentManager.night_hour or hour < TimeComponentManager.morning_hour: 
+	elif hour >= TimeComponentManager.night_hour or hour < TimeComponentManager.morning_hour:
 		current_shift = Shift.NIGHT
 
 func set_data_attribute() -> void:
 	if not npc_data: # NPCData wajib ada sebagai template
 		return # tanpa NPCData, NPC tidak punya identitas/template
-	
+
 	var state_was_created: bool = false # penanda: state baru dibuat di runtime (supaya kita tidak overwrite progress save)
 	if not npc_state: # kalau state belum di-assign dari inspector
 		npc_state = NPCState.new() # buat state runtime baru supaya NPC tetap bisa jalan
 		state_was_created = true # tandai bahwa ini state baru
-	
+
 	# pastikan state punya npc_id yang cocok untuk save/load
 	if npc_state.npc_id == "" and npc_data.id != "": # kalau belum ada id, set dari NPCData
 		npc_state.npc_id = npc_data.id # mapping state -> NPCData (kunci save/load)
-	
+
 	# ===== ambil identitas dari NPCData (template) =====
 	npc_name = npc_data.npc_name # nama tampil NPC dari template
 	npc_role = npc_data.role # role dari template (supaya siap dipakai di UI/logic)
@@ -217,22 +227,22 @@ func set_data_attribute() -> void:
 	var satisfaction_value: float = npc_data.clamp_satisfaction(npc_state.current_satisfaction) # clamp selalu lewat helper NPCData
 	npc_state.current_satisfaction = satisfaction_value # simpan balik ke state agar konsisten
 	npc_current_satisfaction = satisfaction_value # pakai untuk logic runtime (allow_contract, dll)
-	
+
 	# ===== posisi: ambil dari state, fallback ke posisi node saat ini =====
 	if state_was_created: # posisi hanya di-init jika state baru (jangan override posisi hasil load)
 		npc_state.current_position = global_position # set posisi awal sesuai scene
 		npc_state.last_position = global_position # set last_position awal sama dengan current
-	
+
 	npc_current_position = npc_state.current_position # cache runtime
 	npc_last_position = npc_state.last_position # cache runtime
-	global_position = Vector2(randi_range(50, 100), randi_range(50, 100)) # tempatkan NPC sesuai state (penting untuk konsistensi load)
+	global_position = npc_state.current_position
 
 func debug_npc() -> String:
 	var trust_value: float = npc_state.trust # tampilkan trust kalau sudah ada di state (fallback 0)
 	debug_npc_label.text = "name: %s\nallow_contract: %s\nsatisfaction: %.2f\ntrust: %.2f\nstart_fee_req? %s\nstart_fee: %d" % [
-	npc_name, 
-	npc_allow_contract, 
-	npc_current_satisfaction, 
+	npc_name,
+	npc_allow_contract,
+	npc_current_satisfaction,
 	trust_value,
 	npc_contract_requires_start_fee,
 	npc_contract_start_fee_shekel
@@ -259,9 +269,9 @@ func try_negotiate_contract() -> void:
 		var player: Player = get_tree().get_first_node_in_group("player")
 		if player == null:
 			return
-		
+
 		player_reff = player
-	
+
 	player_reff.increase_fatigue(0.03)
 	player_reff.increase_hunger(0.01)
 	TimeComponentManager.advance_minutes(negotiation_base_duration_minutes)

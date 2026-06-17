@@ -1,8 +1,11 @@
-[gd_scene load_steps=12 format=3 uid="uid://73jm5qjy52vq"]
+[gd_scene load_steps=20 format=3 uid="uid://73jm5qjy52vq"]
 
 [ext_resource type="Script" uid="uid://tj5r08eklatu" path="res://dialogue/game_dialogue_balloon/game_dialogue_balloon.gd" id="1_36de5"]
+[ext_resource type="Texture2D" uid="uid://ch21q10p6u6ah" path="res://assets/ui/all_asset_ui/all_asset_17.06.2026.png" id="2_0hdkk"]
 [ext_resource type="PackedScene" uid="uid://ckvgyvclnwggo" path="res://addons/dialogue_manager/dialogue_label.tscn" id="2_a8ve6"]
+[ext_resource type="Texture2D" uid="uid://dm2r6rgydnsf7" path="res://assets/ui/ui_tileset.png" id="2_jmgap"]
 [ext_resource type="Script" uid="uid://bb52rsfwhkxbn" path="res://addons/dialogue_manager/dialogue_responses_menu.gd" id="3_72ixx"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_0hdkk"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_spyqn"]
 bg_color = Color(0, 0, 0, 1)
@@ -63,43 +66,57 @@ MarginContainer/constants/margin_right = 30
 MarginContainer/constants/margin_top = 15
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_qkmqt")
 
-[sub_resource type="Animation" id="Animation_nlsx6"]
-length = 0.001
-tracks/0/type = "bezier"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Progress:position:y")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"handle_modes": PackedInt32Array(0),
-"points": PackedFloat32Array(0, -0.25, 0, 0.25, 0),
-"times": PackedFloat32Array(0)
-}
+[sub_resource type="AtlasTexture" id="AtlasTexture_au81w"]
+atlas = ExtResource("2_0hdkk")
+region = Rect2(1, 24, 176, 60)
 
-[sub_resource type="Animation" id="Animation_qkmqt"]
-resource_name = "progress"
-loop_mode = 1
-step = 0.1
-tracks/0/type = "bezier"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Progress:position:y")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"handle_modes": PackedInt32Array(0, 0, 0, 0, 0),
-"points": PackedFloat32Array(0, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.2, -0.0157438, -4, -0.2, 0.0112069, 0.25, 0, -4, -0.25, 0, 0.25, 0, 0, -0.2, 0.00299701, 0.25, 0),
-"times": PackedFloat32Array(0, 0.1, 0.5, 0.6, 1)
-}
+[sub_resource type="AtlasTexture" id="AtlasTexture_yqayt"]
+atlas = ExtResource("2_0hdkk")
+region = Rect2(178, 24, 40, 40)
 
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_1337t"]
-_data = {
-&"RESET": SubResource("Animation_nlsx6"),
-&"progress": SubResource("Animation_qkmqt")
-}
+[sub_resource type="AtlasTexture" id="AtlasTexture_uxx4e"]
+atlas = ExtResource("2_0hdkk")
+region = Rect2(219, 24, 99, 40)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h758f"]
+atlas = ExtResource("2_0hdkk")
+region = Rect2(177, 96, 46, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sa7tv"]
+atlas = SubResource("AtlasTexture_h758f")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jmgap"]
+atlas = ExtResource("2_jmgap")
+region = Rect2(85, 96, 17, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0hdkk"]
+atlas = ExtResource("2_jmgap")
+region = Rect2(102, 96, 17, 12)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_au81w"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jmgap")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0hdkk")
+}],
+"loop": true,
+"name": &"button_pressed",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jmgap")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
 
 [node name="GameDialogueBalloon" type="CanvasLayer"]
+process_mode = 3
 layer = 100
 script = ExtResource("1_36de5")
 
@@ -111,63 +128,121 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_vertical = 8
 theme = SubResource("Theme_qq3yp")
 
-[node name="MarginContainer" type="MarginContainer" parent="Balloon"]
+[node name="BottomCornerContainer" type="Control" parent="Balloon"]
 layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -219.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ChatBoxRoot" type="Control" parent="Balloon/BottomCornerContainer"]
+custom_minimum_size = Vector2(328, 152)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -164.0
+offset_top = -168.0
+offset_right = 164.0
+offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="Balloon/MarginContainer"]
-clip_children = 2
-layout_mode = 2
-mouse_filter = 1
+[node name="TemplateDialogue" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -164.0
+offset_top = -76.0
+offset_right = 12.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(2, 2)
+texture = SubResource("AtlasTexture_au81w")
+expand_mode = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="Balloon/MarginContainer/PanelContainer"]
-layout_mode = 2
+[node name="TexturePhoto" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 10.0
+offset_right = 58.0
+offset_bottom = 50.0
+texture = SubResource("AtlasTexture_yqayt")
+expand_mode = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Balloon/MarginContainer/PanelContainer/MarginContainer"]
-layout_mode = 2
+[node name="TemplateChat" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+layout_mode = 0
+offset_left = 59.0
+offset_top = 10.0
+offset_right = 158.0
+offset_bottom = 50.0
+texture = SubResource("AtlasTexture_uxx4e")
+expand_mode = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CharacterLabel" type="RichTextLabel" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="DialogueLabel" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue/TemplateChat" instance=ExtResource("2_a8ve6")]
 unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0.501961)
-layout_mode = 2
-mouse_filter = 1
-bbcode_enabled = true
-text = "Character"
-fit_content = true
-scroll_active = false
-
-[node name="DialogueLabel" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer/VBoxContainer" instance=ExtResource("2_a8ve6")]
-unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+offset_left = 3.5
+offset_top = 3.5
+offset_right = 95.5
+offset_bottom = 36.5
+grow_horizontal = 1
 size_flags_vertical = 3
-text = "Dialogue..."
+theme = ExtResource("5_0hdkk")
+theme_type_variation = &"DialogueBodyText"
+text = "asdasd"
 
-[node name="Control" type="Control" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(20, 10)
-layout_mode = 2
-size_flags_vertical = 8
+[node name="TemplateName" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 45.0
+offset_right = 61.0
+offset_bottom = 57.0
+size_flags_horizontal = 4
+size_flags_vertical = 0
+texture = SubResource("AtlasTexture_sa7tv")
+expand_mode = 1
 
-[node name="Progress" type="Polygon2D" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer/Control"]
+[node name="CharacterLabel" type="RichTextLabel" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue/TemplateName"]
 unique_name_in_owner = true
-polygon = PackedVector2Array(0, 0, 10, 10, 20, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -3.0
+offset_right = 20.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(20, 4)
+mouse_filter = 1
+theme = ExtResource("5_0hdkk")
+theme_type_variation = &"DialogueNameText"
+bbcode_enabled = true
+text = "Gabbi"
+scroll_active = false
+horizontal_alignment = 1
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer/Control"]
-libraries = {
-&"": SubResource("AnimationLibrary_1337t")
-}
-autoplay = "progress"
+[node name="Progress" type="AnimatedSprite2D" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+unique_name_in_owner = true
+position = Vector2(155.5, 41.5)
+sprite_frames = SubResource("SpriteFrames_au81w")
+animation = &"button_pressed"
 
 [node name="ResponsesMenu" type="VBoxContainer" parent="Balloon" node_paths=PackedStringArray("response_template")]
 unique_name_in_owner = true
@@ -177,21 +252,24 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -290.5
-offset_top = -35.0
-offset_right = 290.5
-offset_bottom = 35.0
+offset_left = -90.0
+offset_top = 105.0
+offset_right = 90.0
+offset_bottom = 129.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 8
-theme_override_constants/separation = 2
+theme_override_constants/separation = 4
 alignment = 1
 script = ExtResource("3_72ixx")
 response_template = NodePath("ResponseExample")
 hide_failed_responses = true
 
 [node name="ResponseExample" type="Button" parent="Balloon/ResponsesMenu"]
+custom_minimum_size = Vector2(180, 24)
 layout_mode = 2
+theme = ExtResource("5_0hdkk")
+theme_type_variation = &"DialogueResponseButton"
 text = "Response example"
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]

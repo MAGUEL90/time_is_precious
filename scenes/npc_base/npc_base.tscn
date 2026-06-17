@@ -34,13 +34,12 @@ position = Vector2(0, -8)
 shape = SubResource("CircleShape2D_ydwj7")
 debug_color = Color(0.6133299, 0.5379511, 9.62615e-07, 0.41960785)
 
-[node name="InteractableLabelComponent" parent="." node_paths=PackedStringArray("parent_node") instance=ExtResource("3_qfur7")]
+[node name="InteractableLabelComponent" parent="." instance=ExtResource("3_qfur7")]
 visible = false
 offset_left = -6.0
 offset_top = -33.0
 offset_right = -6.0
 offset_bottom = -33.0
-parent_node = NodePath("..")
 position_offset = Vector2(-12, -28)
 
 [node name="NPCStateMachine" type="Node" parent="."]
@@ -66,9 +65,11 @@ autostart = true
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 
 [node name="DebugNPCLabel" parent="." instance=ExtResource("6_kba5p")]
+visible = false
 offset_right = 219.0
 offset_bottom = 88.0
 scale = Vector2(0.05, 0.05)
 theme_override_font_sizes/font_size = 64
+text = ""
 
 [connection signal="timeout" from="WalkCycleDuration" to="." method="_on_walk_cycle_duration_timeout"]

@@ -1,7 +1,7 @@
 extends Node
 
 @export var seconds_per_minute: float = 0.1 # 1 detik real = 1 menit game
-@export var start_hour: int = 7
+@export var start_hour: int = 10
 @export var start_day: int 
 @export var tint_transition_minutes: float = 30.0 # durasi transisi tint (menit) agar tidak patah di batas jam
 @export var env_transition_speed: float = 12.0 # kecepatan transisi warna environment (lebih besar = lebih cepat)
@@ -44,7 +44,7 @@ var _target_environment_color: Color = Color(1.0, 1.0 ,1.0)
 func _ready() -> void:
 	current_hour = start_hour
 	current_day = start_day
-	roll_daily_weather() # set cuaca awal untuk debugging/awal game
+	# roll_daily_weather() # set cuaca awal untuk debugging/awal game
 	emit_time_signal() # broadcast state awal (UI/NPC bisa langsung sync)
 	day_cycle(true) # hitung warna awal + paksa emit shift pertama kali
 	
