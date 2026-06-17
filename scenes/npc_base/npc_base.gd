@@ -15,6 +15,7 @@ const GAME_dialogue_BALLOON = preload("uid://73jm5qjy52vq")
 var on_dialogue : bool = false
 var can_walk: bool = false
 var player_reff: Player
+var has_played_intro_dialogue: bool = false
 
 # ============= IDENTITY =============
 var npc_name: String
@@ -115,6 +116,12 @@ func start_dialogue() -> void:
 	var title_list: Array = npc_unique_dialogue.get_titles()
 	var contract_founded: bool = false
 	var npc_states: Array = [self]
+	var intro_title: String = "intro_%s_1" % npc_name.to_lower()
+
+	if not has_played_intro_dialogue and title_list.has(intro_title):
+		has_played_intro_dialogue = true
+		balloon.start(npc_unique_dialogue, intro_title, npc_states)
+		return
 
 	for title in title_list:
 		if title.begins_with("contract") and npc_allow_contract:

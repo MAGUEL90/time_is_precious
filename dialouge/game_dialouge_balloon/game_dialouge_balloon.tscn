@@ -1,9 +1,9 @@
-[gd_scene load_steps=19 format=3 uid="uid://73jm5qjy52vq"]
+[gd_scene load_steps=20 format=3 uid="uid://73jm5qjy52vq"]
 
 [ext_resource type="Script" uid="uid://tj5r08eklatu" path="res://dialouge/game_dialouge_balloon/game_dialouge_balloon.gd" id="1_36de5"]
+[ext_resource type="Texture2D" uid="uid://ch21q10p6u6ah" path="res://assets/ui/all_asset_ui/all_asset_17.06.2026.png" id="2_0hdkk"]
 [ext_resource type="PackedScene" uid="uid://ckvgyvclnwggo" path="res://addons/dialogue_manager/dialogue_label.tscn" id="2_a8ve6"]
 [ext_resource type="Texture2D" uid="uid://dm2r6rgydnsf7" path="res://assets/ui/ui_tileset.png" id="2_jmgap"]
-[ext_resource type="Texture2D" uid="uid://b8txgutwspwvu" path="res://assets/ui/chat_box_test_design_delete_soon.png" id="3_0hdkk"]
 [ext_resource type="Script" uid="uid://bb52rsfwhkxbn" path="res://addons/dialogue_manager/dialogue_responses_menu.gd" id="3_72ixx"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_0hdkk"]
 
@@ -67,19 +67,23 @@ MarginContainer/constants/margin_top = 15
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_qkmqt")
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_au81w"]
-atlas = ExtResource("2_jmgap")
-region = Rect2(16, 19, 164, 76)
+atlas = ExtResource("2_0hdkk")
+region = Rect2(1, 24, 176, 60)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_yqayt"]
-atlas = ExtResource("2_jmgap")
-region = Rect2(184, 19, 40, 40)
+atlas = ExtResource("2_0hdkk")
+region = Rect2(178, 24, 40, 40)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_uxx4e"]
-atlas = ExtResource("3_0hdkk")
+atlas = ExtResource("2_0hdkk")
+region = Rect2(219, 24, 99, 40)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h758f"]
+atlas = ExtResource("2_0hdkk")
+region = Rect2(177, 96, 46, 12)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_sa7tv"]
-atlas = ExtResource("2_jmgap")
-region = Rect2(183, 63, 46, 13)
+atlas = SubResource("AtlasTexture_h758f")
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_jmgap"]
 atlas = ExtResource("2_jmgap")
@@ -152,29 +156,36 @@ grow_vertical = 0
 
 [node name="TemplateDialogue" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -164.0
+offset_top = -76.0
+offset_right = 12.0
+offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
+scale = Vector2(2, 2)
 texture = SubResource("AtlasTexture_au81w")
-expand_mode = 1
+expand_mode = 3
 
 [node name="TexturePhoto" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
-offset_left = 40.0
-offset_top = 28.0
-offset_right = 126.0
-offset_bottom = 124.0
+offset_left = 18.0
+offset_top = 10.0
+offset_right = 58.0
+offset_bottom = 50.0
 texture = SubResource("AtlasTexture_yqayt")
 expand_mode = 1
 
 [node name="TemplateChat" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
-offset_left = 129.0
-offset_top = 23.0
-offset_right = 290.0
-offset_bottom = 132.0
+offset_left = 59.0
+offset_top = 10.0
+offset_right = 158.0
+offset_bottom = 50.0
 texture = SubResource("AtlasTexture_uxx4e")
 expand_mode = 1
 
@@ -183,10 +194,10 @@ unique_name_in_owner = true
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
-offset_left = 11.0
-offset_top = 37.0
-offset_right = 151.0
-offset_bottom = 97.0
+offset_left = 3.5
+offset_top = 3.5
+offset_right = 95.5
+offset_bottom = 36.5
 grow_horizontal = 1
 size_flags_vertical = 3
 theme = ExtResource("5_0hdkk")
@@ -195,10 +206,10 @@ text = "asdasd"
 
 [node name="TemplateName" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
-offset_left = 167.0
-offset_top = 29.0
-offset_right = 259.0
-offset_bottom = 55.0
+offset_left = 15.0
+offset_top = 45.0
+offset_right = 61.0
+offset_bottom = 57.0
 size_flags_horizontal = 4
 size_flags_vertical = 0
 texture = SubResource("AtlasTexture_sa7tv")
@@ -207,15 +218,18 @@ expand_mode = 1
 [node name="CharacterLabel" type="RichTextLabel" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue/TemplateName"]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 5.0
-offset_top = 6.0
-offset_right = -6.0
-offset_bottom = -3.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -3.0
+offset_right = 20.0
+offset_bottom = 3.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(20, 4)
 mouse_filter = 1
 theme = ExtResource("5_0hdkk")
 theme_type_variation = &"DialogueNameText"
@@ -226,25 +240,24 @@ horizontal_alignment = 1
 
 [node name="Progress" type="AnimatedSprite2D" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 unique_name_in_owner = true
-position = Vector2(281, 113)
-scale = Vector2(2, 2)
+position = Vector2(155.5, 41.5)
 sprite_frames = SubResource("SpriteFrames_au81w")
 animation = &"button_pressed"
 
 [node name="ResponsesMenu" type="VBoxContainer" parent="Balloon" node_paths=PackedStringArray("response_template")]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 7
+anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 1.0
+anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -180.0
-offset_top = -260.0
-offset_right = 180.0
-offset_bottom = -180.0
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = 105.0
+offset_right = 90.0
+offset_bottom = 129.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 4
 alignment = 1
@@ -253,7 +266,7 @@ response_template = NodePath("ResponseExample")
 hide_failed_responses = true
 
 [node name="ResponseExample" type="Button" parent="Balloon/ResponsesMenu"]
-custom_minimum_size = Vector2(360, 24)
+custom_minimum_size = Vector2(180, 24)
 layout_mode = 2
 theme = ExtResource("5_0hdkk")
 theme_type_variation = &"DialogueResponseButton"

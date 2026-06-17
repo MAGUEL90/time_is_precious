@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_hraw1")
 npc_id = "gabbi"
-current_position = Vector2(355, 180)
+current_position = Vector2(87, 24)
 metadata/_custom_type_script = "uid://ckqiyfg17w51d"

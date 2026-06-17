@@ -142,6 +142,3 @@ animations = [{
 
 [node name="HairSprite" parent="." index="4"]
 sprite_frames = SubResource("SpriteFrames_xu0kb")
-
-[node name="AccessoriesSprite" parent="." index="5"]
-visible = false

@@ -18,8 +18,60 @@ Gabbi: You really came back for this place?
 	do BaseDialogueManager.dialogue_deactivated.emit()
 	=> END
 
+~ intro_gabbi_1
+do BaseDialogueManager.dialogue_activated.emit()
+Gabbi: Hi there! Welcome to Time is Precious.
+Gabbi: It is a 2D pixel management RPG about time, work, resources, and choices.
+Gabbi: Every decision is part of building a better life.
+=> gabbi_intro_questions_first
+
+~ gabbi_intro_questions_first
+Gabbi: What would you like to know first?
+- Can you tell me more about this?
+	Gabbi: You gather materials, meet villagers, and manage your day.
+	Gabbi: Step by step, you help this village grow.
+	=> gabbi_intro_questions_more
+- What makes this game different?
+	Gabbi: The village is meant to feel like more than a background.
+	Gabbi: Some characters are planned to respond in more personal and unexpected ways as the game develops.
+	=> gabbi_intro_questions_more
+- When will the game be released?
+	Gabbi: The playable prototype is planned to be available as early as the end of 2026.
+	=> gabbi_intro_questions_more
+- Where can we play it?
+	Gabbi: The plan is to make it playable on Android and PC.
+	=> gabbi_intro_questions_more
+- I am ready to begin.
+	Gabbi: It is still early, but every step brings the world closer to life.
+	Gabbi: One percent at a time.
+	do BaseDialogueManager.dialogue_deactivated.emit()
+	=> END
+
+~ gabbi_intro_questions_more
+Gabbi: Anything else?
+- Can you tell me more about this?
+	Gabbi: You gather materials, meet villagers, and manage your day.
+	Gabbi: Step by step, you help this village grow.
+	=> gabbi_intro_questions_more
+- What makes this game different?
+	Gabbi: The village is meant to feel like more than a background.
+	Gabbi: Some characters are planned to respond in more personal and unexpected ways as the game develops.
+	=> gabbi_intro_questions_more
+- When will the game be released?
+	Gabbi: The playable prototype is planned to be available as early as the end of 2026.
+	=> gabbi_intro_questions_more
+- Where can we play it?
+	Gabbi: The plan is to make it playable on Android and PC.
+	=> gabbi_intro_questions_more
+- I am ready to begin.
+	Gabbi: It is still early, but every step brings the world closer to life.
+	Gabbi: One percent at a time.
+	do BaseDialogueManager.dialogue_deactivated.emit()
+	=> END
+
 ~ casual_gabbi_1
 do BaseDialogueManager.dialogue_activated.emit()
-Gabbi: [[I love this place so much | My Parents used to lived in here ... | Maybe someday i will have many gold]]  
-do BaseDialogueManager.dialogue_deactivated.emit() 
+Gabbi: Every small step matters here.
+Gabbi: Come talk to me when you need a little direction.
+do BaseDialogueManager.dialogue_deactivated.emit()
 => END

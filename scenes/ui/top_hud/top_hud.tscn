@@ -1,0 +1,251 @@
+[gd_scene load_steps=12 format=3 uid="uid://c8jsa3yhad0eg"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_b5fap"]
+[ext_resource type="Script" uid="uid://4r7da7k7boj5" path="res://scenes/ui/top_hud/top_hud.gd" id="1_iiiie"]
+[ext_resource type="Texture2D" uid="uid://ch21q10p6u6ah" path="res://assets/ui/all_asset_ui/all_asset_17.06.2026.png" id="2_iiiie"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_130ur"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(1, 1, 275, 22)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ssyqg"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(177, 85, 28, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fgmmj"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(0, 272, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1fs6x"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(16, 272, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b1gmf"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(32, 272, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6qryt"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(50, 272, 12, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_am212"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(67, 272, 11, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wnag3"]
+atlas = ExtResource("2_iiiie")
+region = Rect2(81, 272, 14, 16)
+
+[node name="TopHUD" type="CanvasLayer"]
+script = ExtResource("1_iiiie")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_b5fap")
+
+[node name="Bar" type="TextureRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -281.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = 28.0
+grow_horizontal = 0
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture = SubResource("AtlasTexture_130ur")
+
+[node name="TemplateText1" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 6.0
+offset_right = 54.0
+offset_bottom = 16.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_ssyqg")
+
+[node name="DayLabel" type="Label" parent="Root/Bar/TemplateText1"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.5
+offset_top = -3.0
+offset_right = 11.5
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+text = "day: 1"
+horizontal_alignment = 1
+
+[node name="TemplateText2" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 74.0
+offset_top = 6.0
+offset_right = 102.0
+offset_bottom = 16.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_ssyqg")
+
+[node name="TimeLabel" type="Label" parent="Root/Bar/TemplateText2"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -3.0
+offset_right = 10.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+text = "12:00"
+
+[node name="TemplateText3" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 126.0
+offset_top = 6.0
+offset_right = 154.0
+offset_bottom = 16.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_ssyqg")
+
+[node name="WeatherLabel" type="Label" parent="Root/Bar/TemplateText3"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -3.0
+offset_right = 10.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+text = "sunny"
+
+[node name="TemplateText4" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 172.5
+offset_top = 6.0
+offset_right = 200.5
+offset_bottom = 16.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_ssyqg")
+
+[node name="PopLabel" type="Label" parent="Root/Bar/TemplateText4"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -7.0
+offset_top = -3.000001
+offset_right = 7.0
+offset_bottom = 3.000001
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+text = "3/6"
+
+[node name="TemplateText5" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 6.0
+offset_right = 248.0
+offset_bottom = 16.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_ssyqg")
+
+[node name="FoodLabel" type="Label" parent="Root/Bar/TemplateText5"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -3.0
+offset_right = 4.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+text = "15"
+
+[node name="CalendarIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 3.0
+offset_top = 3.0
+offset_right = 19.0
+offset_bottom = 19.0
+pivot_offset = Vector2(8, 8)
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_fgmmj")
+expand_mode = 3
+stretch_mode = 2
+
+[node name="TimeIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 56.0
+offset_top = 3.0
+offset_right = 72.0
+offset_bottom = 19.0
+pivot_offset = Vector2(8, 8)
+texture = SubResource("AtlasTexture_1fs6x")
+expand_mode = 2
+stretch_mode = 2
+
+[node name="WeatherIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 106.0
+offset_top = 3.0
+offset_right = 122.0
+offset_bottom = 19.0
+texture = SubResource("AtlasTexture_b1gmf")
+
+[node name="PopulationIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 158.0
+offset_top = 3.0
+offset_right = 170.0
+offset_bottom = 19.0
+pivot_offset = Vector2(8, 8)
+texture = SubResource("AtlasTexture_6qryt")
+
+[node name="FoodIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 205.0
+offset_top = 3.0
+offset_right = 216.0
+offset_bottom = 19.0
+texture = SubResource("AtlasTexture_am212")
+
+[node name="SettingIcon" type="TextureRect" parent="Root/Bar"]
+layout_mode = 0
+offset_left = 257.0
+offset_top = 3.0
+offset_right = 271.0
+offset_bottom = 19.0
+texture = SubResource("AtlasTexture_wnag3")
