@@ -6,7 +6,7 @@ signal closed()
 enum Action {
 	CLAIM_TO_PLAYER,
 	MANAGE_STORAGE,
-	ASSIGN_WORKER,
+	ASSIGN_WORK,
 	PAY_ALL_FEES,
 	PAY_OVERDUE_FEES,
 }
@@ -59,7 +59,7 @@ func _on_manage_button_pressed() -> void:
 	_select_action(Action.MANAGE_STORAGE)
 
 func _on_assign_button_pressed() -> void:
-	_select_action(Action.ASSIGN_WORKER)
+	_select_action(Action.ASSIGN_WORK)
 
 func _on_pay_all_button_pressed() -> void:
 	_select_action(Action.PAY_ALL_FEES)

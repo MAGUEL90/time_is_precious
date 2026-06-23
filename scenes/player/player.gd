@@ -51,7 +51,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event.keycode == KEY_2:
 				_open_workshop_storage_menu_ui()
 			elif event.keycode == KEY_3:
-				_confirm_claim_choice(2) # CONTINUE_PROCESS
+				_open_workshop_worker_assignment_ui()
 			elif event.keycode == KEY_4:
 				_pay_workshop_unpaid_fee()
 			elif event.keycode == KEY_5:
@@ -141,6 +141,8 @@ func on_dialogue_deactivated() -> void:
 
 	current_npc_dialogue  = null
 
+# Workshop main menu flow
+
 func open_workshop_menu(workshop: WorkShop, claimable_index: int) -> void:
 	claim_menu_is_open = true
 	claim_menu_workshop = workshop
@@ -160,6 +162,8 @@ func open_workshop_menu(workshop: WorkShop, claimable_index: int) -> void:
 	menu_ui.closed.connect(_on_workshop_menu_closed)
 
 	menu_ui.open_menu(fee_summary, has_claimable_output)
+
+# Workshop claim and fee actions
 
 func _confirm_claim_choice(claim_action: int) -> void:
 	if claim_menu_workshop == null:
@@ -207,6 +211,8 @@ func _pay_workshop_overdue_fee() -> void:
 
 	_close_claim_menu()
 
+# Player stats
+
 func reduce_fatigue(amount: float) -> bool:
 	if fatigue > min_fatigue and amount > 0.0:
 		fatigue = clampf(fatigue- amount, min_fatigue, max_fatigue)
@@ -245,6 +251,8 @@ func get_hunger_percent() -> int:
 func get_focus_percent() -> int:
 	return int(get_focus() * 100.0)
 
+# Workshop storage menu flow
+
 func _open_workshop_storage_menu_ui() -> void:
 	if claim_menu_workshop == null:
 		return
@@ -259,6 +267,50 @@ func _open_workshop_storage_menu_ui() -> void:
 
 	claim_menu_is_open = false
 	workshop_storage_menu.open_menu()
+
+# Workshop worker assignment flow
+
+func _open_workshop_worker_assignment_ui(current_worker_ids: Array[String] = []) -> void:
+	if claim_menu_workshop == null:
+		return
+
+	var worker_assignment_scene: PackedScene = preload("res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.tscn")
+	var worker_assignment_menu: WorkshopWorkerAssignmentUI = worker_assignment_scene.instantiate()
+
+	get_tree().current_scene.add_child(worker_assignment_menu)
+
+	worker_assignment_menu.assignment_next_requested.connect(_on_workshop_worker_assignment_next_requested)
+	worker_assignment_menu.assignment_back_requested.connect(_on_workshop_worker_assignment_back_requested)
+	worker_assignment_menu.assignment_cancelled.connect(_on_workshop_worker_assignment_cancelled)
+
+	claim_menu_is_open = false
+	worker_assignment_menu.open_assignment(
+		current_worker_ids,
+		claim_menu_workshop.get_max_assigned_worker_slots()
+	)
+
+func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	if worker_ids.is_empty():
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	_open_workshop_job_ui(worker_ids)
+
+func _on_workshop_worker_assignment_back_requested() -> void:
+	return_to_workshop_main_menu()
+	_show_current_interact_label()
+
+func _on_workshop_worker_assignment_cancelled() -> void:
+	_close_claim_menu()
+	_show_current_interact_label()
+
+# Workshop transfer flow
 
 func _on_workshop_storage_menu_action_selected(action_id: int) -> void:
 	match action_id:
@@ -277,29 +329,11 @@ func _open_workshop_deposit_transfer() -> void:
 	get_tree().current_scene.add_child(item_transfer_menu)
 
 	item_transfer_menu.transfer_confirmed.connect(_on_workshop_deposit_confirmed)
+	item_transfer_menu.transfer_back_requested.connect(_on_workshop_deposit_back_requested)
 	item_transfer_menu.transfer_cancelled.connect(_on_workshop_deposit_cancelled)
 
 	claim_menu_is_open = false
 	item_transfer_menu.open_transfer("Deposit to Workshop", Inventory.items, "Deposit")
-
-func _open_workshop_withdraw_transfer() -> void:
-	if claim_menu_workshop == null:
-		return
-
-	var item_transfer_scene: PackedScene = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn")
-	var item_transfer_menu: ItemTransferUI = item_transfer_scene.instantiate()
-
-	get_tree().current_scene.add_child(item_transfer_menu)
-
-	item_transfer_menu.transfer_confirmed.connect(_on_workshop_withdraw_confirmed)
-	item_transfer_menu.transfer_cancelled.connect(_on_workshop_withdraw_cancelled)
-
-	claim_menu_is_open = false
-	item_transfer_menu.open_transfer("Withdraw to Inventory", WorkShopStorage.items, "Withdraw")
-
-func _on_workshop_storage_menu_closed() -> void:
-	_close_claim_menu()
-	_show_current_interact_label()
 
 func _on_workshop_deposit_confirmed(selected_items: Dictionary) -> void:
 	if claim_menu_workshop == null:
@@ -339,7 +373,79 @@ func _on_workshop_deposit_confirmed(selected_items: Dictionary) -> void:
 	_close_claim_menu()
 	_show_current_interact_label()
 
+func _on_workshop_deposit_back_requested() -> void:
+	_return_to_workshop_storage_menu()
+
 func _on_workshop_deposit_cancelled() -> void:
+	_close_claim_menu()
+	_show_current_interact_label()
+
+func _open_workshop_withdraw_transfer() -> void:
+	if claim_menu_workshop == null:
+		return
+
+	var item_transfer_scene: PackedScene = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn")
+	var item_transfer_menu: ItemTransferUI = item_transfer_scene.instantiate()
+
+	get_tree().current_scene.add_child(item_transfer_menu)
+
+	item_transfer_menu.transfer_confirmed.connect(_on_workshop_withdraw_confirmed)
+	item_transfer_menu.transfer_back_requested.connect(_on_workshop_withdraw_back_requested)
+	item_transfer_menu.transfer_cancelled.connect(_on_workshop_withdraw_cancelled)
+
+	item_transfer_menu.open_transfer("Withdraw to Inventory", WorkShopStorage.items, "Withdraw")
+
+func _on_workshop_withdraw_back_requested() -> void:
+	_return_to_workshop_storage_menu()
+
+func _on_workshop_storage_menu_closed() -> void:
+	return_to_workshop_main_menu()
+	_show_current_interact_label()
+
+# Workshop job flow
+
+func _open_workshop_job_ui(worker_ids: Array[String]) -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	var workshop_job_scene: PackedScene = preload("res://scenes/ui/workshop_job_ui/workshop_job_ui.tscn")
+	var workshop_job_ui: WorkshopJobUI = workshop_job_scene.instantiate()
+
+	get_tree().current_scene.add_child(workshop_job_ui)
+
+	workshop_job_ui.start_job_requested.connect(_on_workshop_job_start_requested.bind(workshop_job_ui))
+	workshop_job_ui.back_requested.connect(_on_workshop_job_back_requested)
+	workshop_job_ui.cancelled.connect(_on_workshop_job_cancelled)
+
+	workshop_job_ui.open_job(claim_menu_workshop, worker_ids)
+
+func _on_workshop_job_start_requested(
+	job_data: JobData,
+	worker_ids: Array[String],
+	work_days: int,
+	workshop_job_ui: WorkshopJobUI) -> void:
+
+	if claim_menu_workshop == null:
+		workshop_job_ui.show_start_result(false, "Workshop is no longer available.")
+		return
+
+	var start_success: bool = claim_menu_workshop.start_job_from_storage(job_data, worker_ids, work_days)
+	if start_success:
+		workshop_job_ui.show_start_result(true, "Workshop job started.")
+		return
+
+	var message: String = "Could not start workshop job."
+	if claim_menu_workshop.has_method("get_last_start_job_error"):
+		message = claim_menu_workshop.get_last_start_job_error()
+
+	workshop_job_ui.show_start_result(false, message)
+
+func _on_workshop_job_back_requested(worker_ids: Array[String]) -> void:
+	_open_workshop_worker_assignment_ui(worker_ids)
+
+func _on_workshop_job_cancelled() -> void:
 	_close_claim_menu()
 	_show_current_interact_label()
 
@@ -385,20 +491,16 @@ func _on_workshop_withdraw_cancelled() -> void:
 	_close_claim_menu()
 	_show_current_interact_label()
 
+# Shared workshop UI helpers
+
 func _on_work_shop_menu_action_selected(action_id: int) -> void:
 	match action_id:
 		WorkshopMenuUI.Action.CLAIM_TO_PLAYER:
 			_open_fee_confirmation(WorkShopStorage.ClaimAction.TAKE_TO_PLAYER)
 		WorkshopMenuUI.Action.MANAGE_STORAGE:
 			_open_workshop_storage_menu_ui()
-		WorkshopMenuUI.Action.ASSIGN_WORKER:
-			if claim_menu_workshop.has_assigned_worker():
-				claim_menu_workshop.start_mudbrick_job_from_storage()
-			else:
-				claim_menu_workshop.assign_test_worker()
-
-			_close_claim_menu()
-			_show_current_interact_label()
+		WorkshopMenuUI.Action.ASSIGN_WORK:
+			_open_workshop_worker_assignment_ui()
 		WorkshopMenuUI.Action.PAY_ALL_FEES:
 			_pay_workshop_unpaid_fee()
 		WorkshopMenuUI.Action.PAY_OVERDUE_FEES:
@@ -423,3 +525,19 @@ func _spawn_item_change_popup(item_id: String, amount: int, is_positive: bool, p
 	get_tree().current_scene.add_child(item_popup)
 	item_popup.global_position = pos
 	item_popup.setup(item_id, amount, is_positive)
+
+func return_to_workshop_main_menu() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	open_workshop_menu(claim_menu_workshop, claim_menu_claimable_index)
+
+func _return_to_workshop_storage_menu() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	_open_workshop_storage_menu_ui()

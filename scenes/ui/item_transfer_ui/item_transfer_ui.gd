@@ -1,6 +1,7 @@
 class_name ItemTransferUI extends CanvasLayer
 
 signal transfer_confirmed(selected_items: Dictionary)
+signal transfer_back_requested()
 signal transfer_cancelled()
 
 @onready var title_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Header/TitleLabel
@@ -8,31 +9,18 @@ signal transfer_cancelled()
 @onready var info_label: Label = $Root/Center/Window/MarginContainer/MainVBox/InfoLabel
 @onready var grid_container: GridContainer = $Root/Center/Window/MarginContainer/MainVBox/ScrollContainer/GridContainer
 @onready var selected_summary_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Footer/SelectedSummaryLabel
-@onready var cancel_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/CancelButton
+@onready var back_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/BackButton
 @onready var confirm_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/ConfirmButton
 
 var selected_items: Dictionary[String, int] = {}
 var source_items: Dictionary = {}
 var allowed_category: int = ItemEnums.ItemCategory.RESOURCE
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	visible = false
-	cancel_button.pressed.connect(_on_cancel_pressed)
-	close_button.pressed.connect(_on_cancel_pressed)
+	back_button.pressed.connect(_on_back_pressed)
+	close_button.pressed.connect(_on_close_pressed)
 	confirm_button.pressed.connect(_on_confirm_button)
-
-func _on_cancel_pressed() -> void:
-	visible = false
-	get_tree().paused = false
-	transfer_cancelled.emit()
-	queue_free()
-
-func _on_confirm_button() -> void:
-	visible = false
-	get_tree().paused = false
-	transfer_confirmed.emit(selected_items.duplicate(true))
-	queue_free()
 
 func open_transfer(title: String, items: Dictionary, confirm_text: String) -> void:
 	title_label.text = title
@@ -43,6 +31,24 @@ func open_transfer(title: String, items: Dictionary, confirm_text: String) -> vo
 	get_tree().paused = true
 	_refresh_grid()
 	_refresh_summary()
+
+func _on_back_pressed() -> void:
+	visible = false
+	get_tree().paused = false
+	transfer_back_requested.emit()
+	queue_free()
+
+func _on_close_pressed() -> void:
+	visible = false
+	get_tree().paused = false
+	transfer_cancelled.emit()
+	queue_free()
+
+func _on_confirm_button() -> void:
+	visible = false
+	get_tree().paused = false
+	transfer_confirmed.emit(selected_items.duplicate(true))
+	queue_free()
 
 func _refresh_grid() -> void:
 	for child in grid_container.get_children():

@@ -6,7 +6,7 @@
 script = ExtResource("1_1q8q0")
 worker_id = "worker_laborer_01"
 display_name = "Laborer"
-profession = 0
+profession = 1
 profession_xp = 0
 profession_star = 1
 efficiency = 1.0
