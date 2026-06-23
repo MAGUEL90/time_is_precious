@@ -397,16 +397,20 @@ Work output should be affected by:
 ### Worker Team / Mastermind Composition
 
 Long-term worker management should not only be about selecting the best single worker.
-The stronger fantasy is assigning the right combination of workers to the right site.
+The stronger fantasy is assigning the right combination of workers to the right job or location.
 
-A work site may eventually support multiple workers with different professions.
+In the current workshop flow, this should be expressed as a **Workshop Job**.
+A **Work Site** should be reserved for future gathering or location-based work such as farming,
+mining, clay gathering, hauling routes, or other field work.
+
+A future work site may support multiple workers with different professions.
 The correct mix can create team efficiency bonuses.
 
 Example directions:
 
 - **Farming site:** Farmer improves crop work, Hauler improves movement, Laborer supports physical tasks.
 - **Mining site:** Laborer improves extraction, Hauler improves transport, Crafter helps tool handling.
-- **Crafting site:** Crafter improves production, Laborer prepares inputs, Hauler supports supply movement.
+- **Workshop job:** Crafter improves production, Laborer prepares inputs, Hauler supports supply movement.
 
 This creates a "mastermind" style of play:
 
@@ -417,8 +421,8 @@ The recommended progression is:
 
 1. show worker list
 2. show worker detail
-3. assign one worker to a job or site
-4. assign multiple workers to a site
+3. assign one worker to a workshop job
+4. assign multiple workers to a workshop job
 5. add profession synergy bonuses
 
 ## 14. Wages and Control
@@ -768,6 +772,6 @@ If future design choices feel messy, return to these rules first:
 9. City management is separate from personal inventory.
 10. Long-term strength comes from systems, not from manual labor alone.
 11. Oracle and Advisor systems are long-term identity features, not early MVP requirements.
-12. Worker team composition is a long-term site-management feature, not an early Worker Tab requirement.
+12. Worker team composition is a long-term job and location management feature, not an early Worker Tab requirement.
 13. The game should support multiple ending directions based on how the city is rebuilt, not only on final wealth.
 14. The player's identity should emerge from repeated behavior, not from a hard class selection at the start.

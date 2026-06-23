@@ -7,7 +7,7 @@ const MAX_ACTIVE_TEAM_SLOTS: int = 3
 @onready var worker_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/WorkerPanel/WorkerScroll/WorkerList
 @onready var feedback_label: Label = $Root/Center/Window/Margin/MainVBox/Body/ActionPanel/FeedbackLabel
 @onready var team_slot_grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/TeamPanel/TeamSlotGrid
-@onready var site_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/SitePanel/SiteList
+@onready var job_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/JobPanel/JobList
 @onready var team_preview_label: Label = $Root/Center/Window/Margin/MainVBox/Body/TeamPanel/TeamPreviewLabel
 
 var selected_job: JobData
@@ -17,7 +17,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_refresh_team_slots()
-	_refresh_site_list()
+	_refresh_job_list()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("open_worker_hub"):
@@ -30,7 +30,7 @@ func open() -> void:
 	get_tree().paused = true
 	visible = true
 	_refresh_worker_lists()
-	feedback_label.text = "Select a work site."
+	feedback_label.text = "Select a workshop job."
 
 func close() -> void:
 	get_tree().paused = false
@@ -79,19 +79,19 @@ func _refresh_worker_lists() -> void:
 		worker_list.add_child(button_list)
 		
 
-func _refresh_site_list() -> void:
-	for child in site_list.get_children():
+func _refresh_job_list() -> void:
+	for child in job_list.get_children():
 		child.queue_free()
 	
 	var job_button: Button = Button.new()
 	job_button.text = MUDBRICK_JOB.display_name
-	job_button.pressed.connect(_on_site_selected.bind(MUDBRICK_JOB))
-	site_list.add_child(job_button)
+	job_button.pressed.connect(_on_job_selected.bind(MUDBRICK_JOB))
+	job_list.add_child(job_button)
 
-func _on_site_selected(job_data: JobData) -> void:
+func _on_job_selected(job_data: JobData) -> void:
 	selected_job = job_data
-	team_preview_label.text = "Selected Site: %s" % job_data.display_name
-	feedback_label.text = "Choose workers for this site."
+	team_preview_label.text = "Selected Job: %s" % job_data.display_name
+	feedback_label.text = "Choose workers for this job."
 
 func _on_worker_selected(worker_data: WorkerData) -> void:
 	if worker_data.is_working():
@@ -118,7 +118,7 @@ func _on_clear_team() -> void:
 
 func _on_start_job() -> void:
 	if selected_job == null:
-		feedback_label.text = "Select a work site first."
+		feedback_label.text = "Select a workshop job first."
 		return
 		
 	if selected_workers.is_empty():

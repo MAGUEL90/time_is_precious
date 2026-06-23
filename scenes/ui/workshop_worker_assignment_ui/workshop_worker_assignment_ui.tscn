@@ -1,0 +1,149 @@
+[gd_scene load_steps=4 format=3 uid="uid://nfwsexi67ldf"]
+
+[ext_resource type="Script" uid="uid://c1w4kx6tknvdp" path="res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.gd" id="1_a7n3m"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_jgpru"]
+[ext_resource type="PackedScene" uid="uid://dthjfx7bolaxo" path="res://scenes/ui/confirm_discard_panel/confirm_discard_panel.tscn" id="3_jg1as"]
+
+[node name="WorkshopWorkerAssignmentUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_a7n3m")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.4)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(620, 340)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudLabelMain"
+text = "ASSIGN WORKERS"
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Header"]
+custom_minimum_size = Vector2(34, 28)
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudShortcutButton"
+text = "X"
+
+[node name="InfoLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudLabelShortcut"
+text = "Assigned workers: 0 / 2"
+
+[node name="Body" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="AssignedPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="AssignedTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/AssignedPanel"]
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudLabelShortcut"
+text = "Worker Slots"
+
+[node name="SlotGrid" type="GridContainer" parent="Root/Center/Window/Margin/MainVBox/Body/AssignedPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="AvailablePanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="AvailableTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/AvailablePanel"]
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudLabelShortcut"
+text = "Available Workers"
+
+[node name="WorkerScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/Body/AvailablePanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="WorkerList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/AvailablePanel/WorkerScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudLabelShortcut"
+text = "Choose an empty slot, then pick a worker."
+
+[node name="ConfirmDiscardPanel" parent="Root/Center/Window/Margin/MainVBox" instance=ExtResource("3_jg1as")]
+visible = false
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Root/Center/Window/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BackButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(90, 30)
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudShortcutButton"
+text = "Back"
+
+[node name="NextButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+theme = ExtResource("2_jgpru")
+theme_type_variation = &"HudShortcutButton"
+text = "Next"

@@ -1,12 +1,15 @@
-﻿class_name WorkShop extends Node2D
+class_name WorkShop extends Node2D
 
 var player_reff: Player
 
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 
+@export_range(1, 4, 1) var max_assigned_worker_slots: int = 2
+
 var job_lists: Array[String] = ["Mudbrick Making"]
 var assigned_worker_ids: Array[String] = []
+var last_start_job_error: String = ""
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -188,12 +191,46 @@ func withdraw_selected_items_to_player(selected_items: Dictionary) -> bool:
 func has_assigned_worker() -> bool:
 	return not assigned_worker_ids.is_empty()
 
-func get_first_available_assigned_worker_id() -> String:
+func get_assigned_worker_ids() -> Array[String]:
+	return assigned_worker_ids.duplicate(true)
+
+func get_max_assigned_worker_slots() -> int:
+	return max_assigned_worker_slots
+
+func assign_workers(worker_ids: Array[String]) -> bool:
+	var next_assigned_worker_ids: Array[String] = []
+
+	for worker_id in worker_ids:
+		if next_assigned_worker_ids.size() >= max_assigned_worker_slots:
+			break
+		if worker_id.strip_edges().is_empty():
+			continue
+		if next_assigned_worker_ids.has(worker_id):
+			continue
+		if not WorkerDatabase.has_worker_data(worker_id):
+			continue
+
+		next_assigned_worker_ids.append(worker_id)
+
+	if next_assigned_worker_ids.is_empty():
+		print("No worker assigned.")
+		return false
+
+	assigned_worker_ids = next_assigned_worker_ids
+	print("Assigned workers: ", assigned_worker_ids)
+	return true
+
+func get_first_available_assigned_worker_id(job: JobData = null) -> String:
 	if has_assigned_worker():
 		for worker_id in assigned_worker_ids:
 			var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-			if worker_data and worker_data.current_work_status != WorkerData.WorkStatus.WORKING:
-				return worker_data.worker_id
+			if worker_data == null:
+				continue
+			if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
+				continue
+			if job != null and worker_data.profession != job.requirement_profession:
+				continue
+			return worker_data.worker_id
 	return ""
 
 func assign_test_worker() -> bool:
@@ -206,6 +243,13 @@ func assign_test_worker() -> bool:
 		if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
 			continue
 
+		if assigned_worker_ids.has(worker_data.worker_id):
+			continue
+
+		if assigned_worker_ids.size() >= max_assigned_worker_slots:
+			print("Worker slots are full.")
+			return false
+
 		assigned_worker_ids.append(worker_data.worker_id)
 		print("Assigned worker: ", worker_data.worker_id)
 		return true
@@ -214,12 +258,12 @@ func assign_test_worker() -> bool:
 	return false
 
 func start_mudbrick_job_from_storage() -> bool:
-	var worker_id: String = get_first_available_assigned_worker_id()
+	var mudbrick_make: JobData = preload("res://resources/job_data/mudbrick_make.tres")
+	var worker_id: String = get_first_available_assigned_worker_id(mudbrick_make)
 	if worker_id == "":
-		print("Assign a worker first.")
+		print("Assign a matching worker first.")
 		return false
 
-	var mudbrick_make: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 	var order_id: String = WorkManager.start_job(
 		mudbrick_make,
 		WorkOrder.Worker_Type.NPC,
@@ -236,3 +280,54 @@ func start_mudbrick_job_from_storage() -> bool:
 
 	print("Started mudbrick job: ", order_id)
 	return true
+
+func start_job_from_storage(job: JobData, worker_ids: Array[String], work_days: int = 1) -> bool:
+	if job == null:
+		last_start_job_error = "No job selected."
+		return false
+
+	var worker_id: String = _get_first_available_worker_for_job(worker_ids, job)
+	if worker_id == "":
+		last_start_job_error = "No assigned worker matches this job."
+		return false
+
+	var runtime_job: JobData = job
+	if work_days > 1:
+		runtime_job = job.duplicate(true)
+		runtime_job.base_duration_minutes = work_days * 24 * 60
+
+	var order_id: String = WorkManager.start_job(
+		runtime_job,
+		WorkOrder.Worker_Type.NPC,
+		worker_id,
+		null,
+		WorkShopStorage,
+		WorkShopStorage,
+		5
+	)
+
+	if order_id.is_empty():
+		last_start_job_error = WorkManager.get_last_start_job_error()
+		if last_start_job_error.is_empty():
+			last_start_job_error = "Could not start workshop job."
+		return false
+
+	last_start_job_error = ""
+	return true
+
+func _get_first_available_worker_for_job(worker_ids: Array[String], job: JobData) -> String:
+	for worker_id in worker_ids:
+		var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+		if worker_data == null:
+			continue
+		if worker_data.is_working():
+			continue
+		if worker_data.profession != job.requirement_profession:
+			continue
+
+		return worker_data.worker_id
+
+	return ""
+
+func get_last_start_job_error() -> String:
+	return last_start_job_error

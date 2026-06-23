@@ -93,7 +93,7 @@ custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
-text = "3  Assign Worker"
+text = "3  Assign Work"
 alignment = 0
 
 [node name="PayAllButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]

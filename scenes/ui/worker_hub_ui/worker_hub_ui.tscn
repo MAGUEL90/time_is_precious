@@ -44,14 +44,14 @@ text = "X"
 [node name="Body" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
 
-[node name="SitePanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
+[node name="JobPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
 layout_mode = 2
 
-[node name="SiteTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/SitePanel"]
+[node name="JobTitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Body/JobPanel"]
 layout_mode = 2
-text = "Work Sites"
+text = "Workshop Jobs"
 
-[node name="SiteList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/SitePanel"]
+[node name="JobList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body/JobPanel"]
 layout_mode = 2
 
 [node name="TeamPanel" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/Body"]
