@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://du4aaglahgh82"]
+
+[ext_resource type="Texture2D" uid="uid://cxnr47bu2a7js" path="res://assets/items/barley_grain_sack.png" id="1_xtgf4"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="2_gbevc"]
+
+[resource]
+script = ExtResource("2_gbevc")
+id = "barley_grain_sack"
+display_name = "Barley Grain Sack"
+description = "A small sack of barley grain, the old friend of hungry villages. Turn it into food before someone tries eating it by the handful."
+icon = ExtResource("1_xtgf4")
+weight = 4.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

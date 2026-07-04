@@ -1,37 +1,68 @@
-[gd_resource type="Theme" load_steps=5 format=3 uid="uid://chw135qrjyvvj"]
+[gd_resource type="Theme" load_steps=3 format=3 uid="uid://chw135qrjyvvj"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j7vuk"]
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.99607843, 0, 0.09411765, 1)
+[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="1_552j2"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q27fo"]
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m5i5h"]
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 0.39215687)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_552j2"]
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(5.2799434e-05, 0.7464934, 0.19877908, 1)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_transparent"]
 
 [resource]
+HeaderLarge/base_type = &"Label"
+HeaderLarge/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+HeaderLarge/font_sizes/font_size = 18
+HeaderLarge/fonts/font = ExtResource("1_552j2")
+HeaderMedium/base_type = &"Label"
+HeaderMedium/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+HeaderMedium/font_sizes/font_size = 12
+HeaderMedium/fonts/font = ExtResource("1_552j2")
+HeaderSmall/base_type = &"Label"
+HeaderSmall/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+HeaderSmall/font_sizes/font_size = 6
+HeaderSmall/fonts/font = ExtResource("1_552j2")
 InvSlot/base_type = &"Button"
-InvSlot/fonts/font = null
-InvSlot/styles/disabled = SubResource("StyleBoxFlat_j7vuk")
-InvSlot/styles/hover = SubResource("StyleBoxFlat_q27fo")
-InvSlot/styles/normal = SubResource("StyleBoxFlat_m5i5h")
-InvSlot/styles/pressed = SubResource("StyleBoxFlat_552j2")
+InvSlot/fonts/font = ExtResource("1_552j2")
+InvSlot/styles/disabled = SubResource("StyleBoxEmpty_transparent")
+InvSlot/styles/focus = SubResource("StyleBoxEmpty_transparent")
+InvSlot/styles/hover = SubResource("StyleBoxEmpty_transparent")
+InvSlot/styles/normal = SubResource("StyleBoxEmpty_transparent")
+InvSlot/styles/pressed = SubResource("StyleBoxEmpty_transparent")
+InventoryIconButton/base_type = &"Button"
+InventoryIconButton/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventoryIconButton/constants/h_separation = 0
+InventoryIconButton/font_sizes/font_size = 6
+InventoryIconButton/fonts/font = ExtResource("1_552j2")
+InventoryIconButton/styles/disabled = SubResource("StyleBoxEmpty_transparent")
+InventoryIconButton/styles/focus = SubResource("StyleBoxEmpty_transparent")
+InventoryIconButton/styles/hover = SubResource("StyleBoxEmpty_transparent")
+InventoryIconButton/styles/normal = SubResource("StyleBoxEmpty_transparent")
+InventoryIconButton/styles/pressed = SubResource("StyleBoxEmpty_transparent")
+InventorySlotButton/base_type = &"Button"
+InventorySlotButton/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventorySlotButton/constants/h_separation = 0
+InventorySlotButton/font_sizes/font_size = 6
+InventorySlotButton/fonts/font = ExtResource("1_552j2")
+InventorySlotButton/styles/disabled = SubResource("StyleBoxEmpty_transparent")
+InventorySlotButton/styles/focus = SubResource("StyleBoxEmpty_transparent")
+InventorySlotButton/styles/hover = SubResource("StyleBoxEmpty_transparent")
+InventorySlotButton/styles/normal = SubResource("StyleBoxEmpty_transparent")
+InventorySlotButton/styles/pressed = SubResource("StyleBoxEmpty_transparent")
+InventorySlotQuantity/base_type = &"Label"
+InventorySlotQuantity/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventorySlotQuantity/font_sizes/font_size = 6
+InventorySlotQuantity/fonts/font = ExtResource("1_552j2")
+InventorySlotSelectedQuantity/base_type = &"Label"
+InventorySlotSelectedQuantity/colors/font_color = Color(1, 1, 0.71112853, 1)
+InventorySlotSelectedQuantity/font_sizes/font_size = 12
+InventorySlotSelectedQuantity/fonts/font = ExtResource("1_552j2")
+InventoryTextLarge/base_type = &"Label"
+InventoryTextLarge/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventoryTextLarge/font_sizes/font_size = 18
+InventoryTextLarge/fonts/font = ExtResource("1_552j2")
+InventoryTextMedium/base_type = &"Label"
+InventoryTextMedium/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventoryTextMedium/font_sizes/font_size = 12
+InventoryTextMedium/fonts/font = ExtResource("1_552j2")
+InventoryTextSmall/base_type = &"Label"
+InventoryTextSmall/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+InventoryTextSmall/font_sizes/font_size = 6
+InventoryTextSmall/fonts/font = ExtResource("1_552j2")
+InventoryTransparentPanel/base_type = &"PanelContainer"
+InventoryTransparentPanel/styles/panel = SubResource("StyleBoxEmpty_transparent")

@@ -1,14 +1,14 @@
 [gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://cf7rk81lscf6v"]
 
 [ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_ihs4t"]
-[ext_resource type="Texture2D" uid="uid://ba0qgpqe7mi45" path="res://assets/items/wet_mudbrick.png" id="1_mq2wu"]
+[ext_resource type="Texture2D" uid="uid://c8001x5uswgho" path="res://assets/items/wet_mudbrick.png" id="1_ws8r1"]
 
 [resource]
 script = ExtResource("1_ihs4t")
 id = "wet_mudbrick"
 display_name = "Wet Mudbrick"
-description = "A freshly shaped mudbrick that still needs time to dry before use."
-icon = ExtResource("1_mq2wu")
+description = "A fresh mudbrick still soft from shaping. Give it sun and patience, not footsteps and poor planning."
+icon = ExtResource("1_ws8r1")
 weight = 5.0
 max_stack = 5
 base_value_shekel = 1

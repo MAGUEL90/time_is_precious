@@ -1,0 +1,120 @@
+[gd_scene load_steps=6 format=3 uid="uid://c8qv1h1m5o7mq"]
+
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="1_ghrd2"]
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="2_f0m6d"]
+[ext_resource type="Script" uid="uid://d4bnylq24q1g2" path="res://scenes/ui/option_panel/option_panel.gd" id="2_shg37"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_shg37"]
+atlas = ExtResource("1_ghrd2")
+region = Rect2(61, 1, 53, 46)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vxag1"]
+atlas = ExtResource("1_ghrd2")
+region = Rect2(145, 102, 33, 11)
+
+[node name="OptionPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(53, 46)
+offset_right = 53.0
+offset_bottom = 46.0
+scale = Vector2(2, 2)
+mouse_filter = 1
+theme = ExtResource("2_f0m6d")
+script = ExtResource("2_shg37")
+
+[node name="OptionBackgroundTexture" type="TextureRect" parent="."]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_shg37")
+
+[node name="MarginContainer" type="MarginContainer" parent="OptionBackgroundTexture"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="OptionContainer" type="VBoxContainer" parent="OptionBackgroundTexture"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.5
+offset_top = -20.5
+offset_right = 16.5
+offset_bottom = 20.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="UseButtonTexture" type="TextureRect" parent="OptionBackgroundTexture/OptionContainer"]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_vxag1")
+
+[node name="UseButton" type="Button" parent="OptionBackgroundTexture/OptionContainer/UseButtonTexture"]
+custom_minimum_size = Vector2(33, 11)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.5
+offset_top = -5.5
+offset_right = 16.5
+offset_bottom = 5.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"PanelActionButton"
+text = "Use"
+
+[node name="SendButtonTexture" type="TextureRect" parent="OptionBackgroundTexture/OptionContainer"]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_vxag1")
+
+[node name="SendButton" type="Button" parent="OptionBackgroundTexture/OptionContainer/SendButtonTexture"]
+custom_minimum_size = Vector2(33, 11)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.5
+offset_top = -5.5
+offset_right = 16.5
+offset_bottom = 5.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"PanelActionButton"
+text = "Send"
+
+[node name="RemoveButtonTexture" type="TextureRect" parent="OptionBackgroundTexture/OptionContainer"]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_vxag1")
+
+[node name="RemoveButton" type="Button" parent="OptionBackgroundTexture/OptionContainer/RemoveButtonTexture"]
+custom_minimum_size = Vector2(33, 11)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.5
+offset_top = -5.5
+offset_right = 16.5
+offset_bottom = 5.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"PanelActionButton"
+text = "Remove"

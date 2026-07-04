@@ -1,0 +1,98 @@
+[gd_scene load_steps=18 format=3 uid="uid://btfndx42r6ojm"]
+
+[ext_resource type="Script" uid="uid://b0xmhrbxvm3u8" path="res://scenes/ui/confirm_cancel_actions_panel/confirm_action_panel.gd" id="1_2g4f4"]
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_pb1l4"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_oeqwk"]
+[ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="4_0jngj"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0mht8"]
+atlas = ExtResource("2_oeqwk")
+region = Rect2(116, 7, 52, 40)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_breec"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sl3en"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_g0qpt"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mghnm"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6bd55"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7l3ra"]
+atlas = ExtResource("4_0jngj")
+region = Rect2(84, 68, 8, 8)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vjbpn"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nuk2o"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_3ui6x"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lsqtf"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mfek2"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_us1rt"]
+atlas = ExtResource("4_0jngj")
+region = Rect2(100, 68, 8, 8)
+
+[node name="ConfirmActionPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 52.0
+offset_bottom = 40.0
+pivot_offset = Vector2(26, 0)
+theme = ExtResource("1_pb1l4")
+script = ExtResource("1_2g4f4")
+
+[node name="BackgroundTexture" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("AtlasTexture_0mht8")
+stretch_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -9.0
+offset_bottom = 9.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="ConfirmLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"PanelTextSmall"
+text = "confirm"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ConfirmButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_breec")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_sl3en")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_g0qpt")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_mghnm")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_6bd55")
+icon = SubResource("AtlasTexture_7l3ra")
+
+[node name="CancelButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_vjbpn")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_nuk2o")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_3ui6x")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_lsqtf")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_mfek2")
+icon = SubResource("AtlasTexture_us1rt")

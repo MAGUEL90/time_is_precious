@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://bkinlwm13ugb4"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_auu5g"]
+[ext_resource type="Texture2D" uid="uid://el8ldi6qu7j0" path="res://assets/items/fresh_curd_cheese.png" id="1_h8kxu"]
+
+[resource]
+script = ExtResource("1_auu5g")
+id = "fresh_curd_cheese"
+display_name = "Fresh Curd Cheese"
+description = "A soft young cheese, fresh from the morning work. Gentle on the tongue, unless the goat is still watching."
+icon = ExtResource("1_h8kxu")
+weight = 0.05
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

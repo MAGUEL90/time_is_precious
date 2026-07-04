@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://ddi34ymljelaw"]
+
+[ext_resource type="Texture2D" uid="uid://cxbrasg3fu3iq" path="res://assets/items/egg.png" id="1_2537k"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_y21cx"]
+
+[resource]
+script = ExtResource("1_y21cx")
+id = "egg"
+display_name = "Egg"
+description = "A simple egg from a village bird. Small, fragile, and still more useful than a lazy worker."
+icon = ExtResource("1_2537k")
+weight = 0.02
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

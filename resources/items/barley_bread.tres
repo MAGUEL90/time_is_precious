@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://c8btcpycbub4e"]
+
+[ext_resource type="Texture2D" uid="uid://ceom8hmn8cvcj" path="res://assets/items/barley_bread.png" id="1_87f5q"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_oxxmd"]
+
+[resource]
+script = ExtResource("1_oxxmd")
+id = "barley_bread"
+display_name = "Barley Bread"
+description = "A tough little bread made from barley. Dry enough to humble a king, useful enough to keep a worker standing."
+icon = ExtResource("1_87f5q")
+weight = 1.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

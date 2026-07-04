@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://cfkjcv48bx1q8"]
+
+[ext_resource type="Texture2D" uid="uid://dr57vqmlbloot" path="res://assets/items/wood_log.png" id="1_earcf"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_ma1ub"]
+
+[resource]
+script = ExtResource("1_ma1ub")
+id = "wood_log"
+display_name = "Wood Log"
+icon = ExtResource("1_earcf")
+weight = 3.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

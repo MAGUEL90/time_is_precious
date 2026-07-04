@@ -1,10 +1,8 @@
-[gd_scene load_steps=11 format=4 uid="uid://bwpag2520nkr6"]
+[gd_scene load_steps=8 format=4 uid="uid://bwpag2520nkr6"]
 
 [ext_resource type="Texture2D" uid="uid://rymr6doa85vd" path="res://assets/temporer/tile_set/test_tile_set.png" id="2_px5ji"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_37oof"]
-[ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="4_sleuw"]
 [ext_resource type="PackedScene" uid="uid://fsc270pc2u2v" path="res://scenes/pickup_item/pickup_item.tscn" id="5_37oof"]
-[ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="5_hxb2b"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="6_37oof"]
 [ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="7_sleuw"]
 
@@ -192,12 +190,6 @@ texture = ExtResource("2_px5ji")
 [sub_resource type="TileSet" id="TileSet_ptwpp"]
 sources/0 = SubResource("TileSetAtlasSource_hxb2b")
 
-[sub_resource type="NavigationPolygon" id="NavigationPolygon_nvn2h"]
-vertices = PackedVector2Array(275.03125, 162.14844, 72.46875, 168.84375, 57.539063, 30.8125, 275.96094, 23.179688)
-polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
-outlines = Array[PackedVector2Array]([PackedVector2Array(68, 174, 52, 26, 281, 18, 280, 167)])
-agent_radius = 5.0
-
 [node name="TestPickupItem" type="Node2D"]
 
 [node name="TileMap" type="Node2D" parent="."]
@@ -212,36 +204,163 @@ tile_set = SubResource("TileSet_ptwpp")
 [node name="TopLayer" type="TileMapLayer" parent="TileMap"]
 tile_set = SubResource("TileSet_ptwpp")
 
-[node name="NPC\'s" type="Node2D" parent="."]
+[node name="WorldObjects" type="Node2D" parent="."]
+y_sort_enabled = true
 
-[node name="NavigationRegion2D" type="NavigationRegion2D" parent="NPC\'s"]
-navigation_polygon = SubResource("NavigationPolygon_nvn2h")
+[node name="Pickups" type="Node2D" parent="WorldObjects"]
+y_sort_enabled = true
 
-[node name="NPC_Galsal" parent="NPC\'s" instance=ExtResource("4_sleuw")]
-position = Vector2(137, 110)
+[node name="PickupItem" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 86)
+item_id = "barley_bread"
 
-[node name="NPC_Gabbi" parent="NPC\'s" instance=ExtResource("5_hxb2b")]
-position = Vector2(201, 112)
-collision_layer = 1
+[node name="PickupItem2" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 86)
+item_id = "barley_grain_sack"
 
-[node name="PickupItem" parent="." instance=ExtResource("5_37oof")]
-position = Vector2(221, 146)
+[node name="PickupItem3" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(152, 86)
+item_id = "bronze_ingot"
+
+[node name="PickupItem4" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(175, 86)
+item_id = "butchers_cut"
+quantity = 15
+
+[node name="PickupItem5" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(199, 86)
+item_id = "clay_lump"
+
+[node name="PickupItem6" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 105)
+item_id = "clay_worn_wrap"
+
+[node name="PickupItem7" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 105)
+item_id = "copper_chunk"
+
+[node name="PickupItem8" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(153, 105)
+item_id = "copper_ore"
+quantity = 10
+
+[node name="PickupItem9" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 104)
+item_id = "date_cluster"
+
+[node name="PickupItem10" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(199, 104)
+item_id = "egg"
+
+[node name="PickupItem11" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 122)
+item_id = "fresh_curd_cheese"
+
+[node name="PickupItem12" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 122)
+item_id = "fresh_loaf"
+
+[node name="PickupItem13" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(153, 122)
+item_id = "gold_nugget"
+
+[node name="PickupItem14" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 121)
+item_id = "limestone_piece"
+
+[node name="PickupItem15" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(200, 120)
+item_id = "orchard_apple"
+
+[node name="PickupItem16" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 139)
+item_id = "pan_fried_egg"
+
+[node name="PickupItem17" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 139)
+item_id = "plain_head_wrap"
+
+[node name="PickupItem18" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(153, 138)
+item_id = "plain_linen_wrap"
+
+[node name="PickupItem19" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 138)
+item_id = "raw_wool"
+
+[node name="PickupItem20" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(201, 137)
+item_id = "reed_bundle"
+
+[node name="PickupItem21" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 156)
+item_id = "reed_sandal"
+
+[node name="PickupItem22" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 156)
+item_id = "plain_head_wrap"
+
+[node name="PickupItem23" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(153, 155)
+item_id = "roasted_drumstick"
+
+[node name="PickupItem24" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 154)
+item_id = "shekel"
+
+[node name="PickupItem25" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(201, 154)
+item_id = "simple_clothes"
+
+[node name="PickupItem26" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 173)
+item_id = "simple_robe"
+
+[node name="PickupItem27" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 172)
 item_id = "stone"
 
-[node name="PickupItem2" parent="." instance=ExtResource("5_37oof")]
-position = Vector2(185, 143)
+[node name="PickupItem28" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(153, 171)
+item_id = "stone_2"
+
+[node name="PickupItem29" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 171)
+item_id = "stone_hammer"
+
+[node name="PickupItem30" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(201, 171)
 item_id = "straw_bundle"
 
-[node name="PickupItem3" parent="." instance=ExtResource("5_37oof")]
-position = Vector2(144, 144)
+[node name="PickupItem31" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(111, 192)
 item_id = "sun_dried_mudbrick"
 
+[node name="PickupItem32" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(131, 191)
+item_id = "trimmed_robe"
+
+[node name="PickupItem33" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(152, 190)
+item_id = "village_cheese"
+
+[node name="PickupItem34" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(176, 190)
+item_id = "water_jar"
+
+[node name="PickupItem35" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
+position = Vector2(201, 190)
+item_id = "wet_mudbrick"
+
+[node name="Player" parent="WorldObjects" instance=ExtResource("3_37oof")]
+y_sort_enabled = true
+position = Vector2(168, 117)
+
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("6_37oof")]
-layer = 2
+visible = false
 
 [node name="GameplayHUD" parent="." instance=ExtResource("7_sleuw")]
-
-[node name="Player" parent="." instance=ExtResource("3_37oof")]
-position = Vector2(168, 117)
+visible = false

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://0im7fahr7tnp"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_080l7"]
+[ext_resource type="Texture2D" uid="uid://dn27wehr6cl6" path="res://assets/items/copper_chunk.png" id="1_qwh1b"]
+
+[resource]
+script = ExtResource("1_080l7")
+id = "copper_chunk"
+display_name = "Copper Chunk"
+description = "A rough chunk of copper-rich stone. The village calls it progress before the smith calls it work."
+icon = ExtResource("1_qwh1b")
+weight = 25.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

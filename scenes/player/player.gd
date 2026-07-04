@@ -7,6 +7,7 @@ var current_npc_dialogue: NPCBase = null
 var can_move: bool = true
 var can_interact: bool = false
 var dialogue_finished: bool = false
+
 @export var speed = 50
 @export var fatigue: float = 0.5 # << Hanya Tester
 @export var min_fatigue: float = 0.0
@@ -25,6 +26,9 @@ var claim_fee_confirm_choice: int = 0
 
 @onready var player_movement_state: Node = $PlayerStateMachine/PlayerMovementState
 @onready var time_component_manager = TimeComponentManager
+@onready var player_visual: PlayerVisual = $PlayerVisual
+
+# Setup / Input
 
 func _ready() -> void:
 	BaseDialogueManager.dialogue_activated.connect(on_dialogue_activated)
@@ -96,10 +100,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif current_interactable is PickUpItem:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
 		pickup_item.on_player_interact(self)
+		_play_pickup_action()
 
 	elif current_interactable is JobBoard:
 		var job_board: JobBoard = current_interactable as JobBoard
 		job_board.on_player_interact(self)
+
+# Interactable state
 
 func _on_interactable_activated(interactable_owner: Node):
 	if current_interactable != null:
@@ -116,9 +123,13 @@ func _on_interactable_activated(interactable_owner: Node):
 
 func _on_interactable_deactivated(interactable_owner: Node):
 	if current_interactable == interactable_owner:
+		if current_interactable is PickUpItem:
+			current_interactable.on_player_exit_interaction()
 		current_interactable.interactable_label_component.hide()
 		current_interactable = null
 		can_interact  = false
+
+# Dialogue flow
 
 func on_dialogue_activated() -> void:
 	can_move = false
@@ -128,7 +139,6 @@ func on_dialogue_activated() -> void:
 		current_npc_dialogue.on_dialogue  = true
 		current_npc_dialogue.can_walk = false
 		current_npc_dialogue.walk_cycle_duration.stop()
-
 
 func on_dialogue_deactivated() -> void:
 	can_move = true
@@ -541,3 +551,19 @@ func _return_to_workshop_storage_menu() -> void:
 		return
 
 	_open_workshop_storage_menu_ui()
+
+# Pickup visual helpers
+
+func _get_visual_direction_name() -> String:
+	if player_sprite_direction == Vector2.LEFT:
+		return "left"
+
+	return "right"
+
+func _play_pickup_action() -> void:
+	can_move = false
+	velocity = Vector2.ZERO
+
+	await player_visual.play_pickup(_get_visual_direction_name())
+
+	can_move = true

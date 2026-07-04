@@ -1,0 +1,59 @@
+[gd_scene load_steps=8 format=3 uid="uid://dso2ctjch7gxw"]
+
+[ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="1_iidm4"]
+[ext_resource type="Script" uid="uid://b6dcq5ve856ft" path="res://scenes/ui/inventory_category_selector/inventory_category_selector.gd" id="1_kvpnf"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_kvpnf"]
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="4_q6cyc"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lqafa"]
+atlas = ExtResource("1_iidm4")
+region = Rect2(20, 52, 8, 8)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q6cyc"]
+atlas = ExtResource("2_kvpnf")
+region = Rect2(90, 114, 54, 11)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g7rus"]
+atlas = ExtResource("1_iidm4")
+region = Rect2(20, 68, 8, 8)
+
+[node name="InventoryCategorySelector" type="HBoxContainer"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -39.0
+offset_right = 39.0
+offset_bottom = 11.0
+grow_horizontal = 2
+theme = ExtResource("4_q6cyc")
+script = ExtResource("1_kvpnf")
+
+[node name="PrevButton" type="Button" parent="."]
+layout_mode = 2
+theme_type_variation = &"InventoryIconButton"
+icon = SubResource("AtlasTexture_lqafa")
+
+[node name="LabelFrame" type="TextureRect" parent="."]
+layout_mode = 2
+texture = SubResource("AtlasTexture_q6cyc")
+
+[node name="CategoryLabel" type="Label" parent="LabelFrame"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -6.5
+offset_top = -3.0
+offset_right = 6.5
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "test"
+
+[node name="NextButton" type="Button" parent="."]
+layout_mode = 2
+theme_type_variation = &"InventoryIconButton"
+icon = SubResource("AtlasTexture_g7rus")

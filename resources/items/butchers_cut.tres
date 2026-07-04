@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://caeuhgbha8eb4"]
+
+[ext_resource type="Texture2D" uid="uid://d4gsssre7os1x" path="res://assets/items/butcher’s_cut.png" id="1_qbqix"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_y61sc"]
+
+[resource]
+script = ExtResource("1_y61sc")
+id = "butchers_cut"
+display_name = "Butchers Cut"
+description = "A hearty cut of meat from the village butcher. Fresh enough for supper, suspicious enough to ask no further questions."
+icon = ExtResource("1_qbqix")
+weight = 0.5
+category = 1
+base_value_shekel = 1
+fatigue_reduction = 0.01
+hunger_reduction = 0.1
+food_supply_value = 1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

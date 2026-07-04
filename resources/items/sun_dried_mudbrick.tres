@@ -1,14 +1,14 @@
 [gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://bfxwbj0l5p2ny"]
 
-[ext_resource type="Texture2D" uid="uid://w7m1la1ly2nl" path="res://assets/items/sun_dried_mudbrick.png" id="1_fmau0"]
 [ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_kkuav"]
+[ext_resource type="Texture2D" uid="uid://olcyusxq0qyi" path="res://assets/items/sun_dried_mudbrick.png" id="1_r0jph"]
 
 [resource]
 script = ExtResource("1_kkuav")
 id = "sun_dried_mudbrick"
 display_name = "Sun Dried Mudbrick"
-description = "A hardened mudbrick dried under the sun, ready for building and trade."
-icon = ExtResource("1_fmau0")
+description = "A mudbrick hardened under the cruel sun. Strong enough for walls, weak enough to fear rain like a merchant fears taxes."
+icon = ExtResource("1_r0jph")
 weight = 4.0
 max_stack = 60
 base_value_shekel = 3

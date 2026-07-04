@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://ci4je23gifmsr"]
+
+[ext_resource type="Texture2D" uid="uid://b6gevqakprarh" path="res://assets/items/gold_nugget.png" id="1_engj6"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_nd8v3"]
+
+[resource]
+script = ExtResource("1_nd8v3")
+id = "gold_nugget"
+display_name = "Gold Nugget"
+description = "A small piece of bright gold from the earth. Pretty enough to start trade, trouble, or both."
+icon = ExtResource("1_engj6")
+weight = 0.2
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

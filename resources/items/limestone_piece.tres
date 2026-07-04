@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://bj6p6m1f05rkv"]
+
+[ext_resource type="Texture2D" uid="uid://lxqqylbeuc32" path="res://assets/items/limestone_piece.png" id="1_aa378"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_qxcd0"]
+
+[resource]
+script = ExtResource("1_qxcd0")
+id = "limestone_piece"
+display_name = "Limestone Piece"
+description = "A pale piece of limestone, useful for stronger building work. Softer than pride, harder than excuses."
+icon = ExtResource("1_aa378")
+weight = 25.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
