@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://uexw7gwf6yrr"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_nub3j"]
+[ext_resource type="Texture2D" uid="uid://c6a3v6tt0cgf5" path="res://assets/items/bronze_ingot.png" id="1_v3526"]
+
+[resource]
+script = ExtResource("1_nub3j")
+id = "bronze_ingot"
+display_name = "Bronze Ingot"
+description = "A clean metal ingot shaped with careful hands. Shiny enough to impress merchants, heavy enough to remind them it is real."
+icon = ExtResource("1_v3526")
+weight = 50.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

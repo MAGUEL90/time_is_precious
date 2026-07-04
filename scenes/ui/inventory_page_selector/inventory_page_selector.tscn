@@ -1,0 +1,64 @@
+[gd_scene load_steps=9 format=3 uid="uid://e3wgu2sh4adx"]
+
+[ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="1_ncxcd"]
+[ext_resource type="Script" uid="uid://d08jm1bn7iwy" path="res://scenes/ui/inventory_page_selector/inventory_page_selector.gd" id="1_rr62k"]
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="2_v151o"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rr62k"]
+atlas = ExtResource("1_ncxcd")
+region = Rect2(54, 38, 4, 4)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hlkci"]
+atlas = ExtResource("1_ncxcd")
+region = Rect2(54, 54, 4, 4)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_j8jd3"]
+atlas = ExtResource("1_ncxcd")
+region = Rect2(20, 52, 8, 8)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nxyb2"]
+atlas = ExtResource("1_ncxcd")
+region = Rect2(54, 54, 4, 4)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d1815"]
+atlas = ExtResource("1_ncxcd")
+region = Rect2(20, 68, 8, 8)
+
+[node name="InventoryPageSelector" type="HBoxContainer"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -34.0
+offset_right = 34.0
+offset_bottom = 8.0
+grow_horizontal = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+alignment = 1
+theme = ExtResource("2_v151o")
+script = ExtResource("1_rr62k")
+dot_active_texture = SubResource("AtlasTexture_rr62k")
+dot_inactive_texture = SubResource("AtlasTexture_hlkci")
+
+[node name="PrevButton" type="Button" parent="."]
+layout_mode = 2
+theme_type_variation = &"InventoryIconButton"
+icon = SubResource("AtlasTexture_j8jd3")
+
+[node name="DotsContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="DotTemplate" type="TextureRect" parent="DotsContainer"]
+custom_minimum_size = Vector2(4, 4)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_nxyb2")
+stretch_mode = 3
+
+[node name="NextButton" type="Button" parent="."]
+layout_mode = 2
+theme_type_variation = &"InventoryIconButton"
+icon = SubResource("AtlasTexture_d1815")

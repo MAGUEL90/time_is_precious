@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://dthjfx7bolaxo"]
+[gd_scene load_steps=2 format=3 uid="uid://dthjfx7bolaxo"]
+
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_ymhdi"]
 
 [node name="ConfirmDiscardPanel" type="PanelContainer"]
 anchors_preset = 8
@@ -12,6 +14,7 @@ offset_right = 236.0
 offset_bottom = 41.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_ymhdi")
 
 [node name="ConfirmMargin" type="MarginContainer" parent="."]
 layout_mode = 2
@@ -26,6 +29,7 @@ alignment = 1
 
 [node name="ConfirmLabel" type="Label" parent="ConfirmMargin/ConfirmVBox"]
 layout_mode = 2
+theme_type_variation = &"PanelTextSmall"
 text = "\"Semua penempatan worker yang anda atur akan hilang.\""
 
 [node name="ConfirmButtons" type="HBoxContainer" parent="ConfirmMargin/ConfirmVBox"]
@@ -34,8 +38,10 @@ alignment = 1
 
 [node name="KeepButton" type="Button" parent="ConfirmMargin/ConfirmVBox/ConfirmButtons"]
 layout_mode = 2
+theme_type_variation = &"PanelActionButton"
 text = "Stay"
 
 [node name="DiscardButton" type="Button" parent="ConfirmMargin/ConfirmVBox/ConfirmButtons"]
 layout_mode = 2
+theme_type_variation = &"PanelActionButton"
 text = "Discard"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://6wjnpnc86qas"]
+
+[ext_resource type="Texture2D" uid="uid://dnep7d3bdhdxe" path="res://assets/items/shekel.png" id="1_7lqos"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_yhjvk"]
+
+[resource]
+script = ExtResource("1_yhjvk")
+id = "shekel"
+display_name = "Shekel"
+icon = ExtResource("1_7lqos")
+weight = 0.1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

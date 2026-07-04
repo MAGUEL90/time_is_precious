@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://ccow7f8q7vwh0"]
+
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_fq648"]
+[ext_resource type="Texture2D" uid="uid://cf5fcepsgxrie" path="res://assets/items/date_cluster.png" id="1_lnbed"]
+
+[resource]
+script = ExtResource("1_fq648")
+id = "date_cluster"
+display_name = "Date Cluster"
+description = "Sweet dates from a patient palm. Chewy enough to slow complaints, sweet enough to keep workers moving."
+icon = ExtResource("1_lnbed")
+weight = 0.1
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://bb6d4jftdbyy0" path="res://assets/characters/shared_assets/cloth_assets/clay_worn_wrap/walk/walk.png" id="5_c66rr"]
 [ext_resource type="Texture2D" uid="uid://dulpfubn5px28" path="res://assets/characters/shared_assets/cloth_assets/plain_worn_wrap/idle/idle.png" id="6_i5tut"]
 [ext_resource type="Texture2D" uid="uid://bbiu71ahji1vy" path="res://assets/characters/shared_assets/cloth_assets/plain_worn_wrap/walk/walk.png" id="7_5bq36"]
-[ext_resource type="Texture2D" uid="uid://xpeyg6qowy3s" path="res://assets/characters/shared_assets/head_assets/light/base/light.png" id="8_j6epr"]
+[ext_resource type="Texture2D" uid="uid://xpeyg6qowy3s" path="res://assets/characters/shared_assets/head_assets/idle/light/base/light.png" id="8_j6epr"]
 [ext_resource type="Texture2D" uid="uid://bj3i45hpcbkif" path="res://assets/characters/shared_assets/hand_assets/light/light.png" id="9_cche1"]
 [ext_resource type="Texture2D" uid="uid://bpvudqll5hq75" path="res://assets/characters/shared_assets/accessories_assets/farmer_hat/farmer_hat.png" id="11_6guxl"]
 

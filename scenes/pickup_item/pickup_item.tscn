@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://fsc270pc2u2v"]
+[gd_scene load_steps=6 format=3 uid="uid://fsc270pc2u2v"]
 
 [ext_resource type="Script" uid="uid://bojoju2jpucv7" path="res://pickup_item.gd" id="1_oenub"]
+[ext_resource type="Texture2D" uid="uid://o72602snmyfs" path="res://assets/items/orchard_apple.png" id="2_oenub"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="3_o7y1l"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="4_3ra4b"]
 
@@ -11,13 +12,14 @@ radius = 6.0
 script = ExtResource("1_oenub")
 
 [node name="Icon" type="Sprite2D" parent="."]
-position = Vector2(0, -3)
+texture = ExtResource("2_oenub")
+offset = Vector2(0, -5)
 
 [node name="InteractableComponent" parent="." instance=ExtResource("3_o7y1l")]
-visible = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="InteractableComponent"]
-position = Vector2(0, -2)
+visible = false
+position = Vector2(0, -6)
 shape = SubResource("CircleShape2D_qtr2t")
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("4_3ra4b")]

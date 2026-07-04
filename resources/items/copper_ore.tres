@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://b2f8pwndloopq"]
+
+[ext_resource type="Texture2D" uid="uid://4726r8586q4d" path="res://assets/items/copper_ore.png" id="1_xprar"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_yts71"]
+
+[resource]
+script = ExtResource("1_yts71")
+id = "copper_ore"
+display_name = "Copper Ore"
+description = "A rough stone hiding a little bronze-age ambition. Not useful yet, but every better tool begins somewhere."
+icon = ExtResource("1_xprar")
+weight = 15.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"

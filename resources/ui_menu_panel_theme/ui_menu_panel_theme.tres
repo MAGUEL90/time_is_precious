@@ -1,0 +1,85 @@
+[gd_resource type="Theme" load_steps=16 format=3 uid="uid://b30xxcbumi21v"]
+
+[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="1_8nhh5"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_011wb"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pljrm"]
+atlas = ExtResource("2_011wb")
+region = Rect2(145, 102, 33, 11)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_jrbp1"]
+texture = SubResource("AtlasTexture_pljrm")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lx5we"]
+atlas = ExtResource("2_011wb")
+region = Rect2(145, 126, 33, 11)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_wdkl2"]
+texture = SubResource("AtlasTexture_lx5we")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_transparent"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8nhh5"]
+load_path = "res://.godot/imported/base_1_24.06.2026.png-1c7af2ccd4fb089cafc0bc4a688db8dc.ctex"
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_011wb"]
+atlas = SubResource("CompressedTexture2D_8nhh5")
+region = Rect2(61, 68, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_23vrw"]
+texture = SubResource("AtlasTexture_011wb")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gsokd"]
+atlas = ExtResource("2_011wb")
+region = Rect2(61, 51, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_8nhh5"]
+texture = SubResource("AtlasTexture_gsokd")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_lx5we"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_23vrw"]
+atlas = ExtResource("2_011wb")
+region = Rect2(145, 114, 33, 11)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gsokd"]
+texture = SubResource("AtlasTexture_23vrw")
+
+[resource]
+Button/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+Button/font_sizes/font_size = 6
+Button/fonts/font = ExtResource("1_8nhh5")
+Button/styles/hover = null
+Button/styles/normal = SubResource("StyleBoxTexture_jrbp1")
+Button/styles/pressed = SubResource("StyleBoxTexture_wdkl2")
+FlatButton/base_type = &"Button"
+FlatButton/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+FlatButton/constants/h_separation = 0
+FlatButton/font_sizes/font_size = 6
+FlatButton/fonts/font = ExtResource("1_8nhh5")
+FlatButton/styles/disabled = SubResource("StyleBoxEmpty_transparent")
+FlatButton/styles/focus = SubResource("StyleBoxEmpty_transparent")
+FlatButton/styles/hover = SubResource("StyleBoxTexture_23vrw")
+FlatButton/styles/normal = SubResource("StyleBoxTexture_8nhh5")
+FlatButton/styles/pressed = SubResource("StyleBoxTexture_lx5we")
+PanelActionButton/base_type = &"Button"
+PanelActionButton/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+PanelActionButton/font_sizes/font_size = 6
+PanelActionButton/fonts/font = ExtResource("1_8nhh5")
+PanelActionButton/styles/disabled = SubResource("StyleBoxTexture_jrbp1")
+PanelActionButton/styles/focus = SubResource("StyleBoxEmpty_transparent")
+PanelActionButton/styles/hover = SubResource("StyleBoxTexture_gsokd")
+PanelActionButton/styles/normal = SubResource("StyleBoxTexture_jrbp1")
+PanelActionButton/styles/pressed = SubResource("StyleBoxTexture_wdkl2")
+PanelTextLarge/base_type = &"Label"
+PanelTextLarge/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+PanelTextLarge/font_sizes/font_size = 18
+PanelTextLarge/fonts/font = ExtResource("1_8nhh5")
+PanelTextMedium/base_type = &"Label"
+PanelTextMedium/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+PanelTextMedium/font_sizes/font_size = 12
+PanelTextMedium/fonts/font = ExtResource("1_8nhh5")
+PanelTextSmall/base_type = &"Label"
+PanelTextSmall/colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+PanelTextSmall/font_sizes/font_size = 6
+PanelTextSmall/fonts/font = ExtResource("1_8nhh5")

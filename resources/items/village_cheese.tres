@@ -1,15 +1,15 @@
 [gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://dshwcytig5325"]
 
-[ext_resource type="Texture2D" uid="uid://da2f06ypld4wl" path="res://assets/items/village_cheese.png" id="1_1isa2"]
+[ext_resource type="Texture2D" uid="uid://ctxsl3dnr67vd" path="res://assets/items/village_cheese.png" id="1_1isa2"]
 [ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_j5k4w"]
 
 [resource]
 script = ExtResource("1_j5k4w")
 id = "village_cheese"
 display_name = "Village Cheese"
-description = "village_cheese"
+description = "A humble cheese made by village hands. Smells bold, tastes better, and may start a debate at the table."
 icon = ExtResource("1_1isa2")
-weight = 0.01
+weight = 0.5
 category = 1
 base_value_shekel = 1
 fatigue_reduction = 0.01

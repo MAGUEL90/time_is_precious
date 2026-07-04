@@ -1,0 +1,242 @@
+[gd_scene load_steps=32 format=3 uid="uid://ce6sxr7vod5kh"]
+
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_my8ml"]
+[ext_resource type="Script" uid="uid://bt4cfdc1f4im6" path="res://scenes/ui/item_action_confirm_panel/item_action_confirm_panel.gd" id="1_p62ln"]
+[ext_resource type="PackedScene" uid="uid://btfndx42r6ojm" path="res://scenes/ui/confirm_cancel_actions_panel/confirm_action_panel.tscn" id="2_ocpmg"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_m28rt"]
+[ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="4_ec5cn"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3u8i1"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(116, 7, 52, 40)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_my8ml"]
+atlas = ExtResource("4_ec5cn")
+region = Rect2(48, 80, 16, 16)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_v363g"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2vjfj"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bpamu"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_q3sm3"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vpnuq"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vnntf"]
+atlas = ExtResource("4_ec5cn")
+region = Rect2(35, 69, 10, 6)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1ch4j"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wyj1f"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_k78yo"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_jpdgr"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_q16je"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g42tx"]
+atlas = ExtResource("4_ec5cn")
+region = Rect2(51, 67, 10, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m28rt"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(61, 51, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ec5cn"]
+texture = SubResource("AtlasTexture_m28rt")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ec5cn"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(61, 85, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_my8ml"]
+texture = SubResource("AtlasTexture_ec5cn")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_v363g"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(61, 68, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_m28rt"]
+texture = SubResource("AtlasTexture_v363g")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2vjfj"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(112, 51, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bpamu"]
+texture = SubResource("AtlasTexture_2vjfj")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q3sm3"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(112, 73, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vpnuq"]
+texture = SubResource("AtlasTexture_q3sm3")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1ch4j"]
+atlas = ExtResource("3_m28rt")
+region = Rect2(112, 62, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_wyj1f"]
+texture = SubResource("AtlasTexture_1ch4j")
+
+[node name="ItemActionConfirmPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 104.0
+offset_bottom = 80.0
+theme = ExtResource("1_my8ml")
+script = ExtResource("1_p62ln")
+
+[node name="BackgroundTexture" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("AtlasTexture_3u8i1")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="ItemPreviewRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+alignment = 1
+
+[node name="ItemIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/ItemPreviewRow"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = SubResource("AtlasTexture_my8ml")
+stretch_mode = 2
+
+[node name="InfoVBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ItemPreviewRow"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="ActionLabel" type="Label" parent="MarginContainer/VBoxContainer/ItemPreviewRow/InfoVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"PanelTextMedium"
+text = "Use"
+
+[node name="QuantityLabel" type="Label" parent="MarginContainer/VBoxContainer/ItemPreviewRow/InfoVBox"]
+layout_mode = 2
+theme_type_variation = &"PanelTextSmall"
+text = "(Max 1)"
+
+[node name="QuantityStepper" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="MinusButton" type="Button" parent="MarginContainer/VBoxContainer/QuantityStepper"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_v363g")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_2vjfj")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_bpamu")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_q3sm3")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_vpnuq")
+icon = SubResource("AtlasTexture_vnntf")
+
+[node name="QuantityValueLabel" type="Label" parent="MarginContainer/VBoxContainer/QuantityStepper"]
+layout_mode = 2
+theme_type_variation = &"PanelTextSmall"
+text = "1"
+
+[node name="PlusButton" type="Button" parent="MarginContainer/VBoxContainer/QuantityStepper"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1ch4j")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_wyj1f")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_k78yo")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_jpdgr")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_q16je")
+icon = SubResource("AtlasTexture_g42tx")
+
+[node name="StepSelector" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Step1Button" type="Button" parent="MarginContainer/VBoxContainer/StepSelector"]
+custom_minimum_size = Vector2(20, 16)
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
+text = "x1"
+
+[node name="Step10Button" type="Button" parent="MarginContainer/VBoxContainer/StepSelector"]
+custom_minimum_size = Vector2(20, 16)
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
+text = "x10"
+
+[node name="Step25Button" type="Button" parent="MarginContainer/VBoxContainer/StepSelector"]
+custom_minimum_size = Vector2(20, 16)
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
+text = "x25"
+
+[node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(36, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_bpamu")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_vpnuq")
+theme_override_styles/hover = SubResource("StyleBoxTexture_wyj1f")
+text = "confirm"
+
+[node name="ConfirmActions" parent="MarginContainer" instance=ExtResource("2_ocpmg")]
+visible = false
+layout_mode = 2

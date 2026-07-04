@@ -252,7 +252,7 @@ item_id = "roasted_drumstick"
 
 [node name="PickupItem5" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(122, 185)
-item_id = "butcher\\342\\200\\231s_cut"
+item_id = "butchers_cut"
 
 [node name="PickupItem6" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(195, 182)

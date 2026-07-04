@@ -1,18 +1,22 @@
 extends Node
 signal citizen_added(citizen_data: CitizenData)
 
+@export var seed_debug_citizens: bool = false
+@export var seed_generated_citizen: bool = false
+
 var citizens_by_id: Dictionary[String, CitizenData] = {}
 
 func _ready() -> void:
-	var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
-
-	add_citizen(_create_test_citizen(
-		"01", "Gabbi", CitizenData.CitizenStatus.CITIZEN, "black_female_01", "warm", "default"))
-	add_citizen(_create_test_citizen(
-		"02", "Gal-Sal", CitizenData.CitizenStatus.CITIZEN, "brown_male_02", "tan", "default"))
-	add_citizen(_create_test_citizen(
-		"03", "Sukkalgir", CitizenData.CitizenStatus.CITIZEN, "red_male_01", "dark", "default"))
-	add_citizen(generated_citizen)
+	if seed_debug_citizens:
+		add_citizen(_create_test_citizen(
+			"01", "Gabbi", CitizenData.CitizenStatus.CITIZEN, "black_female_01", "warm", "default"))
+		add_citizen(_create_test_citizen(
+			"02", "Gal-Sal", CitizenData.CitizenStatus.CITIZEN, "brown_male_02", "tan", "default"))
+		add_citizen(_create_test_citizen(
+			"03", "Sukkalgir", CitizenData.CitizenStatus.CITIZEN, "red_male_01", "dark", "default"))
+	if seed_generated_citizen:
+		var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
+		add_citizen(generated_citizen)
 
 func _create_test_citizen(
 	id: String,

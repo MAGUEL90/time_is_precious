@@ -1,36 +1,69 @@
 class_name ItemSlot extends Button
 
-signal slot_clicked(item_id: String, quantity: int, node: Node)
+signal slot_clicked(item_id: String, quantity: int, slot_ref: ItemSlot)
 signal slot_deposit_requested(item_id: String, quantity: int, node: Node)
+signal slot_hovered(item_id: String, quantity: int, slot_ref: ItemSlot)
+signal slot_unhovered(slot_ref: ItemSlot)
 
+@onready var target_lock_icon: TextureRect = $TargetLockIcon
 @onready var asset_icon: TextureRect = $MarginContainer/AssetIcon
 @onready var asset_qty: Label = $MarginContainer/AssetQty
 @onready var selected_qty: Label = $SelectedQty
 
 var _item_id: String
 var _quantity: int
+var is_selected: bool = false
+var is_mouse_over: bool = false
+var hover_locked: bool = false
+
+# Setup / Item data
+
+func _ready() -> void:
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
 
 func set_item(item_id: String, quantity: int, item_icon: Texture2D) -> void:
 	asset_icon.texture = item_icon
 	asset_qty.text = str(max(quantity, 0))
-	var item_data: ItemData = ItemDatabase.get_item_data(item_id) as ItemData
-	
+
 	_item_id = item_id
 	_quantity = quantity
-	
-	if item_data and item_data.display_name:
-		tooltip_text = "%s x%s" % [item_data.display_name.capitalize(), asset_qty.text]
-		if item_data.food_supply_value > 0 or item_data.clothing_supply_value > 0:
-			tooltip_text += "\nRight click: Send to City Stock"
+
+# Slot callbacks
 
 func _on_pressed() -> void:
 	slot_clicked.emit(_item_id, _quantity, self)
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			slot_deposit_requested.emit(_item_id, _quantity, self)
+	pass
+
+# Selection state
 
 func set_selected_quantity(quantity: int) -> void:
 	selected_qty.visible = quantity > 0
 	selected_qty.text = str(quantity)
+
+# Hover state
+
+func _on_mouse_entered() -> void:
+	is_mouse_over = true
+
+	if not hover_locked:
+		target_lock_icon.visible = true
+
+	slot_hovered.emit(_item_id, _quantity, self)
+
+func _on_mouse_exited() -> void:
+	is_mouse_over = false
+	target_lock_icon.visible = is_selected
+	slot_unhovered.emit(self)
+
+# Selection lock state
+
+func set_selected(value: bool) -> void:
+	is_selected = value
+	target_lock_icon.visible = is_selected or (is_mouse_over and not hover_locked)
+
+func set_hover_locked(value: bool) -> void:
+	hover_locked = value
+	target_lock_icon.visible = is_selected or (is_mouse_over and not hover_locked)

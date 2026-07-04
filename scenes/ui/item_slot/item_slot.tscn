@@ -1,24 +1,29 @@
 [gd_scene load_steps=8 format=3 uid="uid://buluwpqeq5op"]
 
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_12jxq"]
-[ext_resource type="Texture2D" uid="uid://dj86tr6rvfa4l" path="res://assets/ui/default_icon.png" id="1_gtaos"]
 [ext_resource type="Script" uid="uid://32dnyjxmwki4" path="res://scenes/ui/item_slot/item_slot.gd" id="2_p6bvc"]
-[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="4_camno"]
-[ext_resource type="Texture2D" uid="uid://c7832kv6x703i" path="res://assets/items/roasted_drumstick.png" id="4_rj3wc"]
-[ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="6_rj3wc"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_tngt2"]
+[ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="6_w15vy"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_tngt2"]
-font = ExtResource("6_rj3wc")
-font_size = 12
-font_color = Color(1, 1, 0.71112853, 1)
+[sub_resource type="AtlasTexture" id="AtlasTexture_oieno"]
+atlas = ExtResource("3_tngt2")
+region = Rect2(36, 1, 24, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_camno"]
+atlas = ExtResource("6_w15vy")
+region = Rect2(114, 82, 12, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pgfgq"]
+atlas = ExtResource("6_w15vy")
+region = Rect2(133, 101, 22, 22)
 
 [node name="ItemSlot" type="Button"]
-custom_minimum_size = Vector2(64, 64)
-offset_right = 8.0
-offset_bottom = 8.0
+custom_minimum_size = Vector2(24, 24)
+offset_right = 24.0
+offset_bottom = 24.0
 focus_mode = 0
 theme = ExtResource("1_12jxq")
-theme_type_variation = &"InvSlot"
+theme_type_variation = &"InventorySlotButton"
 script = ExtResource("2_p6bvc")
 
 [node name="DefaultIcon" type="TextureRect" parent="."]
@@ -29,8 +34,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("1_gtaos")
-stretch_mode = 5
+texture = SubResource("AtlasTexture_oieno")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -46,25 +50,33 @@ theme_override_constants/margin_right = 1
 theme_override_constants/margin_bottom = 1
 
 [node name="AssetIcon" type="TextureRect" parent="MarginContainer"]
-custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("4_rj3wc")
-expand_mode = 1
-stretch_mode = 4
+texture = SubResource("AtlasTexture_camno")
 
 [node name="AssetQty" type="Label" parent="MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 8
-theme = ExtResource("4_camno")
-theme_type_variation = &"HudLabelSub"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 12
+theme = ExtResource("1_12jxq")
+theme_type_variation = &"InventorySlotQuantity"
 text = "99"
 horizontal_alignment = 2
 vertical_alignment = 1
+
+[node name="TargetLockIcon" type="TextureRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_pgfgq")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="SelectedQty" type="Label" parent="."]
 visible = false
@@ -75,7 +87,8 @@ anchor_right = 1.0
 offset_left = -10.0
 offset_bottom = 23.0
 grow_horizontal = 0
+theme = ExtResource("1_12jxq")
+theme_type_variation = &"InventorySlotSelectedQuantity"
 text = "0"
-label_settings = SubResource("LabelSettings_tngt2")
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://dmdtking17tu6"]
+
+[ext_resource type="Texture2D" uid="uid://li14cgk4pgep" path="res://assets/items/plain_head_wrap.png" id="1_5bxdc"]
+[ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_8nfa1"]
+
+[resource]
+script = ExtResource("1_8nfa1")
+id = "plain_head_wrap"
+display_name = "Plain Head Wrap"
+icon = ExtResource("1_5bxdc")
+weight = 1.0
+metadata/_custom_type_script = "uid://b21c8w6adaeov"
