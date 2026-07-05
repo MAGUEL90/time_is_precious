@@ -97,12 +97,12 @@ grow_vertical = 2
 theme_type_variation = &"PanelActionButton"
 text = "Send"
 
-[node name="RemoveButtonTexture" type="TextureRect" parent="OptionBackgroundTexture/OptionContainer"]
+[node name="DropButtonTexture" type="TextureRect" parent="OptionBackgroundTexture/OptionContainer"]
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("AtlasTexture_vxag1")
 
-[node name="RemoveButton" type="Button" parent="OptionBackgroundTexture/OptionContainer/RemoveButtonTexture"]
+[node name="DropButton" type="Button" parent="OptionBackgroundTexture/OptionContainer/DropButtonTexture"]
 custom_minimum_size = Vector2(33, 11)
 layout_mode = 1
 anchors_preset = 8
@@ -117,4 +117,4 @@ offset_bottom = 5.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_type_variation = &"PanelActionButton"
-text = "Remove"
+text = "Drop"
