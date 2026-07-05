@@ -142,3 +142,15 @@ func play_failed_pickup_shake() -> void:
 	shake_tween.tween_property(self, "position", original_position + Vector2(-4, 0), 0.04)
 	shake_tween.tween_property(self, "position", original_position + Vector2(2, 0), 0.03)
 	shake_tween.tween_property(self, "position", original_position, 0.03)
+
+# Drop spawn feedback
+
+func play_drop_spawn_feedback() -> void:
+	scale = Vector2(0.75, 0.75)
+	modulate.a = 0.0
+
+	var tween: Tween = create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true)
+	tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "modulate:a", 1.0, 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
