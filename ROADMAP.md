@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-06-09
+Last updated: 2026-07-06
 
 ## Development Principle
 Build a small playable prototype first.
@@ -107,7 +107,7 @@ Avoid expanding into these areas until the playable loop above feels stable:
 - More resource chains
 - Advanced AI Advisor NPC
 - Large content expansion
-- Steam/demo planning
+- Full public demo expansion before the core loop is stable
 
 ## Immediate Execution Checklist
 - [x] Lock the MVP scope around one production chain.
@@ -292,6 +292,28 @@ Only start after the prototype loop is stable.
 
 Do not prioritize this too early unless the current architecture requires preparation.
 
+## Phase 6 - Demo Distribution and Playtesting
+Only start execution after the playable loop is stable, readable, and testable without developer help.
+
+Primary demo hub:
+- One Percent Studio website.
+
+Secondary distribution / test channels:
+- itch.io for early public or limited-access web testing.
+- Steam Playtest after a vertical slice exists and store-facing testing makes sense.
+- Steam Demo when the build represents the intended quality direction.
+- Game Jolt as an optional community mirror after presentation is clear.
+- CrazyGames as a later browser discovery channel, not an early prototype target.
+
+Reference document:
+- See `DEMO_DISTRIBUTION.md` for rollout stages, platform roles, and demo readiness checklist.
+
+Minimum success criteria:
+- The demo has one approved current build.
+- The One Percent Studio website clearly points to the current demo.
+- The demo has a version number, known issues, controls, and a feedback path.
+- External platforms are added gradually, not all at once.
+
 ## Not Yet Priority
 Delay these until the core loop is stable:
 - Large city simulation.
@@ -319,6 +341,7 @@ When updating this project, Codex should maintain these files:
 - `ARCHITECTURE.md`
 - `ASSET_GUIDE.md`
 - `ROADMAP.md`
+- `DEMO_DISTRIBUTION.md`
 
 Future files may be added as needed.
 
@@ -327,3 +350,5 @@ Do not overwrite design direction without explaining the reason.
 Codex should prioritize the playable core loop before expanding into new major systems.
 
 Codex should also avoid designing systems that are permanently fixed, fully predictable, or easy to solve. Use fixed values during early prototype only when needed for stability, then prepare the architecture for controlled variation later.
+
+Codex should treat the One Percent Studio website as the primary demo hub unless the project direction is explicitly changed.
