@@ -1,5 +1,9 @@
 class_name Player extends CharacterBody2D
 
+signal condition_changed
+signal sleep_completed(was_collapse: bool)
+signal collapse_triggered
+
 var player_sprite_direction: Vector2 = Vector2.RIGHT
 var current_interactable: Node = null
 var current_npc_dialogue: NPCBase = null
@@ -9,13 +13,42 @@ var can_interact: bool = false
 var dialogue_finished: bool = false
 
 @export var speed = 50
-@export var fatigue: float = 0.5 # << Hanya Tester
+
+# Core condition stats.
+# fatigue: 0.0 = rested, 1.0 = exhausted.
+# hunger is kept as internal hunger debt for compatibility: 0.0 = fueled, 1.0 = empty/starving.
+# Public getters expose Hunger as body fuel, so high Hunger percent means better condition.
+# focus: 0.0 = unfocused, 1.0 = mentally sharp.
+@export var fatigue: float = 0.0
 @export var min_fatigue: float = 0.0
 @export var max_fatigue: float = 1.0
 @export var hunger: float = 0.0
 @export var hunger_increase_per_min: float = 0.001
 @export var min_hunger: float = 0.0
 @export var max_hunger: float = 1.0
+@export var focus: float = 1.0
+@export var min_focus: float = 0.0
+@export var max_focus: float = 1.0
+
+@export var fatigue_increase_per_min: float = 0.00025
+@export var focus_loss_per_min: float = 0.00012
+@export var focus_loss_from_high_fatigue_per_min: float = 0.00055
+
+@export var sleep_duration_minutes: int = 420
+@export var sleep_fatigue_recovery: float = 0.65
+@export var sleep_focus_recovery: float = 0.75
+
+@export var collapse_fatigue_threshold: float = 1.0
+@export var collapse_focus_threshold: float = 0.02
+@export var collapse_hunger_threshold: float = 0.98
+@export var collapse_time_skip_minutes: int = 240
+@export var collapse_hunger_cost: float = 0.45
+@export var collapse_fatigue_recovery: float = 0.30
+@export var collapse_focus_recovery: float = 0.25
+
+var last_sleep_day: int = -1
+var is_sleeping: bool = false
+var is_collapsing: bool = false
 
 var claim_menu_is_open: bool = false
 var inventory_is_open: bool = false
@@ -37,6 +70,15 @@ func _ready() -> void:
 
 func on_minute_changed(_minute: int) -> void:
 	increase_hunger(hunger_increase_per_min)
+
+	if is_sleeping:
+		condition_changed.emit()
+		return
+
+	increase_fatigue(fatigue_increase_per_min)
+	_apply_focus_drain_from_time_and_fatigue()
+	condition_changed.emit()
+	_check_for_collapse()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if claim_menu_is_open:
@@ -90,7 +132,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		time_component_manager.toggle_pause()
 		npc.interactable_label_component.hide()
 		return
-
 	# selain NPC: panggil method interact khusus kalau ada
 	elif current_interactable is WorkShop:
 		var work_shop: WorkShop = current_interactable as WorkShop
@@ -225,41 +266,153 @@ func _pay_workshop_overdue_fee() -> void:
 
 func reduce_fatigue(amount: float) -> bool:
 	if fatigue > min_fatigue and amount > 0.0:
-		fatigue = clampf(fatigue- amount, min_fatigue, max_fatigue)
-		return true
+		var before_fatigue: float = fatigue
+		fatigue = clampf(fatigue - amount, min_fatigue, max_fatigue)
+		condition_changed.emit()
+		return fatigue < before_fatigue
 
 	return false
 
 func increase_fatigue(amount: float) -> bool:
 	if fatigue < max_fatigue and amount > 0.0:
+		var before_fatigue: float = fatigue
 		fatigue = clampf(fatigue + amount, min_fatigue, max_fatigue)
-		return true
+		condition_changed.emit()
+		return fatigue > before_fatigue
 	return false
 
 func reduce_hunger(amount: float) -> bool:
+	return restore_hunger(amount)
+
+func restore_hunger(amount: float) -> bool:
 	if hunger > min_hunger and amount > 0.0:
+		var before_hunger: float = hunger
 		hunger = clampf(hunger - amount, min_hunger, max_hunger)
-		return true
+		condition_changed.emit()
+		return hunger < before_hunger
 
 	return false
 
 func increase_hunger(amount: float) -> bool:
 	if hunger < max_hunger and amount > 0.0:
+		var before_hunger: float = hunger
 		hunger = clampf(hunger + amount, min_hunger, max_hunger)
-		return true
+		condition_changed.emit()
+		return hunger > before_hunger
 	return false
 
+func consume_focus(amount: float) -> bool:
+	if focus > min_focus and amount > 0.0:
+		var before_focus: float = focus
+		focus = clampf(focus - amount, min_focus, max_focus)
+		condition_changed.emit()
+		return focus < before_focus
+	return false
+
+func recover_focus(amount: float) -> bool:
+	if focus < max_focus and amount > 0.0:
+		var before_focus: float = focus
+		focus = clampf(focus + amount, min_focus, max_focus)
+		condition_changed.emit()
+		return focus > before_focus
+	return false
+
+func try_spend_focus(cost: float) -> bool:
+	if cost <= 0.0:
+		return true
+
+	if focus < cost:
+		return false
+
+	return consume_focus(cost)
+
+func get_hunger() -> float:
+	return 1.0 - hunger
+
 func get_focus() -> float:
-	return 1.0 - ((fatigue + hunger) / 2.0)
+	return focus
+
+func get_sleep_recovery_quality() -> float:
+	var body_fuel: float = get_hunger()
+	return clampf(0.15 + (body_fuel * 0.85), 0.15, 1.0)
+
+func can_sleep_today() -> bool:
+	if TimeComponentManager.current_hour == 0 and TimeComponentManager.current_minute == 0:
+		return false
+
+	return last_sleep_day != TimeComponentManager.current_day
+
+func sleep() -> bool:
+	return sleep_for_minutes(sleep_duration_minutes)
+
+func sleep_for_minutes(duration_minutes: int) -> bool:
+	if not can_sleep_today():
+		return false
+
+	if duration_minutes <= 0:
+		return false
+
+	last_sleep_day = TimeComponentManager.current_day
+	var sleep_quality: float = get_sleep_recovery_quality()
+
+	is_sleeping = true
+	time_component_manager.advance_minutes(duration_minutes)
+	is_sleeping = false
+
+	reduce_fatigue(sleep_fatigue_recovery * sleep_quality)
+	recover_focus(sleep_focus_recovery * sleep_quality)
+	sleep_completed.emit(false)
+	return true
+
+func collapse() -> void:
+	if is_collapsing:
+		return
+
+	is_collapsing = true
+	collapse_triggered.emit()
+	last_sleep_day = TimeComponentManager.current_day
+	can_move = false
+	velocity = Vector2.ZERO
+
+	is_sleeping = true
+	time_component_manager.advance_minutes(collapse_time_skip_minutes)
+	is_sleeping = false
+
+	increase_hunger(collapse_hunger_cost)
+	reduce_fatigue(collapse_fatigue_recovery)
+	recover_focus(collapse_focus_recovery)
+	sleep_completed.emit(true)
+
+	can_move = true
+	is_collapsing = false
 
 func get_fatigue_percent() -> int:
 	return int(fatigue * 100.0)
 
 func get_hunger_percent() -> int:
-	return int(hunger * 100.0)
+	return int(get_hunger() * 100.0)
 
 func get_focus_percent() -> int:
 	return int(get_focus() * 100.0)
+
+func _apply_focus_drain_from_time_and_fatigue() -> void:
+	var fatigue_pressure: float = clampf((fatigue - 0.55) / 0.45, 0.0, 1.0)
+	consume_focus(focus_loss_per_min + (focus_loss_from_high_fatigue_per_min * fatigue_pressure))
+
+func _check_for_collapse() -> void:
+	if is_collapsing or is_sleeping:
+		return
+
+	if fatigue >= collapse_fatigue_threshold:
+		collapse()
+		return
+
+	if focus <= collapse_focus_threshold:
+		collapse()
+		return
+
+	if hunger >= collapse_hunger_threshold:
+		collapse()
 
 # Workshop storage menu flow
 
