@@ -1,12 +1,12 @@
-[gd_scene load_steps=12 format=4 uid="uid://d1sjb3eauq6xj"]
+[gd_scene load_steps=11 format=4 uid="uid://d1sjb3eauq6xj"]
 
 [ext_resource type="Script" uid="uid://3a87u065blx6" path="res://scenes/test_scenes/test_scene_feature_consumable-fatigue/test_scene_consumable.gd" id="1_jin54"]
 [ext_resource type="Texture2D" uid="uid://rymr6doa85vd" path="res://assets/temporer/tile_set/test_tile_set.png" id="1_re3w7"]
-[ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="2_1m81i"]
-[ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="3_bkgnk"]
 [ext_resource type="PackedScene" uid="uid://fsc270pc2u2v" path="res://scenes/pickup_item/pickup_item.tscn" id="4_2tlsb"]
+[ext_resource type="PackedScene" uid="uid://ck0grik4yminb" path="res://scenes/sleep_spot/sleep_spot.tscn" id="4_07h26"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="5_6xc3f"]
-[ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="6_5my3y"]
+[ext_resource type="PackedScene" uid="uid://c11gc83v7mjib" path="res://scenes/nightmare_world/nightmare_world.tscn" id="6_e6gr8"]
+[ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="7_e6gr8"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="7_l0jvn"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_hxb2b"]
@@ -193,12 +193,6 @@ texture = ExtResource("1_re3w7")
 [sub_resource type="TileSet" id="TileSet_ptwpp"]
 sources/0 = SubResource("TileSetAtlasSource_hxb2b")
 
-[sub_resource type="NavigationPolygon" id="NavigationPolygon_nvn2h"]
-vertices = PackedVector2Array(275.03125, 162.14844, 72.46875, 168.84375, 57.539063, 30.8125, 275.96094, 23.179688)
-polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
-outlines = Array[PackedVector2Array]([PackedVector2Array(68, 174, 52, 26, 281, 18, 280, 167)])
-agent_radius = 5.0
-
 [node name="TestConsumable" type="Node2D"]
 script = ExtResource("1_jin54")
 
@@ -214,47 +208,51 @@ tile_set = SubResource("TileSet_ptwpp")
 [node name="TopLayer" type="TileMapLayer" parent="TileMap"]
 tile_set = SubResource("TileSet_ptwpp")
 
-[node name="NPC\'s" type="Node2D" parent="."]
+[node name="WorldObjects" type="Node2D" parent="."]
+y_sort_enabled = true
 
-[node name="NavigationRegion2D" type="NavigationRegion2D" parent="NPC\'s"]
-navigation_polygon = SubResource("NavigationPolygon_nvn2h")
+[node name="Pickups" type="Node2D" parent="WorldObjects"]
+y_sort_enabled = true
 
-[node name="NPC_Galsal" parent="NPC\'s" instance=ExtResource("2_1m81i")]
-position = Vector2(137, 110)
-
-[node name="NPC_Gabbi" parent="NPC\'s" instance=ExtResource("3_bkgnk")]
-position = Vector2(201, 112)
-collision_layer = 1
-
-[node name="PickupItem" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(221, 146)
 item_id = "stone"
 
-[node name="PickupItem4" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem4" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(152, 176)
 item_id = "roasted_drumstick"
 
-[node name="PickupItem5" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem5" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(122, 185)
 item_id = "fresh_loaf"
 
-[node name="PickupItem6" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem6" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(195, 182)
 item_id = "roasted_drumstick"
 
-[node name="PickupItem2" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem2" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(185, 143)
 item_id = "straw_bundle"
 
-[node name="PickupItem3" parent="." instance=ExtResource("4_2tlsb")]
+[node name="PickupItem3" parent="WorldObjects/Pickups" instance=ExtResource("4_2tlsb")]
 position = Vector2(144, 144)
 item_id = "sun_dried_mudbrick"
+
+[node name="SleepSpot" parent="WorldObjects" instance=ExtResource("4_07h26")]
+position = Vector2(116, 109)
+
+[node name="Player" parent="WorldObjects" instance=ExtResource("7_l0jvn")]
+position = Vector2(168, 117)
+fatigue = 0.8
+hunger = 0.7
+focus = 0.5
+current_experience = 50
+
+[node name="NightmareWorld" parent="." instance=ExtResource("6_e6gr8")]
+position = Vector2(5000, 5000)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("5_6xc3f")]
 
-[node name="GameplayHUD" parent="." instance=ExtResource("6_5my3y")]
-
-[node name="Player" parent="." instance=ExtResource("7_l0jvn")]
-position = Vector2(168, 117)
+[node name="TopHUD" parent="." instance=ExtResource("7_e6gr8")]

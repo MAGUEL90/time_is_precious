@@ -30,12 +30,12 @@ ApplicantOfferDatabase="*res://scripts/autoload/applicant_offer_database/applica
 CitizenManager="*res://scripts/autoload/citizen_manager/citizen_manager.gd"
 CitizenGenerator="*res://scripts/autoload/citizen_generator/citizen_generator.gd"
 ImmigrationManager="*res://scripts/autoload/immigration_manager/immigration_manager.gd"
+SceneTransition="*res://scenes/scene_transition/scene_transition.tscn"
 
 [display]
 
 window/size/viewport_width=640
 window/size/viewport_height=360
-window/size/mode=3
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="viewport"
@@ -63,6 +63,7 @@ player=""
 npcs=""
 smoke_test=""
 worker_hub_ui=""
+nightmare_world=""
 
 [input]
 

@@ -1,0 +1,58 @@
+[gd_scene load_steps=7 format=4 uid="uid://c11gc83v7mjib"]
+
+[ext_resource type="Script" uid="uid://nq5umnxidiyw" path="res://scenes/nightmare_world/nightmare_world.gd" id="1_kvxfd"]
+[ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="1_m387a"]
+[ext_resource type="PackedScene" uid="uid://bit0j10nuewy1" path="res://scenes/worker_visual/base_worker_visual.tscn" id="2_kvxfd"]
+[ext_resource type="Shader" uid="uid://mhc23qbhkyko" path="res://scenes/nightmare_world/nightmare_vision.gdshader" id="4_o73sd"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_o73sd"]
+radius = 17.029387
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kvxfd"]
+shader = ExtResource("4_o73sd")
+shader_parameter/radius_pixels = 96.0
+shader_parameter/softness_pixels = 32.0
+shader_parameter/darkness = 1.0
+
+[node name="NightmareWorld" type="Node2D" groups=["nightmare_world"]]
+script = ExtResource("1_kvxfd")
+base_vision_radius = 140.0
+minimum_vision_radius = 72.0
+
+[node name="Background" type="TileMapLayer" parent="."]
+z_index = -10
+position = Vector2(0, 8)
+tile_map_data = PackedByteArray("AAAAAAcAAQABAAEAAAAAAAgAAQABAAEAAAABAAcAAQABAAEAAAABAAgAAQABAAEAAAACAAMAAQABAAEAAAACAAQAAQABAAEAAAACAAUAAQABAAEAAAACAAYAAQABAAEAAAACAAcAAQABAAEAAAACAAgAAQABAAEAAAADAAMAAQABAAEAAAADAAQAAQABAAEAAAADAAUAAQABAAEAAAADAAYAAQABAAEAAAADAAcAAQABAAEAAAADAAgAAQABAAEAAAAEAAMAAQABAAEAAAAEAAQAAQABAAEAAAAFAAMAAQABAAEAAAAFAAQAAQABAAEAAAAFAAUAAQABAAEAAAAFAAYAAQABAAEAAAAFAAcAAQABAAEAAAAFAAgAAQABAAEAAAAFAAsAAQABAAEAAAAFAAwAAQABAAEAAAAGAAMAAQABAAEAAAAGAAQAAQABAAEAAAAGAAUAAQABAAEAAAAGAAYAAQABAAEAAAAGAAcAAQABAAEAAAAGAAgAAQABAAEAAAAGAAsAAQABAAEAAAAGAAwAAQABAAEAAAAHAAMAAQABAAEAAAAHAAQAAQAAAAUAAAAHAAcAAQABAAEAAAAHAAgAAQABAAEAAAAHAAsAAQABAAEAAAAHAAwAAQABAAEAAAAIAAMAAQABAAEAAAAIAAcAAQABAAEAAAAIAAgAAQABAAEAAAAIAAkAAQABAAEAAAAIAAoAAQABAAEAAAAIAAsAAQABAAEAAAAIAAwAAQABAAEAAAAJAAIAAQABAAEAAAAJAAMAAQABAAEAAAAJAAcAAQABAAEAAAAJAAgAAQABAAEAAAAJAAkAAQABAAEAAAAJAAoAAQABAAEAAAAJAAsAAQABAAEAAAAJAAwAAQABAAEAAAAKAAkAAQABAAEAAAAKAAoAAQABAAEAAAALAAkAAQABAAEAAAALAAoAAQABAAEAAAAMAAkAAQABAAEAAAAMAAoAAQABAAEAAAANAAkAAQABAAEAAAANAAoAAQABAAEAAAAOAAkAAQABAAEAAAAOAAoAAQABAAEAAAAJAAEAAQAAAAUAAAAIAAEAAQAAAAUAAAAHAAEAAQAAAAUAAAAGAAEAAQAAAAUAAAAFAAEAAQAAAAUAAAAEAAEAAQAAAAUAAAAEAAAAAQAAAAUAAAAFAAAAAQAAAAUAAAAIAAIAAQAAAAUAAAAIAAQAAQAAAAUAAAAJAAQAAQAAAAUAAAAKAAQAAQAAAAUAAAALAAQAAQAAAAUAAAAMAAQAAQAAAAUAAAANAAQAAQAAAAUAAAAKAAMAAQAAAAUAAAALAAMAAQAAAAUAAAAMAAMAAQAAAAUAAAANAAMAAQAAAAUAAAAOAAMAAQAAAAUAAAAOAAQAAQAAAAUAAAANAAUAAQAAAAUAAAANAAYAAQAAAAUAAAAOAAYAAQAAAAUAAAAOAAUAAQAAAAUAAAA=")
+tile_set = ExtResource("1_m387a")
+
+[node name="WorldObjects" type="Node2D" parent="."]
+
+[node name="SpawnPoint" type="Marker2D" parent="WorldObjects"]
+
+[node name="Obstacles" type="Node2D" parent="WorldObjects"]
+
+[node name="ExitNPC" type="Area2D" parent="WorldObjects"]
+position = Vector2(80, 11)
+collision_layer = 0
+collision_mask = 2
+
+[node name="BaseWorkerVisual" parent="WorldObjects/ExitNPC" instance=ExtResource("2_kvxfd")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WorldObjects/ExitNPC"]
+position = Vector2(0, 4)
+shape = SubResource("CircleShape2D_o73sd")
+
+[node name="NightmareUI" type="CanvasLayer" parent="."]
+
+[node name="VisionOverlay" type="ColorRect" parent="NightmareUI"]
+material = SubResource("ShaderMaterial_kvxfd")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TimerLabel" type="Label" parent="NightmareUI"]
+offset_right = 40.0
+offset_bottom = 23.0

@@ -9,6 +9,7 @@ atlas = ExtResource("3_x1xbw")
 region = Rect2(90, 114, 54, 11)
 
 [node name="InteractableLabelComponent" type="Control"]
+visible = false
 z_index = 2
 layout_mode = 3
 anchors_preset = 0
