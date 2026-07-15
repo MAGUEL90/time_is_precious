@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3 uid="uid://vanocrgmjrjq"]
+
+[ext_resource type="Script" uid="uid://dk87ydairpfk" path="res://scenes/scene_transition/scene_transition.gd" id="1_iwxbl"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_hen7b"]
+
+[node name="SceneTransition" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_iwxbl")
+
+[node name="FadeOverlay" type="ColorRect" parent="."]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="MessageLabel" type="Label" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_hen7b")
+theme_type_variation = &"HeaderLarge"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

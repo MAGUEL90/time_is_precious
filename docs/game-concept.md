@@ -2,7 +2,7 @@
 
 Source of truth for high-level game design decisions.
 
-- Last updated: 2026-05-15
+- Last updated: 2026-07-16
 - Working version: v0.9 draft
 - Focus: game idea, player experience, world logic, and long-term design direction.
 - Separate note: implementation progress and coding notes should live outside this concept document.
@@ -498,12 +498,94 @@ The current direction is closer to intellectual / managerial growth:
 These are not separate characters, but growth directions that reinforce the fantasy
 of rebuilding the city through smarter leadership.
 
-## 18. Oracle Forecast and Advisor NPC
+## 18. Player Condition and Sleep Direction
+
+The player has a personal condition layer that reinforces the time economy and the risk of
+relying too heavily on manual work. The current MVP establishes the core relationship between
+Fatigue, Hunger, Focus, Sleep, Collapse, and the Nightmare consequence. Exact balance and final
+presentation remain provisional.
+
+### 18.1 Core Conditions
+
+- **Fatigue:** physical exhaustion. It rises while the player is awake and through demanding or
+  manual work. Higher internal Fatigue means a worse condition. The HUD displays the inverse as
+  remaining rest capacity, so a full bar consistently means a healthy state.
+- **Hunger / Body Fuel:** physical nourishment. Internal Hunger rises as the player becomes more
+  hungry, so a higher internal value means a worse condition. The HUD displays the inverse as
+  remaining nourishment, keeping a full bar consistent with a healthy state. The final
+  public-facing term still needs to be chosen.
+- **Focus:** an independent mental resource rather than a value derived only from Fatigue and
+  Hunger. It can support negotiation, strategy, important dialogue choices, and precision work.
+  High Focus is good, while high Fatigue and poor nourishment make it harder to maintain.
+- **Sleep:** the main recovery action. It advances the world clock, so recovery always costs time.
+
+### 18.2 Sleep Rules
+
+- A full sleep advances roughly seven in-game hours as an initial direction; the exact duration
+  remains a balance decision.
+- The player can normally complete one full sleep per in-game day.
+- Hunger or food pressure continues while time passes during sleep.
+- Sleep quality depends on the player's nourishment. Sleeping while well fed restores more
+  Fatigue and Focus than sleeping while starving.
+- Sleep should restore the player without completely erasing the consequences of poor planning.
+- A bed or another valid SleepSpot provides the interaction. The player cannot sleep from an
+  arbitrary location during normal gameplay.
+- A separate short-rest system is not required for the early MVP.
+
+### 18.3 Collapse and Nightmare Consequence
+
+If Fatigue reaches its limit, Focus is depleted, or Hunger becomes critical, the player may
+collapse. Collapse is a penalty rather than a substitute for healthy sleep:
+
+- the player enters a Nightmare space while the normal world clock is paused
+- limited vision prevents the player from reading the entire route immediately
+- the player must reach a special exit character or finish point before the timer expires
+- time spent in the Nightmare is converted into additional time in the normal world
+- escaping quickly reduces the time loss, while a timeout adds an additional penalty
+- later Collapse tiers increase pressure through stronger penalties, reduced vision, and
+  progressively harder or longer challenges
+- Hunger becomes worse, while Fatigue and Focus recover only partially
+- the normal sleep opportunity is consumed for the day on which the player returns
+
+When the Nightmare ends, the transition should clearly report time spent, tier penalties,
+timeout penalties, and the total time added to the normal world. Waiting for a timeout should
+not be strategically equal to solving the challenge.
+
+Collapse should have visible warnings and feel like the result of ignored conditions, not a
+sudden random punishment. Fatigue does not need to reduce movement speed in the first version;
+time loss and collapse risk are enough initial pressure.
+
+### 18.4 Design Purpose
+
+The condition layer should strengthen the game's central message:
+
+- manual work has a personal cost beyond the minutes spent performing it
+- food, sleep, and Focus compete with production and travel for limited time
+- delegation becomes valuable because it protects the player's time and condition
+- Focus connects physical self-management to negotiation and managerial decision-making
+
+Sleep must not become a free healing button. It is another strategic use of the player's most
+important resource: time.
+
+### 18.5 Open Implementation Decisions
+
+The MVP is functional, but these decisions remain open for balancing and later iterations:
+
+- whether the public-facing term is Hunger, Body Fuel, or Satiety
+- exact drain, recovery, and collapse values
+- how the once-per-day sleep limit resets across midnight and after Collapse
+- which additional locations can act as valid SleepSpots
+- final warning sprites, animation, audio, and presentation before Collapse
+- which actions spend Focus and how clearly those costs are communicated
+- how Nightmare maze difficulty, time limits, and penalties scale across tiers
+- which condition and Nightmare values must persist across save and load
+
+## 19. Oracle Forecast and Advisor NPC
 
 This is a long-term core feature direction.
 It should not be built large during early MVP.
 
-### 18.1 Oracle Forecast System
+### 19.1 Oracle Forecast System
 
 The Oracle Forecast System reads city data and predicts future risks or opportunities.
 
@@ -520,7 +602,7 @@ Example forecast topics:
 The Oracle understands the city as a system.
 It sees numbers, trends, shortages, and time pressure.
 
-### 18.2 Advisor NPC With Memory
+### 19.2 Advisor NPC With Memory
 
 The Advisor NPC reads the player's behavior and remembers important choices.
 
@@ -535,7 +617,7 @@ Example memory topics:
 The Advisor understands the player as a person.
 It sees habits, repeated mistakes, and decision style.
 
-### 18.3 Combined Identity
+### 19.3 Combined Identity
 
 The strongest direction is the combination:
 
@@ -551,7 +633,7 @@ Example:
 This can become one of the unique identities of **Time is Precious**:
 a management RPG where the city remembers, warns, and responds intelligently.
 
-### 18.4 MVP Boundary
+### 19.4 MVP Boundary
 
 Do not build the full system early.
 
@@ -561,7 +643,7 @@ First small version:
 - Advisor remembers 3 to 5 important player events
 - advice is simple, readable, and grounded in current city problems
 
-## 19. Production and Storage Direction
+## 20. Production and Storage Direction
 
 The current design direction remains:
 
@@ -578,7 +660,7 @@ This supports chain-based gameplay:
 - refine
 - use / sell / reinvest
 
-## 20. Current Design Priorities
+## 21. Current Design Priorities
 
 ### Priority A. Clarify NPC Identity
 
@@ -612,7 +694,7 @@ Do not overload the system too early with:
 - full AI advice before city systems are readable
 - riot-level consequences before the basic city loop is stable
 
-## 21. Open Questions
+## 22. Open Questions
 
 These are still intentionally open:
 
@@ -624,7 +706,7 @@ These are still intentionally open:
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
 
-## 22. Legacy and Multiple Ending Direction
+## 23. Legacy and Multiple Ending Direction
 
 **Time is Precious** should not have only one simple win condition.
 
@@ -640,7 +722,7 @@ The stronger question is:
 This direction prevents the game from feeling like a fixed economic checklist.
 The player should be able to shape the city's future through repeated decisions, not through a single hard class selection.
 
-### 22.1 Ending Evaluation Values
+### 23.1 Ending Evaluation Values
 
 Endings should be determined by several long-term values:
 
@@ -657,7 +739,7 @@ Endings should be determined by several long-term values:
 The game can still have a clear main objective: rebuild the city and manage wealth wisely.
 However, the result should reflect the player's method, not only the final amount of money.
 
-### 22.2 Possible Ending Directions
+### 23.2 Possible Ending Directions
 
 #### Golden Steward Ending
 
@@ -714,7 +796,7 @@ The city may survive for a while, but it cannot scale.
 This ending reinforces the title's meaning.
 The player used effort, but failed to use time wisely.
 
-### 22.3 Soft Player Identity Routes
+### 23.3 Soft Player Identity Routes
 
 The game should avoid forcing the player into hard classes at the beginning.
 Instead, the player's identity can emerge from repeated decisions.
@@ -731,7 +813,7 @@ Possible soft routes:
 These routes do not need to lock the player out of other systems.
 They are behavioral labels, advisor memory hooks, and ending influences.
 
-### 22.4 Advisor and Oracle Support for Endings
+### 23.4 Advisor and Oracle Support for Endings
 
 The Oracle and Advisor systems can support multi-ending direction by warning the player about long-term patterns.
 
@@ -746,7 +828,7 @@ Example advisor reactions:
 The Advisor should not only explain numbers.
 The Advisor should help the player understand what kind of leader they are becoming.
 
-### 22.5 Design Rule
+### 23.5 Design Rule
 
 Multiple endings should not feel random.
 They should be the natural result of visible player behavior over time.
@@ -757,7 +839,7 @@ A good ending system for **Time is Precious** should answer three questions:
 2. Did the player build a stable city?
 3. Did the player use time, people, and power wisely?
 
-## 23. Immediate Reference Rules
+## 24. Immediate Reference Rules
 
 If future design choices feel messy, return to these rules first:
 
@@ -775,3 +857,4 @@ If future design choices feel messy, return to these rules first:
 12. Worker team composition is a long-term job and location management feature, not an early Worker Tab requirement.
 13. The game should support multiple ending directions based on how the city is rebuilt, not only on final wealth.
 14. The player's identity should emerge from repeated behavior, not from a hard class selection at the start.
+15. Player conditions, Sleep, Collapse, and Nightmare consequences must reinforce the value of time and delegation.
