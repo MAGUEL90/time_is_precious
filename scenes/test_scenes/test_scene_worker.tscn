@@ -1,11 +1,10 @@
-[gd_scene load_steps=12 format=4 uid="uid://0mhc8gr6qna7"]
+[gd_scene load_steps=11 format=4 uid="uid://0mhc8gr6qna7"]
 
 [ext_resource type="Script" uid="uid://bovovnq7kbcoy" path="res://scenes/test_scenes/test_scene_worker.gd" id="1_c84ir"]
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="2_q0h4i"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_3un5y"]
 [ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="6_lnk0j"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="8_3bb67"]
-[ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="9_dh3i7"]
 [ext_resource type="PackedScene" uid="uid://qw2sc2h3urwo" path="res://scenes/city_spawner/city_spawner.tscn" id="9_esm0p"]
 [ext_resource type="PackedScene" uid="uid://b72ntkdkju1bx" path="res://scenes/job_board/job_board.tscn" id="10_odmqt"]
 [ext_resource type="PackedScene" uid="uid://bh7wd54bwa3f" path="res://scenes/ui/immigration_request_ui/immigration_request_ui.tscn" id="10_p2ul1"]
@@ -25,8 +24,6 @@ position = Vector2(305, 101)
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("8_3bb67")]
-
-[node name="GameplayHUD" parent="." instance=ExtResource("9_dh3i7")]
 
 [node name="JobBoard" parent="." instance=ExtResource("10_odmqt")]
 

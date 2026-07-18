@@ -25,7 +25,9 @@ func generate_citizen() -> CitizenData:
 	var citizen_data: CitizenData = CitizenData.new()
 	citizen_data.citizen_id = "citizen_%03d" % counter_id
 	citizen_data.display_name = display_name_container.pick_random()
-	citizen_data.status = CitizenData.CitizenStatus.CITIZEN
+	citizen_data.population_status = CitizenData.PopulationStatus.MIGRANT
+	citizen_data.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	citizen_data.status = CitizenData.CitizenStatus.NONE
 	citizen_data.profession = WorkerData.Profession.NONE
 	var visual_profile: VisualProfile = VisualProfile.new()
 	visual_profile.skin_tone = skin_tone_container.pick_random()
