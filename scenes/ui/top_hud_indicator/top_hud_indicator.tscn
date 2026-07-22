@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=3 uid="uid://csiwbxjbuocth"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_pkp8k"]
+[ext_resource type="Texture2D" uid="uid://2qhjslgvmnnv" path="res://assets/ui/top_hud/icon_top_hud.png" id="2_utvdj"]
+[ext_resource type="Texture2D" uid="uid://dpwye8ymlkk1c" path="res://assets/ui/top_hud/slot_button_top_hud.png" id="3_3etrv"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sxd8g"]
+atlas = ExtResource("2_utvdj")
+region = Rect2(0, 0, 16, 16)
+
+[node name="TopHUDIndicator" type="HBoxContainer"]
+custom_minimum_size = Vector2(44, 16)
+offset_right = 44.0
+offset_bottom = 16.0
+mouse_filter = 2
+theme = ExtResource("1_pkp8k")
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = SubResource("AtlasTexture_sxd8g")
+stretch_mode = 2
+
+[node name="ValuePanel" type="TextureRect" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_3etrv")
+stretch_mode = 2
+
+[node name="ValueLabel" type="Label" parent="ValuePanel"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TopHudLabel"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true

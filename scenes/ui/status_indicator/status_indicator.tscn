@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3 uid="uid://rsx7sjnfh6ut"]
+
+[ext_resource type="Texture2D" uid="uid://xwctbaixf0ld" path="res://assets/ui/ui_icon/fatigue_icon.png" id="1_m4bnv"]
+[ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="2_xmjt2"]
+[ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="3_dm6yg"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ijhdm"]
+atlas = ExtResource("1_m4bnv")
+
+[node name="StatusIndicator" type="HBoxContainer"]
+custom_minimum_size = Vector2(38, 16)
+offset_right = 38.0
+offset_bottom = 16.0
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="."]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+texture = SubResource("AtlasTexture_ijhdm")
+stretch_mode = 5
+
+[node name="Bar" type="TextureProgressBar" parent="."]
+custom_minimum_size = Vector2(20, 7)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+nine_patch_stretch = true
+stretch_margin_left = 3
+stretch_margin_top = 3
+stretch_margin_right = 3
+stretch_margin_bottom = 3
+texture_under = ExtResource("2_xmjt2")
+texture_progress = ExtResource("3_dm6yg")

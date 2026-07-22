@@ -1,53 +1,31 @@
-[gd_scene load_steps=21 format=3 uid="uid://c8jsa3yhad0eg"]
+[gd_scene load_steps=12 format=3 uid="uid://c8jsa3yhad0eg"]
 
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_b5fap"]
 [ext_resource type="Script" uid="uid://4r7da7k7boj5" path="res://scenes/ui/top_hud/top_hud.gd" id="1_iiiie"]
-[ext_resource type="Texture2D" uid="uid://ch21q10p6u6ah" path="res://assets/ui/all_asset_ui/all_asset_17.06.2026.png" id="2_iiiie"]
-[ext_resource type="Texture2D" uid="uid://xwctbaixf0ld" path="res://assets/ui/ui_icon/fatigue_icon.png" id="4_1fs6x"]
-[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="4_am212"]
-[ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="6_b1gmf"]
-[ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="7_6qryt"]
-[ext_resource type="Texture2D" uid="uid://cpiqwsclu6aoc" path="res://assets/ui/ui_icon/focus_icon.png" id="7_am212"]
-[ext_resource type="Texture2D" uid="uid://bnvey8ew22rwh" path="res://assets/ui/ui_icon/hunger_icon.png" id="8_wnag3"]
-[ext_resource type="Texture2D" uid="uid://cimquy70mlvx5" path="res://assets/ui/ui_icon/XP icon.png" id="9_wnrq1"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_130ur"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(1, 1, 275, 22)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_ssyqg"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(177, 85, 28, 10)
+[ext_resource type="Texture2D" uid="uid://dadr7rte5v0c2" path="res://assets/ui/top_hud/base_template_top_hud.png" id="3_wnag3"]
+[ext_resource type="PackedScene" uid="uid://csiwbxjbuocth" path="res://scenes/ui/top_hud_indicator/top_hud_indicator.tscn" id="4_wnrq1"]
+[ext_resource type="Texture2D" uid="uid://44s54en6hl14" path="res://assets/ui/top_hud/toogle_template_button.png" id="5_jr8we"]
+[ext_resource type="Texture2D" uid="uid://2qhjslgvmnnv" path="res://assets/ui/top_hud/icon_top_hud.png" id="6_evlea"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_fgmmj"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(0, 272, 16, 16)
+atlas = ExtResource("6_evlea")
+region = Rect2(64, 0, 16, 16)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1fs6x"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(16, 272, 16, 16)
+atlas = ExtResource("6_evlea")
+region = Rect2(48, 0, 16, 16)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_b1gmf"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(32, 272, 16, 16)
+atlas = ExtResource("6_evlea")
+region = Rect2(32, 0, 16, 16)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_6qryt"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(50, 272, 12, 16)
+[sub_resource type="AtlasTexture" id="AtlasTexture_mptim"]
+atlas = ExtResource("5_jr8we")
+region = Rect2(23, 0, 22, 22)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_am212"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(67, 272, 11, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_wnag3"]
-atlas = ExtResource("2_iiiie")
-region = Rect2(81, 272, 14, 16)
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_am212"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_wnrq1"]
-atlas = ExtResource("4_am212")
-region = Rect2(170, 1, 98, 111)
+[sub_resource type="AtlasTexture" id="AtlasTexture_vikca"]
+atlas = ExtResource("6_evlea")
+region = Rect2(80, 0, 16, 16)
 
 [node name="TopHUD" type="CanvasLayer"]
 script = ExtResource("1_iiiie")
@@ -59,295 +37,89 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme = ExtResource("1_b5fap")
 
 [node name="Bar" type="TextureRect" parent="Root"]
+custom_minimum_size = Vector2(0, 6)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -281.0
-offset_top = 6.0
-offset_right = -6.0
-offset_bottom = 28.0
+offset_left = -230.0
+offset_top = 4.0
+offset_right = -11.999695
+offset_bottom = 18.0
 grow_horizontal = 0
 size_flags_horizontal = 8
 size_flags_vertical = 0
-texture = SubResource("AtlasTexture_130ur")
+mouse_filter = 2
+texture = ExtResource("3_wnag3")
 
-[node name="TemplateText1" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 26.0
-offset_top = 6.0
-offset_right = 54.0
-offset_bottom = 16.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_ssyqg")
-
-[node name="DayLabel" type="Label" parent="Root/Bar/TemplateText1"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -11.5
-offset_top = -3.0
-offset_right = 11.5
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_type_variation = &"TopHudLabel"
-text = "day: 1"
-horizontal_alignment = 1
-
-[node name="TemplateText2" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 74.0
-offset_top = 6.0
-offset_right = 102.0
-offset_bottom = 16.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_ssyqg")
-
-[node name="TimeLabel" type="Label" parent="Root/Bar/TemplateText2"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -10.0
-offset_top = -3.0
-offset_right = 10.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_type_variation = &"TopHudLabel"
-text = "12:00"
-
-[node name="TemplateText3" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 126.0
-offset_top = 6.0
-offset_right = 154.0
-offset_bottom = 16.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_ssyqg")
-
-[node name="WeatherLabel" type="Label" parent="Root/Bar/TemplateText3"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -10.0
-offset_top = -3.0
-offset_right = 10.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_type_variation = &"TopHudLabel"
-text = "sunny"
-
-[node name="TemplateText4" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 172.5
-offset_top = 6.0
-offset_right = 200.5
-offset_bottom = 16.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_ssyqg")
-
-[node name="PopLabel" type="Label" parent="Root/Bar/TemplateText4"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -7.0
-offset_top = -3.000001
-offset_right = 7.0
-offset_bottom = 3.000001
-grow_horizontal = 2
-grow_vertical = 2
-theme_type_variation = &"TopHudLabel"
-text = "3/6"
-
-[node name="TemplateText5" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 220.0
-offset_top = 6.0
-offset_right = 248.0
-offset_bottom = 16.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_ssyqg")
-
-[node name="FoodLabel" type="Label" parent="Root/Bar/TemplateText5"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -4.0
-offset_top = -3.0
-offset_right = 4.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_type_variation = &"TopHudLabel"
-text = "15"
-
-[node name="CalendarIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 3.0
-offset_top = 3.0
-offset_right = 19.0
-offset_bottom = 19.0
-pivot_offset = Vector2(8, 8)
-size_flags_horizontal = 0
-size_flags_vertical = 4
-texture = SubResource("AtlasTexture_fgmmj")
-expand_mode = 3
-stretch_mode = 2
-
-[node name="TimeIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 56.0
-offset_top = 3.0
-offset_right = 72.0
-offset_bottom = 19.0
-pivot_offset = Vector2(8, 8)
-texture = SubResource("AtlasTexture_1fs6x")
-expand_mode = 2
-stretch_mode = 2
-
-[node name="WeatherIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 106.0
-offset_top = 3.0
-offset_right = 122.0
-offset_bottom = 19.0
-texture = SubResource("AtlasTexture_b1gmf")
-
-[node name="PopulationIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 158.0
-offset_top = 3.0
-offset_right = 170.0
-offset_bottom = 19.0
-pivot_offset = Vector2(8, 8)
-texture = SubResource("AtlasTexture_6qryt")
-
-[node name="FoodIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 205.0
-offset_top = 3.0
-offset_right = 216.0
-offset_bottom = 19.0
-texture = SubResource("AtlasTexture_am212")
-
-[node name="SettingIcon" type="TextureRect" parent="Root/Bar"]
-layout_mode = 0
-offset_left = 257.0
-offset_top = 3.0
-offset_right = 271.0
-offset_bottom = 19.0
-texture = SubResource("AtlasTexture_wnag3")
-
-[node name="PlayerStatusPanel" type="PanelContainer" parent="Root"]
+[node name="IndicatorRow" type="HBoxContainer" parent="Root/Bar"]
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_left = 8.0
-offset_top = -44.0
-offset_right = 96.0
-offset_bottom = 44.0
+offset_left = -1.0
+offset_top = -8.0
+offset_right = 203.0
+offset_bottom = 8.0
 grow_vertical = 2
-size_flags_horizontal = 8
-size_flags_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxEmpty_am212")
+mouse_filter = 2
+theme_override_constants/separation = 4
 
-[node name="StatusContainer" type="TextureRect" parent="Root/PlayerStatusPanel"]
+[node name="DayIndicator" parent="Root/Bar/IndicatorRow" instance=ExtResource("4_wnrq1")]
 layout_mode = 2
-texture = SubResource("AtlasTexture_wnrq1")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Root/PlayerStatusPanel/StatusContainer"]
+[node name="TimeIndicator" parent="Root/Bar/IndicatorRow" instance=ExtResource("4_wnrq1")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/Bar/IndicatorRow/TimeIndicator" index="0"]
+texture = SubResource("AtlasTexture_fgmmj")
+
+[node name="WeatherIndicator" parent="Root/Bar/IndicatorRow" instance=ExtResource("4_wnrq1")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/Bar/IndicatorRow/WeatherIndicator" index="0"]
+texture = SubResource("AtlasTexture_1fs6x")
+
+[node name="PopulationIndicator" parent="Root/Bar/IndicatorRow" instance=ExtResource("4_wnrq1")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/Bar/IndicatorRow/PopulationIndicator" index="0"]
+texture = SubResource("AtlasTexture_b1gmf")
+
+[node name="ToggleButton" type="TextureButton" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -22.0
+offset_bottom = 22.0
+grow_horizontal = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+texture_normal = SubResource("AtlasTexture_mptim")
+
+[node name="ToggleIcon" type="TextureRect" parent="Root/ToggleButton"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -33.0
-offset_top = -38.0
-offset_right = 33.0
-offset_bottom = 38.0
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 8.0
+offset_bottom = 8.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 4
-alignment = 1
+mouse_filter = 2
+texture = SubResource("AtlasTexture_vikca")
 
-[node name="FatigueRow" type="HBoxContainer" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer"]
-custom_minimum_size = Vector2(32, 16)
-layout_mode = 2
-
-[node name="FatigueIcon" type="TextureRect" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FatigueRow"]
-layout_mode = 2
-texture = ExtResource("4_1fs6x")
-
-[node name="FatigueProgressBar" type="TextureProgressBar" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FatigueRow"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture_under = ExtResource("6_b1gmf")
-texture_progress = ExtResource("7_6qryt")
-
-[node name="FocusRow" type="HBoxContainer" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="FocusIcon" type="TextureRect" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FocusRow"]
-layout_mode = 2
-texture = ExtResource("7_am212")
-
-[node name="FocusProgressBar" type="TextureProgressBar" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FocusRow"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture_under = ExtResource("6_b1gmf")
-texture_progress = ExtResource("7_6qryt")
-
-[node name="HungerRow" type="HBoxContainer" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="HungerIcon" type="TextureRect" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/HungerRow"]
-layout_mode = 2
-texture = ExtResource("8_wnag3")
-
-[node name="HungerProgressBar" type="TextureProgressBar" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/HungerRow"]
-layout_mode = 2
-size_flags_vertical = 4
-texture_under = ExtResource("6_b1gmf")
-texture_progress = ExtResource("7_6qryt")
-
-[node name="ExperienceRow" type="HBoxContainer" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="ExperienceIcon" type="TextureRect" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/ExperienceRow"]
-layout_mode = 2
-texture = ExtResource("9_wnrq1")
-
-[node name="ExperienceProgressBar" type="TextureProgressBar" parent="Root/PlayerStatusPanel/StatusContainer/VBoxContainer/ExperienceRow"]
-layout_mode = 2
-size_flags_vertical = 4
-texture_under = ExtResource("6_b1gmf")
-texture_progress = ExtResource("7_6qryt")
+[editable path="Root/Bar/IndicatorRow/DayIndicator"]
+[editable path="Root/Bar/IndicatorRow/TimeIndicator"]
+[editable path="Root/Bar/IndicatorRow/WeatherIndicator"]
+[editable path="Root/Bar/IndicatorRow/PopulationIndicator"]

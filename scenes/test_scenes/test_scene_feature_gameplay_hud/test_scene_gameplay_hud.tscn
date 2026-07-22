@@ -311,6 +311,7 @@ item_id = "raw_wool"
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("6_hbtma")]
 
 [node name="GameplayHUD" parent="." instance=ExtResource("7_5xn2i")]
+visible = false
 
 [node name="Player" parent="." instance=ExtResource("8_sgx43")]
 position = Vector2(168, 117)

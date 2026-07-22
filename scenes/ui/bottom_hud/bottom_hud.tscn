@@ -1,0 +1,189 @@
+[gd_scene load_steps=19 format=3 uid="uid://04lfa0355no7"]
+
+[ext_resource type="PackedScene" uid="uid://rsx7sjnfh6ut" path="res://scenes/ui/status_indicator/status_indicator.tscn" id="1_amamv"]
+[ext_resource type="Script" uid="uid://cnxr4b22t03hr" path="res://scenes/ui/bottom_hud/bottom_hud.gd" id="1_ric74"]
+[ext_resource type="Texture2D" uid="uid://0r2hw0t1kxn6" path="res://assets/ui/bottom_hud/base_template_bottom_hud.png" id="1_xx36t"]
+[ext_resource type="Texture2D" uid="uid://cpiqwsclu6aoc" path="res://assets/ui/ui_icon/focus_icon.png" id="2_0qxx0"]
+[ext_resource type="PackedScene" uid="uid://cocp8t8x2la81" path="res://scenes/ui/bottom_hud/bottom_hud_slot.tscn" id="2_hxnt4"]
+[ext_resource type="Texture2D" uid="uid://7ywyxd1vd82c" path="res://assets/ui/bottom_hud/icon_bottom_hud.png" id="3_amamv"]
+[ext_resource type="Texture2D" uid="uid://bnvey8ew22rwh" path="res://assets/ui/ui_icon/hunger_icon.png" id="3_nwqr3"]
+[ext_resource type="Texture2D" uid="uid://cimquy70mlvx5" path="res://assets/ui/ui_icon/XP icon.png" id="4_iweik"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lhyk8"]
+atlas = ExtResource("2_0qxx0")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xx5ha"]
+atlas = ExtResource("3_nwqr3")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_24vvc"]
+atlas = ExtResource("4_iweik")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hxnt4"]
+atlas = ExtResource("1_xx36t")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0i8bf"]
+atlas = ExtResource("3_amamv")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_amamv"]
+atlas = ExtResource("3_amamv")
+region = Rect2(32, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0qxx0"]
+atlas = ExtResource("3_amamv")
+region = Rect2(48, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nwqr3"]
+atlas = ExtResource("3_amamv")
+region = Rect2(64, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_iweik"]
+atlas = ExtResource("3_amamv")
+region = Rect2(80, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ric74"]
+atlas = ExtResource("3_amamv")
+region = Rect2(96, 0, 16, 16)
+
+[node name="BottomHUD" type="CanvasLayer"]
+script = ExtResource("1_ric74")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StatusDrawer" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -79.0
+offset_top = -60.0
+offset_right = 79.0
+offset_bottom = -44.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="IndicatorRow" type="HBoxContainer" parent="Root/StatusDrawer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="FatigueIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="FocusIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/StatusDrawer/IndicatorRow/FocusIndicator" index="0"]
+texture = SubResource("AtlasTexture_lhyk8")
+
+[node name="HungerIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/StatusDrawer/IndicatorRow/HungerIndicator" index="0"]
+texture = SubResource("AtlasTexture_xx5ha")
+
+[node name="ExperienceIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/StatusDrawer/IndicatorRow/ExperienceIndicator" index="0"]
+texture = SubResource("AtlasTexture_24vvc")
+
+[node name="BottomBar" type="TextureRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -85.0
+offset_top = -42.0
+offset_right = 84.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = SubResource("AtlasTexture_hxnt4")
+
+[node name="SlotMargin" type="MarginContainer" parent="Root/BottomBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 13
+theme_override_constants/margin_top = 11
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 11
+
+[node name="SlotRow" type="HBoxContainer" parent="Root/BottomBar/SlotMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="StatusButton" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="StatusButton2" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton2" index="0"]
+texture = SubResource("AtlasTexture_0i8bf")
+
+[node name="StatusButton3" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton3" index="0"]
+texture = SubResource("AtlasTexture_amamv")
+
+[node name="StatusButton4" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton4" index="0"]
+texture = SubResource("AtlasTexture_0qxx0")
+
+[node name="StatusButton5" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton5" index="0"]
+texture = SubResource("AtlasTexture_nwqr3")
+
+[node name="StatusButton6" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton6" index="0"]
+texture = SubResource("AtlasTexture_iweik")
+
+[node name="StatusButton7" parent="Root/BottomBar/SlotMargin/SlotRow" instance=ExtResource("2_hxnt4")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton7" index="0"]
+texture = SubResource("AtlasTexture_ric74")
+
+[editable path="Root/StatusDrawer/IndicatorRow/FatigueIndicator"]
+[editable path="Root/StatusDrawer/IndicatorRow/FocusIndicator"]
+[editable path="Root/StatusDrawer/IndicatorRow/HungerIndicator"]
+[editable path="Root/StatusDrawer/IndicatorRow/ExperienceIndicator"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton2"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton3"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton4"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton5"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton6"]
+[editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton7"]
