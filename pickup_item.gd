@@ -115,7 +115,6 @@ func _play_focus_highlight() -> void:
 
 	highlight_tween = create_tween()
 	highlight_tween.set_parallel()
-	highlight_tween.tween_property(icon, "scale", icon_default_scale * 1.12, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	highlight_tween.tween_property(icon, "modulate", Color(1.25, 1.25, 1.1, 1.0), 0.12)
 
 func on_player_exit_interaction() -> void:
@@ -127,7 +126,6 @@ func on_player_exit_interaction() -> void:
 
 	highlight_tween = create_tween()
 	highlight_tween.set_parallel()
-	highlight_tween.tween_property(icon, "scale", icon_default_scale, 0.1)
 	highlight_tween.tween_property(icon, "modulate", icon_default_modulate, 0.1)
 
 # Failure feedback
