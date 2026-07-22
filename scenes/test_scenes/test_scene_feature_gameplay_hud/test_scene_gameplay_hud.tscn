@@ -199,7 +199,7 @@ polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
 outlines = Array[PackedVector2Array]([PackedVector2Array(68, 174, 52, 26, 281, 18, 280, 167)])
 agent_radius = 5.0
 
-[node name="TestConsumable" type="Node2D"]
+[node name="TestSceneGameplayHud" type="Node2D"]
 script = ExtResource("1_kndt4")
 
 [node name="TileMap" type="Node2D" parent="."]
@@ -240,11 +240,11 @@ item_id = "sun_dried_mudbrick"
 
 [node name="PickupItem4" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(152, 176)
-item_id = "roasted_drumstick"
+item_id = "barley_bread"
 
 [node name="PickupItem8" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(164, 188)
-item_id = "roasted_drumstick"
+item_id = "bronze_ingot"
 
 [node name="PickupItem9" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(146, 191)
@@ -261,6 +261,50 @@ item_id = "orchard_apple"
 [node name="PickupItem7" parent="." instance=ExtResource("5_0e26t")]
 position = Vector2(239, 202)
 item_id = "fresh_loaf"
+
+[node name="PickupItem10" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(202, 159)
+item_id = "clay_worn_wrap"
+
+[node name="PickupItem11" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(215, 168)
+item_id = "copper_ore"
+
+[node name="PickupItem12" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(180, 89)
+item_id = "copper_chunk"
+
+[node name="PickupItem13" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(118, 132)
+item_id = "egg"
+
+[node name="PickupItem14" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(254, 172)
+item_id = "date_cluster"
+
+[node name="PickupItem15" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(229, 122)
+item_id = "gold_nugget"
+
+[node name="PickupItem16" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(231, 182)
+item_id = "fresh_curd_cheese"
+
+[node name="PickupItem17" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(215, 95)
+item_id = "pan_fried_egg"
+
+[node name="PickupItem18" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(105, 145)
+item_id = "plain_head_wrap"
+
+[node name="PickupItem19" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(95, 124)
+item_id = "plain_linen_wrap"
+
+[node name="PickupItem20" parent="." instance=ExtResource("5_0e26t")]
+position = Vector2(112, 98)
+item_id = "raw_wool"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 

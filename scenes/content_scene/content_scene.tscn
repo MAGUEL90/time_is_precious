@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=17 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="Script" uid="uid://bw8euggk8mqya" path="res://scenes/content_scene/content_scene.gd" id="1_xdgwu"]
 [ext_resource type="Texture2D" uid="uid://qja5s8pdaf37" path="res://assets/tile_set/tileset_base.png" id="2_fwfww"]
@@ -9,6 +9,7 @@
 [ext_resource type="Resource" uid="uid://wtotcv7h86xq" path="res://resources/npc_states/npc_state_intro.tres" id="5_egupp"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
 [ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="7_ssn5y"]
+[ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="10_7vn6b"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nji41"]
 texture = ExtResource("2_fwfww")
@@ -370,5 +371,7 @@ anchor_mode = 0
 [node name="ContentDirector" type="Node" parent="."]
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
+
+[node name="InventoryUI" parent="." instance=ExtResource("10_7vn6b")]
 
 [editable path="Actors/NPC_Gabbi"]

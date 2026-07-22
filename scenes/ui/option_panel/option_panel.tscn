@@ -16,7 +16,6 @@ region = Rect2(145, 102, 33, 11)
 custom_minimum_size = Vector2(53, 46)
 offset_right = 53.0
 offset_bottom = 46.0
-scale = Vector2(2, 2)
 mouse_filter = 1
 theme = ExtResource("2_f0m6d")
 script = ExtResource("2_shg37")
