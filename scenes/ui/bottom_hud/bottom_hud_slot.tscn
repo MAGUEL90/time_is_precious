@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3 uid="uid://cocp8t8x2la81"]
+
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="1_gbdyq"]
+[ext_resource type="Texture2D" uid="uid://7ywyxd1vd82c" path="res://assets/ui/bottom_hud/icon_bottom_hud.png" id="2_hoxfu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0qxx0"]
+atlas = ExtResource("1_gbdyq")
+region = Rect2(61, 51, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nwqr3"]
+atlas = ExtResource("1_gbdyq")
+region = Rect2(61, 68, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_iweik"]
+atlas = ExtResource("2_hoxfu")
+region = Rect2(0, 0, 16, 16)
+
+[node name="BottomHUDSlot" type="TextureButton"]
+custom_minimum_size = Vector2(16, 16)
+focus_mode = 0
+texture_normal = SubResource("AtlasTexture_0qxx0")
+texture_hover = SubResource("AtlasTexture_nwqr3")
+
+[node name="Icon" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_iweik")
+expand_mode = 1
+stretch_mode = 3

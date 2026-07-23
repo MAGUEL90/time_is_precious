@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://ce6sxr7vod5kh"]
+[gd_scene load_steps=30 format=3 uid="uid://ce6sxr7vod5kh"]
 
 [ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_my8ml"]
 [ext_resource type="Script" uid="uid://bt4cfdc1f4im6" path="res://scenes/ui/item_action_confirm_panel/item_action_confirm_panel.gd" id="1_p62ln"]
@@ -49,13 +49,6 @@ region = Rect2(61, 51, 16, 16)
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ec5cn"]
 texture = SubResource("AtlasTexture_m28rt")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_ec5cn"]
-atlas = ExtResource("3_m28rt")
-region = Rect2(61, 85, 16, 16)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_my8ml"]
-texture = SubResource("AtlasTexture_ec5cn")
-
 [sub_resource type="AtlasTexture" id="AtlasTexture_v363g"]
 atlas = ExtResource("3_m28rt")
 region = Rect2(61, 68, 16, 16)
@@ -92,15 +85,20 @@ offset_bottom = 80.0
 theme = ExtResource("1_my8ml")
 script = ExtResource("1_p62ln")
 
-[node name="BackgroundTexture" type="TextureRect" parent="."]
+[node name="BackgroundTexture" type="NinePatchRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("AtlasTexture_3u8i1")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -190,7 +188,7 @@ theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.18823
 theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_m28rt")
 theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
 text = "x1"
 
@@ -204,7 +202,7 @@ theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.18823
 theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_m28rt")
 theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
 text = "x10"
 
@@ -218,7 +216,7 @@ theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.18823
 theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_styles/normal = SubResource("StyleBoxTexture_ec5cn")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_my8ml")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_m28rt")
 theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
 text = "x25"
 

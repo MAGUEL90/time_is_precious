@@ -18,20 +18,39 @@ var is_mouse_over: bool = false
 var hover_locked: bool = false
 var interaction_locked: bool = false
 
-# Setup / Item data
+# Lifecycle
 
 func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 
+# Item data
+
 func set_item(item_id: String, quantity: int, item_icon: Texture2D) -> void:
+	asset_icon.visible = true
+	asset_qty.visible = true
+	disabled = false
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
 	asset_icon.texture = item_icon
 	asset_qty.text = str(max(quantity, 0))
 
 	_item_id = item_id
 	_quantity = quantity
 
-# Slot callbacks
+func set_empty() -> void:
+	_item_id = ""
+	_quantity = 0
+
+	asset_icon.visible = false
+	asset_qty.visible = false
+	selected_qty.visible = false
+	target_lock_icon.visible = false
+
+	disabled = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+# Click and drag callbacks
 
 func _on_pressed() -> void:
 	if interaction_locked:
@@ -72,13 +91,13 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 
 	return drag_data
 
-# Selection state
+# Selection display
 
 func set_selected_quantity(quantity: int) -> void:
 	selected_qty.visible = quantity > 0
 	selected_qty.text = str(quantity)
 
-# Hover state
+# Hover callbacks
 
 func _on_mouse_entered() -> void:
 	is_mouse_over = true
@@ -90,7 +109,7 @@ func _on_mouse_exited() -> void:
 	_refresh_target_lock_visibility()
 	slot_unhovered.emit(self)
 
-# Selection lock state
+# Selection and hover lock state
 
 func set_selected(value: bool) -> void:
 	is_selected = value
@@ -100,7 +119,17 @@ func set_hover_locked(value: bool) -> void:
 	hover_locked = value
 	_refresh_target_lock_visibility()
 
-# Drag / interaction state
+func _refresh_target_lock_visibility() -> void:
+	if interaction_locked:
+		target_lock_icon.visible = is_selected
+		return
+
+	target_lock_icon.visible = _should_show_target_lock()
+
+func _should_show_target_lock() -> bool:
+	return is_selected or (is_mouse_over and not hover_locked)
+
+# Drag and interaction state
 
 func set_drag_source_active(active: bool) -> void:
 	var alpha: float = 0.45 if active else 1.0
@@ -116,13 +145,3 @@ func set_interaction_locked(value: bool) -> void:
 	disabled = value
 	mouse_filter = Control.MOUSE_FILTER_IGNORE if value else Control.MOUSE_FILTER_STOP
 	_refresh_target_lock_visibility()
-
-func _refresh_target_lock_visibility() -> void:
-	if interaction_locked:
-		target_lock_icon.visible = is_selected
-		return
-
-	target_lock_icon.visible = _should_show_target_lock()
-
-func _should_show_target_lock() -> bool:
-	return is_selected or (is_mouse_over and not hover_locked)

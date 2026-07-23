@@ -1,56 +1,32 @@
 extends CanvasLayer
 
-# Clock references
+const OPEN_DURATION: float = 0.36
+const CLOSE_DURATION: float = 0.30
 
-@onready var day_label: Label = $Root/Bar/TemplateText1/DayLabel
-@onready var time_label: Label = $Root/Bar/TemplateText2/TimeLabel
-@onready var weather_label: Label = $Root/Bar/TemplateText3/WeatherLabel
-@onready var pop_label: Label = $Root/Bar/TemplateText4/PopLabel
-@onready var food_label: Label = $Root/Bar/TemplateText5/FoodLabel
+@onready var root: Control = $Root
+@onready var bar: TextureRect = $Root/Bar
+@onready var toggle_button: TextureButton = $Root/ToggleButton
+@onready var toggle_icon: TextureRect = $Root/ToggleButton/ToggleIcon
 
-# Player condition references
+@onready var day_label: Label = $Root/Bar/IndicatorRow/DayIndicator/ValuePanel/ValueLabel
+@onready var time_label: Label = $Root/Bar/IndicatorRow/TimeIndicator/ValuePanel/ValueLabel
+@onready var weather_label: Label = $Root/Bar/IndicatorRow/WeatherIndicator/ValuePanel/ValueLabel
+@onready var population_label: Label = $Root/Bar/IndicatorRow/PopulationIndicator/ValuePanel/ValueLabel
 
-@onready var fatigue_row: HBoxContainer = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FatigueRow
-@onready var focus_row: HBoxContainer = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FocusRow
-@onready var hunger_row: HBoxContainer = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/HungerRow
-@onready var fatigue_icon: TextureRect = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FatigueRow/FatigueIcon
-@onready var fatigue_progress_bar: TextureProgressBar = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FatigueRow/FatigueProgressBar
-@onready var focus_icon: TextureRect = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FocusRow/FocusIcon
-@onready var focus_progress_bar: TextureProgressBar = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/FocusRow/FocusProgressBar
-@onready var hunger_icon: TextureRect = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/HungerRow/HungerIcon
-@onready var hunger_progress_bar: TextureProgressBar = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/HungerRow/HungerProgressBar
-@onready var experience_icon: TextureRect = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/ExperienceRow/ExperienceIcon
-@onready var experience_progress_bar: TextureProgressBar = $Root/PlayerStatusPanel/StatusContainer/VBoxContainer/ExperienceRow/ExperienceProgressBar
-
-const CONDITION_NORMAL_COLOR: Color = Color.WHITE
-const CONDITION_WARNING_COLOR: Color = Color("f2cf5b")
-const CONDITION_CRITICAL_COLOR: Color = Color("e85d5d")
-
-var player_ref: Player = null
 var nightmare_world_ref: NightmareWorld = null
+var bar_tween: Tween
 
-# Setup and signal bindings
+var is_expanded: bool = false
+var expanded_bar_x: float = 0.0
+var collapsed_bar_x: float = 0.0
+
+# Lifecycle
 
 func _ready() -> void:
-	nightmare_world_ref = (
-		get_tree().get_first_node_in_group("nightmare_world")
-		as NightmareWorld
-	)
+	_setup_bar()
+	_setup_nightmare_visibility()
 
-	if nightmare_world_ref != null:
-		nightmare_world_ref.nightmare_active_changed.connect(
-			_on_nightmare_active_changed
-		)
-
-		visible = not nightmare_world_ref.is_active
-	else:
-		visible = true
-
-	player_ref = get_tree().get_first_node_in_group("player")
-
-	if player_ref == null:
-		push_warning("TopHUD could not find player.")
-		return
+	toggle_button.pressed.connect(_on_toggle_button_pressed)
 
 	TimeComponentManager.time_changed.connect(_on_time_changed)
 	_on_time_changed(
@@ -60,59 +36,90 @@ func _ready() -> void:
 		TimeComponentManager.current_weather
 	)
 
-	player_ref.condition_changed.connect(_on_condition_changed)
-	player_ref.experience_changed.connect(_on_experience_changed)
+	CitizenManager.citizen_added.connect(_on_citizen_added)
+	_update_population()
 
-	_on_condition_changed()
-	_on_experience_changed()
+# Bar setup and animation
 
-# Clock presentation
+func _setup_bar() -> void:
+	expanded_bar_x = bar.position.x
+	collapsed_bar_x = root.size.x
+
+	is_expanded = false
+	_set_bar_x(collapsed_bar_x)
+	_update_toggle_icon()
+
+func _on_toggle_button_pressed() -> void:
+	toggle_button.release_focus()
+	is_expanded = not is_expanded
+
+	var target_x: float = (
+		expanded_bar_x
+		if is_expanded
+		else collapsed_bar_x
+	)
+	var duration: float = (
+		OPEN_DURATION
+		if is_expanded
+		else CLOSE_DURATION
+	)
+
+	_animate_bar(target_x, duration)
+	_update_toggle_icon()
+
+func _animate_bar(target_x: float, duration: float) -> void:
+	if bar_tween != null:
+		bar_tween.kill()
+
+	bar_tween = create_tween()
+	bar_tween.set_trans(Tween.TRANS_SINE)
+	bar_tween.set_ease(Tween.EASE_IN_OUT)
+	bar_tween.tween_method(
+		_set_bar_x,
+		bar.position.x,
+		target_x,
+		duration
+	)
+
+func _set_bar_x(value: float) -> void:
+	var snapped_position: Vector2 = bar.position
+	snapped_position.x = roundf(value)
+	bar.position = snapped_position
+
+func _update_toggle_icon() -> void:
+	toggle_icon.flip_h = is_expanded
+
+# Indicator presentation
 
 func _on_time_changed(day: int, hour: int, minute: int, weather: String) -> void:
-	day_label.text = "day: %d" % day
+	day_label.text = str(day)
 	time_label.text = "%02d:%02d" % [hour, minute]
 	weather_label.text = weather.capitalize()
 
-# Player condition presentation
+func _on_citizen_added(_citizen_data: CitizenData) -> void:
+	_update_population()
 
-func _on_condition_changed() -> void:
-	var fatigue_percent: int = player_ref.get_fatigue_percent()
-	var focus_percent: int = player_ref.get_focus_percent()
-	var hunger_percent: int = player_ref.get_hunger_percent()
-
-	fatigue_progress_bar.value = 100 - fatigue_percent
-	focus_progress_bar.value = focus_percent
-	hunger_progress_bar.value = 100 - hunger_percent
-	_update_condition_colors()
-
-func _on_experience_changed() -> void:
-	experience_progress_bar.max_value = player_ref.experience_required
-	experience_progress_bar.value = player_ref.current_experience
-
-func _update_condition_colors() -> void:
-	fatigue_row.modulate = _get_severity_color(
-		player_ref.get_fatigue_severity()
+func _update_population() -> void:
+	population_label.text = str(
+		CitizenManager.get_all_citizens().size()
 	)
-	focus_row.modulate = _get_severity_color(
-		player_ref.get_focus_severity()
-	)
-	hunger_row.modulate = _get_severity_color(
-		player_ref.get_hunger_severity()
-	)
-
-func _get_severity_color(severity: int) -> Color:
-	match severity:
-		Player.ConditionSeverity.WARNING:
-			return CONDITION_WARNING_COLOR
-		Player.ConditionSeverity.CRITICAL:
-			return CONDITION_CRITICAL_COLOR
-		_:
-			return CONDITION_NORMAL_COLOR
 
 # Nightmare visibility
 
-func _on_nightmare_active_changed(active: bool) -> void:
-	if active:
-		hide()
-	else:
+func _setup_nightmare_visibility() -> void:
+	nightmare_world_ref = (
+		get_tree().get_first_node_in_group("nightmare_world") as NightmareWorld
+	)
+
+	if nightmare_world_ref == null:
 		show()
+		return
+
+	nightmare_world_ref.nightmare_active_changed.connect(
+		_on_nightmare_active_changed
+	)
+
+	visible = not nightmare_world_ref.is_active
+
+func _on_nightmare_active_changed(active: bool) -> void:
+	visible = not active
