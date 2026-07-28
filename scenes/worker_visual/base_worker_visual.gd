@@ -42,17 +42,33 @@ var hair_styles: Array[String] = [
 	]
 
 var accessories: Array[String] = ["default", "farmer_hat"]
+var current_visual_key: String = ""
+
+# Lifecycle
 
 func _ready() -> void:
-	play_visual(skin_tone, expression, default_action, default_direction, accessory, clothes_id, hair_style)
+	play_visual(
+		skin_tone,
+		expression,
+		default_action,
+		default_direction,
+		accessory,
+		clothes_id,
+		hair_style
+	)
 
-func play_visual(skin_tone_id: String,
-				expression_id: String,
-				action: String,
-				direction: String,
-				accessory_id: String,
-				clothes_id_param: String = "",
-				hair_style_id: String = "") -> void:
+
+# Public API
+
+func play_visual(
+	skin_tone_id: String,
+	expression_id: String,
+	action: String,
+	direction: String,
+	accessory_id: String,
+	clothes_id_param: String = "",
+	hair_style_id: String = ""
+) -> void:
 	skin_tone = skin_tone_id
 	expression = expression_id
 	accessory = accessory_id if accessory_id != "" else "default"
@@ -64,6 +80,21 @@ func play_visual(skin_tone_id: String,
 		hair_style = hair_style_id
 
 	var resolved_direction: String = _normalize_direction(direction)
+	var visual_key: String = "%s|%s|%s|%s|%s|%s|%s" % [
+		skin_tone,
+		expression,
+		action,
+		resolved_direction,
+		accessory,
+		clothes_id,
+		hair_style
+	]
+
+	if current_visual_key == visual_key:
+		return
+
+	current_visual_key = visual_key
+
 	var playback_speed: float = idle_anim_speed if action == "idle" else anim_speed
 	var base_anim: String = "%s_%s" % [action, resolved_direction]
 	var walk_anim: String = "walk_%s" % resolved_direction
@@ -86,7 +117,43 @@ func play_visual(skin_tone_id: String,
 	_play_optional_layer(hair_sprite, hair_style, hair_anim, "%s_%s" % [hair_style, walk_anim], playback_speed)
 	_play_optional_layer(accessories_sprite, accessory, accessory_anim, "%s_%s" % [accessory, walk_anim], playback_speed)
 
-func _play_layer(layer: AnimatedSprite2D, anim_name: String, fallback_anim: String = "", playback_speed: float = -1.0) -> bool:
+
+func apply_profile(
+	skin_tone_id: String,
+	expression_id: String,
+	accessory_id: String,
+	clothes_id_param: String = "",
+	hair_style_id: String = ""
+) -> void:
+	skin_tone = skin_tone_id
+	expression = expression_id
+	accessory = accessory_id
+
+	if clothes_id_param != "":
+		clothes_id = clothes_id_param
+
+	if hair_style_id != "":
+		hair_style = hair_style_id
+
+	play_visual(
+		skin_tone,
+		expression,
+		default_action,
+		default_direction,
+		accessory,
+		clothes_id,
+		hair_style
+	)
+
+
+# Layer Playback
+
+func _play_layer(
+	layer: AnimatedSprite2D,
+	anim_name: String,
+	fallback_anim: String = "",
+	playback_speed: float = -1.0
+) -> bool:
 	var resolved_speed: float = playback_speed if playback_speed >= 0.0 else anim_speed
 
 	if _has_playable_animation(layer, anim_name):
@@ -106,19 +173,31 @@ func _play_layer(layer: AnimatedSprite2D, anim_name: String, fallback_anim: Stri
 	_hide_layer(layer)
 	return false
 
-func _play_optional_layer(layer: AnimatedSprite2D, layer_id: String, anim_name: String, fallback_anim: String = "", playback_speed: float = -1.0) -> void:
+
+func _play_optional_layer(
+	layer: AnimatedSprite2D,
+	layer_id: String,
+	anim_name: String,
+	fallback_anim: String = "",
+	playback_speed: float = -1.0
+) -> void:
 	if _is_default_option(layer_id):
 		_hide_layer(layer)
 		return
 
 	_play_layer(layer, anim_name, fallback_anim, playback_speed)
 
+
 func _hide_layer(layer: AnimatedSprite2D) -> void:
 	layer.stop()
 	layer.visible = false
 
+
+# Animation Resolution
+
 func _is_default_option(layer_id: String) -> bool:
 	return layer_id == "" or layer_id == "default" or layer_id == "none"
+
 
 func _normalize_direction(direction: String) -> String:
 	if direction == "side":
@@ -127,26 +206,10 @@ func _normalize_direction(direction: String) -> String:
 		return direction
 	return default_direction
 
+
 func _has_playable_animation(layer: AnimatedSprite2D, anim_name: String) -> bool:
 	return (
 		layer.sprite_frames != null
 		and layer.sprite_frames.has_animation(anim_name)
 		and layer.sprite_frames.get_frame_count(anim_name) > 0
 	)
-
-func apply_profile(skin_tone_id: String,
-					expression_id: String,
-					accessory_id: String,
-					clothes_id_param: String = "",
-					hair_style_id: String = "") -> void:
-	skin_tone = skin_tone_id
-	expression = expression_id
-	accessory = accessory_id
-
-	if clothes_id_param != "":
-		clothes_id = clothes_id_param
-
-	if hair_style_id != "":
-		hair_style = hair_style_id
-
-	play_visual(skin_tone, expression, default_action, default_direction, accessory, clothes_id, hair_style)

@@ -1,5 +1,7 @@
 extends Node2D
 
+# Test Setup
+
 # Seed kondisi awal khusus scene test worker loop.
 # Jumlah kecil: cukup untuk 3x job mudbrick (3+3+3 per job) dan beberapa hari kebutuhan.
 func _ready() -> void:
@@ -11,3 +13,6 @@ func _ready() -> void:
 	CityStockManager.add_food_supply(20)
 	CityStockManager.add_clothing_supply(20)
 	CityStockManager.add_shelter_capacity(10)
+
+	for _i in range(8):
+		CitizenManager.add_citizen(CitizenGenerator.generate_citizen())

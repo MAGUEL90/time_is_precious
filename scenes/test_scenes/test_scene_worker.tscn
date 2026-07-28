@@ -23,10 +23,13 @@ tile_set = ExtResource("2_q0h4i")
 position = Vector2(305, 101)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
 
 [node name="InventoryUI" parent="CanvasLayer" instance=ExtResource("8_3bb67")]
+visible = false
 
 [node name="GameplayHUD" parent="." instance=ExtResource("9_dh3i7")]
+visible = false
 
 [node name="JobBoard" parent="." instance=ExtResource("10_odmqt")]
 
