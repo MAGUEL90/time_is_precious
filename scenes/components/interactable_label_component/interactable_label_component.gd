@@ -1,12 +1,18 @@
 class_name InteractableLabelComponent extends Control
 
-@export var position_offset: Vector2 = Vector2(-35, -30)
-@onready var label: Label = $TextureRect/Label
+const INTERACT_TEXT: String = "E"
 
-# Setup / Public API
+@export var position_offset: Vector2 = Vector2(-5, -30)
+@onready var label: Label = $NinePatchRect/Label
+
+# Lifecycle
 
 func _ready() -> void:
 	position = position_offset
+	label.text = INTERACT_TEXT
 
-func set_text(new_text: String) -> void:
-	label.text = new_text
+
+# Public API
+
+func set_text(_new_text: String) -> void:
+	label.text = INTERACT_TEXT

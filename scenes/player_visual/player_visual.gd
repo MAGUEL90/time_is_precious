@@ -7,12 +7,15 @@ class_name PlayerVisual extends Node2D
 @onready var hair_sprite: AnimatedSprite2D = $HairSprite
 @onready var accessories_sprite: AnimatedSprite2D = $AccessoriesSprite
 
-@export var body_id: String = "light"
-@export var clothes_id: String = "plain_worn_wrap"
-@export var head_id: String = "player_head"
-@export var hair_id: String = "player_hair"
-@export var hand_id: String = "light"
+@export_category("Visual Variants")
+@export_enum("dark", "light", "tan", "warm") var body_id: String = "light"
+@export_enum("default", "clay_worn_wrap", "plain_worn_wrap") var clothes_id: String = "default"
+@export_enum("dark", "light", "tan", "warm") var head_id: String = "light"
+@export_enum("default", "player_hair") var hair_id: String = "player_hair"
+@export_enum("dark", "light", "tan", "warm") var hand_id: String = "light"
+@export_enum("default", "farmer_hat") var accessory_id: String = "default"
 
+@export_category("Playback")
 @export var walk_anim_speed: float = 6.0
 @export var idle_anim_speed: float = 1.0
 @export var pickup_anim_speed: float = 8.0
@@ -38,23 +41,37 @@ func play_visual(action: String, direction: String) -> void:
 	var playback_speed: float = _get_playback_speed(action)
 	var body_anim: String = "%s_%s" % [body_id, anim_suffix]
 	var clothes_anim: String = "%s_%s" % [clothes_id, anim_suffix]
-	var head_anim: String = "%s_%s" % [head_id, anim_suffix]
+	var head_anim: String = "base_%s_%s" % [head_id, anim_suffix]
 	var hair_anim: String = "%s_%s" % [hair_id, anim_suffix]
-	var hand_anim: String =  "%s_%s" % [hand_id, anim_suffix]
+	var hand_anim: String = "%s_%s" % [hand_id, anim_suffix]
+	var accessory_anim: String = "%s_%s" % [accessory_id, anim_suffix]
 
-	_play_layer(body_sprite, body_anim,"", playback_speed)
-	_play_layer(clothes_sprite, clothes_anim, "default", playback_speed)
+	_play_layer(body_sprite, body_anim, "", playback_speed)
+	_play_optional_layer(clothes_sprite, clothes_id, clothes_anim, playback_speed)
 	_play_layer(head_sprite, head_anim, "", playback_speed)
-	_play_layer(hair_sprite, hair_anim, "", playback_speed)
+	_play_optional_layer(hair_sprite, hair_id, hair_anim, playback_speed)
 
 	if action == "idle":
 		_hide_layer(hand_sprite)
 	else:
 		_play_layer(hand_sprite, hand_anim, "", playback_speed)
 
-	accessories_sprite.visible = false
+	_play_optional_layer(accessories_sprite, accessory_id, accessory_anim, playback_speed)
 
-# Layer playback helpers
+
+func play_pickup(direction: String) -> void:
+	is_action_locked = true
+	play_visual("pickup", direction)
+
+	var animation_name: String = "%s_pickup_%s" % [body_id, direction]
+	var duration: float = _get_animation_duration(body_sprite, animation_name)
+	await get_tree().create_timer(duration).timeout
+
+	is_action_locked = false
+	play_visual("idle", direction)
+
+
+# Playback Timing
 
 func _get_playback_speed(action: String) -> float:
 	match action:
@@ -65,11 +82,27 @@ func _get_playback_speed(action: String) -> float:
 		_:
 			return walk_anim_speed
 
-func _play_layer(layer: AnimatedSprite2D,
-				anim_name: String,
-				fallback_anim: String,
-				playback_speed: float = -1.0) -> bool:
 
+func _get_animation_duration(layer: AnimatedSprite2D, anim_name: String) -> float:
+	if not _has_playable_animation(layer, anim_name):
+		return 0.25
+
+	var frame_count: int = layer.sprite_frames.get_frame_count(anim_name)
+	var speed: float = layer.sprite_frames.get_animation_speed(anim_name)
+	if speed <= 0.0:
+		return 0.25
+
+	return float(frame_count) / speed
+
+
+# Layer Playback
+
+func _play_layer(
+	layer: AnimatedSprite2D,
+	anim_name: String,
+	fallback_anim: String,
+	playback_speed: float = -1.0
+) -> bool:
 	var resolved_speed: float = playback_speed if playback_speed >= 0.0 else walk_anim_speed
 
 	if _has_playable_animation(layer, anim_name):
@@ -89,6 +122,27 @@ func _play_layer(layer: AnimatedSprite2D,
 	_hide_layer(layer)
 	return false
 
+
+func _play_optional_layer(
+	layer: AnimatedSprite2D,
+	layer_id: String,
+	anim_name: String,
+	playback_speed: float = -1.0
+) -> void:
+	if _is_default_option(layer_id):
+		_hide_layer(layer)
+		return
+
+	_play_layer(layer, anim_name, "", playback_speed)
+
+
+func _hide_layer(layer: AnimatedSprite2D) -> void:
+	layer.stop()
+	layer.visible = false
+
+
+# Animation Validation
+
 func _has_playable_animation(layer: AnimatedSprite2D, anim_name: String) -> bool:
 	return (
 		layer.sprite_frames != null
@@ -96,29 +150,6 @@ func _has_playable_animation(layer: AnimatedSprite2D, anim_name: String) -> bool
 		and layer.sprite_frames.get_frame_count(anim_name) > 0
 	)
 
-func _hide_layer(layer: AnimatedSprite2D) -> void:
-	layer.stop()
-	layer.visible = false
 
-# Pickup action
-
-func play_pickup(direction: String) -> void:
-	is_action_locked = true
-	play_visual("pickup", direction)
-
-	var duration: float = _get_animation_duration(body_sprite, "%s_pickup_%s" % [body_id, direction])
-	await get_tree().create_timer(duration).timeout
-
-	is_action_locked = false
-	play_visual("idle", direction)
-
-func _get_animation_duration(layer: AnimatedSprite2D, anim_name: String) -> float:
-	if not _has_playable_animation(layer, anim_name):
-		return 0.25
-
-	var frame_count: int = layer.sprite_frames.get_frame_count(anim_name)
-	var speed: float = layer.sprite_frames.get_animation_speed(anim_name)
-	if speed <= 0.0:
-		return 0.25
-
-	return float(frame_count) / speed
+func _is_default_option(layer_id: String) -> bool:
+	return layer_id == "" or layer_id == "default" or layer_id == "none"

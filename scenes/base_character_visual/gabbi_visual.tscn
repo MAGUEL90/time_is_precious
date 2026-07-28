@@ -1,69 +1,13 @@
-[gd_scene load_steps=20 format=3 uid="uid://o6w0l75t6qiv"]
+[gd_scene load_steps=6 format=3 uid="uid://o6w0l75t6qiv"]
 
 [ext_resource type="PackedScene" uid="uid://df7f3h4x5gtta" path="res://scenes/base_character_visual/base_character_visual.tscn" id="1_lgvp5"]
-[ext_resource type="Texture2D" uid="uid://j8inqecqokif" path="res://assets/characters/gabbi/gabbi_hair.png" id="2_q7a2i"]
+[ext_resource type="Texture2D" uid="uid://b1xlouj0mvsqg" path="res://assets/characters/gabbi/gabbi_hair/gabbi_hair_idle.png" id="2_q7a2i"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_c2qkn"]
 atlas = ExtResource("2_q7a2i")
-region = Rect2(0, 32, 32, 32)
+region = Rect2(64, 0, 32, 32)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_qj7ts"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(32, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_elwt1"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(64, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_orp6n"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(96, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_h1uyn"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(0, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_hrxea"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(32, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_es2oo"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(64, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_reuyq"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(96, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_yioha"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(0, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_lvr6i"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(32, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_gljqb"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(64, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_8w4s1"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(96, 32, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_ghq0h"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(0, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_euvvv"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(32, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_n8oxe"]
-atlas = ExtResource("2_q7a2i")
-region = Rect2(64, 0, 32, 32)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_jkd7m"]
 atlas = ExtResource("2_q7a2i")
 region = Rect2(96, 0, 32, 32)
 
@@ -77,62 +21,26 @@ animations = [{
 "texture": SubResource("AtlasTexture_qj7ts")
 }, {
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_elwt1")
+"texture": SubResource("AtlasTexture_c2qkn")
 }, {
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_orp6n")
+"texture": SubResource("AtlasTexture_qj7ts")
 }],
 "loop": true,
 "name": &"hair_idle_left",
 "speed": 5.0
 }, {
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_h1uyn")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_hrxea")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_es2oo")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_reuyq")
-}],
+"frames": [],
 "loop": true,
 "name": &"hair_idle_right",
 "speed": 5.0
 }, {
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_yioha")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_lvr6i")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_gljqb")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_8w4s1")
-}],
+"frames": [],
 "loop": true,
 "name": &"hair_walk_left",
 "speed": 5.0
 }, {
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_ghq0h")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_euvvv")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_n8oxe")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_jkd7m")
-}],
+"frames": [],
 "loop": true,
 "name": &"hair_walk_right",
 "speed": 5.0
@@ -140,5 +48,12 @@ animations = [{
 
 [node name="GabbiVisual" instance=ExtResource("1_lgvp5")]
 
+[node name="ClothesSprite" parent="." index="1"]
+visible = true
+
 [node name="HairSprite" parent="." index="4"]
 sprite_frames = SubResource("SpriteFrames_xu0kb")
+animation = &"hair_idle_left"
+
+[node name="AccessoriesSprite" parent="." index="5"]
+visible = true

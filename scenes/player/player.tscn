@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/player/player_movement_state.gd" id="6_8x2wn"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_p47bc"]
-radius = 5.0
+radius = 7.0
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
@@ -15,12 +15,15 @@ script = ExtResource("2_d4mna")
 fatigue = 0.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -5)
+position = Vector2(0, -7)
 shape = SubResource("CircleShape2D_p47bc")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+offset = Vector2(0, -16)
 
 [node name="PlayerVisual" parent="." instance=ExtResource("3_75vfm")]
+clothes_id = "default"
+accessory_id = "default"
 
 [node name="PlayerStateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_node_state")]
 script = ExtResource("4_0eris")

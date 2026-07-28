@@ -20,7 +20,7 @@ var is_collecting: bool = false
 var collecting_tween: Tween
 var shake_tween: Tween
 
-# Setup / Lifecycle
+# Lifecycle
 
 func _ready() -> void:
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
@@ -43,7 +43,7 @@ func _ready() -> void:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
 
-# Idle feedback
+# Idle Feedback
 
 func _start_idle_float() -> void:
 	if idle_tween and idle_tween.is_valid():
@@ -54,7 +54,7 @@ func _start_idle_float() -> void:
 	idle_tween.tween_property(icon, "position", icon_default_position + Vector2(0, -1), 0.95).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	idle_tween.tween_property(icon, "position", icon_default_position, 0.95).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-# Collection flow
+# Collection Flow
 
 func on_player_interact(player: Player) -> void:
 	if is_collecting:
@@ -95,7 +95,8 @@ func _spawn_pickup_popup(player: Player) -> void:
 	item_popup.global_position = player.global_position + Vector2(0, -28)
 	item_popup.setup(item_id, quantity, true)
 
-# Interaction focus feedback
+
+# Interaction Focus Feedback
 
 func on_player_enter_interaction() -> void:
 	if not Inventory.has_capacity_for(item_id, quantity):
@@ -103,19 +104,9 @@ func on_player_enter_interaction() -> void:
 		interactable_label_component.set_text("Inventory Full")
 
 	else:
-		interactable_label_component.set_text("press E to collect")
+		interactable_label_component.set_text("E")
 		_play_focus_highlight()
 
-func _play_focus_highlight() -> void:
-	if is_collecting:
-		return
-
-	if highlight_tween and highlight_tween.is_valid():
-		highlight_tween.kill()
-
-	highlight_tween = create_tween()
-	highlight_tween.set_parallel()
-	highlight_tween.tween_property(icon, "modulate", Color(1.25, 1.25, 1.1, 1.0), 0.12)
 
 func on_player_exit_interaction() -> void:
 	if is_collecting:
@@ -128,7 +119,20 @@ func on_player_exit_interaction() -> void:
 	highlight_tween.set_parallel()
 	highlight_tween.tween_property(icon, "modulate", icon_default_modulate, 0.1)
 
-# Failure feedback
+
+func _play_focus_highlight() -> void:
+	if is_collecting:
+		return
+
+	if highlight_tween and highlight_tween.is_valid():
+		highlight_tween.kill()
+
+	highlight_tween = create_tween()
+	highlight_tween.set_parallel()
+	highlight_tween.tween_property(icon, "modulate", Color(1.25, 1.25, 1.1, 1.0), 0.12)
+
+
+# Failure Feedback
 
 func play_failed_pickup_shake() -> void:
 	var original_position: Vector2 = position
@@ -141,7 +145,8 @@ func play_failed_pickup_shake() -> void:
 	shake_tween.tween_property(self, "position", original_position + Vector2(2, 0), 0.03)
 	shake_tween.tween_property(self, "position", original_position, 0.03)
 
-# Drop spawn feedback
+
+# Drop Spawn Feedback
 
 func play_drop_spawn_feedback() -> void:
 	scale = Vector2(0.75, 0.75)
