@@ -4,6 +4,7 @@ extends CanvasLayer
 @onready var message_label: Label = $MessageLabel
 
 var is_transitioning: bool = false
+var _pending_spawn_point: StringName = &""
 
 # Setup
 
@@ -42,7 +43,15 @@ func run_with_fade(
 
 	var action_succeeded: bool = action.call()
 
-	await get_tree().process_frame
+	if action_succeeded and not _pending_spawn_point.is_empty():
+		# Destination nodes are available only after SceneTree finishes the swap.
+		await get_tree().scene_changed
+		_place_player_at_pending_spawn()
+	else:
+		if not action_succeeded:
+			clear_spawn_point()
+		await get_tree().process_frame
+
 	await get_tree().create_timer(hold_duration).timeout
 
 	hide_message()
@@ -50,6 +59,46 @@ func run_with_fade(
 
 	is_transitioning = false
 	return action_succeeded
+
+# Spawn routing
+
+func queue_spawn_point(spawn_point_name: StringName) -> void:
+	_pending_spawn_point = spawn_point_name
+
+func clear_spawn_point() -> void:
+	_pending_spawn_point = &""
+
+func _place_player_at_pending_spawn() -> void:
+	if _pending_spawn_point.is_empty():
+		return
+
+	var spawn_point_name: StringName = _pending_spawn_point
+	_pending_spawn_point = &""
+
+	var current_scene: Node = get_tree().current_scene
+	if current_scene == null:
+		push_warning("SceneTransition could not find the current scene.")
+		return
+
+	var spawn_point: Marker2D = current_scene.find_child(
+		String(spawn_point_name),
+		true,
+		false) as Marker2D
+
+	var player: Player = get_tree().get_first_node_in_group("player") as Player
+
+	if spawn_point == null:
+		push_warning(
+			"SceneTransition could not find spawn point: %s"
+			% spawn_point_name
+		)
+		return
+
+	if player == null:
+		push_warning("SceneTransition could not find Player.")
+		return
+
+	player.global_position = spawn_point.global_position
 
 # Message presentation
 

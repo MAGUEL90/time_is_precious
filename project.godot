@@ -11,6 +11,7 @@ config_version=5
 [application]
 
 config/name="time_is_precious"
+run/main_scene="uid://djq0h3e4lbs6f"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [autoload]
@@ -31,6 +32,7 @@ CitizenManager="*res://scripts/autoload/citizen_manager/citizen_manager.gd"
 CitizenGenerator="*res://scripts/autoload/citizen_generator/citizen_generator.gd"
 ImmigrationManager="*res://scripts/autoload/immigration_manager/immigration_manager.gd"
 SceneTransition="*res://scenes/scene_transition/scene_transition.tscn"
+PlayerRuntimeState="*res://scripts/autoload/player_runtime_state/player_runtime_state.gd"
 
 [display]
 
