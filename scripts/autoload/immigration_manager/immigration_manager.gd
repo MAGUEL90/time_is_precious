@@ -22,7 +22,8 @@ func spawn_immigration(amount: int) -> void:
 	
 	for i in range(amount):
 		var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
-		generated_citizen.status = CitizenData.CitizenStatus.NONE
+		generated_citizen.population_status = CitizenData.PopulationStatus.MIGRANT
+		generated_citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 		pending_immigrants.append(generated_citizen)
 	
 	immigration_requested.emit(pending_immigrants.duplicate())
@@ -33,7 +34,8 @@ func accept_pending_immigrants() -> bool:
 		return false
 		
 	for immigrant in pending_immigrants:
-		immigrant.status = CitizenData.CitizenStatus.CITIZEN
+		immigrant.population_status = CitizenData.PopulationStatus.RESIDENT
+		immigrant.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 		CitizenManager.add_citizen(immigrant)
 	pending_immigrants.clear()
 	return true
@@ -41,12 +43,16 @@ func accept_pending_immigrants() -> bool:
 func reject_pending_immigrants() -> bool:
 	if pending_immigrants.is_empty():
 		return false
-		
+
+	for immigrant in pending_immigrants:
+		immigrant.population_status = CitizenData.PopulationStatus.REJECTED
+		immigrant.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+
 	pending_immigrants.clear()
 	return true
 
 func evaluate_immigration() -> void:
-	var total_citizen: int = CitizenManager.get_all_citizens().size()
+	var total_citizen: int = CitizenManager.get_all_residents().size()
 	
 	if not pending_immigrants.is_empty():
 		return

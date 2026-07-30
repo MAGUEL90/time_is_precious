@@ -8,7 +8,7 @@ const OFFSET_SPAWN: Vector2 = Vector2(24, 0)
 var spawn_index: int = 0
 
 func _ready() -> void:
-	for citizen_data in CitizenManager.get_all_citizens():
+	for citizen_data in CitizenManager.get_all_residents():
 		_spawn_citizen_actor(citizen_data)
 	
 	CitizenManager.citizen_added.connect(_on_citizen_added)

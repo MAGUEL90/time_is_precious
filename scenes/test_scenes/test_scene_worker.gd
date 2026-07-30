@@ -15,4 +15,6 @@ func _ready() -> void:
 	CityStockManager.add_shelter_capacity(10)
 
 	for _i in range(8):
-		CitizenManager.add_citizen(CitizenGenerator.generate_citizen())
+		var resident: CitizenData = CitizenGenerator.generate_citizen()
+		resident.population_status = CitizenData.PopulationStatus.RESIDENT
+		CitizenManager.add_citizen(resident)

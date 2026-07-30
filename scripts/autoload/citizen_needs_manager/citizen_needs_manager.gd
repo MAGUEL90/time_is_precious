@@ -23,7 +23,7 @@ func process_daily_needs() -> void:
 	process_daily_clothing_needs()
 	process_daily_shelter_capacity_needs()
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	for citizen in citizens:
 		if not (citizen is CitizenData):
 			continue
@@ -66,7 +66,7 @@ func process_daily_food_needs() -> void:
 	last_food_fulfilled_count = 0
 	last_food_unfulfilled_count = 0
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	for citizen in citizens:
 		if not (citizen is CitizenData):
@@ -84,7 +84,7 @@ func process_daily_clothing_needs() -> void:
 	last_clothing_fulfilled_count = 0
 	last_clothing_unfulfilled_count = 0
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	for citizen in citizens:
 		if not (citizen is CitizenData):
@@ -104,7 +104,7 @@ func process_daily_shelter_capacity_needs() -> void:
 	last_shelter_capacity_fulfilled_count = 0
 	last_shelter_capacity_unfulfilled_count = 0
 	
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	var remaining_capacity: int = CityStockManager.shelter_capacity
 	
 	for citizen in citizens:
@@ -122,7 +122,7 @@ func process_daily_shelter_capacity_needs() -> void:
 			citizen_data.shelter_fulfilled = true
 
 func get_citizen_count() -> int:
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	return citizens.size()
 
@@ -136,7 +136,7 @@ func get_daily_shelter_capacity_need() -> int:
 	return get_citizen_count()
 
 func get_average_satisfaction() -> float:
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	var total_satisfaction: float = 0.0
 	var valid_citizen: int = 0
 	for citizen in citizens:
