@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=18 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="Script" uid="uid://bw8euggk8mqya" path="res://scenes/content_scene/content_scene.gd" id="1_xdgwu"]
 [ext_resource type="PackedScene" uid="uid://qw2sc2h3urwo" path="res://scenes/city_spawner/city_spawner.tscn" id="2_7vn6b"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
 [ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="7_ssn5y"]
 [ext_resource type="PackedScene" uid="uid://61l18ryobbrw" path="res://scenes/citizen_actor/citizen_actor.tscn" id="8_lvuy0"]
+[ext_resource type="Script" uid="uid://cn6kidsseih1q" path="res://scenes/components/scene_door/scene_door.gd" id="9_lvuy0"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="10_7vn6b"]
 [ext_resource type="PackedScene" uid="uid://fsc270pc2u2v" path="res://scenes/pickup_item/pickup_item.tscn" id="11_lvuy0"]
 [ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="11_v5dai"]
@@ -161,6 +162,9 @@ vertices = PackedVector2Array(-429, -198.64063, -395.3828, -200.4375, -104.15625
 polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3, 4, 5, 6), PackedInt32Array(7, 8, 9, 6, 5), PackedInt32Array(10, 11, 12, 13, 14, 15, 16), PackedInt32Array(16, 17, 10), PackedInt32Array(4, 16, 15, 5), PackedInt32Array(18, 19, 1, 0)])
 outlines = Array[PackedVector2Array]([PackedVector2Array(-439, -253, -439, -208, -454, -207, -477, -207, -477, -190, -474, -145, -438, -146, -437, -115, -475, -112, -465, 16, -315, 15, -315, -79, -331, -87, -332, -114, -387, -113, -389, -145, -98, -153, -93, -196, -386, -210, -389, -255)])
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5jflu"]
+size = Vector2(11.5, 8)
+
 [node name="ContentScene" type="Node2D"]
 script = ExtResource("1_xdgwu")
 metadata/_edit_vertical_guides_ = [355.0, 87.0, -133.0]
@@ -192,7 +196,7 @@ position = Vector2(256, 208)
 
 [node name="object" type="TileMapLayer" parent="YSortWorld"]
 y_sort_enabled = true
-tile_map_data = PackedByteArray("AADj/+r/AQAIAAwAAADj/+v/AQAIAA0AAADj/+z/AQAIAA4AAADk/+r/AQAJAAwAAADk/+v/AQAJAA0AAADk/+z/AQAJAA4AAADl/+r/AQAKAAwAAADl/+v/AQAKAA0AAADl/+z/AQAKAA4AAADm/+r/AQALAAwAAADm/+v/AQALAA0AAADm/+z/AQALAA4AAADn/+r/AQAMAAwAAADn/+v/AQAMAA0AAADn/+z/AQAMAA4AAADj/+j/AQAIAAoAAADj/+n/AQAIAAsAAADk/+j/AQAJAAoAAADk/+n/AQAJAAsAAADl/+j/AQAKAAoAAADl/+n/AQAKAAsAAADm/+j/AQALAAoAAADm/+n/AQALAAsAAADn/+j/AQAMAAoAAADn/+n/AQAMAAsAAADj/+7/AQAFAAYAAADj/+//AQAFAAcAAADk/+7/AQAGAAYAAADk/+//AQAGAAcAAADp/+n/AQAHAAYAAADp/+r/AQAHAAcAAADp/+v/AQAHAAgAAADp/+z/AQAHAAkAAADq/+n/AQAIAAYAAADq/+r/AQAIAAcAAADq/+v/AQAIAAgAAADq/+z/AQAIAAkAAADs/+v/AQAHAAYAAADs/+z/AQAHAAcAAADs/+3/AQAHAAgAAADs/+7/AQAHAAkAAADt/+v/AQAIAAYAAADt/+z/AQAIAAcAAADt/+3/AQAIAAgAAADt/+7/AQAIAAkAAADv/+r/AQAHAAYAAADv/+v/AQAHAAcAAADv/+z/AQAHAAgAAADv/+3/AQAHAAkAAADw/+r/AQAIAAYAAADw/+v/AQAIAAcAAADw/+z/AQAIAAgAAADw/+3/AQAIAAkAAADr/+f/AQAHAAYAAADr/+j/AQAHAAcAAADr/+n/AQAHAAgAAADr/+r/AQAHAAkAAADs/+f/AQAIAAYAAADs/+j/AQAIAAcAAADs/+n/AQAIAAgAAADs/+r/AQAIAAkAAADo/+7/AQACAAYAAADr/+//AQACAAYAAADq/+3/AQACAAYAAADj/+3/AQACAAYAAADv/+7/AQACAAYAAADr/+v/AQADAAYAAADo/+v/AQADAAYAAADu/+3/AQAEAAYAAADt/+//AQAEAAYAAADm/+3/AQAGAAoAAADm/+7/AQAGAAsAAADn/+3/AQAHAAoAAADn/+7/AQAHAAsAAADo/+3/AQAFAAgAAADw/+//AQAHAAcAAADw//D/AQAHAAgAAADw//H/AQAHAAkAAADx/+//AQAIAAcAAADx//D/AQAIAAgAAADx//H/AQAIAAkAAADw/+7/AQAHAAYAAADx/+7/AQAIAAYAAADi//H/AQAHAAYAAADi//L/AQAHAAcAAADi//P/AQAHAAgAAADi//T/AQAHAAkAAADj//H/AQAIAAYAAADj//L/AQAIAAcAAADj//P/AQAIAAgAAADj//T/AQAIAAkAAADj//X/AQAHAAYAAADj//b/AQAHAAcAAADj//f/AQAHAAgAAADk//X/AQAIAAYAAADk//b/AQAIAAcAAADk//f/AQAIAAgAAADk//j/AQAIAAkAAADy//L/AQADAAYAAADo/+n/AQADAAgAAAD2//P/AQADAAcAAAD3//P/AQAEAAcAAAD4//T/AQADAAcAAAD5//T/AQAEAAcAAADk/+3/AQAEAAgAAAD3//T/AQAGAAgAAAD3//X/AQAGAAkAAADi/+n/AQAEAAkAAADi/+r/AQAEAAkAAADi/+v/AQAEAAkAAADi/+z/AQAEAAkAAADv//T/AQACAAYAAAD0//P/AQACAAYAAADt//P/AwACAAYAAADn//X/AQADAAYAAADx//T/AQAEAAYAAADj//z/AQACAAYAAADn//z/AQACAAYAAADp//z/AQADAAYAAADn////AQADAAYAAADr//7/AQADAAYAAADp/wAAAQACAAYAAADp//r/AQACAAYAAADl//v/AwAEAAYAAADk//7/AQAEAAYAAADr//f/AQAHAAYAAADr//j/AQAHAAcAAADr//n/AQAHAAgAAADr//r/AQAHAAkAAADs//f/AQAIAAYAAADs//j/AQAIAAcAAADs//n/AQAIAAgAAADs//r/AQAIAAkAAADm//r/AQAGAAoAAADm//v/AQAGAAsAAADn//r/AQAHAAoAAADn//v/AQAHAAsAAADp//3/AQAGAAoAAADp//7/AQAGAAsAAADq//3/AQAHAAoAAADq//7/AQAHAAsAAADq//X/AQACAAYAAADj/wAAAQADAAYAAADp//P/AQACAAYAAADj//j/AQAHAAkAAADt//z/AQAHAAYAAADt//3/AQAHAAcAAADt//7/AQAHAAgAAADt////AQAHAAkAAADu//z/AQAIAAYAAADu//3/AQAIAAcAAADu//7/AQAIAAgAAADu////AQAIAAkAAADu//j/AQAHAAYAAADu//n/AQAHAAcAAADu//r/AQAHAAgAAADu//v/AQAHAAkAAADv//j/AQAIAAYAAADv//n/AQAIAAcAAADv//r/AQAIAAgAAADv//v/AQAIAAkAAADx//b/AQAHAAYAAADx//f/AQAHAAcAAADx//j/AQAHAAgAAADx//n/AQAHAAkAAADy//b/AQAIAAYAAADy//f/AQAIAAcAAADy//j/AQAIAAgAAADy//n/AQAIAAkAAADn/+//AQAFAAgAAADo/+r/AQADAAgAAAA=")
+tile_map_data = PackedByteArray("AADj/+r/AQAIAAwAAADj/+v/AQAIAA0AAADj/+z/AQAIAA4AAADk/+r/AQAJAAwAAADk/+v/AQAJAA0AAADk/+z/AQAJAA4AAADl/+r/AQAKAAwAAADl/+v/AQAKAA0AAADl/+z/AQAKAA4AAADm/+r/AQALAAwAAADm/+v/AQALAA0AAADm/+z/AQALAA4AAADn/+r/AQAMAAwAAADn/+v/AQAMAA0AAADn/+z/AQAMAA4AAADj/+j/AQAIAAoAAADj/+n/AQAIAAsAAADk/+j/AQAJAAoAAADk/+n/AQAJAAsAAADl/+j/AQAKAAoAAADl/+n/AQAKAAsAAADm/+j/AQALAAoAAADm/+n/AQALAAsAAADn/+j/AQAMAAoAAADn/+n/AQAMAAsAAADp/+n/AQAHAAYAAADp/+r/AQAHAAcAAADp/+v/AQAHAAgAAADp/+z/AQAHAAkAAADq/+n/AQAIAAYAAADq/+r/AQAIAAcAAADq/+v/AQAIAAgAAADq/+z/AQAIAAkAAADs/+v/AQAHAAYAAADs/+z/AQAHAAcAAADs/+3/AQAHAAgAAADs/+7/AQAHAAkAAADt/+v/AQAIAAYAAADt/+z/AQAIAAcAAADt/+3/AQAIAAgAAADt/+7/AQAIAAkAAADv/+r/AQAHAAYAAADv/+v/AQAHAAcAAADv/+z/AQAHAAgAAADv/+3/AQAHAAkAAADw/+r/AQAIAAYAAADw/+v/AQAIAAcAAADw/+z/AQAIAAgAAADw/+3/AQAIAAkAAADr/+f/AQAHAAYAAADr/+j/AQAHAAcAAADr/+n/AQAHAAgAAADr/+r/AQAHAAkAAADs/+f/AQAIAAYAAADs/+j/AQAIAAcAAADs/+n/AQAIAAgAAADs/+r/AQAIAAkAAADo/+7/AQACAAYAAADr/+//AQACAAYAAADq/+3/AQACAAYAAADv/+7/AQACAAYAAADr/+v/AQADAAYAAADo/+v/AQADAAYAAADu/+3/AQAEAAYAAADt/+//AQAEAAYAAADw/+//AQAHAAcAAADw//D/AQAHAAgAAADw//H/AQAHAAkAAADx/+//AQAIAAcAAADx//D/AQAIAAgAAADx//H/AQAIAAkAAADw/+7/AQAHAAYAAADx/+7/AQAIAAYAAADi//H/AQAHAAYAAADi//L/AQAHAAcAAADi//P/AQAHAAgAAADi//T/AQAHAAkAAADj//P/AQAIAAgAAADj//T/AQAIAAkAAADj//X/AQAHAAYAAADj//b/AQAHAAcAAADj//f/AQAHAAgAAADk//X/AQAIAAYAAADk//b/AQAIAAcAAADk//f/AQAIAAgAAADk//j/AQAIAAkAAADy//L/AQADAAYAAADo/+n/AQADAAgAAAD2//P/AQADAAcAAAD3//P/AQAEAAcAAAD4//T/AQADAAcAAAD5//T/AQAEAAcAAAD3//T/AQAGAAgAAAD3//X/AQAGAAkAAADi/+n/AQAEAAkAAADi/+r/AQAEAAkAAADi/+v/AQAEAAkAAADi/+z/AQAEAAkAAADv//T/AQACAAYAAAD0//P/AQACAAYAAADt//P/AwACAAYAAADn//X/AQADAAYAAADx//T/AQAEAAYAAADj//z/AQACAAYAAADn//z/AQACAAYAAADp//z/AQADAAYAAADn////AQADAAYAAADr//7/AQADAAYAAADp/wAAAQACAAYAAADp//r/AQACAAYAAADl//v/AwAEAAYAAADk//7/AQAEAAYAAADr//f/AQAHAAYAAADr//j/AQAHAAcAAADr//n/AQAHAAgAAADr//r/AQAHAAkAAADs//f/AQAIAAYAAADs//j/AQAIAAcAAADs//n/AQAIAAgAAADs//r/AQAIAAkAAADm//r/AQAGAAoAAADm//v/AQAGAAsAAADn//r/AQAHAAoAAADn//v/AQAHAAsAAADp//3/AQAGAAoAAADp//7/AQAGAAsAAADq//3/AQAHAAoAAADq//7/AQAHAAsAAADq//X/AQACAAYAAADj/wAAAQADAAYAAADp//P/AQACAAYAAADj//j/AQAHAAkAAADt//z/AQAHAAYAAADt//3/AQAHAAcAAADt//7/AQAHAAgAAADt////AQAHAAkAAADu//z/AQAIAAYAAADu//3/AQAIAAcAAADu//7/AQAIAAgAAADu////AQAIAAkAAADu//j/AQAHAAYAAADu//n/AQAHAAcAAADu//r/AQAHAAgAAADu//v/AQAHAAkAAADv//j/AQAIAAYAAADv//n/AQAIAAcAAADv//r/AQAIAAgAAADv//v/AQAIAAkAAADx//b/AQAHAAYAAADx//f/AQAHAAcAAADx//j/AQAHAAgAAADx//n/AQAHAAkAAADy//b/AQAIAAYAAADy//f/AQAIAAcAAADy//j/AQAIAAgAAADy//n/AQAIAAkAAADo/+r/AQADAAgAAADj//H/AQAIAAYAAADj//L/AQAIAAcAAADo//H/AQAFAAYAAADo//L/AQAFAAcAAADp//H/AQAGAAYAAADp//L/AQAGAAcAAADj/+//AQACAAYAAADj/+3/AQAEAAgAAADr//H/AQAFAAgAAADs//H/AQAGAAoAAADs//L/AQAGAAsAAADt//H/AQAHAAoAAADt//L/AQAHAAsAAADu//H/AQAFAAgAAAA=")
 tile_set = ExtResource("4_v5dai")
 
 [node name="CitySpawner" parent="YSortWorld" instance=ExtResource("2_7vn6b")]
@@ -200,7 +204,7 @@ y_sort_enabled = true
 position = Vector2(-351, -224)
 
 [node name="CitizenActor" parent="YSortWorld/CitySpawner" instance=ExtResource("8_lvuy0")]
-position = Vector2(-66, -40)
+position = Vector2(-37, -30)
 accessory = "farmer_hat"
 
 [node name="CitizenActor2" parent="YSortWorld/CitySpawner" instance=ExtResource("8_lvuy0")]
@@ -254,6 +258,22 @@ position = Vector2(-366, -177)
 
 [node name="CitizenWanderRegion" type="NavigationRegion2D" parent="YSortWorld"]
 navigation_polygon = SubResource("NavigationPolygon_v5dai")
+
+[node name="SpawnPoints" type="Node2D" parent="YSortWorld"]
+
+[node name="HomeEntryPoint" type="Marker2D" parent="YSortWorld/SpawnPoints"]
+position = Vector2(-427, -294)
+
+[node name="HomeDoor" type="Area2D" parent="YSortWorld"]
+position = Vector2(-426.75, -313)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("9_lvuy0")
+target_scene_path = "uid://djq0h3e4lbs6f"
+target_spawn_point = &"DoorEntryPoint"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="YSortWorld/HomeDoor"]
+shape = SubResource("RectangleShape2D_5jflu")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 anchor_mode = 0

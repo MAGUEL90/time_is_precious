@@ -82,9 +82,14 @@ var last_collapse_day: int = -1
 # Lifecycle and time updates
 
 func _ready() -> void:
+	PlayerRuntimeState.restore(self)
+
 	BaseDialogueManager.dialogue_activated.connect(on_dialogue_activated)
 	BaseDialogueManager.dialogue_deactivated.connect(on_dialogue_deactivated)
 	TimeComponentManager.minute_changed.connect(on_minute_changed)
+
+func _exit_tree() -> void:
+	PlayerRuntimeState.capture(self)
 
 func on_minute_changed(_minute: int) -> void:
 	if is_sleeping:

@@ -1,0 +1,435 @@
+[gd_scene load_steps=13 format=4 uid="uid://djq0h3e4lbs6f"]
+
+[ext_resource type="Texture2D" uid="uid://rymr6doa85vd" path="res://assets/temporer/tile_set/test_tile_set.png" id="1_qu06q"]
+[ext_resource type="TileSet" uid="uid://dmedjrf3am34i" path="res://scenes/content_scene/object_tile_set.tres" id="2_nddy8"]
+[ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_nddy8"]
+[ext_resource type="PackedScene" uid="uid://ck0grik4yminb" path="res://scenes/sleep_spot/sleep_spot.tscn" id="4_a5njf"]
+[ext_resource type="Script" uid="uid://cn6kidsseih1q" path="res://scenes/components/scene_door/scene_door.gd" id="5_a5njf"]
+[ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="5_nddy8"]
+[ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="6_a5njf"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_whgal"]
+texture = ExtResource("1_qu06q")
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+4:1/0 = 0
+5:1/0 = 0
+6:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+4:2/0 = 0
+5:2/0 = 0
+6:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+4:3/0 = 0
+5:3/0 = 0
+6:3/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+5:5/0 = 0
+0:6/0 = 0
+1:6/0 = 0
+3:6/0 = 0
+4:6/0 = 0
+5:6/0 = 0
+3:7/0 = 0
+4:7/0 = 0
+5:7/0 = 0
+2:8/0 = 0
+3:8/0 = 0
+0:10/0 = 0
+1:10/0 = 0
+2:10/0 = 0
+3:10/0 = 0
+4:10/0 = 0
+5:10/0 = 0
+6:10/0 = 0
+0:11/0 = 0
+1:11/0 = 0
+2:11/0 = 0
+3:11/0 = 0
+4:11/0 = 0
+5:11/0 = 0
+6:11/0 = 0
+2:12/0 = 0
+3:12/0 = 0
+4:12/0 = 0
+5:12/0 = 0
+6:12/0 = 0
+2:13/0 = 0
+3:13/0 = 0
+4:13/0 = 0
+5:13/0 = 0
+6:13/0 = 0
+0:15/0 = 0
+1:15/0 = 0
+2:15/0 = 0
+4:15/0 = 0
+5:15/0 = 0
+6:15/0 = 0
+0:16/0 = 0
+2:16/0 = 0
+0:17/0 = 0
+1:17/0 = 0
+2:17/0 = 0
+6:17/0 = 0
+4:18/0 = 0
+5:18/0 = 0
+6:18/0 = 0
+7:18/0 = 0
+0:19/0 = 0
+1:19/0 = 0
+2:19/0 = 0
+3:19/0 = 0
+4:19/0 = 0
+5:19/0 = 0
+6:19/0 = 0
+7:19/0 = 0
+0:20/0 = 0
+1:20/0 = 0
+2:20/0 = 0
+3:20/0 = 0
+4:20/0 = 0
+5:20/0 = 0
+6:20/0 = 0
+7:20/0 = 0
+0:22/0 = 0
+1:22/0 = 0
+2:22/0 = 0
+3:22/0 = 0
+4:22/0 = 0
+5:22/0 = 0
+6:22/0 = 0
+7:22/0 = 0
+2:24/0 = 0
+3:24/0 = 0
+4:24/0 = 0
+5:24/0 = 0
+6:24/0 = 0
+0:25/0 = 0
+1:25/0 = 0
+2:25/0 = 0
+3:25/0 = 0
+4:25/0 = 0
+5:25/0 = 0
+6:25/0 = 0
+0:26/0 = 0
+1:26/0 = 0
+2:26/0 = 0
+3:26/0 = 0
+4:26/0 = 0
+0:27/0 = 0
+1:27/0 = 0
+2:27/0 = 0
+3:27/0 = 0
+4:27/0 = 0
+6:27/0 = 0
+7:27/0 = 0
+0:28/0 = 0
+1:28/0 = 0
+2:28/0 = 0
+3:28/0 = 0
+4:28/0 = 0
+6:28/0 = 0
+7:28/0 = 0
+0:29/0 = 0
+1:29/0 = 0
+2:29/0 = 0
+6:29/0 = 0
+7:29/0 = 0
+0:31/0 = 0
+1:31/0 = 0
+2:31/0 = 0
+0:32/0 = 0
+2:32/0 = 0
+0:33/0 = 0
+1:33/0 = 0
+2:33/0 = 0
+0:34/0 = 0
+1:34/0 = 0
+2:34/0 = 0
+5:34/0 = 0
+6:34/0 = 0
+0:35/0 = 0
+1:35/0 = 0
+2:35/0 = 0
+5:36/0 = 0
+6:36/0 = 0
+7:36/0 = 0
+0:37/0 = 0
+1:37/0 = 0
+2:37/0 = 0
+3:37/0 = 0
+5:37/0 = 0
+6:37/0 = 0
+1:38/0 = 0
+2:38/0 = 0
+3:38/0 = 0
+5:38/0 = 0
+6:38/0 = 0
+1:39/0 = 0
+2:39/0 = 0
+3:39/0 = 0
+5:40/0 = 0
+6:40/0 = 0
+7:40/0 = 0
+0:45/0 = 0
+1:45/0 = 0
+2:45/0 = 0
+3:45/0 = 0
+4:45/0 = 0
+5:45/0 = 0
+6:45/0 = 0
+7:45/0 = 0
+0:46/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_8a06a"]
+sources/0 = SubResource("TileSetAtlasSource_whgal")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nddy8"]
+texture = ExtResource("1_qu06q")
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+4:1/0 = 0
+5:1/0 = 0
+6:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+4:2/0 = 0
+5:2/0 = 0
+6:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+4:3/0 = 0
+5:3/0 = 0
+6:3/0 = 0
+0:5/0 = 0
+1:5/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+5:5/0 = 0
+0:6/0 = 0
+1:6/0 = 0
+3:6/0 = 0
+4:6/0 = 0
+5:6/0 = 0
+3:7/0 = 0
+4:7/0 = 0
+5:7/0 = 0
+2:8/0 = 0
+3:8/0 = 0
+0:10/0 = 0
+1:10/0 = 0
+2:10/0 = 0
+3:10/0 = 0
+4:10/0 = 0
+5:10/0 = 0
+6:10/0 = 0
+0:11/0 = 0
+1:11/0 = 0
+2:11/0 = 0
+3:11/0 = 0
+4:11/0 = 0
+5:11/0 = 0
+6:11/0 = 0
+2:12/0 = 0
+3:12/0 = 0
+4:12/0 = 0
+5:12/0 = 0
+6:12/0 = 0
+2:13/0 = 0
+3:13/0 = 0
+4:13/0 = 0
+5:13/0 = 0
+6:13/0 = 0
+0:15/0 = 0
+1:15/0 = 0
+2:15/0 = 0
+4:15/0 = 0
+5:15/0 = 0
+6:15/0 = 0
+0:16/0 = 0
+2:16/0 = 0
+0:17/0 = 0
+1:17/0 = 0
+2:17/0 = 0
+6:17/0 = 0
+4:18/0 = 0
+5:18/0 = 0
+6:18/0 = 0
+7:18/0 = 0
+0:19/0 = 0
+1:19/0 = 0
+2:19/0 = 0
+3:19/0 = 0
+4:19/0 = 0
+5:19/0 = 0
+6:19/0 = 0
+7:19/0 = 0
+0:20/0 = 0
+1:20/0 = 0
+2:20/0 = 0
+3:20/0 = 0
+4:20/0 = 0
+5:20/0 = 0
+6:20/0 = 0
+7:20/0 = 0
+0:22/0 = 0
+1:22/0 = 0
+2:22/0 = 0
+3:22/0 = 0
+4:22/0 = 0
+5:22/0 = 0
+6:22/0 = 0
+7:22/0 = 0
+2:24/0 = 0
+3:24/0 = 0
+4:24/0 = 0
+5:24/0 = 0
+6:24/0 = 0
+0:25/0 = 0
+1:25/0 = 0
+2:25/0 = 0
+3:25/0 = 0
+4:25/0 = 0
+5:25/0 = 0
+6:25/0 = 0
+0:26/0 = 0
+1:26/0 = 0
+2:26/0 = 0
+3:26/0 = 0
+4:26/0 = 0
+0:27/0 = 0
+1:27/0 = 0
+2:27/0 = 0
+3:27/0 = 0
+4:27/0 = 0
+6:27/0 = 0
+7:27/0 = 0
+0:28/0 = 0
+1:28/0 = 0
+2:28/0 = 0
+3:28/0 = 0
+4:28/0 = 0
+6:28/0 = 0
+7:28/0 = 0
+0:29/0 = 0
+1:29/0 = 0
+2:29/0 = 0
+6:29/0 = 0
+7:29/0 = 0
+0:31/0 = 0
+1:31/0 = 0
+2:31/0 = 0
+0:32/0 = 0
+2:32/0 = 0
+0:33/0 = 0
+1:33/0 = 0
+2:33/0 = 0
+0:34/0 = 0
+0:34/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+1:34/0 = 0
+1:34/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+2:34/0 = 0
+2:34/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+5:34/0 = 0
+6:34/0 = 0
+0:35/0 = 0
+1:35/0 = 0
+1:35/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+2:35/0 = 0
+5:36/0 = 0
+6:36/0 = 0
+7:36/0 = 0
+0:37/0 = 0
+1:37/0 = 0
+2:37/0 = 0
+3:37/0 = 0
+5:37/0 = 0
+6:37/0 = 0
+1:38/0 = 0
+2:38/0 = 0
+3:38/0 = 0
+5:38/0 = 0
+6:38/0 = 0
+1:39/0 = 0
+2:39/0 = 0
+3:39/0 = 0
+5:40/0 = 0
+6:40/0 = 0
+7:40/0 = 0
+0:45/0 = 0
+1:45/0 = 0
+2:45/0 = 0
+3:45/0 = 0
+4:45/0 = 0
+5:45/0 = 0
+6:45/0 = 0
+7:45/0 = 0
+0:46/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_a5njf"]
+physics_layer_0/collision_layer = 1
+physics_layer_0/collision_mask = 0
+sources/0 = SubResource("TileSetAtlasSource_nddy8")
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wuqfv"]
+size = Vector2(20, 10)
+
+[node name="PlayerHomeInterior" type="Node2D"]
+
+[node name="Ground" type="Node2D" parent="."]
+
+[node name="Floor" type="TileMapLayer" parent="Ground"]
+tile_map_data = PackedByteArray("AAD8//r/AAAEAC0AAAD8//v/AAAAAC4AAAD8//z/AAABAC0AAAD8//3/AAAEAC0AAAD8//7/AAAAAC0AAAD9//n/AAABAC0AAAD9//r/AAAEAC0AAAD9//v/AAAAAC0AAAD9//z/AAACAC0AAAD9//3/AAACAC0AAAD9//7/AAACAC0AAAD9////AAABAC0AAAD+//n/AAACAC0AAAD+//r/AAAEAC0AAAD+//v/AAADAC0AAAD+//z/AAAEAC0AAAD+//3/AAAAAC4AAAD+//7/AAACAC0AAAD+////AAABAC0AAAD///n/AAABAC0AAAD///r/AAABAC0AAAD///v/AAADAC0AAAD///z/AAABAC0AAAD///3/AAABAC0AAAD///7/AAADAC0AAAD/////AAABAC0AAAAAAPn/AAAEAC0AAAAAAPr/AAABAC0AAAAAAPv/AAAAAC0AAAAAAPz/AAADAC0AAAAAAP3/AAAAAC0AAAAAAP7/AAABAC0AAAAAAP//AAACAC0AAAABAPn/AAAAAC0AAAABAPr/AAADAC0AAAABAPv/AAAAAC0AAAABAPz/AAAAAC0AAAABAP3/AAADAC0AAAABAP7/AAACAC0AAAABAP//AAAAAC0AAAACAPn/AAABAC0AAAACAPr/AAACAC0AAAACAPv/AAADAC0AAAACAPz/AAAAAC0AAAACAP3/AAAAAC0AAAACAP7/AAAEAC0AAAACAP//AAACAC0AAAADAPr/AAACAC0AAAADAPv/AAAAAC0AAAADAPz/AAADAC0AAAADAP3/AAABAC0AAAADAP7/AAADAC0AAAA=")
+tile_set = SubResource("TileSet_8a06a")
+
+[node name="Walls" type="TileMapLayer" parent="Ground"]
+tile_map_data = PackedByteArray("AAD9//j/AAABACMAAAD+//j/AAABACMAAAD///j/AAABACMAAAAAAPj/AAABACMAAAABAPj/AAABACMAAAACAPj/AAABACMAAAADAPn/AAACACIAAAD8//n/AAACACIAAAD7//r/AAACACIAAAD7//v/AAACACIAAAD7//z/AAACACIAAAD7//3/AAACACIAAAD7//7/AAACACIAAAD8////AAACACIAAAADAP//AAACACIAAAAEAP7/AAACACIAAAAEAP3/AAACACIAAAAEAPz/AAACACIAAAAEAPv/AAACACIAAAAEAPr/AAACACIAAAD9////AAABACIAAAD+////AAABACIAAAABAP//AAABACIAAAACAP//AAABACIAAAA=")
+tile_set = SubResource("TileSet_a5njf")
+
+[node name="YSortWorld" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Furniture" type="TileMapLayer" parent="YSortWorld"]
+y_sort_enabled = true
+tile_map_data = PackedByteArray("AAD8//7/AQACAAgAAAD8//3/AQACAAgAAAD9//n/AQAEAAkAAAD8//r/AQADAAgAAAADAP3/AQAFAAgAAAD9//v/AQAGAAoAAAD9//z/AQAGAAsAAAD+//v/AQAHAAoAAAD+//z/AQAHAAsAAAD+//r/AQAFAAgAAAA=")
+tile_set = ExtResource("2_nddy8")
+
+[node name="Player" parent="YSortWorld" instance=ExtResource("3_nddy8")]
+position = Vector2(0, -74)
+
+[node name="SleepSpot" parent="YSortWorld" instance=ExtResource("4_a5njf")]
+position = Vector2(28, -76)
+
+[node name="ExitDoor" type="Area2D" parent="YSortWorld"]
+position = Vector2(0, -5)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("5_a5njf")
+target_scene_path = "uid://dtqsj6h6lollc"
+target_spawn_point = &"HomeEntryPoint"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="YSortWorld/ExitDoor"]
+shape = SubResource("RectangleShape2D_wuqfv")
+
+[node name="SpawnPoints" type="Node2D" parent="."]
+
+[node name="WakeUpPoint" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(0, -74)
+
+[node name="DoorEntryPoint" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(0, -28)
+
+[node name="TopHUD" parent="." instance=ExtResource("5_nddy8")]
+
+[node name="BottomHUD" parent="." instance=ExtResource("6_a5njf")]
