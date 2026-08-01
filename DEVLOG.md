@@ -1,192 +1,212 @@
 # DEVLOG - Time is Precious
 
-Last updated: 2026-06-09
+Last updated: 2026-08-01
+
+Repository snapshot: merged work through PR #85.
 
 ## Project Identity
-**Time is Precious** is a 2D top-down management RPG with a Mesopotamian theme, built in Godot Engine 4 / 4.5.
+
+**Time is Precious** is a 2D top-down management RPG with a Mesopotamian-inspired setting, built in Godot Engine 4 / 4.5.
 
 Core pillars:
 - Time as the main strategic pressure.
-- Resource management.
-- Worker / NPC delegation.
+- Resource and inventory management.
+- Player condition management.
+- Worker and NPC delegation.
 - Production chains.
-- City and player home progression.
-- Variable progression between players.
+- City and player-home progression.
+- Variable progression shaped by player decisions and controlled system variation.
 
-## Current Development Focus
-The current focus is not adding big features. The focus is stabilizing the playable core loop.
+## Current Development Phase
 
-Priority order:
-1. Resource gathering.
-2. Resource storage.
-3. Work / process execution.
-4. NPC delegation.
-5. Production output.
-6. Basic progression impact.
-7. Minimum playable prototype.
+The project is in the technical prototype and playable-loop integration phase.
 
-## Milestone Snapshot
-Completed or merged work:
-- PR #57: Job Board began showing applicant offers instead of directly starting jobs.
-- PR #58: Planning docs established the project direction, including the separation between population/citizen status and employment/worker status.
-- PR #59: Asset control docs introduced the asset guide, palette guide, and asset registry workflow.
-- PR #61: Modular worker visual was added with layered body, head, clothes, hands, hair, and accessories.
-- PR #62: Palette guide was updated with the current game colors, including skin, clothing, hair, UI, and Mesopotamian earth-tone rules.
-- PR #63: Roadmap was refocused around the playable core loop.
-- PR #64: Variable progression became a design pillar so the game does not become too predictable.
-- PR #65: Resolution direction was documented as 1280x720, 16:9 landscape, PC first, Android landscape compatible.
-- PR #66: Modular citizens, shared character assets, citizen runtime data, city spawning, and immigration accept/reject flow were added.
-
-Current local work after PR #66:
-- Workshop menu became player-facing.
-- Manage Storage submenu was added.
-- Item transfer UI supports deposit and withdraw.
-- Item change popup shows item gains/losses for storage movement.
-- Workshop can assign a prototype worker and start mudbrick production from stored materials.
-- Mudbrick job output enters claimable workshop escrow.
-
-## 2026-06-09 - Workshop Storage and Mudbrick Job Loop
-
-### What changed
-Added the first player-facing workshop loop around storage, worker assignment, and mudbrick job start.
-
-Implemented:
-- `WorkshopMenuUI` now exposes workshop actions through a modal UI.
-- `WorkshopStorageMenuUI` separates storage management from the main workshop menu.
-- `ItemTransferUI` is reused for both deposit and withdraw.
-- `WorkShop.deposit_selected_items_from_player()` moves selected inventory items into `WorkShopStorage`.
-- `WorkShop.withdraw_selected_items_to_player()` moves stored workshop items back into player inventory.
-- `ItemChangePopup` gives visual feedback for item movement:
-  - deposit: player `-amount`, workshop `+amount`
-  - withdraw: player `+amount`, workshop `-amount`
-- `WorkShop.assign_test_worker()` assigns the first available prototype worker.
-- `WorkShop.start_mudbrick_job_from_storage()` starts `mudbrick_make` using `WorkShopStorage` as both source and output store.
-- NPC job output enters `WorkShopStorage.claimable_outputs` instead of directly entering normal storage.
-
-### Validation
-Manual Godot runtime testing confirmed:
-- Assign worker action works.
-- Deposit of `clay_lump`, `water_jar`, and `straw_bundle` works.
-- Withdraw returns stored items to player inventory.
-- Popup direction changes correctly between deposit and withdraw.
-- Mudbrick job starts from workshop storage after a worker is assigned.
-- Completed mudbrick job creates a claimable `wet_mudbrick` output.
-
-Observed successful test output:
+The immediate goal is not to add many unrelated systems. The goal is to connect the systems that already exist into a clear and repeatable daily loop:
 
 ```text
-Assigned worker: worker_crafter_01
-Selected items: { "clay_lump": 3, "water_jar": 3, "straw_bundle": 3 }
-Started mudbrick job: <order_id>
-Claimable outputs count: 1
-Claimable[0]: { "items": { "wet_mudbrick": 60 }, "service_fee_shekel": 5, ... }
+Wake at home
+-> Enter the city
+-> Gather or manage items
+-> Maintain player conditions
+-> Assign work and process resources
+-> Advance time
+-> Return home and sleep
+-> Face consequences when needs are ignored
 ```
 
-### Remaining boundaries
-- Worker assignment is still a prototype/test path, not yet connected to real hired citizens.
-- Main workshop action currently doubles as assign/start depending on assignment state; this should become separate `Assign Worker` and `Start Job` actions.
-- Workshop job selection UI is not final; current path starts mudbrick directly.
-- Drying process still needs player-facing verification after wet mudbrick becomes claimable.
-- Failure feedback should be improved when storage/inventory capacity blocks transfer.
-- Debug prints should be reduced or converted to UI feedback before polish.
+Current priorities:
+1. Connect the home, item, condition, citizen, and workshop systems into one stable loop.
+2. Improve player-facing clarity, feedback, and visual consistency.
+3. Finish incomplete parts of the mudbrick production loop.
+4. Tune sleep, condition drain, recovery, and Nightmare consequences.
+5. Add real save/load persistence after the runtime loop is stable.
 
-## 2026-06-04 - Modular Citizens and Immigration Flow Added
+## Current Playable Snapshot
 
-### What changed
-PR #66 added the first runtime slice for modular citizens and immigration.
+### World, Citizens, and Character Presentation
+- Modular player, worker, and citizen visuals use layered body, head, clothes, hair, hands, and accessories.
+- Citizens can use configurable visual profiles.
+- Citizens can idle and wander independently.
+- Character facing updates during horizontal and diagonal movement.
+- Player, citizens, pickups, and world objects participate in the current Y-sort setup.
+- Immigration requests can generate citizens and allow batch accept/reject decisions.
 
-Implemented:
-- Shared modular character assets now support reusable body, head, hand, hair, clothing, and accessory combinations.
-- Player visual uses shared body / hand / clothes assets with player-specific head and hair.
-- `CitizenData` and `VisualProfile` define citizen identity, basic need flags, status, profession, and visual appearance.
-- `CitizenManager`, `CitizenGenerator`, and `ImmigrationManager` manage the citizen registry, random citizen creation, immigration pressure/chance, and pending immigrant batches.
-- `CitySpawner` and `CitizenActor` show accepted citizens in the test city.
-- Immigration request UI lets the player accept or reject the full immigrant batch.
+### Items and Inventory
+- Pickups have interaction prompts, highlighting, pickup animation, and item-change popup feedback.
+- Inventory supports item categories, pages, item details, option panels, quantity selection, and confirmation flows.
+- Inventory uses a stable 5x3 slot layout with visible empty placeholders.
+- Items can be used, sent to city stock, or dropped depending on item/action rules.
+- Items can be dragged out of the inventory, dropped near the player, and collected again.
+- Inventory weight and capacity rules remain part of the item flow.
 
-### Validation
-- Manual Godot runtime testing confirmed modular visuals, citizen spawning, immigration request popup, accept/reject flow, and HUD count updates.
-- `git diff --check` passed before the PR.
+### Pixel Resolution and Gameplay HUD
+- Logical viewport is 320x180 while the game window remains 1280x720.
+- Pixel snapping is enabled for consistent pixel rendering.
+- Previous camera scaling that caused inconsistent world/UI scale was removed.
+- Pickup and item feedback avoid scale effects that distort pixel art.
+- Compact Top HUD and Bottom HUD components display live gameplay information.
+- The Top HUD can collapse.
+- Holding `Tab` reveals the player status drawer.
+- Current HUD values include Fatigue, Hunger, Focus, Experience, time, weather, day, and population.
 
-### Remaining boundaries
-- This is a prototype foundation, not final save/load.
-- Accepted citizens currently live in the runtime registry.
-- Job Board applicant conversion, worker hiring from citizens, and richer citizen traits still need future work.
+### Player Conditions, Sleep, and Consequences
+- Fatigue, Hunger, Focus, and Experience are active player values.
+- Conditions change as in-game time passes.
+- Valid sleep interactions advance time by seven hours.
+- Sleep recovery is affected by the player's nourishment.
+- Sleep is limited to once per in-game day.
+- Critical conditions can trigger Collapse.
+- Collapse sends the player into the Nightmare World.
+- Nightmare gameplay includes limited vision, tier-based duration/penalties, exit or timeout completion, and a result screen.
+- Nightmare time and penalties are converted back into normal-world consequences.
 
-## 2026-06-01 - Variable Progression Pillar Added
+### Player Home and Scene Flow
+- The player home interior is the current main starting scene.
+- Reusable doors and spawn-point routing connect the home and city.
+- Player conditions, Experience, sleep usage, and Collapse state persist across scene changes during the current runtime session.
+- World time continues while the player is inside the home.
 
-### What changed
-Added a design pillar stating that the game should not be too easy to predict from a gameplay/progression perspective.
+### Workshop and Worker Loop
+- The player can deposit and withdraw selected item quantities between inventory and workshop storage.
+- Workshop item movement uses popup feedback.
+- Workers can be assigned through the workshop flow.
+- Workshop jobs validate worker profession and resource requirements.
+- Mudbrick production can consume workshop materials and produce claimable `wet_mudbrick` output.
+- Worker daily needs affect satisfaction and reliability, which can influence output.
+- Service fees can be deducted in Shekel when the work flow completes.
 
-### Why
-The intended experience is that different players can develop different cities and progression paths. The game should not become a fixed spreadsheet with one obvious optimal route.
+## Milestone History
 
-### Design direction
-The game should use controlled randomness and system-driven variation.
+### PR #66 - Modular Citizens and Immigration
+Added runtime citizen identity, visual profiles, citizen generation/registry, city spawning, and immigration accept/reject flow.
 
-Examples:
-- Migrant count may vary based on city prosperity.
-- Applicant quality and traits may vary.
-- Timing of opportunities may vary.
-- Needs pressure may vary within readable limits.
-- Production or city events may include small controlled modifiers.
+### PR #67 - Gabbi Character Bible
+Documented Gabbi as a Unique NPC, childhood friend, early guide, social bridge, and story-support character.
 
-### Important boundary
-Randomness should create strategic variation, not chaos.
+### PR #68 - Playable Workshop Storage and Mudbrick Flow
+Added player-facing workshop actions, storage deposit/withdraw, item transfer UI, worker assignment prototype, mudbrick job start, and claimable output.
 
-The player should still feel that decisions matter.
+### PR #69-#72 - Dialogue Stability Pass
+Fixed dialogue naming, intro triggering, NPC dialogue locking, pause/facing behavior, and invalid interaction prompts.
+
+### PR #73 - Minimal Worker Loop
+Connected workshop jobs to time ticks, city/worker needs, satisfaction/reliability, service fees, and claimable output testing.
+
+### PR #74 - AI NPC Quest Architecture
+Documented the long-term separation between AI character voice/intent, Quest System validation, and Game State authority. This is architecture only, not active gameplay.
+
+### PR #75 - Intro Dialogue and Gameplay HUD
+Added Gabbi's intro flow, the updated chatbox, delayed response choices, NPC-relative dialogue positioning, and an early gameplay HUD.
+
+### PR #76 - Workshop Worker Assignment and Job Start
+Added worker slots, available-worker selection, Back/Next navigation, discard confirmation, profession checks, missing-requirement feedback, and job start flow.
+
+### PR #77 - Item Description Writing Guide
+Defined the readable, earthy, lightly humorous English style for Mesopotamian-inspired item descriptions.
+
+### PR #78 - Pickup and Inventory Item Flow
+Improved pickup interaction and inventory UI, added item details and action panels, and added use/send/remove feedback flows.
+
+### PR #79 - Inventory Drop and Drag Flow
+Added drag-out dropping, quantity confirmation, drop spawn animation, randomized player-relative placement, and re-pickup support.
+
+### PR #80 - Demo Distribution Plan
+Defined the One Percent Studio website as the future primary browser-demo hub, with staged expansion to itch.io, Steam, Game Jolt, and CrazyGames.
+
+### PR #81 - Player Sleep Condition Foundation
+Added Fatigue, Hunger, Focus, sleep limits, time advancement, nourishment-based recovery, Collapse preparation, and Focus utility methods.
+
+### PR #82 - Sleep and Nightmare Collapse MVP
+Completed the current sleep, Collapse, Nightmare World, limited vision, consequence, result-screen, and return-to-world MVP loop.
+
+### PR #83 - Pixel-Perfect Resolution, Inventory, and HUD Polish
+Established the 320x180 logical viewport, pixel snapping, stable 5x3 inventory, clearer item panels, compact HUD, and live player status drawer.
+
+### PR #84 - Character Animation and Citizen Visual Polish
+Updated layered idle/walk animation assets and playback, citizen wandering/facing, pickup prompt feedback, and world Y-sorting.
+
+### PR #85 - Player Home Daily Loop
+Added the player home starting scene, home/city transitions, runtime state preservation, and world-time continuity inside the home.
+
+## Current Known Boundaries
+
+- Player state persists across scenes only during the current runtime session; it is not saved to disk yet.
+- The local headless runtime still has a known Godot signal 11 crash in the player-home flow; the complete flow was manually validated in the editor.
+- Citizen movement at low speeds can still appear pixel-stepped because of pixel-snapped transforms.
+- Public-facing terminology for Hunger / Body Fuel / Satiety still needs a final decision.
+- Condition drain, sleep recovery, same-day sleep rules, and Collapse penalties still need tuning.
+- Final warning sprites, animation, and audio for critical conditions are not complete.
+- Nightmare difficulty and presentation need further expansion and polish.
+- Workshop claim/continue production and the drying path from `wet_mudbrick` to `sun_dried_mudbrick` still need a complete player-facing pass.
+- AI NPC quest integration is documented only and must not be presented as an implemented feature.
+- The current prototype is not yet ready for uncontrolled public demo distribution.
+
+## Next Development Priorities
+
+1. Validate the complete home-to-city daily loop without manual setup.
+2. Finish the player-facing mudbrick claim and drying process.
+3. Confirm final production output can be stored, seen, and used for visible progression.
+4. Improve missing-resource, storage-full, inventory-full, and failed-action feedback.
+5. Tune Fatigue, Hunger, Focus, sleep, Collapse, and Nightmare balance.
+6. Add save/load persistence for player conditions, sleep state, citizens, inventory, and progression.
+7. Prepare a small internal playtest checklist before wider demo work.
+
+## Design Decisions Still in Force
+
+### Resident and Worker Are Different States
+
+Population status and employment status must remain separate.
+
+```text
+Migrant arrives
+-> Player accepts or rejects
+-> Accepted migrant becomes a resident/citizen
+-> Resident consumes city resources
+-> Eligible resident may become an applicant
+-> Player hires the applicant
+-> Hired worker can be assigned to work
+```
+
+Food and basic city needs depend on resident/citizen status, not employment status.
+
+### Variable Progression, Not Pure Randomness
+
+The game should support different city-development paths through controlled variation.
 
 Correct direction:
 
 ```text
 Player decision
 -> System state
--> Controlled random variation
+-> Controlled variation
 -> Readable result
 ```
 
-Wrong direction:
+Randomness should create strategic variation, not outcomes the player cannot understand or influence.
 
-```text
-Pure random outcome
--> Player cannot plan
--> Result feels unfair
-```
+## Related Project Documents
 
-## Current Design Issue: Worker vs Resident
-A key issue has been identified: the code/design must not treat `worker` and `resident` as the same concept.
-
-Important decision:
-- Food consumption should depend on **resident/citizen status**.
-- Food consumption should not depend on whether an NPC has been hired as a worker.
-
-Correct flow:
-
-```text
-Migrant arrives
--> Player accepts or rejects
--> Accepted migrant becomes Resident / Citizen
--> Resident starts consuming city stock
--> Eligible resident can appear on Job Board
--> Player hires applicant
--> Hired worker can be assigned to work/process
-```
-
-## Working Design Decision
-Separate NPC state into two layers:
-
-### Population Status
-Examples:
-- `migrant`
-- `resident`
-- `rejected`
-- `left_city`
-
-### Employment Status
-Examples:
-- `unemployed`
-- `applicant`
-- `hired`
-- `assigned`
-- `working`
-
-This avoids the mistake of using only one boolean such as `is_hired` for all NPC logic.
+- `ROADMAP.md` - development phases and implementation priorities.
+- `ARCHITECTURE.md` - technical responsibilities and system boundaries.
+- `DEMO_DISTRIBUTION.md` - staged demo rollout strategy.
+- `docs/CONTENT_LOG.md` - published content, current production, and future content backlog.
