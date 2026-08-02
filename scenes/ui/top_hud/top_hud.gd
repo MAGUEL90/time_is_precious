@@ -101,7 +101,7 @@ func _on_citizen_added(_citizen_data: CitizenData) -> void:
 
 func _update_population() -> void:
 	population_label.text = str(
-		CitizenManager.get_all_citizens().size()
+		CitizenManager.get_all_residents().size()
 	)
 
 # Nightmare visibility

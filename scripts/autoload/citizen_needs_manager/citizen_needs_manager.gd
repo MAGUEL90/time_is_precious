@@ -12,6 +12,8 @@ var last_clothing_unfulfilled_count: int = 0
 var last_shelter_capacity_fulfilled_count: int = 0
 var last_shelter_capacity_unfulfilled_count: int = 0
 
+# Lifecycle and daily orchestration
+
 func _ready() -> void:
 	TimeComponentManager.new_day_started.connect(on_new_day_started)
 
@@ -23,7 +25,7 @@ func process_daily_needs() -> void:
 	process_daily_clothing_needs()
 	process_daily_shelter_capacity_needs()
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	for citizen in citizens:
 		if not (citizen is CitizenData):
 			continue
@@ -36,9 +38,10 @@ func process_daily_needs() -> void:
 
 	process_daily_worker_needs()
 
+# Need processing
+
 func process_daily_worker_needs() -> void:
-	# Worker diproses setelah citizen agar citizen tetap dapat prioritas stok.
-	# Sisa shelter dihitung dari kapasitas dikurangi yang sudah terpakai citizen.
+	# Citizens consume supplies first; workers can only use what remains.
 	var remaining_shelter_capacity: int = CityStockManager.shelter_capacity - last_shelter_capacity_fulfilled_count
 
 	for worker in WorkerDatabase.get_all_workers():
@@ -46,6 +49,11 @@ func process_daily_worker_needs() -> void:
 			continue
 
 		var worker_data: WorkerData = worker as WorkerData
+
+		# Linked workers were already processed through their CitizenData.
+		if worker_data.has_linked_citizen():
+			continue
+
 		worker_data.food_fulfilled = CityStockManager.consume_food_supply(FOOD_SUPPLY_PER_WORKER_PER_DAY)
 		worker_data.clothing_fulfilled = CityStockManager.consume_clothing_supply(CLOTHING_SUPPLY_PER_WORKER_PER_DAY)
 
@@ -66,7 +74,7 @@ func process_daily_food_needs() -> void:
 	last_food_fulfilled_count = 0
 	last_food_unfulfilled_count = 0
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	for citizen in citizens:
 		if not (citizen is CitizenData):
@@ -84,7 +92,7 @@ func process_daily_clothing_needs() -> void:
 	last_clothing_fulfilled_count = 0
 	last_clothing_unfulfilled_count = 0
 
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	for citizen in citizens:
 		if not (citizen is CitizenData):
@@ -104,7 +112,7 @@ func process_daily_shelter_capacity_needs() -> void:
 	last_shelter_capacity_fulfilled_count = 0
 	last_shelter_capacity_unfulfilled_count = 0
 	
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	var remaining_capacity: int = CityStockManager.shelter_capacity
 	
 	for citizen in citizens:
@@ -121,8 +129,10 @@ func process_daily_shelter_capacity_needs() -> void:
 			remaining_capacity -= 1
 			citizen_data.shelter_fulfilled = true
 
+# Population summaries
+
 func get_citizen_count() -> int:
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 
 	return citizens.size()
 
@@ -136,7 +146,7 @@ func get_daily_shelter_capacity_need() -> int:
 	return get_citizen_count()
 
 func get_average_satisfaction() -> float:
-	var citizens: Array = CitizenManager.get_all_citizens()
+	var citizens: Array = CitizenManager.get_all_residents()
 	var total_satisfaction: float = 0.0
 	var valid_citizen: int = 0
 	for citizen in citizens:

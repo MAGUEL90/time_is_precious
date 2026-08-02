@@ -13,6 +13,8 @@ const MAX_ACTIVE_TEAM_SLOTS: int = 3
 var selected_job: JobData
 var selected_workers: Array[WorkerData] = []
 
+# Lifecycle and visibility
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
@@ -36,6 +38,8 @@ func close() -> void:
 	get_tree().paused = false
 	visible = false
 
+# UI refresh
+
 func _refresh_team_slots() -> void:
 	for child in team_slot_grid.get_children():
 		child.queue_free()
@@ -47,7 +51,7 @@ func _refresh_team_slots() -> void:
 			if slot_index < selected_workers.size():
 				var worker_data: WorkerData = selected_workers[slot_index]
 				slot_button.text = "%s\n%s" % [
-					worker_data.display_name,
+					worker_data.get_resolved_display_name(),
 					_get_worker_profession_name(worker_data.profession)]
 			else:
 				slot_button.text = "Empty Slot"
@@ -69,10 +73,11 @@ func _refresh_worker_lists() -> void:
 		var worker_data: WorkerData = worker as WorkerData
 		var button_list: Button = Button.new()
 		button_list.text = "Name: %s\nProfession: %s\nStatus: %s\nSAT: %d%%, REL: %d%% " % [
-			worker_data.display_name,
+			worker_data.get_resolved_display_name(),
 			_get_worker_profession_name(worker_data.profession),
 			_get_worker_status_text(worker_data),
-			roundi(worker_data.satisfaction * 100.0), roundi(worker_data.reliability * 100.0)
+			roundi(worker_data.get_resolved_satisfaction() * 100.0),
+			roundi(worker_data.get_resolved_reliability() * 100.0)
 		]
 		button_list.pressed.connect(_on_worker_selected.bind(worker_data))
 
@@ -87,6 +92,8 @@ func _refresh_job_list() -> void:
 	job_button.text = MUDBRICK_JOB.display_name
 	job_button.pressed.connect(_on_job_selected.bind(MUDBRICK_JOB))
 	job_list.add_child(job_button)
+
+# Selection and job actions
 
 func _on_job_selected(job_data: JobData) -> void:
 	selected_job = job_data
@@ -146,6 +153,8 @@ func _on_start_job() -> void:
 	_refresh_team_slots()
 	_refresh_worker_lists()
 
+# Signal handlers
+
 func _on_close_button_pressed() -> void:
 	close()
 	
@@ -154,6 +163,8 @@ func _on_clear_team_button_pressed() -> void:
 
 func _on_start_job_button_pressed() -> void:
 	_on_start_job()
+
+# Display helpers
 
 func _get_worker_status_text(worker_data: WorkerData) -> String:
 	if worker_data.is_working():
