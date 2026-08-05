@@ -37,6 +37,7 @@ func process_daily_needs() -> void:
 			citizen.reliability = clampf(citizen.reliability - 0.05, 0.01, 0.99)
 
 	process_daily_worker_needs()
+	CitizenManager.evaluate_daily_applications()
 
 # Need processing
 
@@ -111,16 +112,16 @@ func process_daily_clothing_needs() -> void:
 func process_daily_shelter_capacity_needs() -> void:
 	last_shelter_capacity_fulfilled_count = 0
 	last_shelter_capacity_unfulfilled_count = 0
-	
+
 	var citizens: Array = CitizenManager.get_all_residents()
 	var remaining_capacity: int = CityStockManager.shelter_capacity
-	
+
 	for citizen in citizens:
 		if not (citizen is CitizenData):
 			continue
-		
+
 		var citizen_data: CitizenData = citizen as CitizenData
-		
+
 		if remaining_capacity <= 0:
 			last_shelter_capacity_unfulfilled_count += 1
 			citizen_data.shelter_fulfilled = false

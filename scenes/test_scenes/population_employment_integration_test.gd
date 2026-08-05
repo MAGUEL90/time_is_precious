@@ -12,6 +12,7 @@ func _ready() -> void:
 	_test_resident_registration_guard()
 	_test_immigration_acceptance()
 	_test_immigration_rejection()
+	_test_applicant_hiring_lifecycle()
 	_test_worker_data_linking_and_needs_integration()
 
 	CitizenManager.citizens_by_id.clear()
@@ -105,6 +106,147 @@ func _test_immigration_rejection() -> void:
 	_expect(
 		not CitizenManager.has_citizen(immigrant.citizen_id),
 		"Rejected migrants must not enter CitizenManager.")
+
+# Applicant hiring lifecycle
+
+func _test_applicant_hiring_lifecycle() -> void:
+	CitizenManager.citizens_by_id.clear()
+
+	var applicant: CitizenData = CitizenData.new()
+	applicant.citizen_id = "hiring_test"
+	applicant.display_name = "Hiring Test"
+	applicant.population_status = CitizenData.PopulationStatus.RESIDENT
+	applicant.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	applicant.satisfaction = 0.49
+	CitizenManager.add_citizen(applicant)
+	var rejected_application: bool = CitizenManager.register_applicant(
+		applicant.citizen_id,
+		WorkerData.Profession.LABORER
+	)
+
+	_expect(
+		not rejected_application,
+		"Resident below the satisfaction threshold must remain unemployed."
+	)
+	_expect(
+		applicant.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
+		"Rejected application must not change employment status."
+	)
+
+	applicant.satisfaction = CitizenData.MIN_APPLICANT_SATISFACTION
+	var registered_count: int = CitizenManager.evaluate_daily_applications()
+	_expect(
+		registered_count == 1,
+		"Daily evaluation must register one eligible resident."
+	)
+
+	var job_board_scene: PackedScene = load(
+		"res://scenes/job_board/job_board.tscn"
+	)
+	var job_board: JobBoard = job_board_scene.instantiate()
+	add_child(job_board)
+	job_board.default_daily_wage = 2
+
+	job_board.on_player_interact(null)
+
+	var job_board_ui: JobBoardUI = job_board.job_board_ui
+	var hired_worker: WorkerData = null
+
+	_expect(
+		job_board_ui != null,
+		"Job Board interaction must open JobBoardUI."
+	)
+
+	if job_board_ui != null:
+		_expect(job_board_ui.visible, "JobBoardUI must be visible.")
+		_expect(
+			get_tree().paused,
+			"Opening JobBoardUI must pause the world."
+		)
+		_expect(
+			job_board_ui.applicants.has(applicant),
+			"JobBoardUI must contain the eligible applicant."
+		)
+		_expect(
+			job_board_ui.applicant_list.item_count == 1,
+			"JobBoardUI must display one applicant."
+		)
+		_expect(
+			job_board_ui.applicant_list.get_item_text(0).contains(
+				applicant.display_name
+			),
+			"Applicant row must show the citizen name."
+		)
+
+		job_board_ui.hire_button.pressed.emit()
+		hired_worker = WorkerDatabase.get_worker_data(
+			applicant.citizen_id
+		)
+
+	_expect(hired_worker != null, "Eligible applicant must be hired.")
+
+	_expect(
+		applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
+		"Hired applicant must enter the HIRED employment state."
+	)
+	_expect(
+		WorkerDatabase.get_worker_data(applicant.citizen_id) == hired_worker,
+		"Hired applicant must receive linked WorkerData."
+	)
+
+	if hired_worker != null:
+		_expect(
+			hired_worker.has_linked_citizen(),
+			"Hired WorkerData must link back to CitizenData."
+		)
+		_expect(
+			hired_worker.profession == WorkerData.Profession.LABORER,
+			"Hired worker must inherit the applicant profession."
+		)
+		_expect(
+			hired_worker.wage_shekel_per_day == 2,
+			"Hired worker must receive the agreed wage."
+		)
+
+	if job_board_ui != null:
+		_expect(
+			not job_board_ui.applicants.has(applicant),
+			"Hired citizen must disappear from JobBoardUI."
+		)
+		_expect(
+			job_board_ui.applicant_list.item_count == 0,
+			"Applicant list must refresh after hiring."
+		)
+		_expect(
+			job_board_ui.hire_button.disabled,
+			"Hire button must be disabled when no applicants remain."
+		)
+		_expect(
+			job_board_ui.feedback_label.text.contains("Hired"),
+			"JobBoardUI must show successful hiring feedback."
+		)
+
+		job_board_ui.close()
+
+	_expect(
+		not get_tree().paused,
+		"Closing JobBoardUI must resume the world."
+	)
+	_expect(
+		job_board.job_board_ui == null,
+		"Closed JobBoardUI must be released by JobBoard."
+	)
+
+	job_board.free()
+
+	var duplicate_hire: WorkerData = WorkerDatabase.hire_applicant(
+		applicant.citizen_id,
+		2
+	)
+	_expect(duplicate_hire == null, "A hired citizen cannot be hired twice.")
+
+	WorkerDatabase.workers_by_id.erase(applicant.citizen_id)
+	CitizenManager.citizens_by_id.erase(applicant.citizen_id)
 
 # Worker linking and legacy compatibility
 

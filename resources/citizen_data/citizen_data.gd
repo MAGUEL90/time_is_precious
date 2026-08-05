@@ -14,6 +14,8 @@ enum EmploymentStatus {
 	ASSIGNED
 }
 
+const MIN_APPLICANT_SATISFACTION: float = 0.5
+
 @export var citizen_id: String = ""
 @export var display_name: String = ""
 @export var satisfaction: float = 0.5
@@ -29,3 +31,17 @@ enum EmploymentStatus {
 
 func are_basic_needs_fulfilled() -> bool:
 	return food_fulfilled and clothing_fulfilled and shelter_fulfilled
+
+func can_apply_for_work() -> bool:
+	return (
+		population_status == PopulationStatus.RESIDENT
+		and employment_status == EmploymentStatus.UNEMPLOYED
+		and satisfaction >= MIN_APPLICANT_SATISFACTION
+	)
+
+func can_be_hired() -> bool:
+	return (
+		population_status == PopulationStatus.RESIDENT
+		and employment_status == EmploymentStatus.APPLICANT
+		and profession != WorkerData.Profession.NONE
+	)
