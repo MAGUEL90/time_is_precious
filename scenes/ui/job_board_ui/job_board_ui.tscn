@@ -1,0 +1,76 @@
+[gd_scene load_steps=3 format=3 uid="uid://d2m4ct6uaigm0"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_b1dp4"]
+[ext_resource type="Script" uid="uid://d2tllavo36y38" path="res://scenes/ui/job_board_ui/job_board_ui.gd" id="1_ch0ae"]
+
+[node name="JobBoardUI" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_ch0ae")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_b1dp4")
+
+[node name="DimBackground" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(200, 118)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+text = "Job Board"
+horizontal_alignment = 1
+
+[node name="ApplicantList" type="ItemList" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+
+[node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="HireButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(52, 22)
+layout_mode = 2
+text = "Hire"
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(52, 22)
+layout_mode = 2
+text = "Close"

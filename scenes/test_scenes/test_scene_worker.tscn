@@ -32,6 +32,7 @@ visible = false
 visible = false
 
 [node name="JobBoard" parent="." instance=ExtResource("10_odmqt")]
+position = Vector2(225, 103)
 
 [node name="BaseWorkerVisual" parent="." instance=ExtResource("11_pykga")]
 position = Vector2(269, 171)

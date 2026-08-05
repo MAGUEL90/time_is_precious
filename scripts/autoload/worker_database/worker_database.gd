@@ -13,36 +13,36 @@ func _ready() -> void:
 func _load_all_workers(path: String) -> void:
 	workers_by_id.clear()
 	is_loaded = false
-	
+
 	var dir: DirAccess = DirAccess.open(path)
 	if dir == null:
 		push_error("WorkerDatabase: failed to open workers path: %s" % path)
 		return
-	
+
 	dir.list_dir_begin()
 	var file_name: String = dir.get_next()
 	while file_name != "":
 		if dir.current_is_dir():
 			file_name = dir.get_next()
 			continue
-		
+
 		if not file_name.ends_with(".tres"):
 			file_name = dir.get_next()
 			continue
-		
+
 		var worker_path: String = path.path_join(file_name)
 		var worker_res: Resource = load(worker_path)
 		if not worker_res is WorkerData:
 			push_warning("WorkerDatabase: %s is not a WorkerData resource." % worker_path)
 			file_name = dir.get_next()
 			continue
-		
+
 		var worker_data: WorkerData = worker_res as WorkerData
 		var resolved_id: String = worker_data.worker_id.strip_edges()
 		if resolved_id == "":
 			resolved_id = file_name.trim_suffix(".tres")
 			worker_data.worker_id = resolved_id
-		
+
 		if workers_by_id.has(resolved_id):
 			var existing_worker: WorkerData = workers_by_id[resolved_id]
 			push_error(
@@ -54,10 +54,10 @@ func _load_all_workers(path: String) -> void:
 			)
 			file_name = dir.get_next()
 			continue
-		
+
 		workers_by_id[resolved_id] = worker_data
 		file_name = dir.get_next()
-	
+
 	dir.list_dir_end()
 	is_loaded = true
 
@@ -69,6 +69,32 @@ func get_all_workers() -> Array:
 
 func reload_workers() -> void:
 	_load_all_workers(WORKERS_PATH)
-	
+
 func has_worker_data(worker_id: String) -> bool:
 	return workers_by_id.has(worker_id)
+
+# Hiring lifecycle
+
+func hire_applicant(
+	citizen_id: String,
+	wage_shekel_per_day: int = 1
+) -> WorkerData:
+	var citizen_data: CitizenData = CitizenManager.get_citizen(citizen_id)
+	if citizen_data == null:
+		return null
+
+	if not citizen_data.can_be_hired():
+		return null
+
+	if has_worker_data(citizen_data.citizen_id):
+		return null
+
+	var worker_data: WorkerData = WorkerData.new()
+	worker_data.worker_id = citizen_data.citizen_id
+	worker_data.display_name = citizen_data.display_name
+	worker_data.profession = citizen_data.profession
+	worker_data.wage_shekel_per_day = maxi(0, wage_shekel_per_day)
+	workers_by_id[worker_data.worker_id] = worker_data
+	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
+
+	return worker_data

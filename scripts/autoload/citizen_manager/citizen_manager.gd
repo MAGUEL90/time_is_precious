@@ -1,4 +1,5 @@
 extends Node
+
 signal citizen_added(citizen_data: CitizenData)
 
 @export var seed_debug_citizens: bool = false
@@ -25,7 +26,7 @@ func _create_test_citizen(
 	hair_style: String,
 	skin_tone: String,
 	accessory: String) -> CitizenData:
-	
+
 	var test_citizen: CitizenData = CitizenData.new()
 	test_citizen.citizen_id = id
 	test_citizen.display_name = display_name
@@ -40,31 +41,31 @@ func _create_test_citizen(
 
 func add_citizen(citizen_data: CitizenData) -> void:
 	if citizen_data == null:
-		return 
+		return
 
 	if citizen_data.population_status != CitizenData.PopulationStatus.RESIDENT:
 		return
 
 	var citizen_id: String = citizen_data.citizen_id
 	var clean_citizen_id: String = citizen_id.strip_edges()
-	
+
 	citizen_data.citizen_id = clean_citizen_id
-	
+
 	if clean_citizen_id.is_empty():
 		return
-	
+
 	if citizens_by_id.has(clean_citizen_id):
 		return
-	
+
 	citizens_by_id[clean_citizen_id] = citizen_data
 	citizen_added.emit(citizen_data)
 
 func get_citizen(citizen_id: String) -> CitizenData:
 	var clean_citizen_id: String = citizen_id.strip_edges()
-	
+
 	if clean_citizen_id.is_empty():
 		return null
-	
+
 	if not citizens_by_id.has(clean_citizen_id):
 		return null
 
@@ -78,6 +79,42 @@ func get_all_residents() -> Array[CitizenData]:
 			residents.append(citizen)
 
 	return residents
+
+# Employment lifecycle
+
+func register_applicant(
+	citizen_id: String,
+	profession: WorkerData.Profession
+) -> bool:
+	var citizen_data: CitizenData = get_citizen(citizen_id)
+	if citizen_data == null:
+		return false
+
+	if not citizen_data.can_apply_for_work():
+		return false
+
+	if profession == WorkerData.Profession.NONE:
+		return false
+
+	citizen_data.profession = profession
+	citizen_data.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	return true
+
+func evaluate_daily_applications() -> int:
+	var registered_count: int = 0
+
+	for citizen_data in get_all_residents():
+		if not citizen_data.can_apply_for_work():
+			continue
+
+		var registered: bool = register_applicant(
+			citizen_data.citizen_id,
+			WorkerData.Profession.LABORER
+		)
+		if registered:
+			registered_count += 1
+
+	return registered_count
 
 func get_all_applicants() -> Array[CitizenData]:
 	var applicants: Array[CitizenData] = []
@@ -94,8 +131,8 @@ func get_all_applicants() -> Array[CitizenData]:
 
 func has_citizen(citizen_id: String) -> bool:
 	var clean_citizen_id: String = citizen_id.strip_edges()
-	
+
 	if clean_citizen_id.is_empty():
 		return false
-		
+
 	return citizens_by_id.has(clean_citizen_id)
