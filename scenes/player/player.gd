@@ -367,6 +367,7 @@ func _open_workshop_worker_assignment_ui(current_worker_ids: Array[String] = [])
 	get_tree().current_scene.add_child(worker_assignment_menu)
 
 	worker_assignment_menu.assignment_next_requested.connect(_on_workshop_worker_assignment_next_requested)
+	worker_assignment_menu.assignment_changed.connect(_on_workshop_worker_assignment_changed)
 	worker_assignment_menu.assignment_back_requested.connect(_on_workshop_worker_assignment_back_requested)
 	worker_assignment_menu.assignment_cancelled.connect(_on_workshop_worker_assignment_cancelled)
 
@@ -376,6 +377,14 @@ func _open_workshop_worker_assignment_ui(current_worker_ids: Array[String] = [])
 		claim_menu_workshop.get_max_assigned_worker_slots()
 	)
 
+func _on_workshop_worker_assignment_changed(
+	worker_ids: Array[String]
+) -> void:
+	if claim_menu_workshop == null:
+		return
+
+	claim_menu_workshop.assign_workers(worker_ids)
+
 func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) -> void:
 	if claim_menu_workshop == null:
 		_close_claim_menu()
@@ -383,11 +392,12 @@ func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) ->
 		return
 
 	if worker_ids.is_empty():
-		_close_claim_menu()
-		_show_current_interact_label()
+		return_to_workshop_main_menu()
 		return
 
-	_open_workshop_job_ui(worker_ids)
+	_open_workshop_job_ui(
+		claim_menu_workshop.get_assigned_worker_ids()
+	)
 
 func _on_workshop_worker_assignment_back_requested() -> void:
 	return_to_workshop_main_menu()
@@ -587,7 +597,9 @@ func _on_work_shop_menu_action_selected(action_id: int) -> void:
 		WorkshopMenuUI.Action.MANAGE_STORAGE:
 			_open_workshop_storage_menu_ui()
 		WorkshopMenuUI.Action.ASSIGN_WORK:
-			_open_workshop_worker_assignment_ui()
+			_open_workshop_worker_assignment_ui(
+				claim_menu_workshop.get_assigned_worker_ids()
+			)
 		WorkshopMenuUI.Action.PAY_ALL_FEES:
 			_pay_workshop_unpaid_fee()
 		WorkshopMenuUI.Action.PAY_OVERDUE_FEES:

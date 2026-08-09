@@ -213,10 +213,27 @@ func assign_workers(worker_ids: Array[String]) -> bool:
 		next_assigned_worker_ids.append(worker_id)
 
 	if next_assigned_worker_ids.is_empty():
-		print("No worker assigned.")
+		for previous_worker_id in assigned_worker_ids:
+			WorkerDatabase.unassign_worker(previous_worker_id)
+
+		assigned_worker_ids.clear()
+		print("Assigned workers: ", assigned_worker_ids)
+		return true
+
+	var confirmed_worker_ids: Array[String] = []
+	for worker_id in next_assigned_worker_ids:
+		if WorkerDatabase.assign_worker(worker_id):
+			confirmed_worker_ids.append(worker_id)
+
+	if confirmed_worker_ids.is_empty():
+		print("No eligible worker assigned.")
 		return false
 
-	assigned_worker_ids = next_assigned_worker_ids
+	for previous_worker_id in assigned_worker_ids:
+		if not confirmed_worker_ids.has(previous_worker_id):
+			WorkerDatabase.unassign_worker(previous_worker_id)
+
+	assigned_worker_ids = confirmed_worker_ids
 	print("Assigned workers: ", assigned_worker_ids)
 	return true
 

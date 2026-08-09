@@ -1,47 +1,74 @@
-[gd_scene load_steps=2 format=3 uid="uid://dthjfx7bolaxo"]
+[gd_scene load_steps=5 format=3 uid="uid://dthjfx7bolaxo"]
 
 [ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_ymhdi"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_gtdw8"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_yyklc"]
 
-[node name="ConfirmDiscardPanel" type="PanelContainer"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_4h2ug"]
+atlas = ExtResource("2_yyklc")
+region = Rect2(116, 7, 52, 40)
+
+[node name="ConfirmDiscardPanel" type="NinePatchRect"]
+custom_minimum_size = Vector2(160, 48)
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -236.0
-offset_top = -41.0
-offset_right = 236.0
-offset_bottom = 41.0
+offset_left = -160.0
+offset_top = -90.0
+offset_bottom = -42.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_ymhdi")
+texture = SubResource("AtlasTexture_4h2ug")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="ConfirmMargin" type="MarginContainer" parent="."]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="ConfirmVBox" type="VBoxContainer" parent="ConfirmMargin"]
 layout_mode = 2
+theme_override_constants/separation = 3
 alignment = 1
 
 [node name="ConfirmLabel" type="Label" parent="ConfirmMargin/ConfirmVBox"]
 layout_mode = 2
 theme_type_variation = &"PanelTextSmall"
-text = "\"Semua penempatan worker yang anda atur akan hilang.\""
+text = "Discard worker assignment?"
+horizontal_alignment = 1
 
 [node name="ConfirmButtons" type="HBoxContainer" parent="ConfirmMargin/ConfirmVBox"]
 layout_mode = 2
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="KeepButton" type="Button" parent="ConfirmMargin/ConfirmVBox/ConfirmButtons"]
+custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
-theme_type_variation = &"PanelActionButton"
+theme = ExtResource("2_gtdw8")
+theme_type_variation = &"HudShortcutButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "Stay"
 
 [node name="DiscardButton" type="Button" parent="ConfirmMargin/ConfirmVBox/ConfirmButtons"]
+custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
-theme_type_variation = &"PanelActionButton"
+theme = ExtResource("2_gtdw8")
+theme_type_variation = &"HudShortcutButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "Discard"

@@ -11,6 +11,7 @@ region = Rect2(112, 51, 28, 10)
 [node name="InteractableLabelComponent" type="Control"]
 visible = false
 z_index = 2
+custom_minimum_size = Vector2(10, 10)
 layout_mode = 3
 anchors_preset = 0
 offset_left = -5.0

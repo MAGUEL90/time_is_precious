@@ -1,16 +1,20 @@
-[gd_scene load_steps=6 format=3 uid="uid://b72ntkdkju1bx"]
+[gd_scene load_steps=7 format=3 uid="uid://b72ntkdkju1bx"]
 
 [ext_resource type="Script" uid="uid://8nudfg4yadui" path="res://scenes/job_board/job_board.gd" id="1_8wvv0"]
 [ext_resource type="Resource" uid="uid://dtwxjv6s04vaa" path="res://resources/job_data/mudbrick_make.tres" id="2_cjf2a"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_dpx32"]
+[ext_resource type="Texture2D" uid="uid://b760kxx2baat3" path="res://assets/objects/job_board.png" id="3_0klxr"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3_cjf2a"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8wvv0"]
-radius = 30.149628
+radius = 18.681541
 
 [node name="JobBoard" type="Node2D"]
 script = ExtResource("1_8wvv0")
 job_data = ExtResource("2_cjf2a")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("3_0klxr")
 
 [node name="InteractableComponent" parent="." instance=ExtResource("2_dpx32")]
 
@@ -18,4 +22,3 @@ job_data = ExtResource("2_cjf2a")
 shape = SubResource("CircleShape2D_8wvv0")
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("3_cjf2a")]
-visible = false

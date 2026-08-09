@@ -98,3 +98,41 @@ func hire_applicant(
 	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
 
 	return worker_data
+
+func assign_worker(worker_id: String) -> bool:
+	var worker_data: WorkerData = get_worker_data(worker_id)
+	if worker_data == null:
+		return false
+
+	var citizen_data: CitizenData = worker_data.get_linked_citizen()
+	# Preserve compatibility with legacy workers that have no CitizenData.
+	if citizen_data == null:
+		return true
+
+	if citizen_data.employment_status == CitizenData.EmploymentStatus.ASSIGNED:
+		return true
+
+	if not citizen_data.can_be_assigned():
+		return false
+
+	citizen_data.employment_status = CitizenData.EmploymentStatus.ASSIGNED
+	return true
+
+func unassign_worker(worker_id: String) -> bool:
+	var worker_data: WorkerData = get_worker_data(worker_id)
+	if worker_data == null:
+		return false
+
+	var citizen_data: CitizenData = worker_data.get_linked_citizen()
+	# Preserve compatibility with legacy workers that have no CitizenData.
+	if citizen_data == null:
+		return true
+
+	if citizen_data.employment_status == CitizenData.EmploymentStatus.HIRED:
+		return true
+
+	if citizen_data.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+		return false
+
+	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
+	return true
