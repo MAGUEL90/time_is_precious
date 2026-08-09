@@ -1,7 +1,12 @@
-[gd_scene load_steps=3 format=3 uid="uid://bg1u86wqe8p0f"]
+[gd_scene load_steps=5 format=3 uid="uid://bg1u86wqe8p0f"]
 
 [ext_resource type="Script" uid="uid://1tg0avsocwud" path="res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd" id="1_3apnb"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2_70o6a"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_jbrp8"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4l7um"]
+atlas = ExtResource("2_70o6a")
+region = Rect2(1, 1, 168, 134)
 
 [node name="WorkshopMenuUI" type="CanvasLayer"]
 process_mode = 3
@@ -35,25 +40,34 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Window" type="PanelContainer" parent="Root/Center"]
-custom_minimum_size = Vector2(420, 330)
+[node name="Window" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(240, 140)
 layout_mode = 2
+texture = SubResource("AtlasTexture_4l7um")
 
 [node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 14
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 2
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
 text = "WORKSHOP"
 horizontal_alignment = 1
 
@@ -61,6 +75,7 @@ horizontal_alignment = 1
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
 text = "Ready output: None
 Unpaid: 0 | Fee: 0 | Overdue: 0"
 horizontal_alignment = 1
@@ -69,47 +84,54 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 3
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 8
+theme_override_constants/h_separation = 2
+theme_override_constants/v_separation = 2
+columns = 2
 
 [node name="ClaimButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(98, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "1  Claim Output"
 alignment = 0
 
 [node name="ManageButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(98, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "2  Manage Storage"
 alignment = 0
 
 [node name="AssignButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(98, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "3  Assign Work"
 alignment = 0
 
 [node name="PayAllButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(98, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "4  Pay All Fees"
 alignment = 0
 
 [node name="PayOverdueButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ActionGrid"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(98, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "5  Pay Overdue Fees"
+alignment = 0
 
 [node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
@@ -119,8 +141,9 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Footer"]
-custom_minimum_size = Vector2(90, 30)
+custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Close"

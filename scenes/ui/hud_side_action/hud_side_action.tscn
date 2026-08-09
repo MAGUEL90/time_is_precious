@@ -8,7 +8,7 @@ offset_right = 8.0
 offset_bottom = 8.0
 focus_mode = 0
 theme = ExtResource("1_djakl")
-theme_type_variation = &"HudSideActionButton"
+theme_type_variation = &"HudShortcutButton"
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1

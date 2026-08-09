@@ -4,15 +4,15 @@ signal start_job_requested(job_data: JobData, worker_ids: Array[String], work_da
 signal back_requested(worker_ids: Array[String])
 signal cancelled()
 
-@onready var status_label: Label = $Root/Center/Window/Margin/MainVBox/StatusLabel
-@onready var job_label: Label = $Root/Center/Window/Margin/MainVBox/JobLabel
-@onready var requirement_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementLabel
-@onready var back_button: Button = $Root/Center/Window/Margin/MainVBox/Footer/BackButton
-@onready var start_button: Button = $Root/Center/Window/Margin/MainVBox/Footer/StartButton
-@onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Header/CloseButton
-@onready var confirm_discard_panel: PanelContainer = $Root/Center/Window/Margin/MainVBox/ConfirmDiscardPanel
-@onready var keep_button: Button = $Root/Center/Window/Margin/MainVBox/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton
-@onready var discard_button: Button = $Root/Center/Window/Margin/MainVBox/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton
+@onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
+@onready var job_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/JobLabel
+@onready var requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/RequirementLabel
+@onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/BackButton
+@onready var start_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/StartButton
+@onready var close_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Header/CloseButton
+@onready var confirm_discard_panel: NinePatchRect = $Root/Center/TextureWindow/ConfirmDiscardPanel
+@onready var keep_button: Button = $Root/Center/TextureWindow/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton
+@onready var discard_button: Button = $Root/Center/TextureWindow/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton
 
 var current_workshop: Node = null
 var assigned_worker_ids: Array[String] = ["", ""]

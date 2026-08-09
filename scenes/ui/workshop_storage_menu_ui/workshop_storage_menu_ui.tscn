@@ -1,7 +1,12 @@
-[gd_scene load_steps=3 format=3 uid="uid://bymgt3ekm38k4"]
+[gd_scene load_steps=5 format=3 uid="uid://bymgt3ekm38k4"]
 
 [ext_resource type="Script" uid="uid://n4twin7e8inq" path="res://scenes/ui/workshop_storage_menu_ui/workshop_storage_menu_ui.gd" id="1_q38kr"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_ov06s"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_7nn86"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_j5ub2"]
+atlas = ExtResource("3_7nn86")
+region = Rect2(1, 136, 145, 101)
 
 [node name="WorkshopStorageMenuUI" type="CanvasLayer"]
 process_mode = 3
@@ -34,27 +39,36 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Window" type="PanelContainer" parent="Root/Center"]
-custom_minimum_size = Vector2(320, 180)
+[node name="Window" type="TextureRect" parent="Root/Center"]
+custom_minimum_size = Vector2(145, 101)
 layout_mode = 2
 theme = ExtResource("2_ov06s")
-theme_type_variation = &"HudPanel"
+texture = SubResource("AtlasTexture_j5ub2")
 
 [node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 3
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudLabelMain"
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.22745098, 1)
+theme_override_font_sizes/font_size = 12
 text = "WORKSHOP STORAGE"
 horizontal_alignment = 1
 
@@ -62,29 +76,33 @@ horizontal_alignment = 1
 layout_mode = 2
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudLabelSub"
+theme_override_font_sizes/font_size = 6
 text = "Manage stored workshop items."
 horizontal_alignment = 1
 
 [node name="DepositButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(78, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Deposit Items"
 
 [node name="WithdrawButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(78, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Withdraw Items"
 
 [node name="BackButton" type="Button" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 30)
+custom_minimum_size = Vector2(52, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Back"

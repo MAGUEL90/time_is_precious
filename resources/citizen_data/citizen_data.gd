@@ -45,3 +45,10 @@ func can_be_hired() -> bool:
 		and employment_status == EmploymentStatus.APPLICANT
 		and profession != WorkerData.Profession.NONE
 	)
+
+func can_be_assigned() -> bool:
+	return (
+		population_status == PopulationStatus.RESIDENT
+		and employment_status == EmploymentStatus.HIRED
+		and profession != WorkerData.Profession.NONE
+	)

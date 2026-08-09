@@ -13,6 +13,7 @@ func _ready() -> void:
 	_test_immigration_acceptance()
 	_test_immigration_rejection()
 	_test_applicant_hiring_lifecycle()
+	_test_worker_assignment_lifecycle()
 	_test_worker_data_linking_and_needs_integration()
 
 	CitizenManager.citizens_by_id.clear()
@@ -247,6 +248,88 @@ func _test_applicant_hiring_lifecycle() -> void:
 
 	WorkerDatabase.workers_by_id.erase(applicant.citizen_id)
 	CitizenManager.citizens_by_id.erase(applicant.citizen_id)
+
+func _test_worker_assignment_lifecycle() -> void:
+	var first_citizen: CitizenData = CitizenData.new()
+	first_citizen.citizen_id = "assignment_test_first"
+	first_citizen.display_name = "First Assignment Worker"
+	first_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
+	first_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+	first_citizen.profession = WorkerData.Profession.LABORER
+	CitizenManager.add_citizen(first_citizen)
+
+	var first_worker: WorkerData = WorkerData.new()
+	first_worker.worker_id = first_citizen.citizen_id
+	first_worker.profession = first_citizen.profession
+	WorkerDatabase.workers_by_id[first_worker.worker_id] = first_worker
+
+	var second_citizen: CitizenData = CitizenData.new()
+	second_citizen.citizen_id = "assignment_test_second"
+	second_citizen.display_name = "Second Assignment Worker"
+	second_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
+	second_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+	second_citizen.profession = WorkerData.Profession.LABORER
+	CitizenManager.add_citizen(second_citizen)
+
+	var second_worker: WorkerData = WorkerData.new()
+	second_worker.worker_id = second_citizen.citizen_id
+	second_worker.profession = second_citizen.profession
+	WorkerDatabase.workers_by_id[second_worker.worker_id] = second_worker
+
+	var workshop: WorkShop = WorkShop.new()
+	workshop.max_assigned_worker_slots = 1
+
+	var first_assignment: Array[String] = [first_worker.worker_id]
+	_expect(
+		workshop.assign_workers(first_assignment),
+		"A hired worker must be assignable to a workshop."
+	)
+	_expect(
+		first_citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED,
+		"Assigned worker must enter the ASSIGNED employment state."
+	)
+	_expect(
+		workshop.get_assigned_worker_ids() == first_assignment,
+		"Workshop must retain the confirmed worker assignment."
+	)
+
+	var second_assignment: Array[String] = [second_worker.worker_id]
+	_expect(
+		workshop.assign_workers(second_assignment),
+		"A second hired worker must replace the previous assignment."
+	)
+	_expect(
+		first_citizen.employment_status == CitizenData.EmploymentStatus.HIRED,
+		"Removed worker must return to the HIRED employment state."
+	)
+	_expect(
+		second_citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED,
+		"Replacement worker must enter the ASSIGNED employment state."
+	)
+	_expect(
+		workshop.get_assigned_worker_ids() == second_assignment,
+		"Workshop must retain only the replacement worker."
+	)
+
+	var empty_assignment: Array[String] = []
+	_expect(
+		workshop.assign_workers(empty_assignment),
+		"Clearing all worker assignments must succeed."
+	)
+	_expect(
+		workshop.get_assigned_worker_ids().is_empty(),
+		"Workshop must have no assigned workers after clearing."
+	)
+	_expect(
+		second_citizen.employment_status == CitizenData.EmploymentStatus.HIRED,
+		"Cleared worker must return to the HIRED employment state."
+	)
+
+	workshop.free()
+	WorkerDatabase.workers_by_id.erase(first_worker.worker_id)
+	WorkerDatabase.workers_by_id.erase(second_worker.worker_id)
+	CitizenManager.citizens_by_id.erase(first_citizen.citizen_id)
+	CitizenManager.citizens_by_id.erase(second_citizen.citizen_id)
 
 # Worker linking and legacy compatibility
 
