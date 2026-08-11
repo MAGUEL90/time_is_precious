@@ -43,7 +43,6 @@ func open_assignment(current_worker_ids: Array[String], slot_count: int = 2) -> 
 		selected_worker_ids[empty_slot_index] = worker_id
 
 	active_slot_index = _get_first_empty_slot_index()
-	info_label.text = "Assigned workers: %d / %d" % [_get_assigned_worker_count(), max_worker_slots]
 	feedback_label.text = "Choose an empty slot, then pick a worker."
 	visible = true
 	get_tree().paused = true
@@ -99,7 +98,7 @@ func _refresh_slots() -> void:
 		slot_button.pressed.connect(_on_slot_pressed.bind(slot_index))
 		slot_grid.add_child(slot_button)
 
-	info_label.text = "Assigned workers: %d / %d" % [_get_assigned_worker_count(), max_worker_slots]
+	_refresh_info_label()
 
 func _refresh_worker_list() -> void:
 	for child in worker_list.get_children():
@@ -215,6 +214,15 @@ func _on_back_pressed() -> void:
 	_finish_back()
 
 # Display helpers
+
+func _refresh_info_label() -> void:
+	var total_workers: int = WorkerDatabase.get_all_workers().size()
+
+	info_label.text = "Assigned: %d / %d | Total Workers: %d" % [
+		_get_assigned_worker_count(),
+		max_worker_slots,
+		total_workers
+	]
 
 func _get_worker_status_text(worker_data: WorkerData) -> String:
 	if worker_data.is_working():

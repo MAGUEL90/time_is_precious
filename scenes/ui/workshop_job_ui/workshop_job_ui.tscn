@@ -98,6 +98,13 @@ theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Mudbrick Making"
 
+[node name="WorkerRequirementLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "+ Laborer requirement met."
+
 [node name="RequirementLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2

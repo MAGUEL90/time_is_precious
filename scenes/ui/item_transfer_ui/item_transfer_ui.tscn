@@ -1,6 +1,12 @@
-[gd_scene load_steps=2 format=3 uid="uid://d34dky1ificrb"]
+[gd_scene load_steps=5 format=3 uid="uid://d34dky1ificrb"]
 
 [ext_resource type="Script" uid="uid://b3d0mmwbc2332" path="res://scenes/ui/item_transfer_ui/item_transfer_ui.gd" id="1_dhvkw"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_0bjeb"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2_7gv4p"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0bjeb"]
+atlas = ExtResource("2_7gv4p")
+region = Rect2(1, 1, 168, 134)
 
 [node name="ItemTransferUI" type="CanvasLayer"]
 process_mode = 3
@@ -14,6 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_0bjeb")
 
 [node name="Overlay" type="ColorRect" parent="Root"]
 layout_mode = 1
@@ -32,25 +39,40 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Window" type="PanelContainer" parent="Root/Center"]
-custom_minimum_size = Vector2(700, 420)
+[node name="Window" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(270, 155)
 layout_mode = 2
+texture = SubResource("AtlasTexture_0bjeb")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/Center/Window"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 4
 
 [node name="Header" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
 layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
 text = "Transfer Items"
 
 [node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
@@ -58,11 +80,16 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
+custom_minimum_size = Vector2(22, 16)
 layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "X"
 
 [node name="InfoLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
 text = "Select items to transfer"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
@@ -78,6 +105,8 @@ layout_mode = 2
 
 [node name="SelectedSummaryLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
 layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
 text = "Selected: 0"
 
 [node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
@@ -85,9 +114,15 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="BackButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Back"
 
 [node name="ConfirmButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
 text = "Deposit"

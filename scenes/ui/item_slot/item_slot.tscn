@@ -89,6 +89,7 @@ offset_bottom = 23.0
 grow_horizontal = 0
 theme = ExtResource("1_12jxq")
 theme_type_variation = &"InventorySlotSelectedQuantity"
+theme_override_font_sizes/font_size = 6
 text = "0"
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]

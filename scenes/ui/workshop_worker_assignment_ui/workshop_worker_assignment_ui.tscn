@@ -134,7 +134,6 @@ text = "Available Workers"
 custom_minimum_size = Vector2(104, 49)
 layout_mode = 2
 horizontal_scroll_mode = 0
-vertical_scroll_mode = 3
 
 [node name="WorkerList" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/AvailablePanel/WorkerScroll"]
 layout_mode = 2
