@@ -2,6 +2,9 @@ extends CanvasLayer
 
 @onready var fade_overlay: ColorRect = $FadeOverlay
 @onready var message_label: Label = $MessageLabel
+@onready var scoreboard_panel: Control = $ScoreBoardPanel
+@onready var scoreboard_label: Label = $ScoreBoardPanel/ScoreboardLabel
+@onready var continue_button: Button = $ScoreBoardPanel/ContinueButton
 
 var is_transitioning: bool = false
 var _pending_spawn_point: StringName = &""
@@ -12,6 +15,8 @@ func _ready() -> void:
 	message_label.offset_left = 60
 	message_label.offset_right = -60
 	message_label.visible = false
+	continue_button.hide()
+	scoreboard_panel.hide()
 
 # Fade effects
 
@@ -31,7 +36,9 @@ func run_with_fade(
 	action: Callable,
 	fade_duration: float = 0.35,
 	hold_duration: float = 2.5,
-	message: String = "") -> bool:
+	message: String = "",
+	wait_for_continue: bool = false
+) -> bool:
 
 	if is_transitioning:
 		return false
@@ -39,7 +46,10 @@ func run_with_fade(
 	is_transitioning = true
 	await fade_out(fade_duration)
 
-	show_message(message)
+	if wait_for_continue:
+		show_scoreboard(message)
+	else:
+		show_message(message)
 
 	var action_succeeded: bool = action.call()
 
@@ -52,7 +62,17 @@ func run_with_fade(
 			clear_spawn_point()
 		await get_tree().process_frame
 
-	await get_tree().create_timer(hold_duration).timeout
+	if wait_for_continue:
+		continue_button.show()
+		continue_button.grab_focus()
+
+		await continue_button.pressed
+
+		continue_button.hide()
+		continue_button.release_focus()
+		hide_scoreboard()
+	else:
+		await get_tree().create_timer(hold_duration).timeout
 
 	hide_message()
 	await fade_in(fade_duration)
@@ -109,3 +129,11 @@ func show_message(message: String) -> void:
 func hide_message() -> void:
 	message_label.hide()
 	message_label.text = ""
+
+func show_scoreboard(message: String) -> void:
+	scoreboard_label.text = message
+	scoreboard_panel.visible = not message.is_empty()
+
+func hide_scoreboard() -> void:
+	scoreboard_panel.hide()
+	scoreboard_label.text = ""

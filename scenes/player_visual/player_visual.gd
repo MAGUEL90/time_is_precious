@@ -19,6 +19,7 @@ class_name PlayerVisual extends Node2D
 @export var walk_anim_speed: float = 6.0
 @export var idle_anim_speed: float = 1.0
 @export var pickup_anim_speed: float = 8.0
+@export var faint_anim_speed: float = 5.0
 
 var current_action: String = ""
 var current_direction: String = ""
@@ -27,7 +28,7 @@ var is_action_locked: bool = false
 # Playback API
 
 func play_visual(action: String, direction: String) -> void:
-	if is_action_locked and action != "pickup":
+	if is_action_locked and action != "pickup" and action != "faint":
 		return
 
 	if current_action == action and current_direction == direction:
@@ -70,6 +71,19 @@ func play_pickup(direction: String) -> void:
 	is_action_locked = false
 	play_visual("idle", direction)
 
+func play_faint(direction: String) -> void:
+	is_action_locked = true
+	play_visual("faint", direction)
+
+	var animation_name: String = "%s_faint_%s" % [body_id, direction]
+	var duration: float = _get_animation_duration(
+		body_sprite,
+		animation_name
+	)
+
+	await get_tree().create_timer(duration).timeout
+
+	is_action_locked = false
 
 # Playback Timing
 
@@ -79,6 +93,8 @@ func _get_playback_speed(action: String) -> float:
 			return idle_anim_speed
 		"pickup":
 			return pickup_anim_speed
+		"faint":
+			return faint_anim_speed
 		_:
 			return walk_anim_speed
 
