@@ -3,9 +3,9 @@ class_name WorkshopStorageMenuUI extends CanvasLayer
 signal action_selected(action_id: int)
 signal closed()
 
-@onready var deposit_button: Button = $Root/Center/Window/Margin/MainVBox/DepositButton
-@onready var withdraw_button: Button = $Root/Center/Window/Margin/MainVBox/WithdrawButton
-@onready var back_button: Button = $Root/Center/Window/Margin/MainVBox/BackButton
+@onready var deposit_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/DepositButton
+@onready var withdraw_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/WithdrawButton
+@onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/BackButton
 
 enum Action {DEPOSIT_ITEMS, WITHDRAW_ITEMS, BACK}
 

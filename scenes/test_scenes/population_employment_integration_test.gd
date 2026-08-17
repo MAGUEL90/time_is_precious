@@ -14,6 +14,7 @@ func _ready() -> void:
 	_test_immigration_rejection()
 	_test_applicant_hiring_lifecycle()
 	_test_worker_assignment_lifecycle()
+	_test_job_role_requirements()
 	_test_worker_data_linking_and_needs_integration()
 
 	CitizenManager.citizens_by_id.clear()
@@ -330,6 +331,75 @@ func _test_worker_assignment_lifecycle() -> void:
 	WorkerDatabase.workers_by_id.erase(second_worker.worker_id)
 	CitizenManager.citizens_by_id.erase(first_citizen.citizen_id)
 	CitizenManager.citizens_by_id.erase(second_citizen.citizen_id)
+
+# Job role requirements
+
+func _test_job_role_requirements() -> void:
+	var laborer: WorkerData = WorkerData.new()
+	laborer.worker_id = "role_test_laborer"
+	laborer.profession = WorkerData.Profession.LABORER
+	WorkerDatabase.workers_by_id[laborer.worker_id] = laborer
+
+	var crafter: WorkerData = WorkerData.new()
+	crafter.worker_id = "role_test_crafter"
+	crafter.profession = WorkerData.Profession.CRAFTER
+	WorkerDatabase.workers_by_id[crafter.worker_id] = crafter
+
+	var job: JobData = preload(
+		"res://resources/job_data/mudbrick_make.tres"
+	) as JobData
+
+	_expect(
+		job.requirement_profession == WorkerData.Profession.LABORER,
+		"Mudbrick Making must require a Laborer."
+	)
+
+	var workshop: WorkShop = WorkShop.new()
+	workshop.max_assigned_worker_slots = 2
+
+	var mixed_assignment: Array[String] = [
+		crafter.worker_id,
+		laborer.worker_id
+	]
+
+	_expect(
+		workshop.assign_workers(mixed_assignment),
+		"Workers must be assignable before checking job roles."
+	)
+	_expect(
+		workshop.get_first_available_assigned_worker_id(job) == laborer.worker_id,
+		"The workshop must select the worker whose profession matches the job."
+	)
+
+	var crafter_only: Array[String] = [crafter.worker_id]
+	workshop.assign_workers(crafter_only)
+
+	_expect(
+		workshop.get_first_available_assigned_worker_id(job).is_empty(),
+		"A job must not select a worker with the wrong profession."
+	)
+
+	var rejected_order_id: String = WorkManager.start_job(
+		job,
+		WorkOrder.Worker_Type.NPC,
+		crafter.worker_id,
+		null,
+		Inventory,
+		Inventory,
+		0
+	)
+	_expect(
+		rejected_order_id.is_empty(),
+		"WorkManager must reject a worker with the wrong profession."
+	)
+	_expect(
+		WorkManager.get_last_start_job_error().to_lower().contains("profession"),
+		"WorkManager must report the profession mismatch."
+	)
+
+	workshop.free()
+	WorkerDatabase.workers_by_id.erase(laborer.worker_id)
+	WorkerDatabase.workers_by_id.erase(crafter.worker_id)
 
 # Worker linking and legacy compatibility
 

@@ -6,6 +6,7 @@ signal cancelled()
 
 @onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
 @onready var job_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/JobLabel
+@onready var worker_requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WorkerRequirementLabel
 @onready var requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/RequirementLabel
 @onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/BackButton
 @onready var start_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/StartButton
@@ -21,6 +22,8 @@ var job_started: bool = false
 
 const MUDBRICK_JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 const MIN_WORKER_COUNT: int = 1
+const REQUIREMENT_ERROR_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
+const REQUIREMENT_SUCCESS_COLOR: Color = Color(0.78, 1.0, 0.72, 1.0)
 
 # Setup / Public API
 
@@ -47,7 +50,7 @@ func open_job(workshop: WorkShop, worker_ids: Array[String]) -> void:
 	_refresh_start_state()
 
 func show_start_result(success: bool, message: String) -> void:
-	requirement_label.text = message
+	_set_requirement_feedback(message, not success)
 	job_started = success
 	start_button.disabled = success
 	back_button.disabled = success
@@ -86,11 +89,12 @@ func _on_discard_pressed() -> void:
 # Start job state
 
 func _refresh_start_state() -> void:
+	_refresh_worker_requirement_state()
 	var messages: Array[String] = _get_requirement_message()
 	start_button.disabled = not messages.is_empty()
 
 	if messages.is_empty():
-		requirement_label.text = "Requirements met"
+		_set_requirement_feedback("+ Materials ready.", false)
 	else:
 		var text: String = ""
 		for message in messages:
@@ -98,7 +102,38 @@ func _refresh_start_state() -> void:
 				text += "\n"
 			text += "- " + message
 
-		requirement_label.text = text
+		_set_requirement_feedback(text, true)
+
+func _set_requirement_feedback(text: String, is_error: bool) -> void:
+	requirement_label.text = text
+
+	if is_error:
+		requirement_label.add_theme_color_override(
+			"font_color",
+			REQUIREMENT_ERROR_COLOR
+		)
+		return
+
+	requirement_label.add_theme_color_override(
+		"font_color",
+		REQUIREMENT_SUCCESS_COLOR
+	)
+
+func _refresh_worker_requirement_state() -> void:
+	if not _has_matching_worker(MUDBRICK_JOB):
+		worker_requirement_label.visible = false
+		return
+
+	var profession_name: String = _get_profession_name(
+		MUDBRICK_JOB.requirement_profession
+	)
+
+	worker_requirement_label.text = "+ %s requirement met." % profession_name
+	worker_requirement_label.add_theme_color_override(
+		"font_color",
+		REQUIREMENT_SUCCESS_COLOR
+	)
+	worker_requirement_label.visible = true
 
 # Discard guard
 
