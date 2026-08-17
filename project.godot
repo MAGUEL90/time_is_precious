@@ -33,6 +33,7 @@ CitizenGenerator="*res://scripts/autoload/citizen_generator/citizen_generator.gd
 ImmigrationManager="*res://scripts/autoload/immigration_manager/immigration_manager.gd"
 SceneTransition="*res://scenes/scene_transition/scene_transition.tscn"
 PlayerRuntimeState="*res://scripts/autoload/player_runtime_state/player_runtime_state.gd"
+WorkStateRuntime="*res://scenes/work_state_boot_strap/work_state_boot_strap.tscn"
 
 [display]
 

@@ -17,8 +17,8 @@ shape = SubResource("CircleShape2D_3fmud")
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("4_dv5t0")]
 process_mode = 3
-visible = false
-offset_left = -5.0
 offset_top = -45.0
 offset_right = -5.0
 offset_bottom = -45.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

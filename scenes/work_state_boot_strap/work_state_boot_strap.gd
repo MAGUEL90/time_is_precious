@@ -12,9 +12,10 @@ func _ready() -> void:
 	# Registrasi station dasar jika ProcessManager tersedia
 	if has_node("/root/ProcessManager"):
 		var process_manager: Node = get_node("/root/ProcessManager")
+
 		if process_manager.has_method("register_station"):
 			process_manager.call("register_station", "drying_yard", 3)
-	
+
 		# arahkan proses ambil & taruh item ke workshop jika ada # supaya drying chain jalan dari workshop
 		if has_node("/root/WorkShopStorage"):
 			var workshop_storage: Node = get_node("/root/WorkShopStorage") # workshop storage
@@ -22,7 +23,16 @@ func _ready() -> void:
 				process_manager.call("set_source_item_store", workshop_storage) # input proses dari workshop
 			if process_manager.has_method("set_output_item_store"):
 				process_manager.call("set_output_item_store", workshop_storage) # output proses ke workshop
-			
+
+	# Sinkronkan baseline waktu setelah semua manager siap.
+	var time_manager: Node = get_node_or_null("/root/TimeComponentManager")
+	if time_manager != null:
+		_on_time_changed(
+			int(time_manager.get("current_day")),
+			int(time_manager.get("current_hour")),
+			int(time_manager.get("current_minute")),
+			str(time_manager.get("current_weather"))
+		)
 
 func _on_time_changed(day: int, hour: int, minute: int, weather: String) -> void:
 	# Lempar event waktu ke WorkManager
@@ -34,28 +44,10 @@ func _on_time_changed(day: int, hour: int, minute: int, weather: String) -> void
 	# Lempar event waktu ke ProcessManager
 	if has_node("/root/ProcessManager"):
 		var process_manager: Node = get_node("/root/ProcessManager")
-		if process_manager.has_method("on_time_changed"):
-			process_manager.call("on_time_changed", day, hour, minute)
-	# Update cuaca di ProcessManager jika method tersedia
+
+		# Update cuaca di ProcessManager jika method tersedia
 		if process_manager.has_method("set_weather_key"):
 			process_manager.call("set_weather_key", weather)
 
-	
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		if process_manager.has_method("on_time_changed"):
+			process_manager.call("on_time_changed", day, hour, minute)
