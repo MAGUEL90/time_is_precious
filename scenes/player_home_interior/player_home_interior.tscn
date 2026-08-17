@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=4 uid="uid://djq0h3e4lbs6f"]
+[gd_scene load_steps=14 format=4 uid="uid://djq0h3e4lbs6f"]
 
 [ext_resource type="Texture2D" uid="uid://rymr6doa85vd" path="res://assets/temporer/tile_set/test_tile_set.png" id="1_qu06q"]
 [ext_resource type="TileSet" uid="uid://dmedjrf3am34i" path="res://scenes/content_scene/object_tile_set.tres" id="2_nddy8"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://cn6kidsseih1q" path="res://scenes/components/scene_door/scene_door.gd" id="5_a5njf"]
 [ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="5_nddy8"]
 [ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="6_a5njf"]
+[ext_resource type="PackedScene" uid="uid://c11gc83v7mjib" path="res://scenes/nightmare_world/nightmare_world.tscn" id="8_whgal"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_whgal"]
 texture = ExtResource("1_qu06q")
@@ -421,6 +422,9 @@ target_spawn_point = &"HomeEntryPoint"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="YSortWorld/ExitDoor"]
 shape = SubResource("RectangleShape2D_wuqfv")
+
+[node name="NightmareWorld" parent="YSortWorld" instance=ExtResource("8_whgal")]
+position = Vector2(10000, 10000)
 
 [node name="SpawnPoints" type="Node2D" parent="."]
 

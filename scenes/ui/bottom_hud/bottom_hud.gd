@@ -2,8 +2,8 @@ extends CanvasLayer
 
 const SHOW_STATUS_ACTION: StringName = &"show_player_status"
 
-const DRAWER_OPEN_Y: float = 120.0
-const DRAWER_CLOSED_Y: float = 144.0
+const DRAWER_OPEN_Y: float = 165.0
+const DRAWER_CLOSED_Y: float = 189.0
 const OPEN_DURATION: float = 0.14
 const CLOSE_DURATION: float = 0.10
 
@@ -25,12 +25,14 @@ const CONDITION_CRITICAL_COLOR: Color = Color.DARK_RED
 @onready var experience_bar: TextureProgressBar = $Root/StatusDrawer/IndicatorRow/ExperienceIndicator/Bar
 
 var player_ref: Player = null
+var nightmare_world_ref: NightmareWorld = null
 var drawer_tween: Tween
 
 # Lifecycle
 
 func _ready() -> void:
 	_set_drawer_y(DRAWER_CLOSED_Y)
+	_setup_nightmare_visibility()
 
 	player_ref = get_tree().get_first_node_in_group("player") as Player
 
@@ -102,3 +104,30 @@ func _set_drawer_y(value: float) -> void:
 	var snapped_position := status_drawer.position
 	snapped_position.y = roundf(value)
 	status_drawer.position = snapped_position
+
+# Nightmare visibility
+
+func _setup_nightmare_visibility() -> void:
+	nightmare_world_ref = (
+		get_tree().get_first_node_in_group("nightmare_world")
+		as NightmareWorld
+	)
+
+	if nightmare_world_ref == null:
+		show()
+		set_process_unhandled_input(true)
+		return
+
+	nightmare_world_ref.nightmare_active_changed.connect(
+		_on_nightmare_active_changed
+	)
+
+func _on_nightmare_active_changed(active: bool) -> void:
+	visible = not active
+	set_process_unhandled_input(not active)
+
+	if active:
+		if drawer_tween != null:
+			drawer_tween.kill()
+
+		_set_drawer_y(DRAWER_CLOSED_Y)

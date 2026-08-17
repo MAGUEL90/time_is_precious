@@ -7,15 +7,14 @@
 [ext_resource type="Script" uid="uid://caekbdr3g5b12" path="res://scenes/player/player_movement_state.gd" id="6_8x2wn"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_p47bc"]
-radius = 7.0
+radius = 4.1231055
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
 script = ExtResource("2_d4mna")
-fatigue = 0.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -7)
+position = Vector2(0, -4)
 shape = SubResource("CircleShape2D_p47bc")
 
 [node name="Camera2D" type="Camera2D" parent="."]

@@ -814,9 +814,6 @@ func _check_for_collapse() -> void:
 	if is_sleeping or is_collapsing or SceneTransition.is_transitioning:
 		return
 
-	if TimeComponentManager.current_day == last_collapse_day:
-		return
-
 	if has_critical_condition():
 		collapse()
 
@@ -829,6 +826,10 @@ func collapse() -> void:
 	can_move = false
 	velocity = Vector2.ZERO
 	collapse_started.emit()
+
+	await player_visual.play_faint(
+		_get_visual_direction_name()
+	)
 
 	var succeeded: bool = await SceneTransition.run_with_fade(
 		Callable(self, "_enter_nightmare"),
@@ -885,7 +886,16 @@ func _enter_nightmare() -> bool:
 	var next_tier: int = total_collapse_count + 1
 
 	if not nightmare_world.start_nightmare(self, next_tier):
+		player_visual.play_visual(
+			"idle",
+			_get_visual_direction_name()
+		)
 		return false
+
+	player_visual.play_visual(
+		"idle",
+		_get_visual_direction_name()
+	)
 
 	total_collapse_count = next_tier
 	return true
