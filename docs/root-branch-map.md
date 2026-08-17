@@ -1,4 +1,13 @@
-# Root, Branch, dan Visual Tracker
+# Root and Branch Map
+
+Dokumen ini adalah **peta teknis domain project**, bukan tracker progres development.
+
+Untuk pertanyaan:
+
+- **"Sekarang kita ada di tahap mana?"** -> buka `ROADMAP.md`.
+- **"Apa yang sudah benar-benar selesai / merged?"** -> buka `DEVLOG.md`.
+- **"Fitur ini masuk domain teknis mana?"** -> gunakan dokumen ini.
+- **"Bagaimana sistem saling terhubung secara teknis?"** -> buka `ARCHITECTURE.md`.
 
 Dokumen ini dipakai untuk membedakan tiga hal:
 
@@ -6,16 +15,9 @@ Dokumen ini dipakai untuk membedakan tiga hal:
 2. `Branch Git` = pekerjaan kecil yang diambil dari satu root.
 3. `Commit scope` = label kecil agar riwayat Git tetap enak dibaca.
 
-Prinsip utamanya: jangan jadikan branch sebagai peta arsitektur utama. Peta arsitektur disimpan di dokumen ini, sedangkan branch dipakai untuk kerja yang pendek dan spesifik.
+Prinsip utamanya: **branch bukan peta progres dan bukan peta arsitektur utama**. Branch dipakai untuk kerja pendek dan spesifik. Status aktif / selesai / backlog tidak ditentukan dari dokumen ini.
 
-## Kenapa model ini lebih enak daripada Git Bash saja
-
-- Git Bash bagus untuk melihat histori, tapi kurang nyaman untuk melihat hubungan antar fitur.
-- Root map membuatmu bisa melihat "fitur induk -> turunan -> file yang disentuh".
-- Branch jadi lebih konsisten karena selalu lahir dari root yang jelas.
-- Saat balik ke project setelah beberapa hari, kamu tidak perlu menebak lagi sebuah branch itu milik domain mana.
-
-## Pohon hierarki project saat ini
+## Pohon Hierarki Teknis
 
 ```text
 time_is_precious
@@ -90,7 +92,7 @@ time_is_precious
         `-- scenes/test_scenes
 ```
 
-## Diagram ringkas root
+## Diagram Ringkas Root
 
 ```mermaid
 flowchart TD
@@ -104,7 +106,7 @@ flowchart TD
     Game --> Time["time-world"]
 ```
 
-## Root yang paling relevan untuk pekerjaanmu sekarang
+## Root Teknis Utama
 
 | Root | Tujuan | File/folder utama | Contoh child branch |
 | --- | --- | --- | --- |
@@ -116,7 +118,9 @@ flowchart TD
 | `process-workshop` | process crafting/produksi dan sistem workshop | `scripts/autoload/process_manager`, `scripts/autoload/work_manager`, `scripts/autoload/work_shop_storage`, `resources/process_data`, `scenes/work_shop` | `feature/process-workshop/claim-flow` |
 | `time-world` | waktu, cuaca, test scene dunia | `scripts/autoload/time_component_manager`, `scenes/time_label`, `scenes/test_scenes` | `feature/time-world/day-night-balance` |
 
-## Aturan naming branch
+> Catatan: tabel ini menunjukkan **lokasi teknis**, bukan status prioritas. Root yang ada di sini belum tentu sedang dikerjakan. Untuk prioritas aktual selalu cek `ROADMAP.md`.
+
+## Aturan Naming Branch
 
 Format yang disarankan:
 
@@ -142,17 +146,15 @@ Aturan sederhana:
 - `root` harus nama domain, bukan nama file
 - `child-work` harus satu fokus kerja
 - satu branch sebaiknya hanya menyentuh satu root utama
-- kalau pekerjaan menyentuh dua root, pilih root dominan lalu tulis root kedua di deskripsi PR atau tracker
+- kalau pekerjaan menyentuh dua root, pilih root dominan lalu tulis root kedua di deskripsi PR
 
-## Hubungan root dan branch
+## Hubungan Root dan Branch
 
 Contoh cara berpikir yang sehat:
 
 - `item` bukan branch permanen, tapi root/domain.
 - dari root `item`, kamu bisa membuat branch kecil seperti `feature/item/data-consumable`.
 - setelah merge, branch dihapus, tetapi root `item` tetap hidup di dokumen ini.
-
-Jadi struktur mentalnya:
 
 ```mermaid
 flowchart LR
@@ -161,9 +163,7 @@ flowchart LR
     Root --> B3["fix/item/icon-fallback"]
 ```
 
-## Commit convention yang cocok dengan root ini
-
-Supaya Git log juga ikut rapi:
+## Commit Convention
 
 ```text
 feat(item): add consumable fatigue metadata
@@ -175,57 +175,39 @@ refactor(inventory): split capacity calculation helpers
 
 Dengan model ini:
 
-- root kelihatan di dokumen
-- detail kerja kelihatan di branch
-- perubahan kecil kelihatan di commit
+- `ROADMAP.md` menjawab progres dan prioritas
+- dokumen ini menjawab domain teknis
+- branch menjawab satu pekerjaan sementara
+- commit menjawab perubahan kecil
+- `DEVLOG.md` menyimpan hasil implementasi yang sudah benar-benar terjadi
 
-## Tracker kerja yang bisa kamu update
+## Cara Pakai Sehari-hari
 
-Isi bagian ini setiap kali mulai atau selesai sebuah pekerjaan.
+1. Buka `ROADMAP.md` dan pilih **highest unfinished priority**.
+2. Tentukan root teknis yang paling dominan dari pekerjaan itu menggunakan dokumen ini.
+3. Pecah pekerjaan menjadi satu child work kecil.
+4. Buat branch dengan format `<type>/<root>/<child-work>`.
+5. Tulis commit dengan scope root yang sama.
+6. Setelah merge, hapus branch.
+7. Update `DEVLOG.md` jika implementasi menghasilkan milestone berarti.
+8. Update `ROADMAP.md` hanya jika posisi, prioritas, atau phase gate benar-benar berubah.
 
-| Status | Root | Child work | Branch | File sentral |
-| --- | --- | --- | --- | --- |
-| active | `item` | tambah item consumable dan resource | `feature/item/data-consumable` | `resources/items`, `scripts/autoload/item_database`, `resources/item_data` |
-| active | `inventory` | sinkronisasi slot dan consume flow | `feature/inventory/consume-flow` | `scripts/autoload/inventory`, `scenes/ui/inventory_ui`, `scenes/ui/item_slot` |
-| active | `gameplay-hud` | quick consumable tray dan shortcut bag | `feature/gameplay-hud/quick-consumable-tray` | `scenes/ui/gameplay_hud`, `scenes/test_scenes/test_scene_feature_gameplay_hud` |
-| backlog | `player-interaction` | prompt interaksi object | `feature/player-interaction/interact-prompt` | `scenes/components/interactable_component`, `scenes/components/interactable_label_component` |
-| backlog | `npc` | cycle kerja NPC | `feature/npc/work-cycle` | `scenes/npc_base`, `resources/npc_states` |
+## Yang Tidak Boleh Dilakukan
 
-## Cara pakai sehari-hari
+Jangan menulis status seperti `active`, `done`, atau `backlog` di dokumen ini sebagai sumber kebenaran progres.
 
-1. Tentukan dulu root fitur yang sedang kamu sentuh.
-2. Pecah jadi satu pekerjaan kecil.
-3. Buat branch dengan format `<type>/<root>/<child-work>`.
-4. Tulis commit dengan scope root yang sama.
-5. Setelah merge, hapus branch-nya.
-6. Root map tetap dipelihara sebagai peta besar project.
+Alasannya:
 
-## Saran penting
+- status branch cepat basi
+- pekerjaan bisa selesai tanpa struktur root berubah
+- satu fitur dapat menyentuh beberapa domain teknis
+- tracker ganda membuat `ROADMAP.md` dan root map mudah bertentangan
 
-Kalau kamu kerja solo atau tim kecil, aku tidak menyarankan branch panjang seperti:
+Jika butuh menjawab "apa yang aktif sekarang", gunakan `ROADMAP.md`.
 
-```text
-item
-inventory
-gameplay-hud
-```
+## Template Fitur Baru
 
-karena branch seperti itu biasanya jadi:
-
-- terlalu lama hidup
-- sering conflict
-- isinya campur banyak hal
-- sulit diketahui mana pekerjaan yang benar-benar sudah selesai
-
-Lebih sehat kalau:
-
-- `main` tetap stabil
-- root disimpan di dokumen visual
-- branch hanya untuk pekerjaan kecil yang jelas
-
-## Template cepat untuk fitur baru
-
-Kalau nanti kamu menambah root baru, copy pola ini:
+Kalau nanti menambah root baru:
 
 ```text
 Root:
@@ -241,3 +223,5 @@ Commit examples:
 - feat(farming): connect seed item to farm plot
 - fix(farming): prevent double harvest
 ```
+
+Tambahkan root ke dokumen ini hanya jika memang menjadi domain teknis yang berumur panjang, bukan hanya satu task sementara.
