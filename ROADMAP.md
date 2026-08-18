@@ -1,354 +1,392 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-07-06
+Last updated: 2026-08-17
+
+## Purpose of This Document
+
+`ROADMAP.md` is the **single source of truth for current development position, priority, and next work**.
+
+If you or Codex need to answer **"Where are we now, and what should we work on next?"**, start here.
+
+Other documents have different jobs:
+
+- `docs/game-concept.md` = design source of truth: what the game should become.
+- `ROADMAP.md` = progress source of truth: where development is now and what comes next.
+- `DEVLOG.md` = merged implementation history and playable snapshots.
+- `ARCHITECTURE.md` = technical responsibilities and system boundaries.
+- `docs/root-branch-map.md` = technical domain / Git branch map, not a progress tracker.
+- `DEMO_DISTRIBUTION.md` = demo rollout strategy after the prototype is ready.
+
+Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
 ## Development Principle
+
 Build a small playable prototype first.
 
-Do not expand into large systems before the core loop is stable.
+Do not expand into large systems before the core loop is stable, readable, repeatable, and testable without developer help.
 
-The game should also avoid becoming too deterministic. Long-term, player progression should vary between playthroughs through controlled randomness and system-driven variation.
+Long-term progression should also avoid becoming fully deterministic. Controlled variation can be introduced after the basic loop is stable.
 
-## Current Main Priority - Playable Core Loop
-Status: The project has moved beyond concept planning and is now in the technical prototype stage.
+# Current Position
 
-The current priority is **not** to add more large systems yet. The main goal is to turn the existing technical systems into one complete, repeatable, playable loop.
+The project is currently in **Technical Prototype -> Playable Loop Integration**.
 
-Merged milestone history through PR #66:
-- PR #57: Applicant offers shown on the Job Board.
-- PR #58: Game Dev HQ planning docs added.
-- PR #59: Asset control docs v0.1 added.
-- PR #61: Modular worker visual added.
-- PR #62: Palette guide updated to v0.2.
-- PR #63: Roadmap updated around the playable core loop.
-- PR #64: Variable progression design pillar added.
-- PR #65: Resolution and platform display direction documented.
-- PR #66: Modular citizens and immigration flow added.
+The main objective is to connect the systems that already exist into one complete daily gameplay loop rather than adding unrelated major systems.
 
-Current local milestone after PR #66:
-- Workshop menu is player-facing.
-- Workshop storage can receive and return items.
-- Item transfer UI supports selected quantities.
-- Item movement popup gives deposit/withdraw feedback.
-- Prototype worker assignment can attach an available worker to the workshop.
-- Mudbrick job can start from workshop storage.
-- NPC mudbrick output enters claimable workshop escrow.
+```text
+TIME IS PRECIOUS
+|
+|-- 0. GAME VISION / DESIGN
+|   `-- Game Concept                                  [ACTIVE DESIGN / STABLE FOUNDATION]
+|
+|-- 1. PLAYABLE PROTOTYPE                            [CURRENT PHASE]
+|   |
+|   |-- A. Daily Player Loop
+|   |   |-- Player home starting scene               [DONE]
+|   |   |-- Home <-> city transition                 [DONE]
+|   |   |-- World time continuity                    [DONE]
+|   |   |-- Hunger / Fatigue / Focus                 [MVP DONE]
+|   |   |-- Sleep                                    [MVP DONE]
+|   |   |-- Collapse / Nightmare                     [MVP DONE]
+|   |   `-- Full-loop balance and validation         [IN PROGRESS]
+|   |
+|   |-- B. Core Production Loop                      [MAIN BLOCKER]
+|   |   |-- Inventory / item handling                [DONE]
+|   |   |-- Workshop deposit / withdraw              [DONE]
+|   |   |-- Worker assignment                        [DONE - PROTOTYPE]
+|   |   |-- Start mudbrick job                       [DONE]
+|   |   |-- Produce wet_mudbrick                     [DONE]
+|   |   |-- Player-facing claim / continue flow      [PENDING]
+|   |   |-- Dry wet_mudbrick                         [PENDING]
+|   |   |-- Produce sun_dried_mudbrick               [PENDING]
+|   |   `-- Use final output for progression         [PENDING]
+|   |
+|   |-- C. Population / Worker Layer
+|   |   |-- Citizen generation                       [DONE - PROTOTYPE]
+|   |   |-- Immigration accept / reject              [DONE - PROTOTYPE]
+|   |   |-- Visible city citizens                    [DONE - PROTOTYPE]
+|   |   |-- Worker assignment                        [DONE - PROTOTYPE]
+|   |   |-- City daily needs loop                    [PARTIAL / PENDING BALANCE]
+|   |   `-- Citizen -> applicant -> hired worker     [PENDING]
+|   |
+|   |-- D. Player-Facing Clarity
+|   |   |-- Inventory UI                             [DONE - PROTOTYPE]
+|   |   |-- Gameplay HUD                             [DONE - PROTOTYPE]
+|   |   |-- Workshop UI                              [DONE - PROTOTYPE]
+|   |   |-- Failure / missing-resource feedback      [IN PROGRESS]
+|   |   `-- Production state clarity                 [IN PROGRESS]
+|   |
+|   `-- E. Persistence
+|       |-- Runtime state across scene changes       [DONE]
+|       `-- Real save / load to disk                 [PENDING]
+|
+|-- 2. INTERNAL PLAYTEST                             [NOT READY YET]
+|   |-- Complete daily loop without manual setup
+|   |-- Repeatable production loop
+|   |-- Condition / Sleep / Focus tuning
+|   `-- Internal playtest checklist
+|
+|-- 3. VERTICAL SLICE                                [LATER]
+|   |-- Consistent presentation
+|   |-- Representative gameplay loop
+|   `-- Stable test build
+|
+`-- 4. DEMO DISTRIBUTION                             [LATER]
+    |-- One Percent Studio website                   [PRIMARY HUB]
+    |-- itch.io                                      [SECONDARY TEST CHANNEL]
+    |-- Steam Playtest / Steam Demo                  [LATER]
+    `-- Optional mirrors / discovery channels        [LATER]
+```
 
-Known implemented or partially implemented systems:
-- ItemDatabase
-- Inventory with weight handling
-- WorkshopStorage
-- WorkManager
-- ProcessManager
-- Mudbrick production smoke test
-- Drying process path
-- Job Board applicant-offer direction
-- Asset guide, palette guide, and asset registry docs
-- Shared modular character visual assets
-- PlayerVisual and BaseWorkerVisual modular setup
-- CitizenData and VisualProfile resources
-- CitizenManager runtime registry
-- CitizenGenerator prototype random citizen creation
-- ImmigrationManager prototype immigration pressure/chance flow
-- CitySpawner and CitizenActor prototype city population display
-- Immigration request UI with accept/reject batch decision
-- Workshop menu UI
-- Workshop storage menu UI
-- Reusable item transfer UI
-- Item change popup feedback
+## You Are Here
 
-## Target Playable Loop
-The first complete loop should be:
+The project is **not blocked by lack of systems**.
+
+The current blocker is that the existing systems are not yet connected into one complete, repeatable player-facing loop.
+
+The most important incomplete chain is:
 
 ```text
 Clay / straw / water
 -> Player Inventory
--> Inventory weight / capacity check
--> WorkshopStorage deposit
--> Assign worker
--> Start mudbrick job
--> Wet mudbrick claimable output
--> Drying process
--> Sun-dried mudbrick
--> Visible output / usable item
+-> WorkshopStorage
+-> Assign Worker
+-> Start Mudbrick Job
+-> wet_mudbrick
+-> CLAIM / CONTINUE PROCESS          <- CURRENT WORK AREA
+-> Drying
+-> sun_dried_mudbrick
+-> Visible / usable progression
 ```
 
-Current status:
-- Done: inventory to workshop deposit.
-- Done: workshop to inventory withdraw.
-- Done: assigned prototype worker can start mudbrick job.
-- Done: mudbrick job consumes workshop storage.
-- Done: NPC output enters claimable escrow as `wet_mudbrick`.
-- Pending: player-facing claim/continue-process pass after `wet_mudbrick` is ready.
-- Pending: drying process UI/feedback from `wet_mudbrick` to `sun_dried_mudbrick`.
-- Pending: final output use for visible progression.
+Until this chain is complete, avoid starting another large production chain or major management feature.
 
-## Current Risk
-The systems may exist technically, but the game is not yet validated as a fun playable slice.
+# Immediate Priority Stack
 
-The next development work should focus on clarity, feedback, repeatability, and player-facing usability.
+Work from top to bottom. Do not skip downward unless a blocker requires it.
 
-## Design Risk: Too Predictable
-Time is Precious should not become a game where every player can easily predict the same best route.
+## Priority 1 - Finish Mudbrick Output Chain
 
-Future systems should support controlled variation, such as:
-- Migrant count variation.
-- Applicant quality variation.
-- Different resident traits.
-- Different opportunity timing.
-- Small production or needs-pressure variation.
+- [ ] Make `wet_mudbrick` claim / continue-process flow fully player-facing.
+- [ ] Make drying process readable and usable without manual debugging.
+- [ ] Produce final `sun_dried_mudbrick` through the normal player flow.
+- [ ] Confirm final output can be seen, stored, and used for visible progression.
 
-This should be added carefully after the core loop works. The early prototype may use fixed values for stability, but the architecture should not lock the game into fixed outcomes forever.
+**Exit condition:** the mudbrick loop can be completed repeatedly from inputs to final output without developer intervention.
 
-## Do Not Prioritize Yet
-Avoid expanding into these areas until the playable loop above feels stable:
-- Large NPC behavior expansion
-- Complex economy balancing
-- More resource chains
-- Advanced AI Advisor NPC
-- Large content expansion
-- Full public demo expansion before the core loop is stable
+## Priority 2 - Validate the Complete Daily Loop
 
-## Immediate Execution Checklist
-- [x] Lock the MVP scope around one production chain.
-- [x] Make inventory-to-workshop deposit player-facing.
-- [x] Add workshop storage withdraw.
-- [x] Add basic item movement popup feedback.
-- [x] Confirm WorkshopStorage receives and spends materials correctly.
-- [x] Start mudbrick job from workshop storage with an assigned prototype worker.
-- [x] Confirm NPC mudbrick output enters claimable escrow.
-- [ ] Separate `Assign Worker` and `Start Job` into clearer player-facing actions.
-- [ ] Add workshop job selection UI, even if only `Mudbrick Making` exists at first.
-- [ ] Verify claim / continue process path after `wet_mudbrick` is ready.
-- [ ] Verify drying process path and final `sun_dried_mudbrick` output.
-- [ ] Confirm the final item can be seen, stored, and used as a real output.
-- [ ] Improve failure feedback for storage full / inventory full / missing materials.
-- [ ] Create a small internal playtest checklist.
+Validate this as one continuous play session:
 
-## Current Phase
-### Phase 0 - Foundation Review
-Goal: understand and stabilize the existing systems.
+```text
+Wake at home
+-> Enter city
+-> Gather / manage resources
+-> Assign work
+-> Run production
+-> Manage Hunger / Fatigue / Focus
+-> Advance time
+-> Return home
+-> Sleep
+-> Continue into next day
+```
 
-Focus:
-- WorkManager
-- ProcessManager
-- WorkshopStorage
-- Resource / Item system
-- NPC delegation
-- Worker Hub
-- Job Board
+- [ ] Confirm no manual setup is required between steps.
+- [ ] Confirm scene transitions preserve intended runtime state.
+- [ ] Confirm Sleep and Collapse rules do not break the day loop.
+- [ ] Confirm worker / workshop state remains understandable throughout the day.
 
-Deliverable:
-- Clear understanding of how resources, work, processing, storage, and workers connect.
+**Exit condition:** one full in-game day feels like a coherent game loop rather than a collection of test systems.
 
-Status:
-- Mostly complete for the mudbrick prototype path.
+## Priority 3 - Clarity and Failure Feedback
 
-### Phase 0.5 - Playable Loop Stabilization
-Goal: connect the existing systems into one player-facing loop before expanding scope.
+- [ ] Missing materials are explained clearly.
+- [ ] Full inventory is explained clearly.
+- [ ] Full workshop storage is explained clearly.
+- [ ] Active / finished jobs are visually understandable.
+- [ ] Player knows what to do after `wet_mudbrick` is produced.
 
-Focus:
-- Inventory -> WorkshopStorage transfer
-- WorkshopStorage -> WorkManager input spending
-- WorkManager -> claimable output generation
-- Claimable wet mudbrick -> drying process
-- Drying process -> sun-dried mudbrick
-- Basic UI feedback for each step
-- Player clarity: what happened, what is missing, what finished
+**Exit condition:** a tester can understand what failed and what to do next without reading debug output.
 
-Minimum success criteria:
-- Player can start with or collect clay/mud.
-- Player can carry it with weight/capacity respected.
-- Player can deposit it into WorkshopStorage.
-- Player can withdraw stored workshop items.
-- Player can assign a worker.
-- Player can start the mudbrick job.
-- The job spends the correct input.
-- NPC job output becomes claimable.
-- The drying process produces dried mudbrick.
-- The final output is visible to the player.
-- The loop can be repeated without manual debugging.
+## Priority 4 - Condition and Sleep Tuning
 
-Status:
-- In progress.
-- Deposit, withdraw, assign worker, and mudbrick job start are working in manual runtime tests.
-- Claim/continue process and drying still need player-facing verification.
+The systems already exist at MVP level. This is a tuning task, not a reason to rebuild them from scratch.
+
+Tune:
+
+- Hunger drain.
+- Fatigue growth.
+- Focus behavior and costs.
+- Sleep duration and recovery.
+- Once-per-day Sleep rule.
+- Collapse / Nightmare consequence severity.
+
+**Exit condition:** working too long has a meaningful cost, Sleep is valuable but not exploitable, and condition management supports the time-economy theme.
+
+## Priority 5 - Save / Load Persistence
+
+Only after the runtime daily loop is stable:
+
+- [ ] Player conditions.
+- [ ] Sleep usage / day state.
+- [ ] Inventory.
+- [ ] Citizens / workers.
+- [ ] Workshop / production state as required.
+- [ ] Progression values.
+
+**Exit condition:** the playable prototype can be safely stopped and resumed.
+
+## Priority 6 - Internal Playtest
+
+- [ ] Create a short internal playtest checklist.
+- [ ] Test the daily loop from a clean start.
+- [ ] Record blockers, confusion, exploits, and balance problems.
+- [ ] Fix loop-breaking problems before adding scope.
+
+# Phase Status
+
+## Phase 0 - Foundation Review
+
+**Status: Mostly complete for the current prototype.**
+
+Core foundations already exist or are partially implemented:
+
+- ItemDatabase.
+- Inventory and weight handling.
+- WorkshopStorage.
+- WorkManager.
+- ProcessManager.
+- Player interaction.
+- World time.
+- Citizen / immigration prototype.
+- Player condition systems.
+- Home / city scene flow.
+
+Do not reopen this phase broadly unless a concrete blocker appears.
+
+## Phase 0.5 - Playable Loop Stabilization
+
+**Status: ACTIVE - THIS IS THE CURRENT DEVELOPMENT PHASE.**
+
+Goal:
+
+Connect existing systems into a readable, repeatable player-facing loop.
+
+Main remaining blocker:
+
+`wet_mudbrick -> claim / continue -> drying -> sun_dried_mudbrick -> progression`
 
 ## Phase 1 - Core Loop Prototype
-Goal: make the game playable in a small loop.
 
-Core loop:
+**Status: In progress.**
 
-```text
-Gather resource
--> Store resource
--> Assign worker
--> Process resource
--> Produce output
--> Use output for progression
-```
+Success criteria:
 
-Minimum success criteria:
-- Player can collect at least one resource.
-- Resource enters inventory and/or storage correctly.
-- Player can start one process/job.
-- Process/job produces output.
-- Output can be used for a visible progression step.
+- Player can acquire resources.
+- Player can store / move resources.
+- Player can assign work.
+- Work consumes correct inputs.
+- Work generates output.
+- Output can continue into the next production step.
+- Final output creates visible progression.
+- The loop is repeatable.
+
+Phase 1 is not complete until the final output has an actual gameplay purpose.
 
 ## Phase 2 - Population and Worker Separation
-Goal: separate resident/citizen logic from worker/employment logic.
 
-Design decision:
-- Residents consume food.
-- Workers are residents with employment status.
-- Hiring does not start consumption.
-- Accepting a migrant as resident starts consumption.
+**Status: Prototype partially implemented; not the main blocker.**
 
-Required model:
+Design rule remains:
 
 ```text
-Population Status:
-- migrant
-- resident
-- rejected
-- left_city
-
-Employment Status:
-- unemployed
-- applicant
-- hired
-- assigned
-- working
+Migrant
+-> accepted resident / citizen
+-> eligible applicant
+-> hired worker
+-> assigned / working
 ```
 
-Minimum success criteria:
-- New migrant can arrive.
-- Player can accept/reject migrant.
-- Accepted migrant becomes resident.
-- Resident consumes food.
-- Eligible resident can appear on Job Board.
-- Player can hire applicant.
-- Hired worker can be assigned.
+Population status and employment status must stay separate.
 
-Prototype status after PR #66:
-- Done: immigrant/citizen candidates can be generated.
-- Done: player can accept or reject the full pending immigrant batch.
-- Done: accepted immigrants enter `CitizenManager` as citizens.
-- Done: accepted citizens can spawn as visible city actors.
-- Done: HUD need counts can read from the citizen runtime registry.
-- Pending: daily food/clothing/shelter consumption and balance.
-- Pending: citizen persistence through save/load.
-- Pending: applicant conversion from citizens into Job Board offers.
-- Pending: hiring accepted citizens into workers and assigning them to jobs.
+Current prototype supports citizen generation, immigration decisions, visible citizens, and worker-related systems. Daily city needs, persistence, and the complete citizen-to-worker flow still need further work.
+
+Do not let Phase 2 expansion delay completion of the production / daily loop.
 
 ## Phase 2.5 - Controlled Variation Layer
-Goal: prepare the game to create different progression paths between players without breaking player agency.
 
-This phase should come after the basic population/worker flow is stable.
+**Status: Backlog.**
 
-Possible controlled variation systems:
-- Migrant arrival count range based on city prosperity.
-- Randomized resident/applicant traits within clear limits.
-- Slight differences in productivity, loyalty, or needs pressure.
-- Varying opportunity timing.
-- Small modifiers to production or city events.
+Long-term variation may include:
 
-Minimum success criteria:
-- Variation is visible between playthroughs.
-- Player still understands why things happen.
-- Randomness does not feel unfair.
-- No important result is fully disconnected from player decisions.
+- migrant arrival variation
+- applicant quality variation
+- resident traits
+- opportunity timing
+- small production / needs-pressure variation
+
+Randomness must remain readable and influenced by player decisions.
 
 ## Phase 3 - Prototype Asset Pass
-Goal: replace rough placeholders with consistent minimum assets.
 
-Minimum asset list:
-- Player sprite.
-- Worker/NPC sprite.
-- Migrant/resident variation.
-- Resource nodes: clay/mud, wood, stone, grass/reed.
-- Storage object.
-- Workstation.
-- Job Board.
-- Worker Hub.
-- House stage 0-3.
-- Basic item/resource icons.
+**Status: Ongoing support work, not the main blocker.**
+
+Use enough consistent art to make the prototype readable. Do not wait for final assets before validating gameplay.
 
 ## Phase 4 - Basic UI Pass
-Goal: make the prototype readable.
 
-Minimum UI:
-- Resource stock display.
-- Inventory weight/capacity display.
-- Time display.
-- Worker status display.
-- Process status display.
-- WorkshopStorage status display.
-- Job Board interface.
-- Basic population/needs display.
+**Status: Partially implemented.**
 
-## Phase 5 - Save/Load Preparation
-Only start after the prototype loop is stable.
+Inventory, HUD, dialogue, and workshop interfaces exist at prototype level. Continue UI work when it directly improves the current playable loop.
 
-Do not prioritize this too early unless the current architecture requires preparation.
+## Phase 5 - Save / Load
 
-## Phase 6 - Demo Distribution and Playtesting
-Only start execution after the playable loop is stable, readable, and testable without developer help.
+**Status: Queued after loop stabilization.**
+
+Real persistence should begin after the runtime daily loop is stable enough that the saved state model is unlikely to change every session.
+
+## Phase 6 - Internal Playtest
+
+**Status: Not ready.**
+
+Entry gate:
+
+- complete mudbrick chain
+- coherent daily loop
+- readable failure feedback
+- basic condition tuning
+- no developer-only setup required
+
+## Phase 7 - Vertical Slice
+
+**Status: Later.**
+
+A vertical slice should represent the intended quality and identity of the game, not merely prove that systems technically run.
+
+## Phase 8 - Demo Distribution
+
+**Status: Later; planning exists, execution waits for readiness.**
 
 Primary demo hub:
-- One Percent Studio website.
 
-Secondary distribution / test channels:
-- itch.io for early public or limited-access web testing.
-- Steam Playtest after a vertical slice exists and store-facing testing makes sense.
-- Steam Demo when the build represents the intended quality direction.
-- Game Jolt as an optional community mirror after presentation is clear.
-- CrazyGames as a later browser discovery channel, not an early prototype target.
+- **One Percent Studio website**
 
-Reference document:
-- See `DEMO_DISTRIBUTION.md` for rollout stages, platform roles, and demo readiness checklist.
+Secondary channels:
 
-Minimum success criteria:
-- The demo has one approved current build.
-- The One Percent Studio website clearly points to the current demo.
-- The demo has a version number, known issues, controls, and a feedback path.
-- External platforms are added gradually, not all at once.
+- itch.io for early public or limited-access testing
+- Steam Playtest after a representative vertical slice exists
+- Steam Demo when store-facing quality is appropriate
+- Game Jolt as an optional community mirror
+- CrazyGames as a later browser discovery channel
 
-## Not Yet Priority
-Delay these until the core loop is stable:
-- Large city simulation.
-- Complex economy.
-- Advanced NPC personality.
-- Advisor NPC with memory.
-- Large quest system.
-- Advanced combat.
-- Advanced VFX/SFX.
-- Large asset library.
-- Marketing trailer.
+See `DEMO_DISTRIBUTION.md` for channel roles and rollout details.
 
-## Immediate Next Tasks
-1. Separate `Assign Worker` and `Start Job` in the workshop UI.
-2. Add a small job selection step for workshop jobs.
-3. Verify the current claimable wet mudbrick path.
-4. Verify the drying process path and final dried mudbrick output.
-5. Improve UI feedback for missing materials, full storage, full inventory, and active jobs.
-6. Keep worker/citizen conversion secondary until the workshop loop is stable.
-7. Keep code changes small and explain them before implementation.
+# Scope Guard - Do Not Prioritize Yet
 
-## Codex Instruction
-When updating this project, Codex should maintain these files:
-- `DEVLOG.md`
-- `ARCHITECTURE.md`
-- `ASSET_GUIDE.md`
-- `ROADMAP.md`
-- `DEMO_DISTRIBUTION.md`
+Delay these unless they are necessary to unblock the current loop:
 
-Future files may be added as needed.
+- another large production chain
+- large NPC behavior expansion
+- complex economy balancing
+- full Advisor NPC / AI system
+- large quest system
+- large city simulation
+- advanced combat
+- large asset library
+- advanced VFX / SFX
+- marketing trailer
+- uncontrolled public demo distribution
 
-Do not overwrite design direction without explaining the reason.
+# Design Risk - Too Predictable
 
-Codex should prioritize the playable core loop before expanding into new major systems.
+The game should eventually support controlled variation so players do not discover one permanently solved route.
 
-Codex should also avoid designing systems that are permanently fixed, fully predictable, or easy to solve. Use fixed values during early prototype only when needed for stability, then prepare the architecture for controlled variation later.
+However, **do not solve this risk by adding complexity before the core loop works**.
 
-Codex should treat the One Percent Studio website as the primary demo hub unless the project direction is explicitly changed.
+Preferred order:
+
+```text
+Stable deterministic prototype
+-> readable complete loop
+-> internal playtest
+-> controlled variation
+-> balancing
+```
+
+# Codex Working Rule
+
+Before starting implementation, Codex should read this section and identify the highest unfinished priority that the requested task belongs to.
+
+When a meaningful feature is merged:
+
+1. Update `DEVLOG.md` with what actually changed.
+2. Update `ROADMAP.md` only if current status, priority, or a phase gate changed.
+3. Update `ARCHITECTURE.md` only when technical responsibility or system boundaries changed.
+4. Update `docs/game-concept.md` only when the intended game design changed.
+5. Update `docs/root-branch-map.md` only when technical root/domain structure changed.
+
+Do not copy PR history into this roadmap. PR and milestone history belongs in `DEVLOG.md`.
+
+Do not use `docs/root-branch-map.md` as evidence that a feature is active, complete, or prioritized.
+
+**Current Codex priority:** finish and validate the playable daily / mudbrick loop before expanding into new major systems.
