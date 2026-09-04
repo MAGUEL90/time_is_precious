@@ -1,13 +1,15 @@
 # ARCHITECTURE - Time is Precious
 
-Last updated: 2026-06-14
+Last updated: 2026-09-05
 
 ## Purpose
+
 This document is the architectural source of truth for **Time is Precious**.
 
-The goal is to keep systems clean, scalable, and aligned with the game vision while the project moves toward a small playable prototype.
+It defines technical responsibilities, ownership boundaries, state separation, and integration rules. It does not replace `docs/game-concept.md` for design intent or `ROADMAP.md` for current priority.
 
 ## Core Game Identity
+
 Time is Precious is a 2D top-down management RPG focused on:
 - Time pressure.
 - Resource management.
@@ -18,7 +20,8 @@ Time is Precious is a 2D top-down management RPG focused on:
 - Variable progression between players.
 - Long-term AI-assisted unique NPCs that stay controlled by game systems.
 
-## Current Priority
+## Current Architectural Priority
+
 Do not expand into large systems too early.
 
 Stabilize this core loop first:
@@ -26,164 +29,146 @@ Stabilize this core loop first:
 ```text
 Gather resource
 -> Store resource
--> Assign worker
+-> Hire / assign suitable worker when needed
 -> Start work/job
 -> Produce output
 -> Claim or continue processing output
 -> Use output for progression
 ```
 
-Current local prototype status:
-- Inventory-to-workshop transfer is player-facing.
-- Workshop storage supports deposit and withdraw.
-- Workshop can assign a prototype worker.
-- Workshop can start the mudbrick job from stored materials.
-- NPC job output enters `WorkShopStorage.claimable_outputs`.
-- Popup feedback shows item gain/loss for deposit and withdraw.
+Current player-facing workshop foundation includes:
+- Inventory-to-workshop transfer.
+- Workshop deposit and withdraw.
+- Worker assignment UI.
+- Profession/resource validation.
+- Mudbrick job start from workshop storage.
+- World-time-driven work progression.
+- NPC-produced output entering `WorkShopStorage.claimable_outputs`.
 
-## Design Pillar: Variable Progression
-Time is Precious should not be easily predictable from one playthrough to another.
+The current production architecture blocker is not job start. It is the player-facing continuation after `wet_mudbrick`: claim/route -> drying -> `sun_dried_mudbrick` -> visible progression.
 
-The game should avoid becoming a fixed spreadsheet where every player follows the same optimal path, uses the same exact numbers, and reaches the same progression pattern.
+## Source-of-truth roles
 
-The intended experience:
-- Player A and Player B may develop differently.
-- City growth should have controlled randomness.
-- Migrant arrival, applicant availability, needs pressure, and opportunity timing can vary.
-- The player should adapt to circumstances instead of memorizing one perfect route.
-- Randomness should create strategic variation, not chaos.
+- `docs/game-concept.md` = intended game design.
+- `ROADMAP.md` = current progress and priority.
+- `ARCHITECTURE.md` = system responsibilities and boundaries.
+- `DEVLOG.md` = merged implementation history.
+- `docs/root-branch-map.md` = technical domain and branch taxonomy.
+- Current source/scenes = implementation truth.
 
-Important rule:
+## Important Architecture Rule: Population != Employment
 
-```text
-Use controlled randomness to create variation.
-Do not use randomness to remove player agency.
-```
-
-## Important Architecture Rule
-Do not mix **population logic** with **employment logic**.
+Do not mix population logic with employment logic.
 
 An NPC can be a resident without being a worker.
 An NPC can be hired but not assigned.
-An NPC consumes food because they are a resident, not because they are hired.
-
-## NPC State Model
-NPC state should be split into at least two conceptual layers.
+An assigned worker may not currently be executing a job.
+An NPC consumes city needs because they are a resident, not because they are hired.
 
 ### Population / Citizenship Layer
-This controls whether an NPC belongs to the city and consumes city stock.
 
-Possible statuses:
+Conceptual statuses:
 - `migrant`
 - `resident`
 - `rejected`
 - `left_city`
 
-Rules:
-- `migrant`: has arrived but has not yet been accepted by the player.
-- `resident`: accepted into the city and counts as population.
-- `resident` starts consuming food / city stock.
-- `rejected` or `left_city` should not consume city stock.
+Responsibilities:
+- whether the NPC belongs to the city
+- whether the NPC counts toward population
+- whether the NPC consumes city stock / resident needs
 
 ### Employment / Worker Layer
-This controls whether an NPC can be assigned to work.
 
-Possible statuses:
+Conceptual statuses:
 - `unemployed`
 - `applicant`
 - `hired`
 - `assigned`
 - `working`
 
-Rules:
-- `unemployed`: resident without job.
-- `applicant`: resident eligible and visible on Job Board.
-- `hired`: selected by player and added to worker pool.
-- `assigned`: attached to a workstation/site, but not necessarily working right now.
-- `working`: currently executing a job/order.
+Responsibilities:
+- employment eligibility
+- Job Board applicant visibility
+- hiring
+- workplace assignment
+- active work execution
 
-## Current Implementation Snapshot
-This architecture reflects the planning, asset, worker visual, variable progression, citizen/immigration, and workshop core-loop milestones up to the current local work.
+### Current lifecycle implementation
 
-Implemented pieces:
-- Documentation defines the project direction, asset workflow, palette rules, roadmap priority, and resolution/platform direction.
-- Job Board has a first applicant-offer direction, but the full resident-to-applicant conversion still needs future work.
-- Modular worker/player/citizen visuals use layered body, head, clothes, hands, hair, and accessories.
-- `CitizenData` stores runtime citizen identity, basic need flags, satisfaction/reliability values, status, profession, and optional visual profile.
-- `VisualProfile` stores presentation data for modular character appearance.
-- `CitizenManager` keeps the runtime citizen registry and emits `citizen_added`.
-- `CitizenGenerator` creates randomized prototype citizens.
-- `ImmigrationManager` evaluates immigration chance, keeps pending immigrant batches, and accepts or rejects the full batch.
-- `CitySpawner` and `CitizenActor` turn accepted citizen data into visible city actors.
-- `Inventory` and `WorkShopStorage` both support item capacity/weight checks.
-- `ItemTransferUI` supports reusable quantity-based transfer.
-- `WorkshopMenuUI` opens player-facing workshop actions.
-- `WorkshopStorageMenuUI` separates deposit/withdraw from the main workshop menu.
-- `WorkShop` can deposit items, withdraw stored items, assign a prototype worker, and start the mudbrick job from workshop storage.
-- `WorkManager` can consume source storage inputs and send NPC output to claimable workshop escrow.
+Merged prototype implementation now supports the main lifecycle:
 
-Current rules:
-- Population/citizen status and employment/worker status must remain separate.
-- Immigration approval is batch-based for now: accept all pending immigrants or reject all pending immigrants.
-- Accepted immigrants become citizens and are added to the runtime registry.
-- Visual data should stay separate from gameplay rules unless a future trait system intentionally connects them.
-- Save/load should eventually persist data resources or serialized citizen data, not spawned scene nodes.
-- Workshop stored items are separate from `claimable_outputs`.
-- Withdraw should only pull from `WorkShopStorage.items`, not from claimable escrow.
-- NPC-produced output should stay in `claimable_outputs` until the player claims or routes it forward.
+```text
+Accepted resident
+-> daily applicant eligibility evaluation
+-> APPLICANT
+-> Job Board hire
+-> linked WorkerData
+-> HIRED
+-> workshop assignment
+-> ASSIGNED
+-> job execution / worker runtime state
+```
 
-Current boundaries:
-- Applicant/job-board conversion from citizen to worker is not finished.
-- Worker assignment is still a prototype path and not yet connected cleanly to accepted citizens.
-- Workshop job selection is not final; current flow starts mudbrick through the prototype assign/start action.
-- Long-term citizen and workshop persistence are not finished.
-- Needs display/counting exists, but deeper daily consumption/balancing still needs future work.
-- Drying process integration still needs player-facing verification after wet mudbrick is claimable.
+Key responsibilities:
+- `CitizenData` owns population and employment status.
+- `CitizenManager` owns the runtime citizen registry and applicant-state transitions.
+- `WorkerDatabase` owns WorkerData lookup/creation plus hire/assign/unassign integration.
+- `WorkerData` represents worker-specific work data while resolving linked citizen information where appropriate.
+- Workshop assignment must update the linked citizen employment state rather than keeping an unrelated parallel flag.
 
-## Job Board Concept
-For the current prototype, Job Board applicants should come from accepted residents.
+Legacy worker compatibility may exist, but new work should not create additional disconnected employment authorities.
 
-Recommended flow:
+## Citizen / Immigration Layer
+
+- `CitizenGenerator` creates prototype citizen data.
+- `CitizenManager` stores the runtime citizen registry.
+- `ImmigrationManager` evaluates immigration and manages pending batches.
+- Accepted immigrants become residents/citizens.
+- Rejected/left citizens must not consume city resources.
+- `CitySpawner` / `CitizenActor` represent resident data in the world.
+- Visual presentation should stay separate from gameplay authority unless an approved trait system intentionally connects them.
+
+Current immigration approval remains batch-based unless design explicitly changes it.
+
+## Applicant / Job Board Layer
+
+For the current prototype, applicants originate from accepted residents.
 
 ```text
 Resident
--> Needs are good enough
--> Eligible for work
--> Appears on Job Board
+-> needs / eligibility check
+-> Applicant
+-> Job Board
 -> Player hires
--> Added to Worker Hub / worker pool
+-> WorkerData linked to citizen identity
 ```
 
-Do not spawn unrelated external applicants for now unless the design intentionally changes later.
+Do not spawn unrelated external applicants unless design explicitly introduces a separate applicant source.
 
-## Workshop Concept
-Workshop actions should stay focused on a coherent production family.
+Applicant evaluation is a gameplay-system responsibility, not a UI responsibility. Job Board UI displays and triggers approved actions; it must not invent eligibility rules.
 
-For the current workshop, the production family is earth/clay/construction material work:
-- Mudbrick making.
-- Clay mix refinement.
-- Mudbrick reinforcement.
-- Cracked mudbrick repair.
-- Drying preparation.
+## Worker Assignment Layer
 
-Avoid making one workshop handle unrelated work such as clothing, cooking, fishing, or broad general crafting.
-
-Recommended workshop flow:
+Assignment is separate from hiring and separate from active job execution.
 
 ```text
-Manage Storage
--> Deposit raw materials
--> Assign worker
--> Choose/start relevant job
--> Job consumes workshop storage
--> NPC output enters claimable escrow
--> Player claims output or continues processing
+HIRED
+-> player assigns to workplace
+-> ASSIGNED
+-> job starts
+-> active work runtime
 ```
 
-## Consumption Rule
-Food and need consumption should be based on population status.
+Removing a worker from the workplace should return the linked employment state to the appropriate hired/idle state rather than deleting citizen identity.
 
-Correct:
+Workshop UI must not become the authoritative storage location for worker employment state.
+
+## City Needs Layer
+
+Food/basic need consumption depends on population state.
+
+Correct conceptual rule:
 
 ```text
 if population_status == resident:
@@ -197,187 +182,181 @@ if is_hired:
     consume_city_stock()
 ```
 
-## Randomness / System Variation Rule
-Randomness should be implemented as a support layer over clear systems.
+Current daily needs/satisfaction/reliability behavior exists at prototype level, but balance remains unfinished.
 
-Recommended structure:
+## Workshop / Production Responsibilities
+
+The workshop production family is currently earth/clay/construction-material work.
+
+Current intended flow:
+
+```text
+Manage Storage
+-> Deposit raw materials
+-> Assign worker
+-> Choose/start relevant job
+-> Validate profession and resources
+-> Job consumes workshop storage
+-> World time advances work
+-> NPC output enters claimable escrow
+-> Player claims output or routes it forward
+-> Further process where relevant
+```
+
+### Storage separation
+
+`WorkShopStorage.items` and `claimable_outputs` are different concepts.
+
+- Stored items = normal workshop inventory available for actions/processes.
+- Claimable output = NPC-produced output awaiting player claim/routing.
+
+Withdraw must not silently bypass claimable escrow.
+
+### WorkManager
+
+`WorkManager` is responsible for work orders, input consumption, timing, worker execution state, and routing output according to the work flow.
+
+It must not become the authority for unrelated city population, UI layout, quest logic, or global economy design.
+
+### ProcessManager
+
+`ProcessManager` handles process/batch-style transformation logic. Future drying integration should reuse this responsibility where appropriate rather than embedding a second process engine inside UI scripts.
+
+### WorkStateRuntime
+
+Current project setup includes a runtime work-state bootstrap/autoload path so work/process systems can remain synchronized with world-time changes across the player-facing flow.
+
+Do not add duplicate scene-local bootstrap instances without a specific architectural reason.
+
+## Player Runtime / Scene Transition Responsibilities
+
+The current prototype keeps selected player/runtime state across scene transitions.
+
+- Player home is the main start flow.
+- Home <-> city transitions use reusable scene/spawn routing.
+- `PlayerRuntimeState` supports runtime persistence across scene changes.
+- `SceneTransition` owns transition/routing behavior.
+
+Runtime persistence is not the same as save/load to disk.
+
+## Save / Persistence Boundary
+
+Real save/load is not yet complete.
+
+Future persistence should serialize authoritative data/state rather than spawned visual nodes.
+
+Likely persisted domains will include:
+- player conditions and progression
+- day/sleep usage
+- inventory
+- citizens and employment states
+- workshop/work/process state as required
+- city resources
+
+Before implementing persistence, define schema ownership and migration rules. Do not infer a stable schema from runtime objects alone.
+
+## Display / UI Boundary
+
+Current implementation uses a low logical viewport for pixel-art rendering and integer scaling. Project-wide viewport/stretch settings are configuration authority, not per-UI preferences.
+
+UI scripts/scenes may adapt layout, but they must not change `project.godot` display configuration as a local fix.
+
+Experimental UI should be isolated under the approved sandbox after agent activation:
+
+`res://scenes/test_scenes/ui_sandbox/`
+
+Production UI remains under established `res://scenes/ui/` conventions.
+
+## Design Pillar: Variable Progression
+
+The game should avoid becoming a fixed spreadsheet where every playthrough follows one solved route.
+
+Use controlled variation:
 
 ```text
 Player decision
 -> System state check
 -> Controlled random variation
--> Result with readable feedback
+-> Readable result
 ```
 
-Example:
+Randomness should create strategic variation, not remove player agency.
 
-```text
-If city prosperity is above threshold:
-    migrant_count = random value within a small range
-    migrant quality/traits may vary
-    player chooses accept/reject
-```
+Possible later variation layers include migrant timing, applicant availability/quality, resident traits, opportunity timing, and limited production/needs variation.
 
-The player should still understand why something happened.
-
-Do not hardcode every outcome into fixed numbers unless needed for early prototype stability. Use tunable ranges where appropriate.
+Do not introduce broad randomness before the deterministic prototype loop is stable and readable.
 
 ## AI NPC / Quest Integration Architecture
-AI-powered unique NPCs are a long-term feature layer. They should not replace the core game systems.
 
-The correct responsibility split is:
+AI-powered unique NPCs are a long-term layer. They must not replace authoritative game systems.
+
+Responsibility split:
 
 ```text
 AI NPC = character voice, personality, intent, contextual dialogue
 Quest System = rules, validation, objective tracking, reward approval
-Game State = source of truth for inventory, city data, trust, progress, and economy
+Game State = inventory, city state, trust, progress, economy authority
 ```
 
-AI can help important NPCs feel alive by responding through a defined profile instead of relying only on manually written dialogue branches.
+AI may suggest quest intent, but the game must validate item, quantity, timing, requirements, reward and completion.
 
-An AI-ready unique NPC profile should include:
-- identity and role
-- personality
-- speaking style
-- knowledge boundaries
-- hidden goals or motivations
-- relationship/trust state with the player
-- allowed quest categories
-- forbidden actions or forbidden knowledge
-
-Recommended AI usage:
-- Advisor NPC.
-- Village leader.
-- Merchant.
-- Mentor.
-- Rival.
-- Important quest giver.
-- Story-critical character.
-
-Do not use AI for every background villager or generic worker. Regular NPCs should remain system-driven unless there is a specific design reason.
-
-### AI Quest Flow
-AI NPCs may suggest quest intent, but the game must validate the final quest.
-
-Recommended flow:
-
-```text
-Player talks to unique NPC
--> Game prepares NPC profile + relevant game state
--> AI produces dialogue and/or quest intent
--> Quest System validates type, item, quantity, reward, requirements, and timing
--> Game creates the quest only if valid
--> Game tracks progress and completion
--> AI generates flavor dialogue after the system result is known
-```
-
-Example:
-
-```text
-NPC role: grain merchant
-World state: grain stock is low
-Player trust: neutral
-AI intent: request wheat supply
-Quest System validates: 10 wheat, 25 copper, +3 trust
-Result: valid quest offer
-```
-
-AI must not directly create money, items, rewards, inventory changes, trust changes, or progression flags.
-
-### Reward Authority
-Rewards should come from tunable quest rules, not from free AI generation.
-
-Possible reward types:
-- copper / money
-- trust increase
-- loyalty increase
-- village prosperity increase
-- discount unlock
-- skill XP
-- information access
-- trade access
-- special item
-
-Reward amount should depend on:
-- quest difficulty
-- item rarity
-- travel or time cost
-- player level/progress
-- NPC trust
-- city economic condition
-- urgency
-
-### Completion Flow
-When a quest is completed, the game should resolve the transaction before the AI responds.
-
-Recommended structure:
-
-```text
-Game checks objective
--> If valid, update inventory/resources/rewards/trust/progress
--> Mark quest completed
--> Send result summary to AI
--> AI produces character-specific reaction dialogue
-```
-
-This keeps the NPC expressive without letting AI break the economy or progression.
-
-### Development Boundary
-Do not build the full AI NPC system during early MVP.
+AI must not directly create money/items, modify authoritative inventory, mark quests complete, distribute rewards, change trust/progression flags, or override economy rules.
 
 Recommended order:
-1. Basic dialogue system.
-2. Inventory and resource rules.
+1. Stable dialogue.
+2. Stable inventory/resource rules.
 3. Normal quest system.
-4. NPC trust / loyalty / relationship state.
+4. Trust/relationship state.
 5. Quest templates and reward ranges.
 6. AI dialogue layer for selected unique NPCs.
-7. AI-assisted quest offering after validation rules are stable.
+7. AI-assisted quest offering behind validation.
 
-## Existing / Expected Core Systems
-Codex should analyze and preserve the intent of these systems:
+## Existing Core Systems to Preserve
+
+Implementation agents should inspect and preserve the intent of existing systems including:
+- ItemDatabase
+- Inventory
+- WorkShopStorage
 - WorkManager
 - ProcessManager
-- WorkshopStorage
-- Resource / Item system
-- NPC delegation / contract system
-- Worker Hub
-- Job Board
-- Basic UI
-- Future Quest System
-- Future NPC trust / loyalty state
-- Future AI NPC dialogue layer
-- Save/load later, after core loop is stable
+- TimeComponentManager
+- CitizenManager
+- CitizenGenerator
+- ImmigrationManager
+- CitizenNeedsManager
+- WorkerDatabase
+- Applicant/Job Board flow
+- PlayerRuntimeState
+- SceneTransition
+- WorkStateRuntime
+- gameplay UI scenes
+
+Do not add another manager simply because a feature could be implemented that way. First determine which existing system already owns the responsibility.
+
+## Main architecture risks
+
+### Duplicate authority
+Avoid multiple places owning the same state, especially:
+- citizen/employment state
+- worker assignment
+- workshop storage/output
+- world time
+- player runtime state
+
+### UI owning gameplay
+UI should display state and request actions. It should not become the hidden owner of economy, employment, production, condition, or progression rules.
+
+### Global-manager sprawl
+The project already has many autoloads. Adding another autoload is a high-impact architecture change and requires explicit justification/approval.
+
+### Save schema churn
+Do not lock persistence around unstable node structures before the daily loop is stable.
+
+### AI becoming game authority
+Future AI NPC systems must remain expressive layers over deterministic validated game rules.
 
 ## Code Change Policy
-Do not directly rewrite systems without explaining why.
 
-Prefer small, isolated changes over large rewrites.
+Prefer small isolated changes over broad rewrites.
 
-## Current Architecture Risk
-The biggest current risk is coupling too many responsibilities into one NPC/worker flag.
-
-Avoid relying only on:
-
-```gdscript
-is_hired = true
-```
-
-A single boolean cannot represent:
-- outsider/migrant
-- accepted resident
-- unemployed citizen
-- job applicant
-- hired but idle worker
-- assigned active worker
-- currently working worker
-
-Use explicit state separation instead.
-
-Another major risk is making the game too deterministic.
-
-If every system uses fixed numbers, fixed timing, fixed applicants, and fixed outcomes, the gameplay will become too easy to solve. The design should preserve controlled variation so each player's city develops differently.
-
-Future AI NPC risk: letting AI become the law of the world.
-
-Avoid any implementation where AI directly controls inventory, money, quest completion, reward distribution, or progression flags. AI should provide voice and intent. Game systems must remain authoritative.
+When implementation evidence shows this document is stale, update the relevant snapshot/boundary; do not silently rewrite game design while doing so.
