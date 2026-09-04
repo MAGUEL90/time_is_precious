@@ -1,0 +1,23 @@
+# Human ownership for Time is Precious governance and protected design/system areas.
+# This supports review routing; agent-control rules remain TEMPLATE — NOT ACTIVE until separately activated.
+
+* @MAGUEL90
+
+/AGENTS.md @MAGUEL90
+/docs/agent-control/ @MAGUEL90
+/docs/game-concept.md @MAGUEL90
+/docs/characters/ @MAGUEL90
+/dialogue/ @MAGUEL90
+/project.godot @MAGUEL90
+/addons/ @MAGUEL90
+/scripts/autoload/ @MAGUEL90
+/scenes/player/ @MAGUEL90
+/scenes/content_scene/ @MAGUEL90
+/scenes/player_home_interior/ @MAGUEL90
+/scenes/scene_transition/ @MAGUEL90
+/scenes/nightmare_world/ @MAGUEL90
+/scenes/work_state_boot_strap/ @MAGUEL90
+/resources/job_data/ @MAGUEL90
+/resources/process_data/ @MAGUEL90
+/resources/citizen_data/ @MAGUEL90
+/resources/worker_data/ @MAGUEL90
