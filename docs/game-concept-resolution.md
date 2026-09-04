@@ -1,141 +1,131 @@
 # Time is Precious — Resolution and Platform Display Direction
 
-Last updated: 2026-06-01
+Last updated: 2026-09-05
 
-This document is part of the **Time is Precious** game concept documentation.
-It defines the current target resolution, aspect ratio, platform display direction, and pixel-art readability rules.
+This document defines the current display, pixel-art readability, and platform presentation direction for **Time is Precious**.
 
-## Current Decision
+## Important terminology
 
-The current base/design resolution should remain:
+The project uses two different resolution concepts and they must not be confused:
+
+1. **Logical rendering viewport** — the internal pixel-art coordinate space used by Godot.
+2. **Presentation/output size** — the window or device resolution the player sees.
+
+Changing one does not automatically mean the other should change.
+
+## Current implementation baseline
+
+Current `project.godot` settings use:
 
 ```text
-1280 x 720
+Logical viewport: 400 x 225
+Development window override: 1200 x 675
+Stretch mode: viewport
+Stretch aspect: expand
+Scale mode: integer
+Renderer: GL Compatibility
+2D transform pixel snapping: enabled
 ```
 
-Aspect ratio:
+The logical viewport is intentionally small for pixel-art readability and integer scaling. It is a protected project-wide setting and must not be changed casually.
+
+## Presentation direction
+
+Current presentation direction remains:
 
 ```text
-16:9 landscape
-```
-
-Primary platform direction:
-
-```text
-PC first, Android landscape compatible
-```
-
-## Reasoning
-
-Time is Precious is a 2D top-down management RPG with resource management, worker delegation, production chains, storage, city needs, and UI-heavy decision making.
-
-A landscape layout is currently the safest direction because it gives enough horizontal space for:
-
-- map visibility
-- time/day UI
-- inventory and storage UI
-- resource stock display
-- worker status
-- process status
-- job board / worker hub UI
-- city condition indicators
-
-Portrait can be considered later only if the game design changes significantly toward a simpler mobile-first layout.
-
-## Prototype Rule
-
-For the current prototype, do not change the base resolution away from 1280x720 unless there is a strong technical or gameplay reason.
-
-The current goal is to stabilize the playable core loop first:
-
-```text
-Gather resource
-↓
-Store resource
-↓
-Process resource
-↓
-Produce output
-↓
-Use output for progression
-```
-
-Resolution should support this loop, not distract from it.
-
-## Scaling Direction
-
-Recommended Godot display direction:
-
-```text
-Base viewport: 1280x720
 Aspect ratio: 16:9 landscape
-Stretch direction: support wider screens without cropping important gameplay/UI
+Primary platform: PC first
+Secondary target: Android landscape compatible
+Reference PC presentation: 1280 x 720 class or higher 16:9 output
 ```
 
-For wider PC or mobile screens, extra side space is acceptable if the layout remains readable and does not crop important UI.
+`1280 x 720` is a presentation/reference target, not the current logical Godot viewport.
+
+This distinction resolves the older ambiguity where 1280x720 was described as if it were the internal base viewport.
+
+## Why the logical viewport is smaller
+
+Time is Precious uses small pixel art and UI-heavy management screens. A low logical viewport with integer scaling helps preserve:
+
+- sharp pixel edges
+- consistent world/UI scale
+- readable silhouettes
+- predictable UI spacing
+- stable pixel-snapped movement and presentation
+
+Do not increase the logical viewport merely to match a desktop window resolution.
+
+## Prototype rule
+
+Until the playable core loop is stable:
+
+- Keep the current logical viewport unless a tested gameplay or presentation problem requires change.
+- Do not redesign the whole UI around a new resolution without a dedicated task.
+- Treat changes to stretch, scale mode, pixel snapping, renderer or viewport as project-setting changes requiring explicit approval.
+
+## Scaling direction
+
+The game should remain readable across common landscape outputs while preserving the logical pixel grid.
+
+For wider PC/mobile screens:
+- extra horizontal space is acceptable when layout remains readable
+- core UI must not be cropped
+- important controls must remain reachable
+- integer scaling should be preserved where practical
 
 Avoid:
-
-- cropping core UI
 - forcing portrait layout
-- making pixel assets too small to read
-- redesigning the whole UI before the core loop is stable
+- stretching pixel art non-uniformly
+- changing logical viewport as a quick fix for one panel
+- making every sprite larger to solve readability
 
 ## Pixel Art Readability Rule
 
-The project still prioritizes small efficient pixel art, especially 16x16 where possible.
+The project continues to favor small efficient pixel art, often around 16x16 where readable.
 
 Readability should be handled through:
+- camera composition
+- tile-size consistency
+- UI scale and layout
+- icon sizing
+- clear silhouettes
+- integer scaling
 
-- camera zoom
-- tile size consistency
-- UI scale
-- icon size
-- clean silhouettes
+UI icons may be larger than world sprites when needed for clarity.
 
-Do not solve readability by making every asset larger too early.
+## Android direction
 
-Recommended working direction:
+Android support means:
 
 ```text
-Tile/resource scale: small and efficient
-Character asset direction: 16x16 or close to it when readable
-UI icons: can use 32x32 when needed
-Camera zoom: adjusted for comfort
+Landscape-compatible gameplay and UI
 ```
 
-## Mobile Direction
-
-Mobile support should be treated as:
+It does not mean:
 
 ```text
-Android landscape compatible
+Portrait-first mobile design
 ```
 
-Not:
+Desktop testing alone is not proof of Android readiness. Touch/input, safe-area/layout behavior, performance, and device output must be validated separately before mobile compatibility is claimed.
+
+## Current design lock
+
+Working display decision:
 
 ```text
-Android portrait-first
-```
-
-Reason:
-A management RPG needs space for map, systems, and UI. Portrait would likely create pressure to simplify or redesign the game around vertical mobile behavior.
-
-## Current Design Lock
-
-Until the core loop becomes stable, the working resolution decision is:
-
-```text
-Resolution: 1280x720
-Aspect ratio: 16:9
+Logical viewport: 400 x 225
+Development window: 1200 x 675
+Reference presentation direction: 16:9, 1280 x 720 class or higher
 Orientation: Landscape
 Platform target: PC first, Android landscape compatible
 ```
 
-Future changes must explain:
-
-1. Why 1280x720 is no longer enough.
-2. What gameplay problem the new resolution solves.
-3. How UI readability improves.
-4. How pixel art readability is preserved.
+Future display changes must explain:
+1. What concrete gameplay or presentation problem exists.
+2. Why the current logical viewport/scaling cannot solve it.
+3. How pixel-art readability is preserved.
+4. How existing UI scenes are affected.
 5. Whether PC and Android can still share the same core layout.
+6. What regression tests were performed.
