@@ -1,12 +1,12 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-08-17
+Last updated: 2026-09-05
 
 ## Purpose of This Document
 
 `ROADMAP.md` is the **single source of truth for current development position, priority, and next work**.
 
-If you or Codex need to answer **"Where are we now, and what should we work on next?"**, start here.
+If you or an implementation agent need to answer **"Where are we now, and what should we work on next?"**, start here.
 
 Other documents have different jobs:
 
@@ -31,7 +31,7 @@ Long-term progression should also avoid becoming fully deterministic. Controlled
 
 The project is currently in **Technical Prototype -> Playable Loop Integration**.
 
-The main objective is to connect the systems that already exist into one complete daily gameplay loop rather than adding unrelated major systems.
+The project is **not blocked by lack of systems**. The main objective is to connect and validate the systems that already exist as one complete player-facing loop.
 
 ```text
 TIME IS PRECIOUS
@@ -54,6 +54,7 @@ TIME IS PRECIOUS
 |   |   |-- Inventory / item handling                [DONE]
 |   |   |-- Workshop deposit / withdraw              [DONE]
 |   |   |-- Worker assignment                        [DONE - PROTOTYPE]
+|   |   |-- Profession/resource validation           [DONE - PROTOTYPE]
 |   |   |-- Start mudbrick job                       [DONE]
 |   |   |-- Produce wet_mudbrick                     [DONE]
 |   |   |-- Player-facing claim / continue flow      [PENDING]
@@ -65,13 +66,17 @@ TIME IS PRECIOUS
 |   |   |-- Citizen generation                       [DONE - PROTOTYPE]
 |   |   |-- Immigration accept / reject              [DONE - PROTOTYPE]
 |   |   |-- Visible city citizens                    [DONE - PROTOTYPE]
-|   |   |-- Worker assignment                        [DONE - PROTOTYPE]
+|   |   |-- Population vs employment separation      [DONE - PROTOTYPE]
+|   |   |-- Resident -> applicant evaluation         [DONE - PROTOTYPE]
+|   |   |-- Job Board applicant hiring               [DONE - PROTOTYPE]
+|   |   |-- Hired -> assigned / unassigned lifecycle [DONE - PROTOTYPE]
 |   |   |-- City daily needs loop                    [PARTIAL / PENDING BALANCE]
-|   |   `-- Citizen -> applicant -> hired worker     [PENDING]
+|   |   `-- End-to-end worker loop validation        [IN PROGRESS]
 |   |
 |   |-- D. Player-Facing Clarity
 |   |   |-- Inventory UI                             [DONE - PROTOTYPE]
 |   |   |-- Gameplay HUD                             [DONE - PROTOTYPE]
+|   |   |-- Job Board UI                             [DONE - PROTOTYPE]
 |   |   |-- Workshop UI                              [DONE - PROTOTYPE]
 |   |   |-- Failure / missing-resource feedback      [IN PROGRESS]
 |   |   `-- Production state clarity                 [IN PROGRESS]
@@ -92,19 +97,11 @@ TIME IS PRECIOUS
 |   `-- Stable test build
 |
 `-- 4. DEMO DISTRIBUTION                             [LATER]
-    |-- One Percent Studio website                   [PRIMARY HUB]
-    |-- itch.io                                      [SECONDARY TEST CHANNEL]
-    |-- Steam Playtest / Steam Demo                  [LATER]
-    `-- Optional mirrors / discovery channels        [LATER]
 ```
 
 ## You Are Here
 
-The project is **not blocked by lack of systems**.
-
-The current blocker is that the existing systems are not yet connected into one complete, repeatable player-facing loop.
-
-The most important incomplete chain is:
+The most important incomplete chain remains:
 
 ```text
 Clay / straw / water
@@ -123,7 +120,7 @@ Until this chain is complete, avoid starting another large production chain or m
 
 # Immediate Priority Stack
 
-Work from top to bottom. Do not skip downward unless a blocker requires it.
+Work from top to bottom unless a concrete blocker requires otherwise.
 
 ## Priority 1 - Finish Mudbrick Output Chain
 
@@ -142,6 +139,7 @@ Validate this as one continuous play session:
 Wake at home
 -> Enter city
 -> Gather / manage resources
+-> Review/hire workers when relevant
 -> Assign work
 -> Run production
 -> Manage Hunger / Fatigue / Focus
@@ -154,13 +152,15 @@ Wake at home
 - [ ] Confirm no manual setup is required between steps.
 - [ ] Confirm scene transitions preserve intended runtime state.
 - [ ] Confirm Sleep and Collapse rules do not break the day loop.
-- [ ] Confirm worker / workshop state remains understandable throughout the day.
+- [ ] Confirm Job Board / Worker Hub / workshop state remains understandable.
+- [ ] Confirm accepted residents can reach applicant/hired/assigned states through the normal player-facing flow when conditions allow.
 
 **Exit condition:** one full in-game day feels like a coherent game loop rather than a collection of test systems.
 
 ## Priority 3 - Clarity and Failure Feedback
 
 - [ ] Missing materials are explained clearly.
+- [ ] Missing/incorrect worker profession is explained clearly.
 - [ ] Full inventory is explained clearly.
 - [ ] Full workshop storage is explained clearly.
 - [ ] Active / finished jobs are visually understandable.
@@ -168,20 +168,22 @@ Wake at home
 
 **Exit condition:** a tester can understand what failed and what to do next without reading debug output.
 
-## Priority 4 - Condition and Sleep Tuning
+## Priority 4 - Condition, Worker Needs and Balance Tuning
 
-The systems already exist at MVP level. This is a tuning task, not a reason to rebuild them from scratch.
+Existing systems are MVP/prototype systems. This is a tuning and validation task, not a reason to rebuild them from scratch.
 
-Tune:
-
+Tune/validate:
 - Hunger drain.
 - Fatigue growth.
 - Focus behavior and costs.
 - Sleep duration and recovery.
 - Once-per-day Sleep rule.
 - Collapse / Nightmare consequence severity.
+- Citizen daily needs pressure.
+- Worker satisfaction/reliability effect on production.
+- Wage/economy values only after design approval.
 
-**Exit condition:** working too long has a meaningful cost, Sleep is valuable but not exploitable, and condition management supports the time-economy theme.
+**Exit condition:** time pressure, conditions and worker management create meaningful trade-offs without obvious exploits or opaque punishment.
 
 ## Priority 5 - Save / Load Persistence
 
@@ -190,7 +192,7 @@ Only after the runtime daily loop is stable:
 - [ ] Player conditions.
 - [ ] Sleep usage / day state.
 - [ ] Inventory.
-- [ ] Citizens / workers.
+- [ ] Citizens / workers and employment states.
 - [ ] Workshop / production state as required.
 - [ ] Progression values.
 
@@ -210,7 +212,6 @@ Only after the runtime daily loop is stable:
 **Status: Mostly complete for the current prototype.**
 
 Core foundations already exist or are partially implemented:
-
 - ItemDatabase.
 - Inventory and weight handling.
 - WorkshopStorage.
@@ -219,6 +220,9 @@ Core foundations already exist or are partially implemented:
 - Player interaction.
 - World time.
 - Citizen / immigration prototype.
+- Population/employment state separation.
+- Job Board hiring prototype.
+- Workshop worker assignment prototype.
 - Player condition systems.
 - Home / city scene flow.
 
@@ -228,9 +232,7 @@ Do not reopen this phase broadly unless a concrete blocker appears.
 
 **Status: ACTIVE - THIS IS THE CURRENT DEVELOPMENT PHASE.**
 
-Goal:
-
-Connect existing systems into a readable, repeatable player-facing loop.
+Goal: connect existing systems into a readable, repeatable player-facing loop.
 
 Main remaining blocker:
 
@@ -241,10 +243,9 @@ Main remaining blocker:
 **Status: In progress.**
 
 Success criteria:
-
 - Player can acquire resources.
 - Player can store / move resources.
-- Player can assign work.
+- Player can hire/assign suitable workers where required.
 - Work consumes correct inputs.
 - Work generates output.
 - Output can continue into the next production step.
@@ -255,9 +256,9 @@ Phase 1 is not complete until the final output has an actual gameplay purpose.
 
 ## Phase 2 - Population and Worker Separation
 
-**Status: Prototype partially implemented; not the main blocker.**
+**Status: Core lifecycle prototype implemented; balance and full-loop validation remain.**
 
-Design rule remains:
+Current design flow:
 
 ```text
 Migrant
@@ -267,9 +268,17 @@ Migrant
 -> assigned / working
 ```
 
+Merged implementation now includes:
+- citizen-backed population/employment states
+- resident applicant evaluation
+- Job Board hiring
+- linked WorkerData creation
+- assignment/unassignment lifecycle
+- workshop assignment integration
+
 Population status and employment status must stay separate.
 
-Current prototype supports citizen generation, immigration decisions, visible citizens, and worker-related systems. Daily city needs, persistence, and the complete citizen-to-worker flow still need further work.
+Remaining work is mainly end-to-end gameplay validation, balancing, persistence, broader professions/content, and later systemic consequences — not rebuilding the lifecycle from scratch.
 
 Do not let Phase 2 expansion delay completion of the production / daily loop.
 
@@ -277,13 +286,7 @@ Do not let Phase 2 expansion delay completion of the production / daily loop.
 
 **Status: Backlog.**
 
-Long-term variation may include:
-
-- migrant arrival variation
-- applicant quality variation
-- resident traits
-- opportunity timing
-- small production / needs-pressure variation
+Long-term variation may include migrant arrival variation, applicant quality variation, resident traits, opportunity timing and small production/needs-pressure variation.
 
 Randomness must remain readable and influenced by player decisions.
 
@@ -297,7 +300,7 @@ Use enough consistent art to make the prototype readable. Do not wait for final 
 
 **Status: Partially implemented.**
 
-Inventory, HUD, dialogue, and workshop interfaces exist at prototype level. Continue UI work when it directly improves the current playable loop.
+Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level. Continue UI work when it directly improves the current playable loop.
 
 ## Phase 5 - Save / Load
 
@@ -310,11 +313,10 @@ Real persistence should begin after the runtime daily loop is stable enough that
 **Status: Not ready.**
 
 Entry gate:
-
 - complete mudbrick chain
 - coherent daily loop
 - readable failure feedback
-- basic condition tuning
+- basic condition/worker-needs tuning
 - no developer-only setup required
 
 ## Phase 7 - Vertical Slice
@@ -327,24 +329,11 @@ A vertical slice should represent the intended quality and identity of the game,
 
 **Status: Later; planning exists, execution waits for readiness.**
 
-Primary demo hub:
-
-- **One Percent Studio website**
-
-Secondary channels:
-
-- itch.io for early public or limited-access testing
-- Steam Playtest after a representative vertical slice exists
-- Steam Demo when store-facing quality is appropriate
-- Game Jolt as an optional community mirror
-- CrazyGames as a later browser discovery channel
-
 See `DEMO_DISTRIBUTION.md` for channel roles and rollout details.
 
 # Scope Guard - Do Not Prioritize Yet
 
-Delay these unless they are necessary to unblock the current loop:
-
+Delay these unless necessary to unblock the current loop:
 - another large production chain
 - large NPC behavior expansion
 - complex economy balancing
@@ -361,7 +350,7 @@ Delay these unless they are necessary to unblock the current loop:
 
 The game should eventually support controlled variation so players do not discover one permanently solved route.
 
-However, **do not solve this risk by adding complexity before the core loop works**.
+However, do not solve this risk by adding complexity before the core loop works.
 
 Preferred order:
 
@@ -373,20 +362,19 @@ Stable deterministic prototype
 -> balancing
 ```
 
-# Codex Working Rule
+# Agent / Codex Working Rule
 
-Before starting implementation, Codex should read this section and identify the highest unfinished priority that the requested task belongs to.
+Before starting implementation, read this roadmap and identify the highest unfinished priority that the requested task belongs to.
 
 When a meaningful feature is merged:
-
 1. Update `DEVLOG.md` with what actually changed.
 2. Update `ROADMAP.md` only if current status, priority, or a phase gate changed.
 3. Update `ARCHITECTURE.md` only when technical responsibility or system boundaries changed.
-4. Update `docs/game-concept.md` only when the intended game design changed.
+4. Update `docs/game-concept.md` only when intended game design changed and the Game Director approved it.
 5. Update `docs/root-branch-map.md` only when technical root/domain structure changed.
 
 Do not copy PR history into this roadmap. PR and milestone history belongs in `DEVLOG.md`.
 
 Do not use `docs/root-branch-map.md` as evidence that a feature is active, complete, or prioritized.
 
-**Current Codex priority:** finish and validate the playable daily / mudbrick loop before expanding into new major systems.
+**Current implementation priority:** finish and validate the playable daily / mudbrick loop before expanding into new major systems.
