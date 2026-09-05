@@ -14,23 +14,21 @@ GitHub configuration is not a substitute for this human-approval rule.
 
 ## Known-good baseline
 
-Current repository HEAD at activation-preparation start:
+Human-validated candidate baseline:
 
-`db9b6d5640bd232f1dbed9e4668ad54520cabc50`
+`fcb5dc24a74c3b5b2c23af9ad10676752e7532a1`
 
-This commit is only a candidate baseline. It is NOT yet declared known-good.
+This is the merge commit for PR #95 and was reported by the Game Director as working correctly in Godot after local runtime validation on 2026-09-05.
 
-Before activation:
-1. Pull the intended `main` state locally.
-2. Run a human smoke test in Godot.
-3. Confirm the tested commit hash.
-4. Create a permanent checkpoint/tag on that exact tested commit.
+Human smoke-test status: `PASSED`
 
-Suggested tag after successful human validation:
+Suggested permanent checkpoint tag:
 
 `agent-baseline-2026-09-05`
 
-Actual approved tag: `PENDING HUMAN RUNTIME VALIDATION`
+Actual approved tag: `PENDING TAG CREATION`
+
+Important: the control pack must remain `TEMPLATE — NOT ACTIVE` until the permanent tag exists and the Game Director explicitly approves activation.
 
 ## One task = one branch
 

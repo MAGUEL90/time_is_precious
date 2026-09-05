@@ -89,6 +89,14 @@ Before the control pack may become ACTIVE, the Game Director should verify the s
 7. Time/conditions advance as expected during a short session.
 8. Sleep/collapse-related flow has no obvious new blocker.
 
+### Recorded baseline validation
+
+Date: `2026-09-05`
+Tested commit: `fcb5dc24a74c3b5b2c23af9ad10676752e7532a1`
+Game Director result: `PASSED`
+
+The Game Director reported that the game was run locally and worked correctly after PR #95 was merged. This satisfies the human runtime-validation gate for baseline selection.
+
 This is a baseline smoke test, not a claim that every game feature is complete.
 
 ## Status vocabulary
