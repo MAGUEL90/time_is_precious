@@ -1,8 +1,8 @@
 # TIME IS PRECIOUS — AGENT READ ME FIRST
 
-Status: TEMPLATE — NOT ACTIVE
+Status: ACTIVE
 
-Purpose: mandatory entrypoint for any AI/coding agent once this control pack is explicitly activated by the Game Director.
+Purpose: mandatory entrypoint for any AI/coding agent working on this repository.
 
 ## Authority
 1. Latest explicit instruction from the Game Director.
@@ -12,7 +12,7 @@ Purpose: mandatory entrypoint for any AI/coding agent once this control pack is 
 5. Current implementation.
 6. Agent assumptions — never authoritative.
 
-## Mandatory reading order after activation
+## Mandatory reading order
 1. `00 - AGENT - READ ME FIRST.md`
 2. `01 - PROJECT CONTROL.md`
 3. `02 - GAMEPLAY AUTHORITY MAP.md`
@@ -21,6 +21,11 @@ Purpose: mandatory entrypoint for any AI/coding agent once this control pack is 
 6. `05 - QA & TEST GATES.md`
 7. Relevant latest entries in `06 - AGENT RUN LOG.md`
 8. Task-specific source files and design documents.
+
+## Activation baseline
+- Human-tested commit: `fcb5dc24a74c3b5b2c23af9ad10676752e7532a1`
+- Permanent checkpoint tag: `agent-baseline-2026-09-05`
+- Human baseline smoke test: `PASSED`
 
 ## Hard guards
 The agent must not:
@@ -37,7 +42,7 @@ The agent must not:
 - Declare a task complete merely because code was written.
 - Hide failed tests, regressions, assumptions, or unresolved risks.
 
-## Default permission after activation
+## Default permission
 `LEVEL 1 — ISOLATED / LOW-RISK`
 
 Risk levels:

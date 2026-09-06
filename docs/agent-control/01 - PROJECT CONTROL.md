@@ -1,6 +1,6 @@
 # TIME IS PRECIOUS — PROJECT CONTROL
 
-Status: TEMPLATE — NOT ACTIVE
+Status: ACTIVE
 
 ## Human / Agent boundary
 
@@ -37,7 +37,6 @@ Do not treat current buggy behavior as proof that it is intended.
 If documentation and implementation disagree, do not silently pick whichever is convenient. Preserve the working build, identify the conflict, and use the authority order in `00 - AGENT - READ ME FIRST.md`.
 
 ## Engine / platform baseline
-
 - Engine family: Godot `4.5.x`.
 - Current project feature level: Godot `4.5`.
 - Renderer: GL Compatibility.
@@ -78,12 +77,10 @@ The logical viewport and project-wide display settings are protected. Do not cha
 - `docs/root-branch-map.md`
 - `docs/game-concept-resolution.md`
 
-Protection is not a permanent ban on development. It is a requirement that the task scope, risk level and human authorization match the impact.
+Protection is not a permanent ban on development. It requires task scope, risk level and human authorization to match the impact.
 
 ## Preferred first automation zone
-
-Approved pilot sandbox path after activation:
-
+Approved pilot sandbox path:
 `res://scenes/test_scenes/ui_sandbox/`
 
 Rules:
@@ -102,26 +99,20 @@ Suggested components:
 These names are conventions for a future pilot, not verified existing production files.
 
 ## Task scope contract
-
 Every task must define objective, risk level, expected files, protected/out-of-scope areas, acceptance criteria and test plan.
-
 If implementation unexpectedly requires a protected-area change, do not silently expand scope.
 
 ## Human review triggers
-
 Mandatory when a change affects mechanics, story, economy, balance, save compatibility, autoload/global state, multiple major systems, broad public APIs, major scene/folder structure, dependencies/plugins, project/export settings, deletion/rename of existing assets, or large-scale refactors.
 
 ## No-guessing rule
-
 Missing design values remain `TBD`. Do not invent or silently borrow values from another system.
 
-## Activation gate
+## Activation record
+- Human-tested baseline commit: `fcb5dc24a74c3b5b2c23af9ad10676752e7532a1`.
+- Permanent checkpoint tag: `agent-baseline-2026-09-05`.
+- Human baseline smoke test: `PASSED`.
+- Protected paths and sandbox path: approved through activation preparation.
+- Game Director authorization: confirmed through the activation workflow conversation and merge sequence.
 
-This file becomes ACTIVE only after:
-1. Source-of-truth documents are synchronized with merged implementation.
-2. A human runtime smoke test confirms the selected baseline is healthy.
-3. A permanent known-good checkpoint/tag is created.
-4. Protected paths and sandbox path are accepted.
-5. The Game Director explicitly approves activation.
-
-Until then, this remains `TEMPLATE — NOT ACTIVE`.
+Default permission after activation remains `LEVEL 1 — ISOLATED / LOW-RISK`.

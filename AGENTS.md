@@ -1,16 +1,22 @@
 # TIME IS PRECIOUS — AGENT CONTROL ENTRYPOINT
 
-Status: TEMPLATE — NOT ACTIVE
+Status: ACTIVE
 
-This file and the control pack under `docs/agent-control/` are being staged for future agent governance. They are not yet active and do not grant an agent permission to modify the project.
+The agent-control pack under `docs/agent-control/` is active for coding-agent governance.
 
-When the Game Director later marks the control pack `ACTIVE`, agents must begin with:
+All agents must begin with:
 
 `docs/agent-control/00 - AGENT - READ ME FIRST.md`
 
-and follow the mandatory reading order defined there.
+and follow the mandatory reading order defined there before implementation work.
 
-Until activation:
-- Treat the control pack as review-only documentation.
-- Do not infer new permissions from these files.
-- Do not modify the control pack unless the Game Director explicitly asks for a control-pack update.
+Activation baseline:
+- Human-tested commit: `fcb5dc24a74c3b5b2c23af9ad10676752e7532a1`
+- Permanent checkpoint tag: `agent-baseline-2026-09-05`
+
+Active rules:
+- Default permission is `LEVEL 1 — ISOLATED / LOW-RISK` unless the Game Director authorizes a higher level.
+- Do not infer permissions beyond the assigned task and control pack.
+- Do not work directly on `main` or merge agent-authored work into `main`.
+- Human Game Director retains final merge authority.
+- Do not modify this control pack unless the Game Director explicitly requests a control-pack change.
