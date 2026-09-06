@@ -220,10 +220,14 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_m28rt")
 theme_override_styles/hover = SubResource("StyleBoxTexture_m28rt")
 text = "x25"
 
-[node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="InitialActions" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
 custom_minimum_size = Vector2(36, 10)
 layout_mode = 2
-size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
 theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
@@ -234,6 +238,20 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_bpamu")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_vpnuq")
 theme_override_styles/hover = SubResource("StyleBoxTexture_wyj1f")
 text = "confirm"
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
+custom_minimum_size = Vector2(36, 10)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_bpamu")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_vpnuq")
+theme_override_styles/hover = SubResource("StyleBoxTexture_wyj1f")
+text = "cancel"
 
 [node name="ConfirmActions" parent="MarginContainer" instance=ExtResource("2_ocpmg")]
 visible = false

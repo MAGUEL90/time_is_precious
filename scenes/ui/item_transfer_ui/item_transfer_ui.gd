@@ -5,12 +5,11 @@ signal transfer_back_requested()
 signal transfer_cancelled()
 
 @onready var title_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Header/TitleLabel
-@onready var close_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Header/CloseButton
-@onready var info_label: Label = $Root/Center/Window/MarginContainer/MainVBox/InfoLabel
 @onready var grid_container: GridContainer = $Root/Center/Window/MarginContainer/MainVBox/ScrollContainer/GridContainer
 @onready var selected_summary_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Footer/SelectedSummaryLabel
 @onready var back_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/BackButton
 @onready var confirm_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/ConfirmButton
+@onready var close_button: TextureButton = $Root/Center/Window/MarginContainer/MainVBox/Header/CloseButton
 
 var selected_items: Dictionary[String, int] = {}
 var source_items: Dictionary = {}
@@ -67,6 +66,7 @@ func _refresh_grid() -> void:
 		var item_slot: ItemSlot = slot_scene.instantiate()
 		grid_container.add_child(item_slot)
 		item_slot.set_item(item_id, qty, item_data.icon)
+		item_slot.set_right_click_action_enabled(true)
 		item_slot.slot_clicked.connect(_on_item_slot_clicked)
 		item_slot.slot_deposit_requested.connect(_on_item_slot_decrease_requested)
 

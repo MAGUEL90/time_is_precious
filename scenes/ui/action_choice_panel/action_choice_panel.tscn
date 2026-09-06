@@ -1,0 +1,87 @@
+[gd_scene load_steps=7 format=3 uid="uid://crv6vdqw1lj7m"]
+
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_t50w5"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_yk15v"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_vsm6h"]
+[ext_resource type="Script" uid="uid://cce626fraw2t4" path="res://scenes/ui/action_choice_panel/action_choice_panel.gd" id="3_yk15v"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_vsm6h"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4h2ug"]
+atlas = ExtResource("2_yk15v")
+region = Rect2(116, 7, 52, 40)
+
+[node name="ActionChoicePanel" type="NinePatchRect"]
+custom_minimum_size = Vector2(160, 48)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -90.0
+offset_bottom = -42.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_t50w5")
+texture = SubResource("AtlasTexture_4h2ug")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("3_yk15v")
+
+[node name="ContentMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="ContentVBox" type="VBoxContainer" parent="ContentMargin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="MessageLabel" type="Label" parent="ContentMargin/ContentVBox"]
+layout_mode = 2
+theme_type_variation = &"PanelTextSmall"
+text = "Choose an action."
+horizontal_alignment = 1
+
+[node name="ActionButtons" type="HBoxContainer" parent="ContentMargin/ContentVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="PrimaryButton" type="Button" parent="ContentMargin/ContentVBox/ActionButtons"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme = ExtResource("3_vsm6h")
+theme_type_variation = &"HudShortcutButton"
+text = "Confirm"
+
+[node name="SecondaryButton" type="Button" parent="ContentMargin/ContentVBox/ActionButtons"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme = ExtResource("3_vsm6h")
+theme_type_variation = &"HudShortcutButton"
+text = "Cancel"
+
+[node name="CloseButton" parent="." instance=ExtResource("5_vsm6h")]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -16.0
+offset_top = 5.0
+offset_right = -8.0
+offset_bottom = 13.0
+grow_horizontal = 0

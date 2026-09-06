@@ -17,6 +17,7 @@ var is_selected: bool = false
 var is_mouse_over: bool = false
 var hover_locked: bool = false
 var interaction_locked: bool = false
+var right_click_action_enabled: bool = false
 
 # Lifecycle
 
@@ -57,6 +58,28 @@ func _on_pressed() -> void:
 		return
 
 	slot_clicked.emit(_item_id, _quantity, self)
+
+func _gui_input(event: InputEvent) -> void:
+	var mouse_event: InputEventMouseButton = (
+		event as InputEventMouseButton
+	)
+	if mouse_event == null:
+		return
+	if not mouse_event.pressed:
+		return
+	if mouse_event.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	if not right_click_action_enabled:
+		return
+
+	accept_event()
+	if interaction_locked or _item_id.is_empty() or _quantity <= 0:
+		return
+
+	slot_deposit_requested.emit(_item_id, _quantity, self)
+
+func set_right_click_action_enabled(value: bool) -> void:
+	right_click_action_enabled = value
 
 func _get_drag_data(at_position: Vector2) -> Variant:
 	if interaction_locked:
@@ -113,6 +136,8 @@ func _on_mouse_exited() -> void:
 
 func set_selected(value: bool) -> void:
 	is_selected = value
+	if toggle_mode:
+		button_pressed = value
 	_refresh_target_lock_visibility()
 
 func set_hover_locked(value: bool) -> void:
