@@ -7,7 +7,7 @@
 script = ExtResource("1_8ru7d")
 id = "straw_bundle"
 display_name = "Straw Bundle"
-description = "A bundle of dry straw tied for work and shelter. Useful for roofs, bedding, and pretending the goats will not eat it."
+description = "Dry straw tied for shelter. The goats are already interested."
 icon = ExtResource("1_py51l")
 weight = 1.0
 base_value_shekel = 1

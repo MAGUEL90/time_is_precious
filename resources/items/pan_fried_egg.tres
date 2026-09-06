@@ -7,7 +7,11 @@
 script = ExtResource("1_su637")
 id = "pan_fried_egg"
 display_name = "Pan Fried Egg"
-description = "An egg fried hot over the village fire. Small meal, great comfort, and proof that chickens still serve the economy."
+description = "A hot fried egg. Small meal, great comfort, chicken economy."
 icon = ExtResource("1_tcwcb")
 weight = 0.1
+category = 1
+fatigue_reduction = 0.01
+hunger_reduction = 0.06
+food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

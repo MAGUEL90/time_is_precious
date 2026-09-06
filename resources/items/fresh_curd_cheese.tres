@@ -7,7 +7,11 @@
 script = ExtResource("1_auu5g")
 id = "fresh_curd_cheese"
 display_name = "Fresh Curd Cheese"
-description = "A soft young cheese, fresh from the morning work. Gentle on the tongue, unless the goat is still watching."
+description = "Fresh curd cheese. Soft, mild, and watched by one proud goat."
 icon = ExtResource("1_h8kxu")
-weight = 0.05
+weight = 0.25
+category = 1
+fatigue_reduction = 0.01
+hunger_reduction = 0.05
+food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

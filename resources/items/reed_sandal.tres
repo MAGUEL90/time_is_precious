@@ -7,6 +7,7 @@
 script = ExtResource("1_e61gy")
 id = "reed_sandal"
 display_name = "Reed_Sandal"
+description = "Reed sandals for dusty roads. Cheap, light, and mildly brave."
 icon = ExtResource("1_q3jxc")
-weight = 2.5
+weight = 0.5
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

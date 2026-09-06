@@ -7,7 +7,11 @@
 script = ExtResource("1_oxxmd")
 id = "barley_bread"
 display_name = "Barley Bread"
-description = "A tough little bread made from barley. Dry enough to humble a king, useful enough to keep a worker standing."
+description = "Hard barley bread. Dry, honest, and oddly reliable."
 icon = ExtResource("1_87f5q")
-weight = 1.0
+weight = 0.3
+category = 1
+fatigue_reduction = 0.01
+hunger_reduction = 0.07
+food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

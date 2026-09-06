@@ -7,7 +7,7 @@
 script = ExtResource("1_6yv2l")
 id = "stone"
 display_name = "Stone"
-description = "A common stone from the dusty ground. Not exciting, but civilization was not built from compliments."
+description = "A common stone. Dull, useful, and older than excuses."
 icon = ExtResource("1_q1oyt")
 weight = 1.0
 base_value_shekel = 0.1

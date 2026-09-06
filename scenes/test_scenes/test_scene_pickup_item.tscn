@@ -322,7 +322,7 @@ item_id = "stone"
 
 [node name="PickupItem28" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
 position = Vector2(153, 171)
-item_id = "stone_2"
+item_id = "large_stone"
 
 [node name="PickupItem29" parent="WorldObjects/Pickups" instance=ExtResource("5_37oof")]
 position = Vector2(176, 171)

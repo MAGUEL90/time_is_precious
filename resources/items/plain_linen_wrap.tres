@@ -7,6 +7,7 @@
 script = ExtResource("1_rcg8t")
 id = "plain_linen_wrap"
 display_name = "Plain Linen Wrap"
+description = "Simple linen cloth. Modest, useful, and not goat-approved."
 icon = ExtResource("1_c535x")
-weight = 1.5
+weight = 1.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

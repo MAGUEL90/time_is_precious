@@ -7,7 +7,7 @@
 script = ExtResource("1_kkuav")
 id = "sun_dried_mudbrick"
 display_name = "Sun Dried Mudbrick"
-description = "A mudbrick hardened under the cruel sun. Strong enough for walls, weak enough to fear rain like a merchant fears taxes."
+description = "Sun-dried mudbrick. Strong wall, weak rain courage."
 icon = ExtResource("1_r0jph")
 weight = 4.0
 max_stack = 60

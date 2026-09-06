@@ -7,12 +7,12 @@
 script = ExtResource("1_uopwk")
 id = "fresh_loaf"
 display_name = "Fresh Loaf"
-description = "A warm loaf baked for hungry hands. Simple food, but even kings stop complaining when their stomach is loud."
+description = "Warm bread for hungry hands. Even kings hush when fed."
 icon = ExtResource("1_hhaw1")
-weight = 0.08
+weight = 0.3
 category = 1
 base_value_shekel = 1
-fatigue_reduction = 0.02
-hunger_reduction = 0.01
+fatigue_reduction = 0.01
+hunger_reduction = 0.1
 food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

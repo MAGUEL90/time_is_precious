@@ -7,7 +7,7 @@
 script = ExtResource("1_tf5vk")
 id = "water_jar"
 display_name = "Water Jar"
-description = "A clay jar filled with precious water. Guard it well; the desert does not offer refunds."
+description = "A clay jar of water. Guard it; the desert gives no refunds."
 icon = ExtResource("1_3ujoq")
 weight = 3.0
 max_stack = 5

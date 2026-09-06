@@ -7,11 +7,12 @@
 script = ExtResource("1_j5k4w")
 id = "village_cheese"
 display_name = "Village Cheese"
-description = "A humble cheese made by village hands. Smells bold, tastes better, and may start a debate at the table."
+description = "Village cheese. Bold smell, good taste, instant table debate."
 icon = ExtResource("1_1isa2")
 weight = 0.5
 category = 1
 base_value_shekel = 1
 fatigue_reduction = 0.01
+hunger_reduction = 0.08
 food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

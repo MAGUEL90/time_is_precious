@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://btokpc721xeed" path="res://assets/temporer/ui/test panel 3.png" id="1_8y0qs"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_blffd"]
-[ext_resource type="Texture2D" uid="uid://w7m1la1ly2nl" path="res://assets/items/sun_dried_mudbrick.png" id="1_tomdw"]
+[ext_resource type="Texture2D" uid="uid://olcyusxq0qyi" path="res://assets/items/sun_dried_mudbrick.png" id="1_tomdw"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6svl1"]
 atlas = ExtResource("1_8y0qs")

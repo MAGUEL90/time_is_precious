@@ -7,7 +7,7 @@
 script = ExtResource("1_nuxe6")
 id = "simple_clothes"
 display_name = "Simple Clothes"
-description = "Plain clothes for honest labor. They will not impress nobles, but they will keep the sun from judging too harshly."
+description = "Plain work clothes. No noble charm, but the sun is kinder."
 icon = ExtResource("1_vrc0w")
 weight = 1.0
 category = 2
