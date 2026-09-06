@@ -7,7 +7,7 @@
 script = ExtResource("1_080l7")
 id = "copper_chunk"
 display_name = "Copper Chunk"
-description = "A rough chunk of copper-rich stone. The village calls it progress before the smith calls it work."
+description = "Rough copper-rich stone. Progress, after much hammering."
 icon = ExtResource("1_qwh1b")
-weight = 25.0
+weight = 5.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

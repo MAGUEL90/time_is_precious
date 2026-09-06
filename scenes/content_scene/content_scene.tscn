@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=21 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="Script" uid="uid://bw8euggk8mqya" path="res://scenes/content_scene/content_scene.gd" id="1_xdgwu"]
 [ext_resource type="PackedScene" uid="uid://qw2sc2h3urwo" path="res://scenes/city_spawner/city_spawner.tscn" id="2_7vn6b"]
@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="11_sr7c1"]
 [ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="11_v5dai"]
 [ext_resource type="PackedScene" uid="uid://c11gc83v7mjib" path="res://scenes/nightmare_world/nightmare_world.tscn" id="13_5jflu"]
+[ext_resource type="PackedScene" uid="uid://dt406ppk2d04o" path="res://scenes/ui/work_progress_ui/work_progress_ui.tscn" id="15_s8nia"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nji41"]
 texture = ExtResource("2_fwfww")
@@ -224,52 +225,39 @@ y_sort_enabled = true
 position = Vector2(-256, -208)
 
 [node name="PickupItem" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(180, -82)
-item_id = "wet_mudbrick"
-
-[node name="PickupItem2" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(180, -67)
-item_id = "wet_mudbrick"
-
-[node name="PickupItem3" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(180, -51)
-item_id = "wet_mudbrick"
-
-[node name="PickupItem4" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(195, -82)
+position = Vector2(150, -82)
 item_id = "water_jar"
+quantity = 5
 
 [node name="PickupItem5" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(195, -51)
-item_id = "water_jar"
+position = Vector2(150, -103)
+item_id = "wood_log"
+quantity = 5
 
 [node name="PickupItem6" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(195, -67)
-item_id = "water_jar"
+position = Vector2(166, -103)
+item_id = "reed_bundle"
+quantity = 5
 
-[node name="PickupItem7" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(164, -83)
-item_id = "straw_bundle"
-
-[node name="PickupItem8" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(164, -67)
-item_id = "straw_bundle"
-
-[node name="PickupItem9" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(164, -51)
-item_id = "straw_bundle"
-
-[node name="PickupItem10" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(149, -83)
+[node name="PickupItem2" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
+position = Vector2(166, -82)
 item_id = "clay_lump"
+quantity = 5
 
-[node name="PickupItem11" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(149, -67)
-item_id = "clay_lump"
+[node name="PickupItem3" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
+position = Vector2(182, -82)
+item_id = "straw_bundle"
+quantity = 5
 
-[node name="PickupItem12" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
-position = Vector2(149, -51)
-item_id = "clay_lump"
+[node name="PickupItem4" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
+position = Vector2(166, -67)
+item_id = "wet_mudbrick"
+quantity = 20
+
+[node name="PickupItem15" parent="YSortWorld/Pickups" instance=ExtResource("11_lvuy0")]
+position = Vector2(121, -96)
+item_id = "shekel"
+quantity = 10
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
 position = Vector2(-121, -305)
@@ -309,3 +297,5 @@ anchor_mode = 0
 [node name="BottomHUD" parent="." instance=ExtResource("11_v5dai")]
 
 [node name="InventoryUI" parent="." instance=ExtResource("10_7vn6b")]
+
+[node name="WorkProgressUI" parent="." instance=ExtResource("15_s8nia")]

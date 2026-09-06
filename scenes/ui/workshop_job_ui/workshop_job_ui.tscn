@@ -1,9 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://7wmkmvg1rw6o"]
+[gd_scene load_steps=8 format=3 uid="uid://7wmkmvg1rw6o"]
 
 [ext_resource type="Script" uid="uid://dg46sobrcmdyg" path="res://scenes/ui/workshop_job_ui/workshop_job_ui.gd" id="1_fmy6q"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_2dxbt"]
 [ext_resource type="PackedScene" uid="uid://dthjfx7bolaxo" path="res://scenes/ui/confirm_discard_panel/confirm_discard_panel.tscn" id="3_63tax"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_gmxkd"]
+[ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="4_separator"]
+[ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_close"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_l3gqy"]
 atlas = ExtResource("3_gmxkd")
@@ -79,24 +81,54 @@ text = "WORKSHOP JOB"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CloseButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
-custom_minimum_size = Vector2(22, 16)
+[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("5_close")]
 layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "X"
+size_flags_vertical = 0
 
-[node name="StatusLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+[node name="StatusRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="WorkerCountLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/StatusRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Workers: 0 | Minimum: 1"
+text = "Workers: 0"
+vertical_alignment = 1
+
+[node name="SeparatorIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/StatusRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MinimumLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/StatusRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Minimum: 1"
+vertical_alignment = 1
 
 [node name="JobLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Mudbrick Making"
+text = "Shape Wet Mudbricks"
+
+[node name="OutputLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Output: Wet Mudbrick x60"
 
 [node name="WorkerRequirementLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 visible = false
@@ -120,10 +152,6 @@ size_flags_vertical = 3
 [node name="Footer" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
 
-[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
 [node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
 custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
@@ -131,12 +159,24 @@ theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
 
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="StartButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
 custom_minimum_size = Vector2(44, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Start Job"
+
+[node name="RightSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightBalance" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
 
 [node name="ConfirmDiscardPanel" parent="Root/Center/TextureWindow" instance=ExtResource("3_63tax")]
 visible = false

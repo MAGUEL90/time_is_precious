@@ -1,5 +1,8 @@
 class_name WorkStateBootStrap extends Node
 
+const DRYING_MUDBRICK_PROCESS: ProcessData = preload(
+	"res://resources/process_data/drying_mudbrick.tres"
+	)
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -13,8 +16,14 @@ func _ready() -> void:
 	if has_node("/root/ProcessManager"):
 		var process_manager: Node = get_node("/root/ProcessManager")
 
-		if process_manager.has_method("register_station"):
-			process_manager.call("register_station", "drying_yard", 3)
+		if process_manager.has_method("register_process"):
+			process_manager.call(
+				"register_process",
+				DRYING_MUDBRICK_PROCESS
+			)
+
+		if has_node("/root/WorkshopFacilityManager"):
+			WorkshopFacilityManager.sync_process_stations()
 
 		# arahkan proses ambil & taruh item ke workshop jika ada # supaya drying chain jalan dari workshop
 		if has_node("/root/WorkShopStorage"):

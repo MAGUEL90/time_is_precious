@@ -7,6 +7,7 @@
 script = ExtResource("1_ma1ub")
 id = "wood_log"
 display_name = "Wood Log"
+description = "A sturdy wood log. Future fire, fence, or someone's back pain."
 icon = ExtResource("1_earcf")
 weight = 3.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

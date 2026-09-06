@@ -7,31 +7,22 @@ var work_manager: WorkManager = WorkManager
 var workshop_storage: WorkShopStorage = WorkShopStorage
 var process_manager: ProcessManager = ProcessManager
 
+const DRYING_PROCESS: ProcessData = preload(
+	"res://resources/process_data/drying_mudbrick.tres"
+)
+
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
 
 func _setup_process_data() -> void:
-	# Registrasi station kalau belum
-	if process_manager.has_method("register_station"):
-		process_manager.call("register_station", "drying_yard", 3)
+	# Bangun Drying Yard level 3 agar semua slot tersedia di smoke test.
+	WorkshopFacilityManager.set_facility_level("drying_yard", 3)
 	
-	# Buat ProcessData secara runtime untuk tes
-	var drying_process: ProcessData = ProcessData.new()
-	drying_process.process_id = "drying_mudbrick" # id proses
-	drying_process.display_name = "Drying Mudbrick" # tampilan nama
-	drying_process.input_item_id = "wet_mudbrick" # input
-	drying_process.output_item_id = "sun_dried_mudbrick" # output
-	drying_process.base_duration_minutes = 60 # dipercepat untuk test 60 menit
-	drying_process.required_station_id = "drying_yard" # butuh drying yard
-	
-	# Cuaca mempengaruhi durasi (opsional)
-	drying_process.weather_speed_multiplier = {"clear": 1.0, "cloudy": 1.2, "storm": 2.0}
-	
-	# Daftarkan proses, auto-pull ON, batch size 20
+	# Gunakan data proses yang sama dengan gameplay. Drying tetap manual.
 	if process_manager.has_method("register_process"):
-		process_manager.call("register_process", drying_process, true, 20) # auto-pull wet_mudbrick
+		process_manager.call("register_process", DRYING_PROCESS)
 	# penting: auto-pull harus melihat wet_mudbrick di workshop, bukan di inventory player
 	if process_manager.has_method("set_source_item_store"):
 		process_manager.call("set_source_item_store", workshop_storage)
@@ -56,7 +47,7 @@ func _run_simulation() -> void:
 	mudbrick_job.display_name = "Mudbrick Making"
 	mudbrick_job.base_duration_minutes = 30 # durasi job 10 menit untuk test
 	mudbrick_job.inputs = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
-	mudbrick_job.outputs = {"wet_mudbrick": 60}  # output intermediate 60 bata basah
+	mudbrick_job.outputs = {"wet_mudbrick": 20}
 
 	# Mulai job sebagai PLAYER
 	var order_id: String = ""

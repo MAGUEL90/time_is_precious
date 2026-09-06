@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cbatpkpx71plg"
-path="res://.godot/imported/stone_2.png-c4115975f5243c425fa551924875b91c.ctex"
+uid="uid://cjg0d64y8v4yv"
+path="res://.godot/imported/worker_icon_inactive.png-3d8259fd922044ba9526f22ca3bb123e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/items/stone_2.png"
-dest_files=["res://.godot/imported/stone_2.png-c4115975f5243c425fa551924875b91c.ctex"]
+source_file="res://assets/ui/ui_icon/worker_icon_inactive.png"
+dest_files=["res://.godot/imported/worker_icon_inactive.png-3d8259fd922044ba9526f22ca3bb123e.ctex"]
 
 [params]
 

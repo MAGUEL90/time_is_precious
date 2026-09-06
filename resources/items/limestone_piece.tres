@@ -7,7 +7,7 @@
 script = ExtResource("1_qxcd0")
 id = "limestone_piece"
 display_name = "Limestone Piece"
-description = "A pale piece of limestone, useful for stronger building work. Softer than pride, harder than excuses."
+description = "Pale limestone for sturdy work. Softer than pride."
 icon = ExtResource("1_aa378")
-weight = 25.0
+weight = 8.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

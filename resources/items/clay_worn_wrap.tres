@@ -7,6 +7,7 @@
 script = ExtResource("1_t0mox")
 id = "clay_worn_wrap"
 display_name = "Clay Worn Wrap"
+description = "A clay-stained wrap. Poor finery, honest proof of work."
 icon = ExtResource("1_wnoe7")
-weight = 1.5
+weight = 1.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

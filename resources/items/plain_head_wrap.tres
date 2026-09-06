@@ -7,6 +7,7 @@
 script = ExtResource("1_8nfa1")
 id = "plain_head_wrap"
 display_name = "Plain Head Wrap"
+description = "A plain head wrap. Keeps dust out and thoughts mostly in."
 icon = ExtResource("1_5bxdc")
-weight = 1.0
+weight = 0.5
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

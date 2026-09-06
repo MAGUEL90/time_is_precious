@@ -1,0 +1,182 @@
+[gd_scene load_steps=9 format=3 uid="uid://di6jj2fsnafhc"]
+
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_xymdf"]
+[ext_resource type="Script" uid="uid://cxvjie85qyoxo" path="res://scenes/ui/production_info_panel/production_info_panel.gd" id="2_5rlu8"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_mc8l3"]
+[ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="4_arrow"]
+[ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="5_separator"]
+[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="6_shekel"]
+[ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="7_close"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pww13"]
+atlas = ExtResource("3_mc8l3")
+region = Rect2(199, 51, 138, 44)
+
+[node name="ProductionInfoPanel" type="Control"]
+custom_minimum_size = Vector2(184, 64)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 138.0
+offset_bottom = 104.0
+pivot_offset = Vector2(69, 52)
+mouse_filter = 2
+theme = ExtResource("1_xymdf")
+script = ExtResource("2_5rlu8")
+
+[node name="TextureRect" type="NinePatchRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("AtlasTexture_pww13")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(115, 28)
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="DetailVBox" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ProcessNameLabel" type="Label" parent="MarginContainer/DetailVBox/Header"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_vertical = 1
+size_flags_horizontal = 3
+theme_type_variation = &"InventoryTextSmall"
+text = "Sun-Dry Wet Mudbricks"
+vertical_alignment = 1
+autowrap_mode = 3
+clip_text = true
+max_lines_visible = 2
+
+[node name="CloseButton" parent="MarginContainer/DetailVBox/Header" instance=ExtResource("7_close")]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="InputLabel" type="Label" parent="MarginContainer/DetailVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_vertical = 1
+theme_type_variation = &"InventoryTextSmall"
+vertical_alignment = 1
+autowrap_mode = 3
+max_lines_visible = 2
+
+[node name="OutputRow" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ArrowIcon" type="TextureRect" parent="MarginContainer/DetailVBox/OutputRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OutputLabel" type="Label" parent="MarginContainer/DetailVBox/OutputRow"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"InventoryTextSmall"
+text = "Output: Sun-Dried Mudbrick x15"
+vertical_alignment = 1
+autowrap_mode = 3
+max_lines_visible = 2
+
+[node name="RequirementRow" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+layout_mode = 2
+
+[node name="RequirementLabel" type="Label" parent="MarginContainer/DetailVBox/RequirementRow"]
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "Drying Yard"
+
+[node name="CapacityRow" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="UsageLabel" type="Label" parent="MarginContainer/DetailVBox/CapacityRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "Uses 1 slot"
+vertical_alignment = 1
+max_lines_visible = 2
+
+[node name="SeparatorIcon" type="TextureRect" parent="MarginContainer/DetailVBox/CapacityRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CapacityLabel" type="Label" parent="MarginContainer/DetailVBox/CapacityRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "Free 3/3"
+vertical_alignment = 1
+max_lines_visible = 2
+
+[node name="FeeRow" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="FeeTitleLabel" type="Label" parent="MarginContainer/DetailVBox/FeeRow"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "Workshop rent"
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="MarginContainer/DetailVBox/FeeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CurrencyIcon" type="TextureRect" parent="MarginContainer/DetailVBox/FeeRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"InventoryTextSmall"
+texture = ExtResource("6_shekel")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FeeAmountLabel" type="Label" parent="MarginContainer/DetailVBox/FeeRow"]
+custom_minimum_size = Vector2(12, 8)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "2"
+horizontal_alignment = 2
+vertical_alignment = 1

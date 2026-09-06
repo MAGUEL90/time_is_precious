@@ -1,6 +1,7 @@
 class_name PickUpItem extends Node2D
 
 const ITEM_CHANGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/item_change_popup/item_change_popup.tscn")
+const INVENTORY_FULL_COLOR: Color = Color(1.0, 0.0, 0.18, 1.0)
 
 var player_reff: Player
 
@@ -19,6 +20,7 @@ var icon_default_modulate: Color
 var is_collecting: bool = false
 var collecting_tween: Tween
 var shake_tween: Tween
+var is_player_in_interaction_range: bool = false
 
 # Lifecycle
 
@@ -42,6 +44,21 @@ func _ready() -> void:
 	if player_reff:
 		interactable_component.interactable_activated.connect(player_reff._on_interactable_activated.bind(self))
 		interactable_component.interactable_deactivated.connect(player_reff._on_interactable_deactivated.bind(self))
+
+	if (
+		Inventory != null
+		and Inventory.has_signal("items_changed")
+		and not Inventory.items_changed.is_connected(_on_inventory_items_changed)
+	):
+		Inventory.items_changed.connect(_on_inventory_items_changed)
+
+func _exit_tree() -> void:
+	if (
+		Inventory != null
+		and Inventory.has_signal("items_changed")
+		and Inventory.items_changed.is_connected(_on_inventory_items_changed)
+	):
+		Inventory.items_changed.disconnect(_on_inventory_items_changed)
 
 # Idle Feedback
 
@@ -99,18 +116,16 @@ func _spawn_pickup_popup(player: Player) -> void:
 # Interaction Focus Feedback
 
 func on_player_enter_interaction() -> void:
-	if not Inventory.has_capacity_for(item_id, quantity):
-		interactable_label_component.label.add_theme_color_override("font_color", Color(1.0, 0.0, 0.18, 1.0))
-		interactable_label_component.set_text("Inventory Full")
-
-	else:
-		interactable_label_component.set_text("E")
-		_play_focus_highlight()
+	is_player_in_interaction_range = true
+	_refresh_interaction_feedback()
 
 
 func on_player_exit_interaction() -> void:
+	is_player_in_interaction_range = false
 	if is_collecting:
 		return
+
+	interactable_label_component.label.remove_theme_color_override("font_color")
 
 	if highlight_tween and highlight_tween.is_valid():
 		highlight_tween.kill()
@@ -118,6 +133,42 @@ func on_player_exit_interaction() -> void:
 	highlight_tween = create_tween()
 	highlight_tween.set_parallel()
 	highlight_tween.tween_property(icon, "modulate", icon_default_modulate, 0.1)
+
+func _on_inventory_items_changed() -> void:
+	if not is_player_in_interaction_range or is_collecting:
+		return
+	_refresh_interaction_feedback()
+
+func _refresh_interaction_feedback() -> void:
+	var has_capacity: bool = (
+		Inventory != null
+		and Inventory.has_capacity_for(item_id, quantity)
+	)
+
+	if not has_capacity:
+		interactable_label_component.label.add_theme_color_override(
+			"font_color",
+			INVENTORY_FULL_COLOR
+		)
+		interactable_label_component.set_text("Inventory Full")
+		_restore_default_highlight()
+		return
+
+	interactable_label_component.label.remove_theme_color_override("font_color")
+	interactable_label_component.set_text("E")
+	_play_focus_highlight()
+
+func _restore_default_highlight() -> void:
+	if highlight_tween and highlight_tween.is_valid():
+		highlight_tween.kill()
+
+	highlight_tween = create_tween()
+	highlight_tween.tween_property(
+		icon,
+		"modulate",
+		icon_default_modulate,
+		0.1
+	)
 
 
 func _play_focus_highlight() -> void:

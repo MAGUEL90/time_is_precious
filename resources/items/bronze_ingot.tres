@@ -7,7 +7,7 @@
 script = ExtResource("1_nub3j")
 id = "bronze_ingot"
 display_name = "Bronze Ingot"
-description = "A clean metal ingot shaped with careful hands. Shiny enough to impress merchants, heavy enough to remind them it is real."
+description = "A clean bronze ingot. Shiny, heavy, and merchant-approved."
 icon = ExtResource("1_v3526")
-weight = 50.0
+weight = 10.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

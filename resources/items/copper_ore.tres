@@ -7,7 +7,7 @@
 script = ExtResource("1_yts71")
 id = "copper_ore"
 display_name = "Copper Ore"
-description = "A rough stone hiding a little bronze-age ambition. Not useful yet, but every better tool begins somewhere."
+description = "Copper ore with ambition. Tools do begin as stubborn rocks."
 icon = ExtResource("1_xprar")
-weight = 15.0
+weight = 8.0
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

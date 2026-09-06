@@ -9,7 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://by0hjklyfb7kn" path="res://assets/characters/shared_assets/cloth_assets/plain_worn_wrap/walk/walk.png" id="7_5bq36"]
 [ext_resource type="Texture2D" uid="uid://dgu0tru16nmo5" path="res://assets/characters/shared_assets/head_assets/idle/light/base/light.png" id="8_j6epr"]
 [ext_resource type="Texture2D" path="res://assets/characters/shared_assets/hand_assets/light/light.png" id="9_cche1"]
-[ext_resource type="Texture2D" uid="uid://cshm5mrpc1qcv" path="res://assets/characters/shared_assets/hair_assets/idle/black/male/01.png" id="10_rp35k"]
+[ext_resource type="Texture2D" uid="uid://67q3veotmkh0" path="res://assets/characters/shared_assets/hair_assets/idle/black/male/01.png" id="10_rp35k"]
 [ext_resource type="Texture2D" uid="uid://bpvudqll5hq75" path="res://assets/characters/shared_assets/accessories_assets/farmer_hat/farmer_hat.png" id="11_6guxl"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_wjwb0"]

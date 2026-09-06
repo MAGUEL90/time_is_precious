@@ -1,14 +1,25 @@
-[gd_scene load_steps=5 format=3 uid="uid://4yof1crcrd2u"]
+[gd_scene load_steps=11 format=3 uid="uid://4yof1crcrd2u"]
 
 [ext_resource type="Script" uid="uid://cmv6qr3uuhsyc" path="res://scenes/work_shop/work_shop.gd" id="1_spw5o"]
+[ext_resource type="Script" uid="uid://mte3wqsqhem0" path="res://resources/job_data/job_data.gd" id="2_3fmud"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="3_2xuj5"]
+[ext_resource type="Resource" uid="uid://dtwxjv6s04vaa" path="res://resources/job_data/mudbrick_make.tres" id="3_legag"]
+[ext_resource type="Script" uid="uid://b0f36pxgsx03w" path="res://resources/process_data/process_data.gd" id="4_bnmcp"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="4_dv5t0"]
+[ext_resource type="Resource" uid="uid://dtchq2aug7c1v" path="res://resources/process_data/drying_mudbrick.tres" id="5_1w5fp"]
+[ext_resource type="Texture2D" uid="uid://bw8w2px6deh25" path="res://assets/objects/meja_rusak.png" id="8_legag"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_3fmud"]
-radius = 26.019224
+radius = 20.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_legag"]
+radius = 8.923988
+height = 28.128658
 
 [node name="WorkShop" type="Node2D"]
 script = ExtResource("1_spw5o")
+available_jobs = Array[ExtResource("2_3fmud")]([ExtResource("3_legag")])
+available_processes = Array[ExtResource("4_bnmcp")]([ExtResource("5_1w5fp")])
 
 [node name="InteractableComponent" parent="." instance=ExtResource("3_2xuj5")]
 
@@ -22,3 +33,11 @@ offset_right = -5.0
 offset_bottom = -45.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("8_legag")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(0.11679256, 0)
+rotation = -1.5755427
+shape = SubResource("CapsuleShape2D_legag")

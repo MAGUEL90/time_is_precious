@@ -16,7 +16,6 @@ const ITEM_ACTION_CONFIRM_PANEL_SCENE: PackedScene = preload("res://scenes/ui/it
 const PICKUP_ITEM_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const CATEGORY_ALL: int = -1
 const ITEMS_PER_PAGE: int = 15
-const ITEM_INFO_PANEL_SIZE: Vector2 = Vector2(138, 104)
 const ITEM_INFO_PANEL_GAP: float = 4.0
 const OPTION_PANEL_GAP: float = 4.0
 const OPTION_PANEL_Y_OFFSET: float = -4.0
@@ -29,13 +28,9 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var worker_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer/VBoxContainer/WorkerList
 @onready var category_selector: InventoryCategorySelector = $Root/Center/Window/Margin/MainVBox/HeaderRow/InventoryCategorySelector
 @onready var page_selector: InventoryPageSelector = $Root/Center/Window/Margin/MainVBox/InventoryPageSelector
-@onready var item_info_panel: Control = $Root/ItemInfoPanelRoot
-@onready var item_info_name_label: Label = $Root/ItemInfoPanelRoot/MarginContainer/LabelContainer/NameLabel
-@onready var item_info_category_label: Label = $Root/ItemInfoPanelRoot/MarginContainer/LabelContainer/CategoryWeightContainer/CategoryLabel
-@onready var item_info_weight_label: Label = $Root/ItemInfoPanelRoot/MarginContainer/LabelContainer/CategoryWeightContainer/WeightLabel
-@onready var item_info_description_label: Label = $Root/ItemInfoPanelRoot/MarginContainer/LabelContainer/DescriptionLabel
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
+@onready var item_info_panel: ItemInfoPanel = $Root/ItemInfoPanelRoot
 
 var player_ref: Player
 var current_category: int = CATEGORY_ALL
@@ -54,10 +49,7 @@ func _ready() -> void:
 	player_ref = get_tree().get_first_node_in_group("player")
 
 	visible = false
-	item_info_panel.custom_minimum_size = ITEM_INFO_PANEL_SIZE
-	item_info_panel.size = ITEM_INFO_PANEL_SIZE
-	item_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	item_info_panel.visible = false
+	item_info_panel.clear_item()
 	action_feedback_label.modulate.a = 0.0
 
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -136,7 +128,7 @@ func close_inventory() -> void:
 	_close_inventory_floating_panels()
 
 	get_tree().paused = false
-	item_info_panel.visible = false
+	item_info_panel.clear_item()
 	visible = false
 
 # Inventory grid
@@ -148,7 +140,7 @@ func _refresh_inventory_grid() -> void:
 		return
 
 	_close_inventory_floating_panels()
-	item_info_panel.visible = false
+	item_info_panel.clear_item()
 
 	for child in grid.get_children():
 		child.queue_free()
@@ -286,7 +278,7 @@ func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
 	if active_option_panel != null and is_instance_valid(active_option_panel):
 		return
 
-	item_info_panel.visible = false
+	item_info_panel.clear_item()
 
 # Drag and drop
 
@@ -373,7 +365,7 @@ func _refresh_worker_list() -> void:
 			continue
 		var worker_data: WorkerData = worker as WorkerData
 		var label: Label = Label.new()
-		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%% | REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
+		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%%, REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
 			worker_data.display_name,_get_worker_profession_name(worker_data.profession), worker_data.profession_star,
 			_get_worker_work_status_text(worker_data),
 			roundi(worker_data.satisfaction * 100.0), roundi(worker_data.reliability * 100.0),
@@ -408,23 +400,6 @@ func _get_worker_work_status_text(worker_data: WorkerData) -> String:
 func _get_need_text(is_fulfilled: bool) -> String:
 	return "OK" if is_fulfilled else "NO"
 
-# Display helpers
-
-func _get_item_category_text(category: ItemEnums.ItemCategory) -> String:
-	match category:
-		ItemEnums.ItemCategory.RESOURCE:
-			return "RESOURCE"
-		ItemEnums.ItemCategory.CONSUMABLE:
-			return "FOOD"
-		ItemEnums.ItemCategory.EQUIPMENT:
-			return "EQUIP"
-		ItemEnums.ItemCategory.PLACEABLE:
-			return "Build"
-		ItemEnums.ItemCategory.KEY_ITEM:
-			return "QUEST"
-		_:
-			return "UNKNOWN"
-
 # Category and page navigation
 
 func _on_category_changed(category: int) -> void:
@@ -446,7 +421,7 @@ func _close_option_panel() -> void:
 	_clear_active_option_slot()
 	_set_slots_hover_locked(false)
 	_set_slots_interaction_locked(false)
-	item_info_panel.visible = false
+	item_info_panel.clear_item()
 
 func _position_option_panel_near_slot(slot_ref: ItemSlot) -> void:
 	if active_option_panel == null or not is_instance_valid(active_option_panel):
@@ -488,29 +463,20 @@ func _clear_active_option_slot() -> void:
 # Item information panel
 
 func _show_item_info(item_id: String, _slot_ref: ItemSlot = null) -> void:
-	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-	if item_data == null:
+	if not item_info_panel.display_item(item_id):
 		return
 
-	item_info_name_label.text = item_data.display_name
-	item_info_category_label.text = "category: %s" % _get_item_category_text(item_data.category)
-	item_info_weight_label.text = "weight: %.2f" % item_data.weight
-	item_info_description_label.text = item_data.description if not item_data.description.is_empty() else "-"
-
 	_position_item_info_panel()
-	item_info_panel.visible = true
 
 func _position_item_info_panel() -> void:
 	if inventory_window == null or item_info_panel == null:
 		return
 
-	item_info_panel.custom_minimum_size = ITEM_INFO_PANEL_SIZE
-	item_info_panel.size = ITEM_INFO_PANEL_SIZE
-
 	var window_rect: Rect2 = inventory_window.get_global_rect()
+	var panel_size: Vector2 = item_info_panel.size
 	var panel_position: Vector2 = Vector2(
 		window_rect.position.x + window_rect.size.x + ITEM_INFO_PANEL_GAP,
-		window_rect.position.y + (window_rect.size.y - ITEM_INFO_PANEL_SIZE.y) * 0.5
+		window_rect.position.y + (window_rect.size.y - panel_size.y) * 0.5
 	)
 	item_info_panel.global_position = panel_position.round()
 

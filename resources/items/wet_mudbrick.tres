@@ -7,7 +7,7 @@
 script = ExtResource("1_ihs4t")
 id = "wet_mudbrick"
 display_name = "Wet Mudbrick"
-description = "A fresh mudbrick still soft from shaping. Give it sun and patience, not footsteps and poor planning."
+description = "Fresh wet mudbrick. Needs sun, patience, and no footsteps."
 icon = ExtResource("1_ws8r1")
 weight = 5.0
 max_stack = 5

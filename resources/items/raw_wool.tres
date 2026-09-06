@@ -7,6 +7,7 @@
 script = ExtResource("1_qrxda")
 id = "raw_wool"
 display_name = "Raw Wool"
+description = "Raw wool from a patient sheep. Soft now, suspicious later."
 icon = ExtResource("1_46mkq")
-weight = 0.1
+weight = 0.5
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

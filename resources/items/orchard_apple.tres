@@ -7,12 +7,12 @@
 script = ExtResource("1_lgkwg")
 id = "orchard_apple"
 display_name = "Orchard Apple"
-description = "A crisp fruit from the village orchard. Sweet, round, and far less troublesome than most people."
+description = "A crisp orchard apple. Sweet, round, and low on drama."
 icon = ExtResource("1_b6rim")
-weight = 0.02
+weight = 0.1
 category = 1
 base_value_shekel = 1
-fatigue_reduction = 0.02
-hunger_reduction = 0.1
+fatigue_reduction = 0.01
+hunger_reduction = 0.05
 food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

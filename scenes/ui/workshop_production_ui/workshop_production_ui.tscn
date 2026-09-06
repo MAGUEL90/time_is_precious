@@ -1,0 +1,178 @@
+[gd_scene load_steps=9 format=3 uid="uid://dl8pdt1lo5iwa"]
+
+[ext_resource type="Script" uid="uid://bx6jqf3xqhkla" path="res://scenes/ui/workshop_production_ui/workshop_production_ui.gd" id="1_28385"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2_2gdqy"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_4ltvf"]
+[ext_resource type="PackedScene" uid="uid://c5ewkwbkc6y47" path="res://scenes/ui/work_order_card/work_order_card.tscn" id="3_k3f0b"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_422uc"]
+[ext_resource type="PackedScene" uid="uid://di6jj2fsnafhc" path="res://scenes/ui/production_info_panel/production_info_panel.tscn" id="8_3fpab"]
+[ext_resource type="PackedScene" uid="uid://crv6vdqw1lj7m" path="res://scenes/ui/action_choice_panel/action_choice_panel.tscn" id="9_confirm"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1wrtx"]
+atlas = ExtResource("2_2gdqy")
+region = Rect2(1, 1, 168, 134)
+
+[node name="WorkshopProductionUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_28385")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureWindow" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(270, 155)
+layout_mode = 2
+texture = SubResource("AtlasTexture_1wrtx")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/TextureWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("3_4ltvf")
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "PRODUCTION"
+
+[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("4_422uc")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="InfoLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+theme = ExtResource("3_4ltvf")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Choose a work order."
+
+[node name="Body" type="CenterContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="WorkOrderGrid" type="GridContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body"]
+layout_mode = 2
+theme_override_constants/h_separation = 4
+columns = 3
+
+[node name="LockedCard" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/WorkOrderGrid" instance=ExtResource("3_k3f0b")]
+layout_mode = 2
+disabled = true
+card_title = "Locked"
+progression_locked = true
+
+[node name="RequirementLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("3_4ltvf")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Select a work order to view requirements."
+vertical_alignment = 1
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme = ExtResource("3_4ltvf")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NextButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme = ExtResource("3_4ltvf")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+disabled = true
+text = "Next"
+
+[node name="ProductionInfoPanel" parent="Root" instance=ExtResource("8_3fpab")]
+layout_mode = 0
+offset_right = 184.0
+
+[node name="ProcessConfirmOverlay" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Dim" type="ColorRect" parent="Root/ProcessConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="Center" type="CenterContainer" parent="Root/ProcessConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ProcessConfirmPanel" parent="Root/ProcessConfirmOverlay/Center" instance=ExtResource("9_confirm")]
+custom_minimum_size = Vector2(240, 64)
+layout_mode = 2

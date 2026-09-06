@@ -1,8 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://d34dky1ificrb"]
+[gd_scene load_steps=7 format=3 uid="uid://d34dky1ificrb"]
 
 [ext_resource type="Script" uid="uid://b3d0mmwbc2332" path="res://scenes/ui/item_transfer_ui/item_transfer_ui.gd" id="1_dhvkw"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_0bjeb"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_cxbgh"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_cxbgh"]
+[ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="5_separator"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_e28vu"]
 atlas = ExtResource("3_cxbgh")
@@ -79,18 +81,78 @@ text = "Transfer Items"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CloseButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Header"]
-custom_minimum_size = Vector2(22, 16)
+[node name="CloseButton" parent="Root/Center/Window/MarginContainer/MainVBox/Header" instance=ExtResource("4_cxbgh")]
 layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "X"
+size_flags_vertical = 4
 
-[node name="InfoLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox"]
+[node name="InstructionRow" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
+custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="LeftClickLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Select items to transfer"
+text = "Left: +"
+vertical_alignment = 1
+
+[node name="Separator1" type="TextureRect" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RightClickLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Right: -"
+vertical_alignment = 1
+
+[node name="Separator2" type="TextureRect" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ShiftLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Shift x10"
+vertical_alignment = 1
+
+[node name="Separator3" type="TextureRect" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CtrlLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/InstructionRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Ctrl x50"
+vertical_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2

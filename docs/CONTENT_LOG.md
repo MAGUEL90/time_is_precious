@@ -277,7 +277,7 @@ Content note:
 
 ### E. Workshop and Mudbrick Production Loop
 
-Status: `Backlog`
+Status: `Implementation Complete - Manual Playtest Pending`
 
 Relevant PRs:
 - PR #68.
@@ -291,7 +291,13 @@ Current implemented content:
 - Check profession and material requirements.
 - Start mudbrick work.
 - Advance time.
-- Produce claimable `wet_mudbrick`.
+- Produce locked `wet_mudbrick` as Held Output.
+- Pay an output fee to convert Held Output into Free Stock.
+- Dry full batches of 20 Wet Mudbricks into Sun-Dried Mudbricks.
+- Configure Shape and Drying fee amount/currency from their data resources.
+- Keep Free Stock and Held Output separate in Workshop Storage.
+- Block new workshop production while a Pending Delivery needs space.
+- Keep item-level and Pay All fee actions inside Workshop Storage; Pay All only affects visible Held Output.
 - Apply worker needs, satisfaction, reliability, and service fee rules.
 
 Recommended content structure:
@@ -311,11 +317,17 @@ Content 2 - `Making the First Mudbricks`
 Start the job
 -> Advance time
 -> Show job completion
--> Claim wet mudbrick output
+-> Pay the Shape fee to unlock Wet Mudbrick
+-> Start a full Drying batch from Free Stock
+-> Pay the Drying fee
+-> Withdraw the finished Sun-Dried Mudbrick
 ```
 
 Important boundary:
-- The player-facing drying path to `sun_dried_mudbrick` is not complete enough for a final full-chain claim.
+- Held Output cannot be withdrawn or used as process input.
+- Pending Delivery is not extra storage; it blocks new work until workshop capacity is available.
+- Pending Delivery cannot be paid before it enters physical storage as Held Output.
+- Pending Delivery does not start its fee deadline or overdue penalty until it becomes Held Output.
 
 ### F. Immigration and Growing Population
 
@@ -374,8 +386,12 @@ Current state:
 Status: `Blocked`
 
 Current state:
-- Wet mudbrick production exists.
-- The final player-facing claim, drying, and visible progression path is still incomplete.
+- Shape produces Wet Mudbrick as fee-locked Held Output.
+- Paid Wet Mudbrick becomes processable Free Stock.
+- Drying consumes full batches of 20 and produces fee-locked Sun-Dried Mudbrick.
+- Workshop Storage exposes Free Stock, Held Output, shared capacity, and Pending Delivery state.
+- The Godot 4.5.1 integration test passes for Shape, fee unlock, Drying, Held Output, Free Stock, and Pending Delivery rules.
+- The Workshop Storage scene loads without runtime node errors; final F6 visual and interaction validation remains.
 
 ### Public Demo Release
 

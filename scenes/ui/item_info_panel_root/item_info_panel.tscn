@@ -1,0 +1,101 @@
+[gd_scene load_steps=5 format=3 uid="uid://cyh2espirvxvn"]
+
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="1_rjnhm"]
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="1_xk3dt"]
+[ext_resource type="Script" uid="uid://b4bg08urg8dip" path="res://scenes/ui/item_info_panel_root/item_info_panel.gd" id="2_ki5xe"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pww13"]
+atlas = ExtResource("1_rjnhm")
+region = Rect2(199, 51, 138, 44)
+
+[node name="ItemInfoPanelRoot" type="Control"]
+custom_minimum_size = Vector2(184, 0)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 138.0
+offset_bottom = 104.0
+pivot_offset = Vector2(69, 52)
+theme = ExtResource("1_xk3dt")
+script = ExtResource("2_ki5xe")
+
+[node name="TextureRect" type="NinePatchRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("AtlasTexture_pww13")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(115, 28)
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="LabelContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="MarginContainer/LabelContainer"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_vertical = 1
+theme_type_variation = &"InventoryTextSmall"
+text = "name: sun dried mudbrick"
+vertical_alignment = 1
+autowrap_mode = 3
+clip_text = true
+max_lines_visible = 2
+
+[node name="CategoryWeightContainer" type="HBoxContainer" parent="MarginContainer/LabelContainer"]
+layout_mode = 2
+
+[node name="CategoryLabel" type="Label" parent="MarginContainer/LabelContainer/CategoryWeightContainer"]
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "category"
+
+[node name="Spacer" type="Control" parent="MarginContainer/LabelContainer/CategoryWeightContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WeightLabel" type="Label" parent="MarginContainer/LabelContainer/CategoryWeightContainer"]
+custom_minimum_size = Vector2(44, 8)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "weight:"
+horizontal_alignment = 2
+
+[node name="EffectLabel" type="Label" parent="MarginContainer/LabelContainer"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "effect: none"
+autowrap_mode = 3
+clip_text = true
+max_lines_visible = 2
+
+[node name="DescriptionLabel" type="Label" parent="MarginContainer/LabelContainer"]
+custom_minimum_size = Vector2(172, 0)
+layout_mode = 2
+theme_type_variation = &"InventoryTextSmall"
+text = "ini deskripsi ..."
+autowrap_mode = 3
+clip_text = true
+text_overrun_behavior = 4
+max_lines_visible = 4

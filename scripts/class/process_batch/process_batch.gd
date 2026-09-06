@@ -1,4 +1,4 @@
-class_name ProcessBatch extends Node
+class_name ProcessBatch extends RefCounted
 
 enum BatchStatus {QUEUE, RUNNING, DONE, FAILED} # status khusus proses
 
@@ -12,3 +12,4 @@ var duration_minutes: int = 0
 var slot_index: int = -1
 var progress_minutes: int = 0
 var status: int = BatchStatus.QUEUE
+var fee_ids: Array[String] = []

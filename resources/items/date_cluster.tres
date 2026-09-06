@@ -7,7 +7,11 @@
 script = ExtResource("1_fq648")
 id = "date_cluster"
 display_name = "Date Cluster"
-description = "Sweet dates from a patient palm. Chewy enough to slow complaints, sweet enough to keep workers moving."
+description = "Sweet dates from a patient palm. Small mercy under harsh sun."
 icon = ExtResource("1_lnbed")
 weight = 0.1
+category = 1
+fatigue_reduction = 0.01
+hunger_reduction = 0.04
+food_supply_value = 1
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

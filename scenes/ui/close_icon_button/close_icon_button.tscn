@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://tpjiw5abudfv"]
+
+[ext_resource type="Texture2D" uid="uid://dyld4k7lvu07x" path="res://assets/ui/ui_icon/close_button_animation.png" id="1_vosdb"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fa0y7"]
+atlas = ExtResource("1_vosdb")
+region = Rect2(20, 4, 8, 8)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hmmjt"]
+atlas = ExtResource("1_vosdb")
+region = Rect2(4, 4, 8, 8)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sonhi"]
+atlas = ExtResource("1_vosdb")
+region = Rect2(36, 4, 8, 8)
+
+[node name="CloseButton" type="TextureButton"]
+texture_filter = 1
+custom_minimum_size = Vector2(8, 8)
+offset_right = 8.0
+offset_bottom = 8.0
+focus_mode = 0
+texture_normal = SubResource("AtlasTexture_fa0y7")
+texture_pressed = SubResource("AtlasTexture_hmmjt")
+texture_hover = SubResource("AtlasTexture_sonhi")

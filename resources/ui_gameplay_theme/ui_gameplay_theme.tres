@@ -1,9 +1,10 @@
-[gd_resource type="Theme" load_steps=7 format=3 uid="uid://cgbl8ufm3rl2n"]
+[gd_resource type="Theme" load_steps=40 format=3 uid="uid://cgbl8ufm3rl2n"]
 
 [ext_resource type="FontFile" uid="uid://dqmwrfvtl177y" path="res://assets/font/pixel_rpg.ttf" id="1_08jpu"]
-[ext_resource type="StyleBox" uid="uid://ddlguyefnuww" path="res://resources/ui_gameplay_theme/hud_shortcut_button_hover.tres" id="1_ar6jk"]
-[ext_resource type="StyleBox" uid="uid://bxat7iyyo815s" path="res://resources/ui_gameplay_theme/hud_shortcut_button_normal.tres" id="2_role8"]
-[ext_resource type="StyleBox" uid="uid://d01qrxocruy58" path="res://resources/ui_gameplay_theme/hud_shortcut_button_pressed.tres" id="3_plut7"]
+[ext_resource type="Texture2D" uid="uid://bg2cjc7k161qw" path="res://assets/ui/ui_panel/brown_rectangle_panel_28x10.png" id="4_role8"]
+[ext_resource type="Texture2D" uid="uid://byfbtmpuo2yuw" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="5_panel16"]
+[ext_resource type="Texture2D" uid="uid://d4g0org5y4q56" path="res://assets/ui/ui_panel/brown_panel_24x24.png" id="6_panel24"]
+[ext_resource type="Texture2D" uid="uid://c4dbte3k0yncy" path="res://assets/ui/ui_panel/brown_panel_34x34.png" id="7_panel34"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k3e77"]
 content_margin_left = 8.0
@@ -23,7 +24,247 @@ corner_radius_bottom_left = 6
 shadow_color = Color(0, 0, 0, 0.3764706)
 shadow_size = 4
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_i3xcq"]
+atlas = ExtResource("4_role8")
+region = Rect2(88, 1, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ar6jk"]
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_i3xcq")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ar6jk"]
+atlas = ExtResource("4_role8")
+region = Rect2(30, 1, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_plut7"]
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_ar6jk")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_k3e77"]
+atlas = ExtResource("4_role8")
+region = Rect2(59, 1, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_08jpu"]
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_k3e77")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_plut7"]
+atlas = ExtResource("4_role8")
+region = Rect2(1, 1, 28, 10)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_k3e77"]
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_plut7")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel16_disabled"]
+atlas = ExtResource("5_panel16")
+region = Rect2(52, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel16_disabled"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel16_disabled")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel16_hover"]
+atlas = ExtResource("5_panel16")
+region = Rect2(18, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel16_hover"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel16_hover")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel16_pressed"]
+atlas = ExtResource("5_panel16")
+region = Rect2(35, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel16_pressed"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel16_pressed")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel16_normal"]
+atlas = ExtResource("5_panel16")
+region = Rect2(1, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel16_normal"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel16_normal")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel24_disabled"]
+atlas = ExtResource("6_panel24")
+region = Rect2(76, 1, 24, 24)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel24_disabled"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel24_disabled")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel24_hover"]
+atlas = ExtResource("6_panel24")
+region = Rect2(26, 1, 24, 24)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel24_hover"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel24_hover")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel24_pressed"]
+atlas = ExtResource("6_panel24")
+region = Rect2(51, 1, 24, 24)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel24_pressed"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel24_pressed")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel24_normal"]
+atlas = ExtResource("6_panel24")
+region = Rect2(1, 1, 24, 24)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel24_normal"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+texture = SubResource("AtlasTexture_panel24_normal")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel34_disabled"]
+atlas = ExtResource("7_panel34")
+region = Rect2(106, 1, 34, 34)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel34_disabled"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+texture = SubResource("AtlasTexture_panel34_disabled")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel34_hover"]
+atlas = ExtResource("7_panel34")
+region = Rect2(36, 1, 34, 34)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel34_hover"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+texture = SubResource("AtlasTexture_panel34_hover")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel34_pressed"]
+atlas = ExtResource("7_panel34")
+region = Rect2(71, 1, 34, 34)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel34_pressed"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+texture = SubResource("AtlasTexture_panel34_pressed")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel34_normal"]
+atlas = ExtResource("7_panel34")
+region = Rect2(1, 1, 34, 34)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel34_normal"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+texture = SubResource("AtlasTexture_panel34_normal")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
 
 [resource]
 DialogueBodyText/base_type = &"RichTextLabel"
@@ -49,10 +290,62 @@ HudLabelSub/fonts/font = ExtResource("1_08jpu")
 HudPanel/base_type = &"Panel"
 HudPanel/styles/panel = SubResource("StyleBoxFlat_k3e77")
 HudShortcutButton/base_type = &"Button"
+HudShortcutButton/colors/font_color = Color(1, 1, 1, 1)
+HudShortcutButton/colors/font_disabled_color = Color(1, 1, 1, 1)
+HudShortcutButton/colors/font_focus_color = Color(1, 1, 1, 1)
+HudShortcutButton/colors/font_hover_color = Color(1, 1, 1, 1)
+HudShortcutButton/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+HudShortcutButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+HudShortcutButton/font_sizes/font_size = 6
 HudShortcutButton/fonts/font = ExtResource("1_08jpu")
-HudShortcutButton/styles/disabled = ExtResource("3_plut7")
+HudShortcutButton/styles/disabled = SubResource("StyleBoxTexture_ar6jk")
 HudShortcutButton/styles/focus = SubResource("StyleBoxEmpty_focus")
-HudShortcutButton/styles/hover = ExtResource("1_ar6jk")
-HudShortcutButton/styles/hover_pressed = ExtResource("3_plut7")
-HudShortcutButton/styles/normal = ExtResource("2_role8")
-HudShortcutButton/styles/pressed = ExtResource("3_plut7")
+HudShortcutButton/styles/hover = SubResource("StyleBoxTexture_plut7")
+HudShortcutButton/styles/hover_pressed = SubResource("StyleBoxTexture_08jpu")
+HudShortcutButton/styles/normal = SubResource("StyleBoxTexture_k3e77")
+HudShortcutButton/styles/pressed = SubResource("StyleBoxTexture_08jpu")
+WorkshopSquareButton16/base_type = &"Button"
+WorkshopSquareButton16/colors/font_color = Color(1, 1, 1, 1)
+WorkshopSquareButton16/colors/font_disabled_color = Color(0.36862746, 0.27450982, 0.1882353, 0.7)
+WorkshopSquareButton16/colors/font_focus_color = Color(1, 1, 1, 1)
+WorkshopSquareButton16/colors/font_hover_color = Color(1, 1, 1, 1)
+WorkshopSquareButton16/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton16/colors/font_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton16/font_sizes/font_size = 6
+WorkshopSquareButton16/fonts/font = ExtResource("1_08jpu")
+WorkshopSquareButton16/styles/disabled = SubResource("StyleBoxTexture_panel16_disabled")
+WorkshopSquareButton16/styles/focus = SubResource("StyleBoxEmpty_focus")
+WorkshopSquareButton16/styles/hover = SubResource("StyleBoxTexture_panel16_hover")
+WorkshopSquareButton16/styles/hover_pressed = SubResource("StyleBoxTexture_panel16_pressed")
+WorkshopSquareButton16/styles/normal = SubResource("StyleBoxTexture_panel16_normal")
+WorkshopSquareButton16/styles/pressed = SubResource("StyleBoxTexture_panel16_pressed")
+WorkshopSquareButton24/base_type = &"Button"
+WorkshopSquareButton24/colors/font_color = Color(1, 1, 1, 1)
+WorkshopSquareButton24/colors/font_disabled_color = Color(0.36862746, 0.27450982, 0.1882353, 0.7)
+WorkshopSquareButton24/colors/font_focus_color = Color(1, 1, 1, 1)
+WorkshopSquareButton24/colors/font_hover_color = Color(1, 1, 1, 1)
+WorkshopSquareButton24/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton24/colors/font_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton24/font_sizes/font_size = 6
+WorkshopSquareButton24/fonts/font = ExtResource("1_08jpu")
+WorkshopSquareButton24/styles/disabled = SubResource("StyleBoxTexture_panel24_disabled")
+WorkshopSquareButton24/styles/focus = SubResource("StyleBoxEmpty_focus")
+WorkshopSquareButton24/styles/hover = SubResource("StyleBoxTexture_panel24_hover")
+WorkshopSquareButton24/styles/hover_pressed = SubResource("StyleBoxTexture_panel24_pressed")
+WorkshopSquareButton24/styles/normal = SubResource("StyleBoxTexture_panel24_normal")
+WorkshopSquareButton24/styles/pressed = SubResource("StyleBoxTexture_panel24_pressed")
+WorkshopSquareButton34/base_type = &"Button"
+WorkshopSquareButton34/colors/font_color = Color(1, 1, 1, 1)
+WorkshopSquareButton34/colors/font_disabled_color = Color(0.36862746, 0.27450982, 0.1882353, 0.7)
+WorkshopSquareButton34/colors/font_focus_color = Color(1, 1, 1, 1)
+WorkshopSquareButton34/colors/font_hover_color = Color(1, 1, 1, 1)
+WorkshopSquareButton34/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton34/colors/font_pressed_color = Color(1, 1, 1, 1)
+WorkshopSquareButton34/font_sizes/font_size = 6
+WorkshopSquareButton34/fonts/font = ExtResource("1_08jpu")
+WorkshopSquareButton34/styles/disabled = SubResource("StyleBoxTexture_panel34_disabled")
+WorkshopSquareButton34/styles/focus = SubResource("StyleBoxEmpty_focus")
+WorkshopSquareButton34/styles/hover = SubResource("StyleBoxTexture_panel34_hover")
+WorkshopSquareButton34/styles/hover_pressed = SubResource("StyleBoxTexture_panel34_pressed")
+WorkshopSquareButton34/styles/normal = SubResource("StyleBoxTexture_panel34_normal")
+WorkshopSquareButton34/styles/pressed = SubResource("StyleBoxTexture_panel34_pressed")

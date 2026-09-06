@@ -7,7 +7,7 @@
 script = ExtResource("1_23kg5")
 id = "clay_lump"
 display_name = "Clay Lump"
-description = "A lump of river clay, soft and full of promise. Shape it well, or it shall remain a proud little blob."
+description = "Soft river clay. Shape it, or let it be a noble blob."
 icon = ExtResource("1_n5m2r")
 weight = 2.0
 max_stack = 15

@@ -7,7 +7,7 @@
 script = ExtResource("1_nd8v3")
 id = "gold_nugget"
 display_name = "Gold Nugget"
-description = "A small piece of bright gold from the earth. Pretty enough to start trade, trouble, or both."
+description = "A bright gold nugget. Pretty enough to cause trouble."
 icon = ExtResource("1_engj6")
 weight = 0.2
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

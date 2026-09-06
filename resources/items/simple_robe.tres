@@ -7,6 +7,7 @@
 script = ExtResource("1_krtjb")
 id = "simple_robe"
 display_name = "Simple Robe"
+description = "A simple robe for daily work. Humble cloth, honest shade."
 icon = ExtResource("1_ahcwt")
-weight = 2.5
+weight = 1.5
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

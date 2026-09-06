@@ -744,6 +744,16 @@ The current design direction remains:
 - outputs should not automatically become personal player loot
 - workshop-oriented storage is preferred for production chains
 - city supply is separate from player inventory
+- workshop capacity is shared by Free Stock and fee-locked Held Output
+- paying an output fee converts Held Output into Free Stock
+- only Free Stock may be withdrawn or used by another production process
+- output that cannot fit becomes a blocking Pending Delivery, not extra storage
+- fee payment is attached to visible Held Output; Pending Delivery cannot be paid before storage space is available
+- fee deadlines and overdue penalties begin only after output becomes visible Held Output
+- overdue fees grow linearly from the base fee and stop at twice the base fee
+- advanced processes require a built workshop facility instead of receiving every station for free
+- facility construction and upgrades consume materials from Workshop Free Stock, never Held Output
+- the Drying Yard begins unbuilt; levels 1 to 3 provide 1 to 3 processing slots
 
 This supports chain-based gameplay:
 
