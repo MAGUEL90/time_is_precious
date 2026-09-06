@@ -54,22 +54,22 @@ func open_menu(workshop: WorkShop) -> void:
 func _on_card_pressed(card: WorkOrderCard) -> void:
 	if card.progression_locked:
 		return
-	
+
 	selected_card = card
-	
+
 	for child in work_order_grid.get_children():
 		if child is WorkOrderCard:
 			var other_card := child as WorkOrderCard
 			other_card.set_selected(other_card == card)
-	
+
 	selected_process_availability.clear()
 	production_info_panel.clear_details()
-	
+
 	if card.work_order_type == WorkOrderCard.WorkOrderType.JOB:
 		requirement_label.text = ""
 		next_button.disabled = false
 		return
-	
+
 	var availability: Dictionary = (ProcessManager.get_process_availability(card.work_order_id))
 	selected_process_availability = availability.duplicate(true)
 	requirement_label.text = _get_process_status(availability)
@@ -88,7 +88,7 @@ func _on_card_details_requested(card: WorkOrderCard) -> void:
 func _get_process_status(availability: Dictionary) -> String:
 	if not bool(availability.get("registered", false)):
 		return "Process unavailable."
-	
+
 	if not bool(availability.get("station_ready", false)):
 		var station_id: String = str(
 			availability.get("required_station_id", "")
@@ -98,7 +98,7 @@ func _get_process_status(availability: Dictionary) -> String:
 
 	if bool(availability.get("blocked_by_pending_output", false)):
 		return "Pending Delivery blocks new work. Free storage space."
-	
+
 	var item_id: String = str(availability.get("input_item_id", ""))
 	var item_name: String = _get_item_display_name(item_id)
 	var available: int = int(availability.get("available_quantity", 0))
@@ -107,7 +107,7 @@ func _get_process_status(availability: Dictionary) -> String:
 	var startable_quantity: int = int(
 		availability.get("startable_quantity", 0)
 	)
-	
+
 	if available <= 0:
 		return "Needs %s in Workshop storage." % item_name
 
@@ -120,15 +120,15 @@ func _get_process_status(availability: Dictionary) -> String:
 			batch_size,
 			available
 		]
-	
+
 	return ""
 
 func _get_item_display_name(item_id) -> String:
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-	
+
 	if item_data == null:
 		return item_id.capitalize()
-	
+
 	return item_data.display_name
 
 func _on_next_pressed() -> void:
@@ -154,7 +154,7 @@ func _on_next_pressed() -> void:
 func _emit_selected_work_order() -> void:
 	if selected_card == null:
 		return
-	
+
 	visible = false
 	get_tree().paused = false
 	work_order_selected.emit(
@@ -243,33 +243,33 @@ func _clear_selection() -> void:
 	requirement_label.text = ""
 	awaiting_process_confirmation = false
 	process_confirm_overlay.hide()
-	
+
 	for child in work_order_grid.get_children():
 		if child is WorkOrderCard:
 			(child as WorkOrderCard).set_selected(false)
 
 func _refresh_details_preview() -> void:
 	var should_show: bool = selected_card != null and not awaiting_process_confirmation
-	
+
 	if not should_show:
 		production_info_panel.clear_details()
 		return
-	
+
 	if (selected_card.work_order_type == WorkOrderCard.WorkOrderType.JOB):
 		production_info_panel.display_job(selected_card.card_title)
 	else:
 		if selected_process_availability.is_empty():
 			production_info_panel.clear_details()
 			return
-		
+
 		production_info_panel.display_process(selected_process_availability)
-	
+
 	call_deferred("_position_production_info_panel")
 
 func _position_production_info_panel() -> void:
 	if not production_info_panel.visible:
 		return
-	
+
 	var window_rect: Rect2 = (production_window.get_global_rect())
 	var panel_size: Vector2 = production_info_panel.size
 	var panel_position: Vector2 = Vector2(window_rect.position + (window_rect.size - panel_size) * 0.5)
@@ -281,32 +281,32 @@ func _rebuild_work_order_cards() -> void:
 			continue
 		work_order_grid.remove_child(child)
 		child.queue_free()
-	
+
 	if current_workshop == null:
 		return
-	
+
 	for job_data in current_workshop.available_jobs:
 		if job_data == null:
 			continue
 		var title: String = job_data.short_name.strip_edges()
 		if title.is_empty():
 			title = job_data.display_name
-		
+
 		_add_work_order_card(
 			job_data.job_id,
 			WorkOrderCard.WorkOrderType.JOB,
 			title,
 			_get_job_card_icon(job_data)
 		)
-	
+
 	for process_data in current_workshop.available_processes:
 		if process_data == null:
 			continue
-		
+
 		var title: String = process_data.short_name.strip_edges()
 		if title.is_empty():
 			title = process_data.display_name
-		
+
 		_add_work_order_card(
 			process_data.process_id,
 			WorkOrderCard.WorkOrderType.PROCESS,
@@ -329,7 +329,7 @@ func _add_work_order_card(
 	)
 	if card == null:
 		return
-	
+
 	card.work_order_id = work_order_id
 	card.work_order_type = work_order_type
 	card.card_title = (
@@ -340,7 +340,7 @@ func _add_work_order_card(
 	card.card_icon = card_icon
 	card.progression_locked = progression_locked
 	work_order_grid.add_child(card)
-	
+
 	var locked_card: Node = work_order_grid.get_node_or_null("LockedCard")
 	if locked_card != null:
 		work_order_grid.move_child(card, locked_card.get_index())
@@ -366,7 +366,7 @@ func _get_process_lock_reason(process_data: ProcessData) -> String:
 func _get_job_card_icon(job_data: JobData) -> Texture2D:
 	if job_data.icon != null:
 		return job_data.icon
-	
+
 	for output_id_value in job_data.outputs.keys():
 		var item_data: ItemData = ItemDatabase.get_item_data(str(output_id_value))
 		if item_data != null and item_data.icon != null:
@@ -376,27 +376,12 @@ func _get_job_card_icon(job_data: JobData) -> Texture2D:
 func _get_process_card_icon(process_data: ProcessData) -> Texture2D:
 	if process_data.icon != null:
 		return process_data.icon
-	
+
 	return _get_item_icon(process_data.output_item_id)
 
 func _get_item_icon(item_id: String) -> Texture2D:
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
 	if item_data == null:
 		return null
-	
+
 	return item_data.icon
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		

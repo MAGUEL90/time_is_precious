@@ -77,7 +77,7 @@ func _on_selection_toggled(_selected: bool) -> void:
 func _refresh_visuals() -> void:
 	if not is_node_ready():
 		return
-	
+
 	work_icon.texture = card_icon
 	name_label.text = card_title
 	lock_overlay.visible = progression_locked

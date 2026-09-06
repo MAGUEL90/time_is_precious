@@ -24,13 +24,13 @@ func display_item(item_id: String) -> bool:
 	if item_data == null:
 		clear_item()
 		return false
-	
+
 	var item_name: String = (
 		item_data.display_name
 		if not item_data.display_name.is_empty()
 		else item_id
 	)
-	
+
 	name_label.text = "name: %s" % item_name
 	category_label.text = "category: %s" % _get_category_text(item_data.category)
 	weight_label.text = "weight: %.2f" % item_data.weight
@@ -40,11 +40,11 @@ func display_item(item_id: String) -> bool:
 		if not item_data.description.is_empty()
 		else "-"
 	)
-	
+
 	_refresh_size()
 	visible = true
 	return true
-	
+
 func clear_item() -> void:
 	visible = false
 
@@ -65,39 +65,39 @@ func _get_category_text(category: ItemEnums.ItemCategory) -> String:
 
 func _get_effect_text(item_data: ItemData) -> String:
 	var effects: Array[String] = []
-	
+
 	if item_data.hunger_reduction > 0.0:
 		effects.append(
 			"hunger -%d%%"
 			% int(round(item_data.hunger_reduction * 100.0))
 		)
-	
+
 	if item_data.fatigue_reduction > 0.0:
 		effects.append(
 			"fatigue -%d%%"
 			% int(round(item_data.fatigue_reduction * 100.0))
 		)
-	
+
 	if item_data.food_supply_value > 0:
 		effects.append("food supply +%d" % item_data.food_supply_value)
-	
+
 	if item_data.clothing_supply_value > 0:
 		effects.append(
 			"clothing supply +%d"
 			% item_data.clothing_supply_value
 		)
-	
+
 	return "none" if effects.is_empty() else ", ".join(effects)
 
 func _get_minimum_size() -> Vector2:
 	if not is_node_ready():
 		return Vector2(PANEL_WIDTH, PANEL_MIN_HEIGHT)
-	
+
 	var content_height: float = (
 		label_container.get_combined_minimum_size().y
 		+ PANEL_VERTICAL_PADDING
 	)
-	
+
 	return Vector2(
 		PANEL_WIDTH,
 		maxf(PANEL_MIN_HEIGHT, content_height))
@@ -121,29 +121,25 @@ func _fit_wrapped_label(label: Label) -> void:
 
 	if max_lines > 0:
 		line_count = mini(line_count, max_lines)
-	
+
 	if label == description_label:
 		line_count = maxi(line_count, 2)
-	
+
 	var line_spacing: int = label.get_theme_constant("line_spacing")
-	
+
 	label.custom_minimum_size.y = float(
 		line_count * label.get_line_height()
 		+ maxi(line_count - 1, 0) * line_spacing
 	)
-	
+
 	label.update_minimum_size()
 
 func _refresh_size() -> void:
 	_fit_wrapped_label(name_label)
 	_fit_wrapped_label(effect_label)
 	_fit_wrapped_label(description_label)
-	
+
 	label_container.update_minimum_size()
 	update_minimum_size()
 	reset_size()
 	pivot_offset = size * 0.5
-	
-	
-	
-	

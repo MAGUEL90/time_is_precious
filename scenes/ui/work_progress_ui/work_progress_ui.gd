@@ -19,7 +19,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_panel()
 		get_viewport().set_input_as_handled()
 		return
-	
+
 	if root.visible and event.is_action_pressed("ui_cancel"):
 		close_panel()
 		get_viewport().set_input_as_handled()
@@ -35,7 +35,7 @@ func open_panel() -> void:
 		return
 	if get_tree().paused:
 		return
-	
+
 	_refresh_entries()
 	root.show()
 	get_tree().paused = true
@@ -44,18 +44,18 @@ func open_panel() -> void:
 func close_panel() -> void:
 	if not root.visible:
 		return
-	
+
 	root.hide()
 	get_tree().paused = false
 
 func _refresh_entries() -> void:
 	_clear_entries()
-	
+
 	var progress_entries: Array[Dictionary] = []
-	
+
 	progress_entries.append_array(WorkManager.get_active_progress_entries())
 	progress_entries.append_array(ProcessManager.get_active_progress_entries())
-	
+
 	for progress_data in progress_entries:
 		var entry: WorkProgressEntry = (
 			ENTRY_SCENE.instantiate() as WorkProgressEntry
@@ -63,10 +63,10 @@ func _refresh_entries() -> void:
 
 		if entry == null:
 			continue
-	
+
 		work_list.add_child(entry)
 		entry.setup(progress_data)
-	
+
 	var has_entries: bool = not progress_entries.is_empty()
 	empty_label.visible = not has_entries
 	work_scroll.visible = has_entries

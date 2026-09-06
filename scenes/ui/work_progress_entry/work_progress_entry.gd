@@ -42,15 +42,15 @@ func setup(progress_data: Dictionary) -> void:
 		job_icon.texture = icon_value as Texture2D
 	else:
 		job_icon.texture = null
-	
+
 	var source: String = str(progress_data.get("source", "work"))
 	if source == "process":
 		_update_process_summary(progress_data)
 	else:
 		_update_worker_summary(progress_data)
-	
+
 	_update_recipe(progress_data)
-	
+
 	var progress_ratio: float = clampf(float(progress_data.get("progress_ratio", 0.0)), 0.0, 1.0)
 	progress_bar.value = progress_ratio
 	percent_label.text = "%d%%" % roundi(progress_ratio * 100.0)
@@ -66,24 +66,24 @@ func setup(progress_data: Dictionary) -> void:
 		var worker_id: String = str(progress_data.get("worker_id", ""))
 		status_label.text = status_text
 		context_label.text = _resolve_worker_name(worker_id)
-	
+
 	var remaining_minutes: int = int(
 		progress_data.get("remaining_minutes", 0)
 	)
 	eta_label.text = "ETA %s" % _format_duration(remaining_minutes)
-	
+
 
 func _update_recipe(progress_data: Dictionary) -> void:
 	var inputs: Dictionary = progress_data.get("inputs", {})
 	var outputs: Dictionary = progress_data.get("outputs", {})
-	
+
 	var input_ids: Array[String] = _get_positive_item_ids(inputs)
 	var output_ids: Array[String] = _get_positive_item_ids(outputs)
-	
+
 	for icon_index in range(input_item_icons.size()):
 		var icon_node: TextureRect = input_item_icons[icon_index]
 		icon_node.visible = icon_index < input_ids.size()
-		
+
 		if icon_node.visible:
 			icon_node.texture = _get_item_icon(
 				input_ids[icon_index]
@@ -102,7 +102,7 @@ func _update_recipe(progress_data: Dictionary) -> void:
 		and has_output
 	)
 	output_item_icon.visible = has_output
-	
+
 	if has_output:
 		output_item_icon.texture = _get_item_icon(
 			output_ids[0]
@@ -110,35 +110,35 @@ func _update_recipe(progress_data: Dictionary) -> void:
 
 func _get_positive_item_ids(items: Dictionary) -> Array[String]:
 	var item_ids: Array[String] = []
-	
+
 	for item_id_value in items.keys():
 		if int(items[item_id_value]) <= 0:
 			continue
-		
+
 		var item_id: String = str(item_id_value)
 		if not item_id.is_empty():
 			item_ids.append(item_id)
-	
+
 	return item_ids
 
 func _get_item_icon(item_id: String) -> Texture2D:
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-	
+
 	if item_data == null:
 		return null
-	
+
 	return item_data.icon
 
 func _update_process_summary(progress_data: Dictionary) -> void:
 	worker_icons_container.hide()
 	var slot_capacity: int = maxi(int(progress_data.get("process_slot_capacity", 0)), 0)
 	var active_slot_count: int = clampi(int(progress_data.get("active_process_slot_count", 0)), 0, slot_capacity)
-	
+
 	worker_count_label.text = "Active %d/%d" % [active_slot_count, slot_capacity]
 
 func _update_worker_summary(progress_data: Dictionary) -> void:
 	worker_icons_container.show()
-	
+
 	var slot_capacity: int = clampi(
 		int(progress_data.get("worker_slot_capacity", 1)),
 		1,
@@ -165,24 +165,24 @@ func _update_worker_summary(progress_data: Dictionary) -> void:
 func _resolve_worker_name(worker_id: String) -> String:
 	if worker_id.is_empty():
 		return "Unassigned"
-	
+
 	var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
 	if worker_data == null:
 		return worker_id
-	
+
 	var display_name: String = worker_data.get_resolved_display_name()
 	return display_name if not display_name.is_empty() else worker_id
 
 func _format_duration(total_minutes: int) -> String:
 	var safe_minutes: int = maxi(total_minutes, 0)
-	
+
 	if safe_minutes < 60:
 		return "%dm" % safe_minutes
-	
+
 	var hours: int = floori(float(safe_minutes) / 60.0)
 	var minutes: int = safe_minutes % 60
-	
+
 	if minutes == 0:
 		return "%dh" % hours
-	
+
 	return "%dh %dm" % [hours, minutes]
