@@ -2,6 +2,7 @@ class_name JobData extends Resource
 
 @export var job_id: String = ""
 @export var display_name: String = ""
+@export var short_name: String = ""
 @export var inputs: Dictionary[String, int] = {}
 @export var outputs: Dictionary[String, int] = {}
 @export var required_tool_id: String = "" # Kosong jika tidak ada standard
@@ -11,5 +12,8 @@ class_name JobData extends Resource
 @export var min_trust: float = 0
 @export var min_satisfaction: float = 0
 @export var requirement_profession: WorkerData.Profession = WorkerData.Profession.LABORER
+@export_range(0, 999, 1) var workshop_fee_amount: int = 0
+@export var workshop_fee_currency_item_id: String = "shekel"
+@export var icon: Texture2D
 
 var allowed_roles: Array[String] = []

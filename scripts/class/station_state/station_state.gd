@@ -1,4 +1,4 @@
-class_name StationState extends Node
+class_name StationState extends RefCounted
 
 var station_id: String = ""
 var slots_total: int = 0
@@ -6,10 +6,22 @@ var slots: Array = []
 
 func setup(p_station_id: String, p_slots_total: int) -> void:
 	station_id = p_station_id
-	slots_total = max(p_slots_total, 0)
-	slots.resize(slots_total)
-	for i in range(slots_total):
-		slots[i] = null # slot kosong
+	resize_slots(p_slots_total)
+
+func resize_slots(p_slots_total: int) -> bool:
+	var safe_slots_total: int = maxi(p_slots_total, 0)
+	if safe_slots_total < slots.size():
+		for index: int in range(safe_slots_total, slots.size()):
+			if slots[index] != null:
+				return false
+
+	var previous_size: int = slots.size()
+	slots.resize(safe_slots_total)
+	for index: int in range(previous_size, safe_slots_total):
+		slots[index] = null
+
+	slots_total = safe_slots_total
+	return true
 
 func find_free_slot() -> int:
 	for i in range(slots.size()):
@@ -25,7 +37,7 @@ func set_slot(idx: int, batch: ProcessBatch) -> void:
 func clear_slot(idx: int) -> void:
 	if idx < 0 or idx >= slots.size():
 		return
-	
+
 	slots[idx] = null
 
 
@@ -34,4 +46,3 @@ func clear_slot(idx: int) -> void:
 
 
 
-	

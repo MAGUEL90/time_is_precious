@@ -250,8 +250,6 @@ func debug_npc() -> String:
 	return debug_npc_label.text
 
 func proceed_contract() -> void:
-	var work_state_smoke_test: WorkStateSmokeTest = WorkStateSmokeTest.new()
-
 	if npc_contract_requires_start_fee:
 		if npc_contract_start_fee_shekel > 0:
 			if not Inventory.has_item("shekel", npc_contract_start_fee_shekel):
@@ -261,7 +259,6 @@ func proceed_contract() -> void:
 			Inventory.remove_item("shekel", npc_contract_start_fee_shekel)
 			print("player has money")
 
-	work_state_smoke_test._start_test(npc_id)
 	is_contract_activated = true
 
 func try_negotiate_contract() -> void:

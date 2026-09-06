@@ -1,18 +1,22 @@
-[gd_resource type="Resource" script_class="JobData" load_steps=2 format=3 uid="uid://dtwxjv6s04vaa"]
+[gd_resource type="Resource" script_class="JobData" load_steps=3 format=3 uid="uid://dtwxjv6s04vaa"]
 
 [ext_resource type="Script" uid="uid://mte3wqsqhem0" path="res://resources/job_data/job_data.gd" id="1_cfgsx"]
+[ext_resource type="Texture2D" uid="uid://7katfoxrg6es" path="res://assets/ui/ui_icon/work_progress/wet_mudbrick_job_icon.png" id="1_o5wym"]
 
 [resource]
 script = ExtResource("1_cfgsx")
 job_id = "mudbrick_make"
-display_name = "Mudbrick Making"
+display_name = "Shape Wet Mudbricks"
+short_name = "Shape"
 inputs = Dictionary[String, int]({
 "clay_lump": 3,
 "straw_bundle": 3,
 "water_jar": 3
 })
 outputs = Dictionary[String, int]({
-"wet_mudbrick": 60
+"wet_mudbrick": 20
 })
 base_duration_minutes = 30
+workshop_fee_amount = 5
+icon = ExtResource("1_o5wym")
 metadata/_custom_type_script = "uid://mte3wqsqhem0"

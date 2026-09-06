@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ProcessData" load_steps=3 format=3 uid="uid://dtchq2aug7c1v"]
+
+[ext_resource type="Script" uid="uid://b0f36pxgsx03w" path="res://resources/process_data/process_data.gd" id="1_bgbtt"]
+[ext_resource type="Texture2D" uid="uid://cpws54x4q33um" path="res://assets/ui/ui_icon/work_progress/sun_dried_mudbrick_job_icon.png" id="2_drying_icon"]
+
+[resource]
+script = ExtResource("1_bgbtt")
+process_id = "drying_mudbrick"
+display_name = "Sun-Dry Wet Mudbricks"
+short_name = "Drying"
+icon = ExtResource("2_drying_icon")
+input_item_id = "wet_mudbrick"
+output_item_id = "sun_dried_mudbrick"
+required_station_id = "drying_yard"
+base_duration_minutes = 10
+requires_full_batch = true
+station_fee_per_batch = 2
+metadata/_custom_type_script = "uid://b0f36pxgsx03w"

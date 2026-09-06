@@ -142,7 +142,7 @@ func _on_start_job() -> void:
 	null,
 	Inventory,
 	null,
-	5)
+		selected_job.workshop_fee_amount)
 	
 	if order_id.is_empty():
 		feedback_label.text = WorkManager.get_last_start_job_error()
