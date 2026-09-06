@@ -2,18 +2,15 @@ extends CanvasLayer
 
 const SHOW_STATUS_ACTION: StringName = &"show_player_status"
 
-const DRAWER_OPEN_Y: float = 165.0
-const DRAWER_CLOSED_Y: float = 189.0
+const DRAWER_OPEN_Y: float = -60.0
+const DRAWER_CLOSED_Y: float = 24.0
 const OPEN_DURATION: float = 0.14
 const CLOSE_DURATION: float = 0.10
 
 const CONDITION_NORMAL_COLOR: Color = Color.WHITE
 const CONDITION_WARNING_COLOR: Color = Color(1.0, 0.65, 0.35, 1.0)
-const CONDITION_CRITICAL_COLOR: Color = Color.DARK_RED
-
-@export_group("Condition Alert Thresholds")
-@export_range(0.0, 100.0, 1.0) var warning_remaining_percent: float = 40.0
-@export_range(0.0, 100.0, 1.0) var critical_remaining_percent: float = 20.0
+const CONDITION_CRITICAL_COLOR: Color = Color(1.0, 0.55, 0.48, 1.0)
+const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 
 @onready var status_drawer: Control = $Root/StatusDrawer
 @onready var fatigue_indicator: HBoxContainer = $Root/StatusDrawer/IndicatorRow/FatigueIndicator
@@ -31,7 +28,9 @@ var drawer_tween: Tween
 # Lifecycle
 
 func _ready() -> void:
+	_setup_status_text()
 	_set_drawer_y(DRAWER_CLOSED_Y)
+	status_drawer.hide()
 	_setup_nightmare_visibility()
 
 	player_ref = get_tree().get_first_node_in_group("player") as Player
@@ -67,43 +66,67 @@ func _on_condition_changed() -> void:
 	focus_bar.value = focus_remaining
 	hunger_bar.value = hunger_remaining
 
-	fatigue_indicator.modulate = _get_condition_color(fatigue_remaining)
-	focus_indicator.modulate = _get_condition_color(focus_remaining)
-	hunger_indicator.modulate = _get_condition_color(hunger_remaining)
+	fatigue_indicator.modulate = _get_condition_color(player_ref.get_fatigue_severity())
+	focus_indicator.modulate = _get_condition_color(player_ref.get_focus_severity())
+	hunger_indicator.modulate = _get_condition_color(player_ref.get_hunger_severity())
 
 func _on_experience_changed() -> void:
 	experience_bar.max_value = player_ref.experience_required
 	experience_bar.value = player_ref.current_experience
 
-func _get_condition_color(remaining_percent: float) -> Color:
-	if remaining_percent <= critical_remaining_percent:
+func _get_condition_color(severity: int) -> Color:
+	if severity == Player.ConditionSeverity.CRITICAL:
 		return CONDITION_CRITICAL_COLOR
 
-	if remaining_percent <= warning_remaining_percent:
+	if severity == Player.ConditionSeverity.WARNING:
 		return CONDITION_WARNING_COLOR
 
 	return CONDITION_NORMAL_COLOR
+
+func _make_status_label(text_value: String) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.theme = GAMEPLAY_THEME
+	label.theme_type_variation = &"HudLabelShortcut"
+	label.add_theme_font_size_override("font_size", 6)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return label
+
+func _setup_status_text() -> void:
+	var names := HBoxContainer.new()
+	names.name = "StatusNames"
+	names.position = Vector2(0, -10)
+	names.add_theme_constant_override("separation", 2)
+	names.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for title in ["Energy", "Focus", "Satiety", "EXP"]:
+		var label: Label = _make_status_label(title)
+		label.custom_minimum_size.x = 38
+		names.add_child(label)
+	status_drawer.add_child(names)
 
 # Drawer animation
 
 func _animate_drawer(target_y: float, duration: float) -> void:
 	if drawer_tween != null:
 		drawer_tween.kill()
+	status_drawer.show()
 
 	drawer_tween = create_tween()
 	drawer_tween.set_trans(Tween.TRANS_QUAD)
 	drawer_tween.set_ease(Tween.EASE_OUT)
 	drawer_tween.tween_method(
 		_set_drawer_y,
-		status_drawer.position.y,
+		status_drawer.offset_top,
 		target_y,
 		duration
 	)
+	if target_y == DRAWER_CLOSED_Y:
+		drawer_tween.tween_callback(status_drawer.hide)
 
 func _set_drawer_y(value: float) -> void:
-	var snapped_position := status_drawer.position
-	snapped_position.y = roundf(value)
-	status_drawer.position = snapped_position
+	status_drawer.offset_top = roundf(value)
+	status_drawer.offset_bottom = roundf(value) + 16.0
 
 # Nightmare visibility
 
@@ -131,3 +154,4 @@ func _on_nightmare_active_changed(active: bool) -> void:
 			drawer_tween.kill()
 
 		_set_drawer_y(DRAWER_CLOSED_Y)
+		status_drawer.hide()
