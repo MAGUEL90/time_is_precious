@@ -935,9 +935,9 @@ func get_focus_severity() -> int:
 	return ConditionSeverity.NORMAL
 
 func has_critical_condition() -> bool:
+	# Hunger affects collapse indirectly by accelerating Focus loss.
 	return (
 		get_fatigue_severity() == ConditionSeverity.CRITICAL
-		or get_hunger_severity() == ConditionSeverity.CRITICAL
 		or get_focus_severity() == ConditionSeverity.CRITICAL
 	)
 
