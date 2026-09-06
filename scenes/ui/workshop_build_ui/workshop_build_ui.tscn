@@ -1,0 +1,267 @@
+[gd_scene load_steps=8 format=3 uid="uid://d1neuvk2elam1"]
+
+[ext_resource type="Script" uid="uid://be73iwihlddlp" path="res://scenes/ui/workshop_build_ui/workshop_build_ui.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_base"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_close"]
+[ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="5_arrow"]
+[ext_resource type="PackedScene" uid="uid://crv6vdqw1lj7m" path="res://scenes/ui/action_choice_panel/action_choice_panel.tscn" id="6_confirm"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_window"]
+atlas = ExtResource("3_base")
+region = Rect2(1, 1, 168, 134)
+
+[node name="WorkshopBuildUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureWindow" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(210, 172)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/TextureWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "BUILD & UPGRADE"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("4_close")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="SelectionPage" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="PromptLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Choose a facility."
+vertical_alignment = 1
+
+[node name="FacilityList" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FlexibleSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/SelectionPage/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DetailsPage" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 1
+
+[node name="FacilityRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="FacilityNameLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/FacilityRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Drying Yard"
+vertical_alignment = 1
+
+[node name="LevelLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/FacilityRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Level 0/3"
+vertical_alignment = 1
+
+[node name="SlotRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="CurrentSlotsLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/SlotRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Slots: 0"
+vertical_alignment = 1
+
+[node name="SlotArrow" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/SlotRow"]
+custom_minimum_size = Vector2(8, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("5_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TargetSlotsLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/SlotRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "1"
+vertical_alignment = 1
+
+[node name="RequirementTitle" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Materials from Free Stock"
+vertical_alignment = 1
+
+[node name="RequirementsList" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="FeedbackLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Missing materials."
+vertical_alignment = 1
+
+[node name="FlexibleSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BuildButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Build"
+
+[node name="RightSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightBalance" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+
+[node name="ConfirmOverlay" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Root/ConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="Center" type="CenterContainer" parent="Root/ConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ConfirmPanel" parent="Root/ConfirmOverlay/Center" instance=ExtResource("6_confirm")]
+custom_minimum_size = Vector2(184, 48)
+layout_mode = 2

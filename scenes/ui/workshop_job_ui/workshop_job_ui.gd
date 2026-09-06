@@ -4,23 +4,25 @@ signal start_job_requested(job_data: JobData, worker_ids: Array[String], work_da
 signal back_requested(worker_ids: Array[String])
 signal cancelled()
 
-@onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
+@onready var worker_count_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusRow/WorkerCountLabel
+@onready var minimum_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusRow/MinimumLabel
 @onready var job_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/JobLabel
 @onready var worker_requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WorkerRequirementLabel
 @onready var requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/RequirementLabel
 @onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/BackButton
 @onready var start_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/StartButton
-@onready var close_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Header/CloseButton
+@onready var close_button: TextureButton = $Root/Center/TextureWindow/Margin/MainVBox/Header/CloseButton
 @onready var confirm_discard_panel: NinePatchRect = $Root/Center/TextureWindow/ConfirmDiscardPanel
 @onready var keep_button: Button = $Root/Center/TextureWindow/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton
 @onready var discard_button: Button = $Root/Center/TextureWindow/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton
+@onready var output_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/OutputLabel
 
 var current_workshop: Node = null
 var assigned_worker_ids: Array[String] = ["", ""]
 var work_days: int = 1
 var job_started: bool = false
+var current_job: JobData = null
 
-const MUDBRICK_JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 const MIN_WORKER_COUNT: int = 1
 const REQUIREMENT_ERROR_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
 const REQUIREMENT_SUCCESS_COLOR: Color = Color(0.78, 1.0, 0.72, 1.0)
@@ -36,7 +38,17 @@ func _ready() -> void:
 	keep_button.pressed.connect(_on_keep_pressed)
 	discard_button.pressed.connect(_on_discard_pressed)
 
-func open_job(workshop: WorkShop, worker_ids: Array[String]) -> void:
+func open_job(
+	workshop: WorkShop,
+	worker_ids: Array[String],
+	job_data: JobData) -> void:
+
+	if job_data == null:
+		push_warning("WorkshopJobUI opened without JobData.")
+		queue_free()
+		return
+
+	current_job = job_data
 	job_started = false
 	confirm_discard_panel.visible = false
 	current_workshop = workshop
@@ -45,8 +57,10 @@ func open_job(workshop: WorkShop, worker_ids: Array[String]) -> void:
 	visible = true
 	get_tree().paused = true
 
-	status_label.text = "Workers: %d | Minimum: %d" % [assigned_worker_ids.size(), MIN_WORKER_COUNT]
-	job_label.text = MUDBRICK_JOB.display_name
+	worker_count_label.text = "Workers: %d" % assigned_worker_ids.size()
+	minimum_label.text = "Minimum: %d" % MIN_WORKER_COUNT
+	job_label.text = current_job.display_name
+	output_label.text = _get_output_text(current_job)
 	_refresh_start_state()
 
 func show_start_result(success: bool, message: String) -> void:
@@ -63,7 +77,7 @@ func show_start_result(success: bool, message: String) -> void:
 func _on_start_pressed() -> void:
 	start_button.disabled = true
 	back_button.disabled = true
-	start_job_requested.emit(MUDBRICK_JOB, assigned_worker_ids.duplicate(true), work_days)
+	start_job_requested.emit(current_job, assigned_worker_ids.duplicate(true), work_days)
 
 func _on_back_pressed() -> void:
 	visible = false
@@ -120,12 +134,12 @@ func _set_requirement_feedback(text: String, is_error: bool) -> void:
 	)
 
 func _refresh_worker_requirement_state() -> void:
-	if not _has_matching_worker(MUDBRICK_JOB):
+	if not _has_matching_worker(current_job):
 		worker_requirement_label.visible = false
 		return
 
 	var profession_name: String = _get_profession_name(
-		MUDBRICK_JOB.requirement_profession
+		current_job.requirement_profession
 	)
 
 	worker_requirement_label.text = "+ %s requirement met." % profession_name
@@ -181,13 +195,17 @@ func _has_matching_worker(job: JobData) -> bool:
 func _get_requirement_message() -> Array[String]:
 	var messages: Array[String] = []
 
+	if current_job == null:
+		messages.append("No Job selected.")
+		return messages
+
 	if not _has_minimum_workers():
 		messages.append("Assign at least %d worker." % MIN_WORKER_COUNT)
-	elif not _has_matching_worker(MUDBRICK_JOB):
-		messages.append("Needs a %s worker." % _get_profession_name(MUDBRICK_JOB.requirement_profession))
+	elif not _has_matching_worker(current_job):
+		messages.append("Needs a %s worker." % _get_profession_name(current_job.requirement_profession))
 
-	for item_id in MUDBRICK_JOB.inputs.keys():
-		var required_amount: int = int(MUDBRICK_JOB.inputs[item_id])
+	for item_id in current_job.inputs.keys():
+		var required_amount: int = int(current_job.inputs[item_id])
 		var stored_amount: int = int(WorkShopStorage.items.get(item_id, 0))
 
 		if stored_amount < required_amount:
@@ -198,6 +216,21 @@ func _get_requirement_message() -> Array[String]:
 			])
 
 	return messages
+
+func _get_output_text(job: JobData) -> String:
+	var output_parts: PackedStringArray = []
+
+	for item_id_value in job.outputs.keys():
+		var item_id: String = str(item_id_value)
+		var amount: int = int(job.outputs[item_id])
+		output_parts.append(
+			"%s x%d" % [_get_item_display_name(item_id), amount]
+		)
+
+	if output_parts.is_empty():
+		return "Produces: None"
+
+	return "Produces: " + ", ".join(output_parts)
 
 func _get_item_display_name(item_id: String) -> String:
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)

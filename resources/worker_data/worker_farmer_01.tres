@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_vpfw3")
 worker_id = "worker_farmer_01"
-display_name = "Farmer"
+display_name = "Dumuzi"
 profession = 4
 profession_xp = 0
 profession_star = 1

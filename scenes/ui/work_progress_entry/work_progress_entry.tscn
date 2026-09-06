@@ -1,0 +1,289 @@
+[gd_scene load_steps=16 format=3 uid="uid://cd2jhvev1dxds"]
+
+[ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_aopau"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="1_gs2ii"]
+[ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="3_cm5sb"]
+[ext_resource type="Script" uid="uid://6ve46hdpiiy6" path="res://scenes/ui/work_progress_entry/work_progress_entry.gd" id="3_srprt"]
+[ext_resource type="Texture2D" uid="uid://7katfoxrg6es" path="res://assets/ui/ui_icon/work_progress/wet_mudbrick_job_icon.png" id="4_srprt"]
+[ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="4_t5eq6"]
+[ext_resource type="Texture2D" uid="uid://ca60ougclpgam" path="res://assets/items/clay_lump.png" id="6_i5off"]
+[ext_resource type="Texture2D" uid="uid://dov1q2avwonbx" path="res://assets/ui/ui_icon/plus_icon_2.png" id="7_srprt"]
+[ext_resource type="Texture2D" uid="uid://coicfm7y8hbu4" path="res://assets/items/straw_bundle.png" id="8_o0kgx"]
+[ext_resource type="Texture2D" uid="uid://du2us3svb08on" path="res://assets/items/water_jar.png" id="9_ktrw7"]
+[ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="10_1fmha"]
+[ext_resource type="Texture2D" uid="uid://c8001x5uswgho" path="res://assets/items/wet_mudbrick.png" id="11_v5fpg"]
+[ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="12_separator"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4cagb"]
+atlas = ExtResource("1_gs2ii")
+region = Rect2(199, 51, 138, 44)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1od20"]
+atlas = ExtResource("1_gs2ii")
+region = Rect2(1, 1, 34, 34)
+
+[node name="WorkProgressEntry" type="NinePatchRect"]
+custom_minimum_size = Vector2(232, 54)
+offset_right = 40.0
+offset_bottom = 55.0
+size_flags_horizontal = 3
+theme = ExtResource("1_aopau")
+texture = SubResource("AtlasTexture_4cagb")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("3_srprt")
+
+[node name="EntryMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 5
+
+[node name="BodyRow" type="HBoxContainer" parent="EntryMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="IconFrame" type="TextureRect" parent="EntryMargin/BodyRow"]
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = SubResource("AtlasTexture_1od20")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="JobIcon" type="TextureRect" parent="EntryMargin/BodyRow/IconFrame"]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_srprt")
+expand_mode = 1
+stretch_mode = 3
+
+[node name="EntryVBox" type="VBoxContainer" parent="EntryMargin/BodyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="JobLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow"]
+layout_mode = 2
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "Shape Wet Mudbricks"
+
+[node name="HeaderSpace" type="Control" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WorkerSummary" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="WorkerIcons" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow/WorkerSummary"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 1
+alignment = 1
+
+[node name="WorkerSlot1" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow/WorkerSummary/WorkerIcons"]
+texture_filter = 1
+custom_minimum_size = Vector2(5, 7)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WorkerSlot2" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow/WorkerSummary/WorkerIcons"]
+texture_filter = 1
+custom_minimum_size = Vector2(5, 7)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WorkerCountLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/HeaderRow/WorkerSummary"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "1/2"
+vertical_alignment = 1
+
+[node name="StatusRow" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="StatusLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/StatusRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "Working"
+vertical_alignment = 1
+
+[node name="SeparatorIcon" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/StatusRow"]
+custom_minimum_size = Vector2(4, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("12_separator")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ContextLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/StatusRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "Laborer 01"
+vertical_alignment = 1
+
+[node name="StatusSpacer" type="Control" parent="EntryMargin/BodyRow/EntryVBox/StatusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EtaLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/StatusRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "ETA 18m"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ProgressRow" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox"]
+custom_minimum_size = Vector2(0, 7)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ProgressBar" type="TextureProgressBar" parent="EntryMargin/BodyRow/EntryVBox/ProgressRow"]
+custom_minimum_size = Vector2(0, 7)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.4
+nine_patch_stretch = true
+stretch_margin_left = 3
+stretch_margin_top = 3
+stretch_margin_right = 3
+stretch_margin_bottom = 3
+texture_under = ExtResource("3_cm5sb")
+texture_progress = ExtResource("4_t5eq6")
+
+[node name="PercentLabel" type="Label" parent="EntryMargin/BodyRow/EntryVBox/ProgressRow"]
+custom_minimum_size = Vector2(18, 7)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"PanelTextSmall"
+theme_override_font_sizes/font_size = 6
+text = "40%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RecipeRow" type="HBoxContainer" parent="EntryMargin/BodyRow/EntryVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="InputIcon1" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("6_i5off")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PlusIcon1" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_vertical = 5
+mouse_filter = 2
+texture = ExtResource("7_srprt")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InputIcon2" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("8_o0kgx")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PlusIcon2" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_vertical = 5
+mouse_filter = 2
+texture = ExtResource("7_srprt")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InputIcon3" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("9_ktrw7")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ArrowIcon" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("10_1fmha")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OutputIcon1" type="TextureRect" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("11_v5fpg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PercentSpacer" type="Control" parent="EntryMargin/BodyRow/EntryVBox/RecipeRow"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+mouse_filter = 2

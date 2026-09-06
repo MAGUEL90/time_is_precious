@@ -5,14 +5,18 @@ var player_reff: Player
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 
+@export var available_jobs: Array[JobData] = []
+@export var available_processes: Array[ProcessData] = []
 @export_range(1, 4, 1) var max_assigned_worker_slots: int = 2
+@export_range(0.0, 5000.0, 10.0) var storage_capacity: float = 200.0
 
-var job_lists: Array[String] = ["Mudbrick Making"]
 var assigned_worker_ids: Array[String] = []
 var last_start_job_error: String = ""
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	if WorkShopStorage != null:
+		WorkShopStorage.max_load = storage_capacity
 
 	player_reff = get_tree().get_first_node_in_group("player") as Player
 
@@ -36,56 +40,52 @@ func _on_claim_range_exited() -> void:
 		workshop_storage.call("set_player_in_claim_area", false)
 
 func on_player_interact(player: Player) -> void:
-	if WorkShopStorage != null and WorkShopStorage.has_method("get_unpaid_fee_summary"):
-		var unpaid_summary: Dictionary = WorkShopStorage.call("get_unpaid_fee_summary")
-		print("Unpaid fee summary: ", unpaid_summary)
-
-	# buka mode pilihan 1/2/3 di player
 	if player != null and player.has_method("open_workshop_menu"):
 		player.call("open_workshop_menu", self, 0)
 
-func pay_all_unpaid_fees(_player: Player) -> bool:
+func get_job_data(job_id: String) -> JobData:
+	for job_data in available_jobs:
+		if job_data == null:
+			continue
+		if job_data.job_id == job_id:
+			return job_data
+	return null
+
+func get_process_data(process_id: String) -> ProcessData:
+	for process_data in available_processes:
+		if process_data == null:
+			continue
+		if process_data.process_id == process_id:
+			return process_data
+
+	return null
+
+func pay_all_held_output_fees(_player: Player) -> bool:
 	if WorkShopStorage == null:
 		return false
 
-	if not WorkShopStorage.has_method("settle_unpaid_fees"):
+	if not WorkShopStorage.has_method("settle_held_output_fees"):
 		return false
-	return bool(WorkShopStorage.call("settle_unpaid_fees", Inventory, false))
+	return bool(WorkShopStorage.call("settle_held_output_fees", Inventory))
 
-func pay_overdue_fees(_player: Player) -> bool:
+func pay_output_lot(_player: Player, lot_id: String) -> Dictionary:
 	if WorkShopStorage == null:
-		return false
+		return {
+			"success": false,
+			"message": "Workshop storage is unavailable."
+		}
 
-	if not WorkShopStorage.has_method("settle_unpaid_fees"):
-		return false
+	return WorkShopStorage.pay_output_lot(lot_id, Inventory)
 
-	return bool(WorkShopStorage.call("settle_unpaid_fees", Inventory, true))
-
-func claim_with_action(
-	_player: Player,
-	claimable_index: int,
-	claim_action: int,
-	will_pay_fee: bool = true) -> bool:
-
+func get_storage_state() -> Dictionary:
 	if WorkShopStorage == null:
-		return false
+		return {}
 
-	if claim_action == WorkShopStorage.ClaimAction.TAKE_TO_PLAYER:
-		var claimables: Array = WorkShopStorage.get("claimable_outputs") if WorkShopStorage != null else []
-		if claimables.is_empty():
-			print("No Claimable output.")
-			return false
-
-	var player_inventory: Node = Inventory if claim_action == WorkShopStorage.ClaimAction.TAKE_TO_PLAYER else null
-	var claim_success: bool = bool(
-		WorkShopStorage.call(
-			"claim_output_with_action",
-			claimable_index,
-			claim_action,
-			player_inventory,
-			will_pay_fee))
-	print("Claim Success: ", claim_success)
-	return claim_success
+	var storage_state: Dictionary = WorkShopStorage.get_storage_state()
+	storage_state["active_processes"] = (
+		ProcessManager.get_active_progress_entries()
+	)
+	return storage_state
 
 func deposit_mudbrick_recipe_materials(required_items: Dictionary[String, int]) -> bool:
 
@@ -171,16 +171,21 @@ func withdraw_selected_items_to_player(selected_items: Dictionary) -> bool:
 
 	for item_id in selected_items.keys():
 		var qty: int = int(selected_items[item_id])
-		if not WorkShopStorage.has_item(item_id, qty):
+		if WorkShopStorage.get_free_item_quantity(item_id) < qty:
 			return false
 
-		if not Inventory.has_capacity_for(item_id, qty):
-			print("Inventory is Full.")
-			return false
+	if (
+		Inventory.get_remaining_capacity()
+		< Inventory.get_bulk_item_total_weight(selected_items)
+	):
+		print("Inventory is Full.")
+		return false
+
+	if not WorkShopStorage.remove_free_items(selected_items):
+		return false
 
 	for item_id in selected_items.keys():
 		var qty: int = int(selected_items[item_id])
-		WorkShopStorage.remove_item(item_id, qty)
 		Inventory.add_item(item_id, qty)
 
 	print("Selected items: ", selected_items)
@@ -288,7 +293,8 @@ func start_mudbrick_job_from_storage() -> bool:
 		null,
 		WorkShopStorage,
 		WorkShopStorage,
-		5
+		mudbrick_make.workshop_fee_amount,
+		max_assigned_worker_slots
 	)
 
 	if order_id.is_empty():
@@ -298,9 +304,34 @@ func start_mudbrick_job_from_storage() -> bool:
 	print("Started mudbrick job: ", order_id)
 	return true
 
-func start_job_from_storage(job: JobData, worker_ids: Array[String], work_days: int = 1) -> bool:
+func start_job_from_storage(
+	job: JobData,
+	worker_ids: Array[String],
+	work_days: int = 1
+	) -> bool:
+
 	if job == null:
 		last_start_job_error = "No job selected."
+		return false
+
+	for item_id in job.inputs.keys():
+		var required_amount: int = int(job.inputs[item_id])
+
+		if (
+			WorkShopStorage.get_free_item_quantity(str(item_id))
+			< required_amount
+		):
+			last_start_job_error = "Not enough %s." % str(item_id)
+			return false
+
+	if not WorkShopStorage.has_capacity_after_exchange(
+		job.inputs,
+		job.outputs
+	):
+		last_start_job_error = (
+			"Workshop storage does not have enough room "
+			+ "for this job output."
+			)
 		return false
 
 	var worker_id: String = _get_first_available_worker_for_job(worker_ids, job)
@@ -320,7 +351,8 @@ func start_job_from_storage(job: JobData, worker_ids: Array[String], work_days: 
 		null,
 		WorkShopStorage,
 		WorkShopStorage,
-		5
+		job.workshop_fee_amount,
+		max_assigned_worker_slots
 	)
 
 	if order_id.is_empty():

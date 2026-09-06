@@ -1,0 +1,106 @@
+[gd_scene load_steps=6 format=3 uid="uid://c5ewkwbkc6y47"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_f21j3"]
+[ext_resource type="Texture2D" uid="uid://c53us0vtn20m" path="res://assets/ui/ui_icon/lock_icon.png" id="2_na7x5"]
+[ext_resource type="Script" uid="uid://drl62acf6y5in" path="res://scenes/ui/work_order_card/work_order_card.gd" id="2_vi4da"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="4_selector"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_selector"]
+atlas = ExtResource("4_selector")
+region = Rect2(133, 101, 22, 22)
+
+[node name="WorkOrderCard" type="Button"]
+custom_minimum_size = Vector2(53, 46)
+offset_right = 53.0
+offset_bottom = 46.0
+focus_mode = 0
+theme = ExtResource("1_f21j3")
+theme_type_variation = &"WorkshopSquareButton34"
+toggle_mode = true
+script = ExtResource("2_vi4da")
+
+[node name="ContentMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 5
+
+[node name="ContentVBox" type="VBoxContainer" parent="ContentMargin"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="IconCenter" type="CenterContainer" parent="ContentMargin/ContentVBox"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 2
+
+[node name="WorkIcon" type="TextureRect" parent="ContentMargin/ContentVBox/IconCenter"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="ContentMargin/ContentVBox"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Work"
+horizontal_alignment = 1
+
+[node name="LockOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.38109186, 0.3133042, 0.22091639, 0.65000004)
+
+[node name="LockCenter" type="CenterContainer" parent="LockOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LockIcon" type="TextureRect" parent="LockOverlay/LockCenter"]
+custom_minimum_size = Vector2(18, 20)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_na7x5")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SelectionFrame" type="NinePatchRect" parent="."]
+visible = false
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_selector")
+patch_margin_left = 5
+patch_margin_top = 5
+patch_margin_right = 5
+patch_margin_bottom = 5

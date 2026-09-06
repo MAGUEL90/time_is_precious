@@ -45,8 +45,8 @@ func _setup_bar() -> void:
 	expanded_bar_x = bar.position.x
 	collapsed_bar_x = root.size.x
 
-	is_expanded = false
-	_set_bar_x(collapsed_bar_x)
+	is_expanded = true
+	_set_bar_x(expanded_bar_x)
 	_update_toggle_icon()
 
 func _on_toggle_button_pressed() -> void:

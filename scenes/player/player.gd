@@ -16,6 +16,7 @@ signal collapse_completed(duration_minutes: int)
 signal sleep_completed(duration_minutes: int, recovery_quality: float)
 
 @export var speed: float = 50.0
+@export var debug_disable_player_needs: bool = false
 @export var fatigue: float = 0.5 # << Hanya Tester
 @export var min_fatigue: float = 0.0
 @export var max_fatigue: float = 1.0
@@ -61,6 +62,7 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
 var current_interactable: Node = null
+var nearby_interactables: Array[Node] = []
 var current_npc_dialogue: NPCBase = null
 
 var can_move: bool = true
@@ -71,18 +73,20 @@ var total_collapse_count: int = 0
 var claim_menu_is_open: bool = false
 var inventory_is_open: bool = false
 var claim_menu_workshop: WorkShop = null
+var selected_workshop_job: JobData = null
 var claim_menu_claimable_index: int = 0
-var claim_fee_confirm_is_open: bool = false
-var claim_fee_confirm_choice: int = 0
 var is_sleeping: bool = false
 var last_sleep_day: int = -1
 var is_collapsing: bool = false
 var last_collapse_day: int = -1
 
+
 # Lifecycle and time updates
 
 func _ready() -> void:
 	PlayerRuntimeState.restore(self)
+	if debug_disable_player_needs:
+		_reset_debug_needs()
 
 	BaseDialogueManager.dialogue_activated.connect(on_dialogue_activated)
 	BaseDialogueManager.dialogue_deactivated.connect(on_dialogue_deactivated)
@@ -91,7 +95,14 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	PlayerRuntimeState.capture(self)
 
+func _process(_delta: float) -> void:
+	if can_move and not nearby_interactables.is_empty():
+		_refresh_current_interactable()
+
 func on_minute_changed(_minute: int) -> void:
+	if debug_disable_player_needs:
+		_reset_debug_needs()
+		return
 	if is_sleeping:
 		hunger = clampf(
 			hunger + hunger_increase_per_min,
@@ -108,31 +119,6 @@ func on_minute_changed(_minute: int) -> void:
 # Input routing
 
 func _unhandled_input(event: InputEvent) -> void:
-	if claim_menu_is_open:
-		if event is InputEventKey and event.is_pressed() and not event.is_echo():
-			if claim_fee_confirm_is_open:
-				if event.keycode == KEY_Y:
-					_confirm_claim_choice_with_fee(true)
-				elif event.keycode == KEY_N:
-					_confirm_claim_choice_with_fee(false)
-				elif event.keycode == KEY_ESCAPE:
-					_close_claim_menu()
-				return
-
-			if event.keycode == KEY_1:
-				_open_fee_confirmation(0) # TAKE TO PLAYER
-			elif event.keycode == KEY_2:
-				_open_workshop_storage_menu_ui()
-			elif event.keycode == KEY_3:
-				_open_workshop_worker_assignment_ui()
-			elif event.keycode == KEY_4:
-				_pay_workshop_unpaid_fee()
-			elif event.keycode == KEY_5:
-				_pay_workshop_overdue_fee()
-			elif event.keycode == KEY_ESCAPE:
-				_close_claim_menu()
-		return
-
 	if not can_move:
 		return
 
@@ -169,6 +155,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif current_interactable is PickUpItem:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
 		pickup_item.on_player_interact(self)
+		if pickup_item.is_collecting:
+			_on_interactable_deactivated(pickup_item)
 		_play_pickup_action()
 
 	elif current_interactable is JobBoard:
@@ -182,25 +170,75 @@ func _unhandled_input(event: InputEvent) -> void:
 # Interactable state
 
 func _on_interactable_activated(interactable_owner: Node):
-	if current_interactable != null:
-		return
-
 	if interactable_owner is NPCBase and not (interactable_owner as NPCBase).can_start_dialogue():
 		return # NPC tanpa dialog valid: jangan tampilkan prompt interact palsu, jangan jadikan interactable
 
-	current_interactable = interactable_owner
-	if current_interactable is PickUpItem:
-		current_interactable.on_player_enter_interaction()
-	current_interactable.interactable_label_component.show()
-	can_interact = true
+	if not nearby_interactables.has(interactable_owner):
+		nearby_interactables.append(interactable_owner)
+
+	if can_move:
+		_refresh_current_interactable()
 
 func _on_interactable_deactivated(interactable_owner: Node):
+	nearby_interactables.erase(interactable_owner)
 	if current_interactable == interactable_owner:
+		_refresh_current_interactable()
+
+func _refresh_current_interactable() -> void:
+	for index: int in range(nearby_interactables.size() - 1, -1, -1):
+		var candidate: Node = nearby_interactables[index]
+		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion():
+			nearby_interactables.remove_at(index)
+
+	var nearest_interactable: Node = null
+	var nearest_distance_squared: float = INF
+	for candidate: Node in nearby_interactables:
+		if not candidate is Node2D:
+			continue
+
+		var candidate_node: Node2D = candidate as Node2D
+		var distance_squared: float = global_position.distance_squared_to(
+			candidate_node.global_position
+		)
+		if distance_squared < nearest_distance_squared:
+			nearest_distance_squared = distance_squared
+			nearest_interactable = candidate
+
+	_set_current_interactable(nearest_interactable)
+
+func _set_current_interactable(next_interactable: Node) -> void:
+	if current_interactable == next_interactable:
+		can_interact = current_interactable != null
+		return
+
+	if is_instance_valid(current_interactable):
 		if current_interactable is PickUpItem:
-			current_interactable.on_player_exit_interaction()
-		current_interactable.interactable_label_component.hide()
-		current_interactable = null
-		can_interact  = false
+			(current_interactable as PickUpItem).on_player_exit_interaction()
+
+		var previous_label: CanvasItem = _get_interactable_label(current_interactable)
+		if previous_label != null:
+			previous_label.hide()
+
+	current_interactable = next_interactable
+	can_interact = current_interactable != null
+	if current_interactable == null:
+		return
+
+	if current_interactable is PickUpItem:
+		(current_interactable as PickUpItem).on_player_enter_interaction()
+
+	var current_label: CanvasItem = _get_interactable_label(current_interactable)
+	if current_label != null:
+		current_label.show()
+
+func _get_interactable_label(interactable_owner: Node) -> CanvasItem:
+	if not is_instance_valid(interactable_owner):
+		return null
+
+	var label_node: Variant = interactable_owner.get("interactable_label_component")
+	if label_node is CanvasItem:
+		return label_node as CanvasItem
+	return null
 
 # Dialogue flow
 
@@ -230,11 +268,8 @@ func open_workshop_menu(workshop: WorkShop, claimable_index: int) -> void:
 	claim_menu_is_open = true
 	claim_menu_workshop = workshop
 	claim_menu_claimable_index = claimable_index
-	claim_fee_confirm_is_open = false
 
-	var fee_summary: Dictionary = WorkShopStorage.get_unpaid_fee_summary()
-	var claimables: Array = WorkShopStorage.get("claimable_outputs")
-	var has_claimable_output: bool = not claimables.is_empty()
+	var storage_state: Dictionary = workshop.get_storage_state()
 
 	var menu_scene: PackedScene = preload("res://scenes/ui/workshop_menu_ui/workshop_menu_ui.tscn")
 	var menu_ui: WorkshopMenuUI = menu_scene.instantiate()
@@ -244,55 +279,15 @@ func open_workshop_menu(workshop: WorkShop, claimable_index: int) -> void:
 	menu_ui.action_selected.connect(_on_work_shop_menu_action_selected)
 	menu_ui.closed.connect(_on_workshop_menu_closed)
 
-	menu_ui.open_menu(fee_summary, has_claimable_output)
+	menu_ui.open_menu(storage_state)
 
-# Workshop claim and fee actions
-
-func _confirm_claim_choice(claim_action: int) -> void:
-	if claim_menu_workshop == null:
-		_close_claim_menu()
-		return
-	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_action, true)
-
-func _open_fee_confirmation(claim_action: int) -> void:
-	claim_fee_confirm_is_open = true
-	claim_fee_confirm_choice = claim_action
-	print("Bayar Fee sekarang? [Y]=Bayar, [N]=TidakBayar (masuk workshop + hitung jatuh tempo hari)")
-
-func _confirm_claim_choice_with_fee(will_pay_fee: bool) -> void:
-	if claim_menu_workshop == null:
-		_close_claim_menu()
-		return
-
-	claim_menu_workshop.claim_with_action(self, claim_menu_claimable_index, claim_fee_confirm_choice, will_pay_fee)
-	_close_claim_menu()
+# Workshop fee actions
 
 func _close_claim_menu() -> void:
+	selected_workshop_job = null
 	claim_menu_is_open = false
 	claim_menu_workshop = null
 	claim_menu_claimable_index = 0
-	claim_fee_confirm_is_open = false
-	claim_fee_confirm_choice = 0
-
-func _pay_workshop_unpaid_fee() -> void:
-	if claim_menu_workshop == null:
-		_close_claim_menu()
-		return
-	if claim_menu_workshop.has_method("pay_all_unpaid_fees"):
-		var paid_success: bool = bool(claim_menu_workshop.call("pay_all_unpaid_fees", self))
-		print("Pay unpaid fee success: ", paid_success)
-	_close_claim_menu()
-
-func _pay_workshop_overdue_fee() -> void:
-	if claim_menu_workshop == null:
-		_close_claim_menu()
-		return
-
-	if claim_menu_workshop.has_method("pay_overdue_fees"):
-		var paid_success: bool = bool(claim_menu_workshop.call("pay_overdue_fees", self))
-		print("Pay overdue fee success", paid_success)
-
-	_close_claim_menu()
 
 # Fatigue, hunger, and condition accessors
 
@@ -305,6 +300,8 @@ func reduce_fatigue(amount: float) -> bool:
 	return false
 
 func increase_fatigue(amount: float) -> bool:
+	if debug_disable_player_needs:
+		return false
 	if fatigue < max_fatigue and amount > 0.0:
 		fatigue = clampf(fatigue + amount, min_fatigue, max_fatigue)
 		condition_changed.emit()
@@ -320,6 +317,8 @@ func reduce_hunger(amount: float) -> bool:
 	return false
 
 func increase_hunger(amount: float) -> bool:
+	if debug_disable_player_needs:
+		return false
 	if hunger < max_hunger and amount > 0.0:
 		hunger = clampf(hunger + amount, min_hunger, max_hunger)
 		condition_changed.emit()
@@ -350,10 +349,140 @@ func _open_workshop_storage_menu_ui() -> void:
 	get_tree().current_scene.add_child(workshop_storage_menu)
 
 	workshop_storage_menu.action_selected.connect(_on_workshop_storage_menu_action_selected)
+	workshop_storage_menu.pay_lot_requested.connect(
+		_on_workshop_output_lot_payment_requested
+	)
+	workshop_storage_menu.pay_all_requested.connect(
+		_on_workshop_storage_pay_all_requested
+	)
+	workshop_storage_menu.withdraw_items_requested.connect(
+		_on_workshop_free_stock_withdraw_requested
+	)
 	workshop_storage_menu.closed.connect(_on_workshop_storage_menu_closed)
 
 	claim_menu_is_open = false
-	workshop_storage_menu.open_menu()
+	workshop_storage_menu.open_menu(
+		claim_menu_workshop.get_storage_state()
+	)
+
+# Workshop production selection flow
+
+func _open_workshop_build_ui() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	var build_scene: PackedScene = preload(
+		"res://scenes/ui/workshop_build_ui/workshop_build_ui.tscn"
+	)
+	var build_ui: WorkshopBuildUI = build_scene.instantiate()
+	get_tree().current_scene.add_child(build_ui)
+	build_ui.back_requested.connect(_on_workshop_build_back_requested)
+	build_ui.cancelled.connect(_on_workshop_build_cancelled)
+
+	claim_menu_is_open = false
+	build_ui.open_menu()
+
+func _on_workshop_build_back_requested() -> void:
+	return_to_workshop_main_menu()
+
+func _on_workshop_build_cancelled() -> void:
+	_close_claim_menu()
+	_show_current_interact_label()
+
+func _open_workshop_production_ui() -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	var production_scene: PackedScene = preload(
+		"res://scenes/ui/workshop_production_ui/workshop_production_ui.tscn"
+	)
+	var production_ui: WorkshopProductionUI = production_scene.instantiate()
+	get_tree().current_scene.add_child(production_ui)
+
+	production_ui.work_order_selected.connect(
+		_on_workshop_work_order_selected
+	)
+
+	production_ui.back_requested.connect(
+		_on_workshop_production_back_requested
+	)
+
+	production_ui.cancelled.connect(
+		_on_workshop_production_cancelled
+	)
+
+	claim_menu_is_open = false
+	production_ui.open_menu(claim_menu_workshop)
+
+func _on_workshop_work_order_selected(
+	work_order_id: String,
+	work_order_type: int
+) -> void:
+	if claim_menu_workshop == null:
+		_close_claim_menu()
+		_show_current_interact_label()
+		return
+
+	if (work_order_type == WorkOrderCard.WorkOrderType.JOB):
+		var job_data: JobData = (claim_menu_workshop.get_job_data(work_order_id))
+
+		if job_data == null:
+			print("Workshop job is unavailable: ", work_order_id)
+			_open_workshop_production_ui()
+			return
+
+		selected_workshop_job = job_data
+		_open_workshop_worker_assignment_ui(claim_menu_workshop.get_assigned_worker_ids())
+		return
+
+	selected_workshop_job = null
+
+	if work_order_type == WorkOrderCard.WorkOrderType.PROCESS:
+		_start_selected_workshop_process(work_order_id)
+		return
+
+	print("Unsupported work order: ", work_order_id)
+	_open_workshop_production_ui()
+
+func _start_selected_workshop_process(process_id: String) -> void:
+	var availability: Dictionary = (
+		ProcessManager.get_process_availability(process_id)
+	)
+	var quantity: int = int(availability.get("startable_quantity", 0))
+
+	if (
+		not bool(availability.get("can_start", false))
+		or quantity <= 0
+	):
+		print("Process is no longer available: ", process_id)
+		_open_workshop_production_ui()
+		return
+
+	var process_started: bool = (
+		ProcessManager.start_registered_process(
+			process_id,
+			quantity
+		)
+	)
+	if not process_started:
+		print("Process failed to start: ", process_id)
+		_open_workshop_production_ui()
+		return
+
+	print("Process started: ", process_id, " x", quantity)
+	_close_claim_menu()
+	_show_current_interact_label()
+
+func _on_workshop_production_back_requested() -> void:
+	return_to_workshop_main_menu()
+
+func _on_workshop_production_cancelled() -> void:
+	_close_claim_menu()
+	_show_current_interact_label()
 
 # Workshop worker assignment flow
 
@@ -374,7 +503,8 @@ func _open_workshop_worker_assignment_ui(current_worker_ids: Array[String] = [])
 	claim_menu_is_open = false
 	worker_assignment_menu.open_assignment(
 		current_worker_ids,
-		claim_menu_workshop.get_max_assigned_worker_slots()
+		claim_menu_workshop.get_max_assigned_worker_slots(),
+		selected_workshop_job.requirement_profession if selected_workshop_job != null else WorkerData.Profession.NONE
 	)
 
 func _on_workshop_worker_assignment_changed(
@@ -392,7 +522,7 @@ func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) ->
 		return
 
 	if worker_ids.is_empty():
-		return_to_workshop_main_menu()
+		_open_workshop_production_ui()
 		return
 
 	_open_workshop_job_ui(
@@ -400,8 +530,7 @@ func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) ->
 	)
 
 func _on_workshop_worker_assignment_back_requested() -> void:
-	return_to_workshop_main_menu()
-	_show_current_interact_label()
+	_open_workshop_production_ui()
 
 func _on_workshop_worker_assignment_cancelled() -> void:
 	_close_claim_menu()
@@ -413,8 +542,68 @@ func _on_workshop_storage_menu_action_selected(action_id: int) -> void:
 	match action_id:
 		WorkshopStorageMenuUI.Action.DEPOSIT_ITEMS:
 			_open_workshop_deposit_transfer()
-		WorkshopStorageMenuUI.Action.WITHDRAW_ITEMS:
-			_open_workshop_withdraw_transfer()
+
+func _on_workshop_output_lot_payment_requested(
+	lot_id: String,
+	menu_ui: WorkshopStorageMenuUI
+) -> void:
+	if claim_menu_workshop == null or not is_instance_valid(menu_ui):
+		return
+
+	var payment_result: Dictionary = claim_menu_workshop.pay_output_lot(
+		self,
+		lot_id
+	)
+	menu_ui.show_payment_result(
+		bool(payment_result.get("success", false)),
+		str(payment_result.get("message", "Could not pay output fee.")),
+		claim_menu_workshop.get_storage_state()
+	)
+
+func _on_workshop_storage_pay_all_requested(
+	menu_ui: WorkshopStorageMenuUI
+) -> void:
+	if claim_menu_workshop == null or not is_instance_valid(menu_ui):
+		return
+
+	var payment_success: bool = claim_menu_workshop.pay_all_held_output_fees(self)
+	menu_ui.show_payment_result(
+		payment_success,
+		(
+			""
+			if payment_success
+			else "Not enough currency to pay all Held Output fees."
+		),
+		claim_menu_workshop.get_storage_state()
+	)
+
+func _on_workshop_free_stock_withdraw_requested(
+	selected_items: Dictionary,
+	menu_ui: WorkshopStorageMenuUI
+) -> void:
+	if claim_menu_workshop == null or not is_instance_valid(menu_ui):
+		return
+
+	if selected_items.is_empty():
+		menu_ui.show_payment_result(
+			false,
+			"Invalid withdrawal.",
+			claim_menu_workshop.get_storage_state()
+		)
+		return
+
+	var withdraw_success: bool = claim_menu_workshop.withdraw_selected_items_to_player(
+		selected_items
+	)
+	menu_ui.show_payment_result(
+		withdraw_success,
+		(
+			"Withdrew selected Free Stock to Inventory."
+			if withdraw_success
+			else "Could not withdraw. Check stock and Inventory capacity."
+		),
+		claim_menu_workshop.get_storage_state()
+	)
 
 func _open_workshop_deposit_transfer() -> void:
 	if claim_menu_workshop == null:
@@ -477,24 +666,6 @@ func _on_workshop_deposit_cancelled() -> void:
 	_close_claim_menu()
 	_show_current_interact_label()
 
-func _open_workshop_withdraw_transfer() -> void:
-	if claim_menu_workshop == null:
-		return
-
-	var item_transfer_scene: PackedScene = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn")
-	var item_transfer_menu: ItemTransferUI = item_transfer_scene.instantiate()
-
-	get_tree().current_scene.add_child(item_transfer_menu)
-
-	item_transfer_menu.transfer_confirmed.connect(_on_workshop_withdraw_confirmed)
-	item_transfer_menu.transfer_back_requested.connect(_on_workshop_withdraw_back_requested)
-	item_transfer_menu.transfer_cancelled.connect(_on_workshop_withdraw_cancelled)
-
-	item_transfer_menu.open_transfer("Withdraw to Inventory", WorkShopStorage.items, "Withdraw")
-
-func _on_workshop_withdraw_back_requested() -> void:
-	_return_to_workshop_storage_menu()
-
 func _on_workshop_storage_menu_closed() -> void:
 	return_to_workshop_main_menu()
 	_show_current_interact_label()
@@ -502,6 +673,10 @@ func _on_workshop_storage_menu_closed() -> void:
 # Workshop job flow
 
 func _open_workshop_job_ui(worker_ids: Array[String]) -> void:
+	if selected_workshop_job == null:
+		_open_workshop_production_ui()
+		return
+
 	if claim_menu_workshop == null:
 		_close_claim_menu()
 		_show_current_interact_label()
@@ -516,7 +691,11 @@ func _open_workshop_job_ui(worker_ids: Array[String]) -> void:
 	workshop_job_ui.back_requested.connect(_on_workshop_job_back_requested)
 	workshop_job_ui.cancelled.connect(_on_workshop_job_cancelled)
 
-	workshop_job_ui.open_job(claim_menu_workshop, worker_ids)
+	workshop_job_ui.open_job(
+		claim_menu_workshop,
+		worker_ids,
+		selected_workshop_job
+		)
 
 func _on_workshop_job_start_requested(
 	job_data: JobData,
@@ -546,64 +725,16 @@ func _on_workshop_job_cancelled() -> void:
 	_close_claim_menu()
 	_show_current_interact_label()
 
-func _on_workshop_withdraw_confirmed(selected_items: Dictionary) -> void:
-	if claim_menu_workshop == null:
-		return
-
-	var workshop: WorkShop = claim_menu_workshop
-
-	var withdraw_success: bool = workshop.withdraw_selected_items_to_player(selected_items)
-
-	if not withdraw_success:
-		_close_claim_menu()
-		_show_current_interact_label()
-		return
-
-	var index: int = 0
-
-	for item_id in selected_items.keys():
-		var qty: int = int(selected_items[item_id])
-		var stack_offset: Vector2 = Vector2(0, -12 * index)
-
-		_spawn_item_change_popup(
-			item_id,
-			qty,
-			true,
-			global_position + Vector2(0, -28) + stack_offset
-		)
-
-		_spawn_item_change_popup(
-			item_id,
-			qty,
-			false,
-			workshop.global_position + Vector2(0, -32) + stack_offset
-		)
-
-		index += 1
-
-	_close_claim_menu()
-	_show_current_interact_label()
-
-func _on_workshop_withdraw_cancelled() -> void:
-	_close_claim_menu()
-	_show_current_interact_label()
-
 # Shared workshop UI helpers
 
 func _on_work_shop_menu_action_selected(action_id: int) -> void:
 	match action_id:
-		WorkshopMenuUI.Action.CLAIM_TO_PLAYER:
-			_open_fee_confirmation(WorkShopStorage.ClaimAction.TAKE_TO_PLAYER)
 		WorkshopMenuUI.Action.MANAGE_STORAGE:
 			_open_workshop_storage_menu_ui()
 		WorkshopMenuUI.Action.ASSIGN_WORK:
-			_open_workshop_worker_assignment_ui(
-				claim_menu_workshop.get_assigned_worker_ids()
-			)
-		WorkshopMenuUI.Action.PAY_ALL_FEES:
-			_pay_workshop_unpaid_fee()
-		WorkshopMenuUI.Action.PAY_OVERDUE_FEES:
-			_pay_workshop_overdue_fee()
+			_open_workshop_production_ui()
+		WorkshopMenuUI.Action.BUILD_AND_UPGRADE:
+			_open_workshop_build_ui()
 
 func _on_workshop_menu_closed() -> void:
 	_close_claim_menu()
@@ -660,6 +791,8 @@ func _play_pickup_action() -> void:
 # Focus and experience
 
 func consume_focus(amount: float) -> bool:
+	if debug_disable_player_needs:
+		return amount > 0.0
 	if amount <= 0.0 or focus <= 0.0:
 		return false
 
@@ -811,11 +944,19 @@ func has_critical_condition() -> bool:
 # Collapse and Nightmare flow
 
 func _check_for_collapse() -> void:
+	if debug_disable_player_needs:
+		return
 	if is_sleeping or is_collapsing or SceneTransition.is_transitioning:
 		return
 
 	if has_critical_condition():
 		collapse()
+
+func _reset_debug_needs() -> void:
+	focus = 1.0
+	fatigue = min_fatigue
+	hunger = min_hunger
+	condition_changed.emit()
 
 func collapse() -> void:
 	if is_collapsing:

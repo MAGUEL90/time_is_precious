@@ -40,7 +40,7 @@ func _refresh_applicants() -> void:
 	applicants = CitizenManager.get_all_applicants()
 
 	for applicant_data in applicants:
-		applicant_list.add_item("%s | %s | SAT %d%% | %d/day" % [
+		applicant_list.add_item("%s, %s, SAT %d%%, %d/day" % [
 			applicant_data.display_name,
 			_get_profession_name(applicant_data.profession),
 			roundi(applicant_data.satisfaction * 100.0),
