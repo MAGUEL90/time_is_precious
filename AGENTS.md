@@ -1,6 +1,6 @@
 # TIME IS PRECIOUS — AGENT CONTROL ENTRYPOINT
 
-Rules Version: `1.1`
+Rules Version: `1.2`
 Status: `ACTIVE`
 Last Rules Update: `2026-09-10`
 
@@ -92,7 +92,34 @@ A subagent saying a task is complete is not sufficient evidence of completion. T
 
 Use subagents proactively when independent subtasks would materially improve speed or parallelism. Do simple tasks directly when delegation would add unnecessary overhead.
 
-## 5. GIT & CHANGE CONTROL
+## 5. REASONING ESCALATION POLICY
+
+Default lead reasoning:
+- `Astra Medium`
+
+The root Astra session must evaluate whether a higher available reasoning tier is warranted when any of the following applies:
+- a bug is fatal, project-blocking or causes severe regressions;
+- the root cause remains ambiguous after an initial investigation;
+- the task or suspected fix reaches across multiple major systems;
+- the blast radius is large or difficult to predict;
+- architecture, save compatibility, global state or project-wide conventions may be affected;
+- previous repair attempts have failed or produced regressions;
+- a wrong decision could create substantial long-term technical debt or gameplay breakage.
+
+Escalation should be based on `risk + scope + ambiguity + blast radius`, not merely task length.
+
+When escalation is warranted:
+1. Keep investigation, architectural reasoning and solution selection in the root Astra session.
+2. Use a higher available Astra reasoning tier if the runtime supports changing or starting the required reasoning configuration safely.
+3. If the current environment cannot self-escalate reasoning, do not pretend escalation occurred; report the limitation to the Game Director before making a high-impact decision.
+4. After the problem is understood and implementation can be reduced to narrow, explicit tasks, those implementation units may still be delegated to Luna XHigh.
+5. Final review remains with the root Astra session.
+
+Do not escalate reasoning merely because a task is verbose, repetitive or time-consuming when the solution is already clear and low-risk.
+
+Reasoning escalation does not increase task permissions or risk authorization. Protected-area and gameplay/architecture restrictions still apply.
+
+## 6. GIT & CHANGE CONTROL
 
 - Do not work directly on `main` or another protected release branch.
 - Follow the repository branch convention and one-task-per-branch rules in the active control pack.
@@ -107,7 +134,7 @@ Known-good activation baseline:
 
 Git history remains the normal fine-grained recovery mechanism. Permanent tags/checkpoints are reserved for important human-validated states, not every small change.
 
-## 6. QA & FINAL REVIEW
+## 7. QA & FINAL REVIEW
 
 Before presenting an implementation as complete:
 - verify the requested behavior
@@ -121,7 +148,13 @@ For delegated work, final review belongs to the root Astra session, not the impl
 
 Only the human Game Director may give final merge approval.
 
-## 7. VERSION NOTES
+## 8. VERSION NOTES
+
+### v1.2 — 2026-09-10
+- Added reasoning escalation policy for fatal bugs, ambiguous root causes, large blast radius and cross-system work.
+- Kept Astra Medium as the default lead reasoning configuration.
+- Required honest reporting when the runtime cannot safely self-escalate to a higher reasoning tier.
+- Clarified that reasoning escalation does not increase permissions and that narrow implementation may still be delegated afterward.
 
 ### v1.1 — 2026-09-10
 - Structured the root rules into clear responsibility sections.
