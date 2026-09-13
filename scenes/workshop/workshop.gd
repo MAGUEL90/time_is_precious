@@ -248,7 +248,7 @@ func get_first_available_assigned_worker_id(job: JobData = null) -> String:
 			var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
 			if worker_data == null:
 				continue
-			if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
+			if worker_data.is_reserved():
 				continue
 			if job != null and worker_data.profession != job.requirement_profession:
 				continue
@@ -262,7 +262,7 @@ func assign_test_worker() -> bool:
 		if worker_data == null:
 			continue
 
-		if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
+		if worker_data.is_reserved():
 			continue
 
 		if assigned_worker_ids.has(worker_data.worker_id):
@@ -369,7 +369,7 @@ func _get_first_available_worker_for_job(worker_ids: Array[String], job: JobData
 		var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
 		if worker_data == null:
 			continue
-		if worker_data.is_working():
+		if worker_data.is_reserved():
 			continue
 		if worker_data.profession != job.requirement_profession:
 			continue

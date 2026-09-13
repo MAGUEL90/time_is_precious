@@ -1,0 +1,111 @@
+[gd_scene load_steps=10 format=3 uid="uid://th087w5pkuk7"]
+
+[ext_resource type="Script" uid="uid://dyn712tfgngbt" path="res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd" id="1_ykrd6"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_iab7v"]
+[ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_57hx4"]
+[ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="4_um2om"]
+[ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="5_xyywd"]
+[ext_resource type="PackedScene" uid="uid://vj0r4ds7b63g" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="6_inspector"]
+[ext_resource type="PackedScene" uid="uid://c8jsa3yhad0eg" path="res://scenes/ui/top_hud/top_hud.tscn" id="7_top"]
+[ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="8_prompt"]
+[ext_resource type="PackedScene" uid="uid://c11gc83v7mjib" path="res://scenes/nightmare_world/nightmare_world.tscn" id="9_nightmare"]
+
+[node name="TestSceneClayWorksite" type="Node2D"]
+script = ExtResource("1_ykrd6")
+prepare_nightmare_test = true
+
+[node name="WorksiteMarkers" type="Node2D" parent="."]
+
+[node name="WorkerDeparture" type="Marker2D" parent="."]
+position = Vector2(0, 70)
+
+[node name="NearSpawn" type="Marker2D" parent="WorkerDeparture"]
+position = Vector2(-45, 0)
+
+[node name="FarSpawn" type="Marker2D" parent="WorkerDeparture"]
+position = Vector2(90, 15)
+
+[node name="ClaySiteA" type="Marker2D" parent="WorksiteMarkers"]
+position = Vector2(-90, 0)
+
+[node name="Label" type="Label" parent="WorksiteMarkers/ClaySiteA"]
+offset_left = -36.0
+offset_top = -36.0
+offset_right = 36.0
+theme = ExtResource("2_iab7v")
+text = "Clay Site A"
+horizontal_alignment = 1
+
+[node name="InteractPrompt" parent="WorksiteMarkers/ClaySiteA" instance=ExtResource("8_prompt")]
+position_offset = Vector2(-5, -15)
+
+[node name="ClaySiteB" type="Marker2D" parent="WorksiteMarkers"]
+position = Vector2(90, 0)
+
+[node name="Label" type="Label" parent="WorksiteMarkers/ClaySiteB"]
+offset_left = -36.0
+offset_top = -36.0
+offset_right = 36.0
+theme = ExtResource("2_iab7v")
+text = "Clay Site B"
+horizontal_alignment = 1
+
+[node name="InteractPrompt" parent="WorksiteMarkers/ClaySiteB" instance=ExtResource("8_prompt")]
+position_offset = Vector2(-5, -15)
+
+[node name="Player" parent="." instance=ExtResource("3_57hx4")]
+position = Vector2(0, 40)
+
+[node name="NightmareWorld" parent="." instance=ExtResource("9_nightmare")]
+position = Vector2(9744, 9792)
+
+[node name="InventoryUI" parent="." instance=ExtResource("4_um2om")]
+
+[node name="BottomHUD" parent="." instance=ExtResource("5_xyywd")]
+
+[node name="TopHUD" parent="." instance=ExtResource("7_top")]
+
+[node name="GroundOutput" type="Node2D" parent="."]
+
+[node name="FixtureNotes" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="FixtureNotes"]
+offset_left = 8.0
+offset_top = 158.0
+offset_right = 392.0
+theme = ExtResource("2_iab7v")
+theme_override_font_sizes/font_size = 8
+text = "Clay worksite manual work test
+Approach a site and press E to work"
+
+[node name="InspectionUI" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="ClayWorksiteInspector" parent="InspectionUI" instance=ExtResource("6_inspector")]
+
+[node name="WorkTransition" type="CanvasLayer" parent="."]
+layer = 90
+
+[node name="Blackout" type="ColorRect" parent="WorkTransition"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="InterruptionMessage" type="Label" parent="WorkTransition/Blackout"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_right = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_iab7v")
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2

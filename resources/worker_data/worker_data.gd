@@ -2,7 +2,7 @@ class_name WorkerData
 extends Resource
 
 enum Profession {NONE, LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
-enum WorkStatus {IDLE, WORKING}
+enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 
 @export var worker_id: String = ""
 @export var display_name: String = ""
@@ -91,6 +91,25 @@ func get_reliability_success_chance() -> float:
 
 func is_working() -> bool:
 	return current_work_status == WorkStatus.WORKING
+
+func is_reserved() -> bool:
+	return not current_order_id.is_empty() or is_working()
+
+func set_work_activity(order_id: String, activity: WorkStatus) -> void:
+	if order_id == current_order_id and not order_id.is_empty():
+		current_work_status = activity
+
+func get_work_activity_text() -> String:
+	match current_work_status:
+		WorkStatus.WORKING:
+			return "Working"
+		WorkStatus.RESTING:
+			return "Resting"
+		WorkStatus.WAITING_FOR_RESOURCES:
+			return "Waiting for resources"
+		WorkStatus.TRAVELLING:
+			return "Travelling"
+	return "Idle"
 
 func start_work(order_id: String, job_id: String) -> void:
 	current_order_id = order_id

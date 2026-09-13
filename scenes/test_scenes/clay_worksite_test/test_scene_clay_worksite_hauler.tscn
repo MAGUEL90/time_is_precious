@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bhjw8mfeh53rn"]
+
+[ext_resource type="Script" uid="uid://bgxju3mol017h" path="res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite_hauler.gd" id="1"]
+
+[node name="TestSceneClayWorksiteHauler" type="Node2D"]
+script = ExtResource("1")

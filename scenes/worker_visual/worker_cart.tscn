@@ -1,0 +1,46 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/shared_assets/tools/push_cart/push_cart.png" id="1_push"]
+[ext_resource type="Texture2D" path="res://assets/characters/shared_assets/tools/idle_cart/idle_cart.png" id="2_idle"]
+
+[sub_resource type="AtlasTexture" id="push_cart_0"]
+atlas = ExtResource("1_push")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="push_cart_1"]
+atlas = ExtResource("1_push")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="push_cart_2"]
+atlas = ExtResource("1_push")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="push_cart_3"]
+atlas = ExtResource("1_push")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="idle_cart_0"]
+atlas = ExtResource("2_idle")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="idle_cart_1"]
+atlas = ExtResource("2_idle")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="SpriteFrames" id="Frames"]
+animations = [{
+"frames": [{"duration": 1.0, "texture": SubResource("push_cart_0")}, {"duration": 1.0, "texture": SubResource("push_cart_1")}, {"duration": 1.0, "texture": SubResource("push_cart_2")}, {"duration": 1.0, "texture": SubResource("push_cart_3")}],
+"loop": true,
+"name": &"push_cart",
+"speed": 6.0
+}, {
+"frames": [{"duration": 1.0, "texture": SubResource("idle_cart_0")}, {"duration": 1.0, "texture": SubResource("idle_cart_1")}],
+"loop": true,
+"name": &"idle_cart",
+"speed": 1.0
+}]
+
+[node name="CartVisual" type="AnimatedSprite2D"]
+texture_filter = 1
+sprite_frames = SubResource("Frames")
+animation = &"idle_cart"

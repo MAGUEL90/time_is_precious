@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite_gathering.gd" id="1"]
+
+[node name="TestSceneClayWorksiteGathering" type="Node"]
+process_mode = 3
+script = ExtResource("1")

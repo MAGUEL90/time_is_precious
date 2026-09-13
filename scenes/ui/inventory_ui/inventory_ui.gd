@@ -389,13 +389,10 @@ func _get_worker_profession_name(profession: WorkerData.Profession) -> String:
 			return "Unknown"
 
 func _get_worker_work_status_text(worker_data: WorkerData) -> String:
-	if worker_data.current_work_status == WorkerData.WorkStatus.WORKING:
-		if worker_data.current_job_id.is_empty():
-			return "Working"
-		else:
-			return "Working - " + worker_data.current_job_id
-	else:
-		return "Idle"
+	var activity: String = worker_data.get_work_activity_text()
+	if worker_data.is_reserved() and not worker_data.current_job_id.is_empty():
+		return activity + " - " + worker_data.current_job_id
+	return activity
 
 func _get_need_text(is_fulfilled: bool) -> String:
 	return "OK" if is_fulfilled else "NO"

@@ -2,7 +2,7 @@
 
 Source of truth for high-level game design decisions.
 
-- Last updated: 2026-08-17
+- Last updated: 2026-09-13
 - Working version: v0.10 draft
 - Focus: game idea, player experience, world logic, and long-term design direction.
 - Separate note: implementation progress and coding notes should live outside this concept document.
@@ -309,6 +309,75 @@ This creates a strong design message:
 
 > A city that takes care of its people creates better workers.
 
+### 9.5 Worker and Worksite MVP Decisions — 2026-09-13
+
+These are the approved rules for the current worker/worksite MVP. The wider needs,
+satisfaction, reliability, profession-star and team-synergy direction remains future work
+for this loop. This section records design decisions; implementation and integration status
+belong in the project roadmap and task reports.
+
+#### Daily assignment and completed work
+
+- Worksite setup becomes a standing assignment when the player confirms Start Work. New
+  assignments begin the following day; intermediate worker selections remain a draft.
+- Daily assignments remain active after the shift ends, natural stock is exhausted, or a
+  Hauler reaches its daily target. Workers leave the location and return on a later workday.
+- Workers share one movement speed. Departure time depends on the distance from each spawn
+  point so workers arrive for the start of their shift.
+- Removing a worker from a worksite requires confirmation and ends that assignment. Completed
+  output and earned XP remain; unfinished gathering progress is discarded. Loaded Hauler cargo
+  must finish delivery or return safely before the worker is released.
+- Firing ends employment and is available only while the worker is idle. Equipped tools return
+  to City Storage; firing is distinct from removing a worksite assignment.
+
+#### Laborer and Hauler cooperation
+
+- Laborers gather output at the worksite. Haulers move that output to a selected storage
+  destination through repeated trips; they do not create extra gathered output.
+- A cart is required for the Hauler role at every worksite. Its provisional capacity is
+  **3 items per trip**, not three inventory slots.
+- Each Hauler has one selected storage destination and one daily item target. The MVP has
+  no multi-stop route configuration.
+- Only items successfully accepted by storage count toward the target. A target of 20 means
+  20 accepted items. Loading, rejected deliveries and items still in transit do not count.
+- The Hauler stops sending to that destination after reaching its target for the day. Daily
+  assignment continues and the delivery count resets for the next day.
+- Commutes to the worksite and departures after work use ordinary walking without a cart.
+  Active hauling uses cart animations; waiting at the worksite uses the idle-cart animation.
+- Storage destinations must be reusable for later warehouse, house and workshop locations.
+  Ownership, access and capacity rules for those different locations remain separate decisions.
+
+#### Worker Hub and equipment
+
+- Worker Hub is a management interface. Shared equipment supplies belong to City Storage.
+  Selecting an equipment slot opens City Storage using the familiar inventory categories and
+  item details; it does not create a second tool stock inside Worker Hub.
+- Equipment slots are **Tool, Hands, Body, Feet and two Accessories**. Slot classification is
+  independent of whether a role or worksite requires the item. Every worker can be equipped.
+- Cart and hand-held implements occupy Tool. Basic Glove occupies Hands and is optional at
+  Clay Site. Tool and Hands can be equipped together. Requirements for other worksites and
+  professions, and combined effects or durability rules, remain TBD.
+- Each physical tool unit belongs to at most one equipped worker at a time. Two workers need
+  two separate units; one item cannot be shared simultaneously.
+- Required equipment must be equipped before assignment. Missing requirements block selection
+  with red feedback. Equipment cannot change while the worker is travelling or in an active
+  work shift; an assigned Hauler must be released from that assignment before its cart is removed.
+- Equipment preparation is abstracted into the time before the next workday. No warehouse
+  tool-pickup animation is required for this MVP.
+- Status shows Name, Role and Work/Idle activity. Manage offers Fire, Go to and Details.
+  Go to opens the assigned worksite panel. Details shows Level, Wage, Location and Productive days.
+  Tools manages equipment, and Level displays profession XP and the existing level/star value.
+
+#### Contribution XP and Productive days
+
+- The provisional rate is **1 profession XP per item gathered or successfully delivered**.
+  Walking, waiting, incomplete gathering and rejected deliveries grant no contribution XP.
+- Productive days counts distinct days with at least one completed contribution. It is a
+  display statistic, not assignment duration and not an XP multiplier.
+- The MVP accumulates XP without automatic level/star increases. Thresholds, balancing and
+  satisfaction/reliability challenges require later decisions; no new penalties or multipliers
+  are implied by this contribution rule.
+
 ## 10. Worker Parameters
 
 Current minimum direction for regular workers:
@@ -400,8 +469,8 @@ Long-term worker management should not only be about selecting the best single w
 The stronger fantasy is assigning the right combination of workers to the right job or location.
 
 In the current workshop flow, this should be expressed as a **Workshop Job**.
-A **Work Site** should be reserved for future gathering or location-based work such as farming,
-mining, clay gathering, hauling routes, or other field work.
+A **Work Site** describes gathering or location-based work such as farming, mining, clay
+gathering and field transport. Section 9.5 defines the approved Laborer/Hauler MVP cooperation.
 
 A future work site may support multiple workers with different professions.
 The correct mix can create team efficiency bonuses.
@@ -416,7 +485,7 @@ This creates a "mastermind" style of play:
 
 > The player wins by composing teams, not just by hiring stronger individuals.
 
-This is not part of the earliest MVP.
+Profession synergy bonuses remain beyond the current worker/worksite MVP.
 The recommended progression is:
 
 1. show worker list
@@ -805,7 +874,7 @@ These are still intentionally open:
 - how clothing quality and durability should affect clothing supply
 - how shelter quality is represented in early prototype
 - what exact formula connects wages to reliability and retention
-- how tools are assigned and degraded in the regular worker loop
+- tool durability, repair, combined equipment effects, and additional role/worksite requirement lists
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
 

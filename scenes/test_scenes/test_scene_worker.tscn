@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bovovnq7kbcoy" path="res://scenes/test_scenes/test_scene_worker.gd" id="1_c84ir"]
 [ext_resource type="TileSet" uid="uid://oek8x3y4q0er" path="res://resources/tile_map_resources/test_game_tile_map.tres" id="2_q0h4i"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_3un5y"]
-[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="6_lnk0j"]
+[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/workshop/workshop.tscn" id="6_lnk0j"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="8_3bb67"]
 [ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="9_dh3i7"]
 [ext_resource type="PackedScene" uid="uid://qw2sc2h3urwo" path="res://scenes/city_spawner/city_spawner.tscn" id="9_esm0p"]

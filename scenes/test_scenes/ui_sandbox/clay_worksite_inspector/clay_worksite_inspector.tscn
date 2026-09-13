@@ -1,0 +1,270 @@
+[gd_scene load_steps=8 format=3 uid="uid://vj0r4ds7b63g"]
+
+[ext_resource type="Script" uid="uid://b5msxa4x6fl0y" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_window"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_close"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="5_simple"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_window"]
+atlas = ExtResource("3_window")
+region = Rect2(1, 1, 168, 134)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_simple"]
+atlas = ExtResource("5_simple")
+region = Rect2(116, 7, 52, 40)
+
+[node name="ClayWorksiteInspector" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureWindow" type="NinePatchRect" parent="Center"]
+custom_minimum_size = Vector2(240, 120)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Center/TextureWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Center/TextureWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "Clay Site (Small)"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="CloseButton" parent="Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("4_close")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="QuestionLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Who will work?"
+
+[node name="ModeRow" type="HBoxContainer" parent="Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HourlyButton" type="Button" parent="Center/TextureWindow/Margin/MainVBox/ModeRow"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Player"
+
+[node name="DailyButton" type="Button" parent="Center/TextureWindow/Margin/MainVBox/ModeRow"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Worker"
+
+[node name="Confirmation" type="VBoxContainer" parent="Center/TextureWindow/Margin/MainVBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="WorkersLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Confirmation"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+autowrap_mode = 2
+
+[node name="DurationLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Confirmation"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Duration: --"
+
+[node name="EnergyLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Confirmation"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Energy --"
+
+[node name="SatietyLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Confirmation"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Satiety --"
+
+[node name="ToolEffectLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox/Confirmation"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Tool effect: None"
+
+[node name="StatusLabel" type="Label" parent="Center/TextureWindow/Margin/MainVBox"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="WorkerProgressButton" type="Button" parent="Center/TextureWindow/Margin/MainVBox/Footer"]
+visible = false
+custom_minimum_size = Vector2(64, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Worker Progress"
+
+[node name="Spacer" type="Control" parent="Center/TextureWindow/Margin/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StartButton" type="Button" parent="Center/TextureWindow/Margin/MainVBox/Footer"]
+visible = false
+custom_minimum_size = Vector2(64, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+disabled = true
+text = "Start Work"
+
+[node name="HourlySetup" type="NinePatchRect" parent="Center"]
+visible = false
+custom_minimum_size = Vector2(108, 60)
+layout_mode = 2
+texture = SubResource("AtlasTexture_simple")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Center/HourlySetup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Body" type="VBoxContainer" parent="Center/HourlySetup/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="Label" type="Label" parent="Center/HourlySetup/Margin/Body"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
+theme_override_font_sizes/font_size = 6
+text = "How long you will work?"
+horizontal_alignment = 1
+
+[node name="DurationRow" type="HBoxContainer" parent="Center/HourlySetup/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DurationButtons" type="HBoxContainer" parent="Center/HourlySetup/Margin/Body/DurationRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="Hours3" type="Button" parent="Center/HourlySetup/Margin/Body/DurationRow/DurationButtons"]
+custom_minimum_size = Vector2(24, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "3h"
+
+[node name="Hours6" type="Button" parent="Center/HourlySetup/Margin/Body/DurationRow/DurationButtons"]
+custom_minimum_size = Vector2(24, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "6h"
+
+[node name="Hours9" type="Button" parent="Center/HourlySetup/Margin/Body/DurationRow/DurationButtons"]
+custom_minimum_size = Vector2(24, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "9h"
+
+[node name="Footer" type="HBoxContainer" parent="Center/HourlySetup/Margin/Body"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Center/HourlySetup/Margin/Body/Footer"]
+custom_minimum_size = Vector2(36, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="NextButton" type="Button" parent="Center/HourlySetup/Margin/Body/Footer"]
+custom_minimum_size = Vector2(36, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Next"
