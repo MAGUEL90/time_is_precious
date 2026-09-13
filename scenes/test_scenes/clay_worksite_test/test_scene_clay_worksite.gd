@@ -18,13 +18,16 @@ var worker_journeys: Dictionary = {}
 var journey_cache_day: int = -1
 @export var storage_destinations: Dictionary[StringName, NodePath] = {}
 @export_range(0, 20, 1) var test_hauler_carts: int = 0
+@export_node_path("Player") var player_path: NodePath = ^"Player"
+@export_node_path("CanvasLayer") var inventory_ui_path: NodePath = ^"InventoryUI"
 var hauling
 var city_tools
 var worker_management
 var worker_control
 
 
-@onready var player: Player = $Player
+@onready var player: Player = get_node_or_null(player_path)
+@onready var inventory_ui: CanvasLayer = get_node_or_null(inventory_ui_path)
 @onready var inspector: Control = $InspectionUI/ClayWorksiteInspector
 
 var _previous_can_move: bool = true
@@ -72,7 +75,7 @@ func _ready() -> void:
 	worker_control = preload("res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.tscn").instantiate()
 	worker_control.rows_provider = worker_management.rows
 	worker_control.tools_provider = worker_management.tools_for
-	worker_control.can_open = func(): return not inspector.visible and not _working and not $InventoryUI.visible and not player.is_collapsing and not SceneTransition.is_transitioning
+	worker_control.can_open = func(): return not inspector.visible and not _working and not inventory_ui.visible and not player.is_collapsing and not SceneTransition.is_transitioning
 	add_child(worker_control)
 	worker_control.equip_requested.connect(func(id: String, unit_id: String):
 		var feedback: String = worker_management.equip(id, unit_id)
@@ -280,7 +283,7 @@ func _prepare_overflow_test() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("interact") or event.is_echo():
 		return
-	if _working or not player.can_move or player.is_collapsing or player.is_sleeping or SceneTransition.is_transitioning or $InventoryUI.visible or get_tree().paused:
+	if _working or not player.can_move or player.is_collapsing or player.is_sleeping or SceneTransition.is_transitioning or inventory_ui.visible or get_tree().paused:
 		return
 	# Let existing pickups own E when a ground stack is focused.
 	if _pickup_focused or (is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem):
@@ -327,8 +330,8 @@ func _preview_work(minutes: int) -> Dictionary:
 			"worker_capacity": 2, "includes_player": false, "working": false,
 			"worker_names": ", ".join(names),
 			"duration_text": "Duration: %d h / day\n%02d:%02d - %02d:%02d" % [
-				DailySchedule.DAILY_LIMIT / 60, DailySchedule.SHIFT_START / 60,
-				DailySchedule.SHIFT_START % 60, DailySchedule.SHIFT_END / 60,
+				floori(DailySchedule.DAILY_LIMIT / 60.0), floori(DailySchedule.SHIFT_START / 60.0),
+				DailySchedule.SHIFT_START % 60, floori(DailySchedule.SHIFT_END / 60.0),
 				DailySchedule.SHIFT_END % 60]}
 	session.participants.assign(["player"])
 	return session.preview(minutes, player)
@@ -354,7 +357,6 @@ func _toggle_participant(id: String) -> void:
 func _start_work(minutes: int) -> void:
 	if _working or not inspector.visible or not is_instance_valid(_selected_site):
 		return
-	var session = sites[_selected_site.name]
 	if not str(_preview_work(minutes).reason).is_empty():
 		inspector.refresh_team()
 		return
@@ -425,7 +427,7 @@ func _fade_work(alpha: float) -> void:
 	await tween.finished
 
 func _drop_output(quantity: int) -> bool:
-	return _drop_output_at(quantity, player.position + Vector2(0, 16))
+	return _drop_output_at(quantity, $GroundOutput.to_local(player.global_position + Vector2(0, 16)))
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if not is_inside_tree() or is_queued_for_deletion():
@@ -435,7 +437,7 @@ func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 			stack.quantity += quantity
 			stack.get_node("QuantityLabel").text = "x%d" % stack.quantity
 			return true
-	if not _drop_output_at(quantity, site.position + Vector2(0, 24), _drop_daily_output.bind(site)):
+	if not _drop_output_at(quantity, $GroundOutput.to_local(site.global_position + Vector2(0, 24)), _drop_daily_output.bind(site)):
 		return false
 	$GroundOutput.get_child(-1).set_meta("daily_site", str(site.name))
 	return true
@@ -464,7 +466,7 @@ func _process(_delta: float) -> void:
 	_pickup_focused = is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem
 	var nearest: Marker2D = null
 	var distance: float = INSPECTION_DISTANCE
-	if player.can_move and not _working and not inspector.visible and not $InventoryUI.visible and not player.is_collapsing and not SceneTransition.is_transitioning and not is_instance_valid(player.current_interactable):
+	if player.can_move and not _working and not inspector.visible and not inventory_ui.visible and not player.is_collapsing and not SceneTransition.is_transitioning and not is_instance_valid(player.current_interactable):
 		for site: Marker2D in $WorksiteMarkers.get_children():
 			var candidate: float = player.global_position.distance_to(site.global_position)
 			if candidate <= distance:

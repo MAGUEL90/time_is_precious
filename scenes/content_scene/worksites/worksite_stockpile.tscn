@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://cky0w0s6m5pnc"]
+
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/storage_destination.tscn" id="1_destination"]
+[ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/house_level_1.png" id="2_3232v"]
+[ext_resource type="Script" uid="uid://dvdvgia5npye0" path="res://scenes/content_scene/worksites/worksite_stockpile.gd" id="2_storage"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
+
+[node name="WorksiteStockpile" instance=ExtResource("1_destination")]
+storage_path = NodePath("Storage")
+
+[node name="Footprint" type="Polygon2D" parent="." index="2"]
+z_index = -1
+color = Color(0.5, 0.384, 0.294, 1)
+polygon = PackedVector2Array(-16, -12, 16, -12, 16, 12, -16, 12)
+
+[node name="Sprite2D" type="Sprite2D" parent="." index="3"]
+position = Vector2(0, -15)
+texture = ExtResource("2_3232v")
+
+[node name="Label" type="Label" parent="." index="4"]
+offset_left = -50.0
+offset_top = -52.0
+offset_right = 50.0
+offset_bottom = -44.0
+theme = ExtResource("3_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Storage: 0 / 96"
+horizontal_alignment = 1
+
+[node name="Storage" type="Node" parent="." index="5"]
+script = ExtResource("2_storage")
