@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_theme"]
+[ext_resource type="PackedScene" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="2_prompt"]
+
+[node name="ClaySite" type="Marker2D"]
+
+[node name="Footprint" type="Polygon2D" parent="."]
+z_index = -1
+polygon = PackedVector2Array(20, 0, 18, 8, 14, 14, 8, 18, 0, 20, -8, 18, -14, 14, -18, 8, -20, 0, -18, -8, -14, -14, -8, -18, 0, -20, 8, -18, 14, -14, 18, -8)
+color = Color(0.5, 0.384, 0.294, 1)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -45.0
+offset_top = -34.0
+offset_right = 45.0
+offset_bottom = -22.0
+mouse_filter = 2
+theme = ExtResource("1_theme")
+theme_override_font_sizes/font_size = 6
+text = "Clay Site"
+horizontal_alignment = 1
+
+[node name="InteractPrompt" parent="." instance=ExtResource("2_prompt")]
+position_offset = Vector2(-5, -15)

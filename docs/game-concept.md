@@ -3,7 +3,7 @@
 Source of truth for high-level game design decisions.
 
 - Last updated: 2026-09-13
-- Working version: v0.10 draft
+- Working version: v0.11 draft
 - Focus: game idea, player experience, world logic, and long-term design direction.
 - Separate note: implementation progress and coding notes should live outside this concept document.
 
@@ -114,6 +114,35 @@ This is a long-term identity direction, not an early MVP requirement.
 6. Maintain worker conditions and city stability.
 7. Read forecasts, warnings, and NPC advice.
 8. Unlock new systems, districts, professions, and story progress.
+
+### 5.1 Early-Game Workshop Origin
+
+The intended early-game progression begins with an empty workshop plot:
+
+```text
+Empty workshop plot
+-> Gather construction materials through manual work
+-> Build the workshop
+-> Hire and delegate workers
+-> Expand production facilities
+```
+
+The player first experiences the time and physical effort required to obtain materials personally.
+Building the workshop then creates a reason to hire workers and delegate recurring work.
+Facility expansion develops that first workplace into a broader production chain.
+
+Manual gathering takes place at physical resource worksites and puts completed output into the
+player's personal inventory. The player should be able to inspect available stock and preview
+the time, condition costs, and expected output before starting work. Quantity-versus-duration
+selection, tool effects, resource recovery, and reward values remain design decisions to settle.
+
+This is a progression direction, not a claim that the empty-plot construction sequence is
+already playable. Clay gathering is one step toward it; introducing that step does not require
+implementing construction, hiring changes, or facility expansion in the same task.
+
+The plot location, ownership or access conditions, construction materials and quantities,
+construction duration, builder, material handoff, and completion/unlock rules remain **TBD**.
+No specific NPC or quest is assigned to this sequence yet.
 
 ## 6. NPC Structure
 
@@ -687,8 +716,10 @@ Workers = stable volume and scalable production
 
 ### 18.5 Collapse and Nightmare Consequence
 
-If Fatigue reaches its limit, Focus is depleted, or Hunger becomes critical, the player may
-collapse. Collapse is a penalty rather than a substitute for healthy sleep.
+Critical Fatigue or critical low Focus can trigger collapse. Hunger is not a direct collapse
+trigger: poor nourishment increases Focus drain and can therefore lead to collapse indirectly.
+Exact thresholds remain balancing values. Collapse is a penalty rather than a substitute for
+healthy sleep.
 
 When Collapse happens:
 
@@ -832,6 +863,17 @@ This supports chain-based gameplay:
 - refine
 - use / sell / reinvest
 
+### 20.1 Initial Workshop Construction and Later Facilities
+
+The empty-plot origin in section 5.1 precedes the established workshop production loop.
+Initial workshop construction must have an explicitly defined material handoff that works
+before the workshop and its storage exist; that handoff remains **TBD**. Do not assume the
+player must deposit into an already-built workshop to construct the first workshop.
+
+Once the workshop exists, the existing rule remains: production-facility construction and
+upgrades consume Workshop Free Stock, never fee-locked Held Output. Manual gathering output
+enters personal inventory; workshop production continues to follow its own storage rules.
+
 ## 21. Current Design Priorities
 
 ### Priority A. Clarify NPC Identity
@@ -877,6 +919,9 @@ These are still intentionally open:
 - tool durability, repair, combined equipment effects, and additional role/worksite requirement lists
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
+- the empty workshop plot's access, construction recipe, material handoff, build time, and unlock rules
+- manual worksite stock cycles, recovery, tool bonuses, work duration, condition costs, and personal EXP
+- which events qualify as Good Deeds or Bad Deeds, how they are represented, and what consequences follow
 
 ## 23. Legacy and Multiple Ending Direction
 
@@ -1011,6 +1056,31 @@ A good ending system for **Time is Precious** should answer three questions:
 2. Did the player build a stable city?
 3. Did the player use time, people, and power wisely?
 
+### 23.6 Good Deeds and Bad Deeds — Future Design Direction
+
+Retain **Good Deed** and **Bad Deed** as concepts for how the player's choices affect people
+and the city. They support the game's existing emphasis on responsibility, social consequences,
+and the legacy of rebuilding. Their detailed mechanics remain **TBD**.
+
+At the concept level:
+
+- **Good Deeds** concern choices that help people or support responsible rebuilding.
+- **Bad Deeds** concern choices that harm people or undermine that responsibility.
+
+Specific qualifying actions and their context must be defined before implementation. These
+labels do not yet establish a numerical morality meter, automatic rewards or penalties, or
+fixed links to trust, reputation, Advisor memory, quests, or endings. Whether and how those
+systems use deeds remains an open design decision.
+
+Gathering resources, working manually, and hiring workers do not automatically count as Good
+or Bad Deeds. Deeds are separate from personal work EXP and worker profession EXP. Do not
+attach moral points to the clay-gathering or hiring loop merely to introduce this concept.
+
+Before implementation, decide event eligibility, how context affects classification, whether
+deeds are recorded as events or scores, repeat-action handling, player visibility, and their
+consequences. This future direction does not expand the current clay-worksite implementation
+scope.
+
 ## 24. Immediate Reference Rules
 
 If future design choices feel messy, return to these rules first:
@@ -1031,3 +1101,25 @@ If future design choices feel messy, return to these rules first:
 14. The player's identity should emerge from repeated behavior, not from a hard class selection at the start.
 15. Player conditions, Sleep, Collapse, and Nightmare consequences must reinforce the value of time and delegation.
 16. Focus should support high-value decisions, negotiation, and output quality without replacing workers or becoming the only production path.
+
+## Design Change Log
+
+This log records concept revisions. Implementation history remains in DEVLOG.md, and current
+delivery priorities remain in ROADMAP.md. A concept revision does not mark a feature implemented.
+
+### v0.11 draft — 2026-09-07
+
+- Added the early-game direction: empty workshop plot -> manual construction-material gathering
+  -> build workshop -> hire and delegate workers -> expand production facilities (section 5.1).
+- Distinguished initial workshop construction from later facility construction using Workshop
+  Free Stock; initial construction handoff and balancing remain TBD (section 20.1).
+- Added Good Deeds and Bad Deeds as future social-consequence concepts, with event definitions,
+  representation, and effects still open; no automatic gathering/hiring moral rewards (section 23.6).
+- Aligned the collapse rule with the latest clay-worksite brief: critical Fatigue or low Focus
+  can trigger collapse; Hunger contributes indirectly through Focus drain (section 18.5).
+- Added the associated unresolved design decisions to section 22. No gameplay code changed.
+
+### v0.10 draft — 2026-08-17
+
+- Previous document version and last-updated date, retained as the reference preceding v0.11.
+  Detailed earlier changes are available in Git history.

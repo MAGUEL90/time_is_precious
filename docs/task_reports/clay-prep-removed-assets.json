@@ -1,0 +1,170 @@
+[
+  {
+    "path": "assets/characters/character animations/3_sukkalgir_animation_png/NPC_3_sukkalgir_animation.png",
+    "bytes": 760,
+    "modified": "2025-11-21T07:50:36+07:00",
+    "git_date": "2025-11-18T16:40:09+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/characters/character animations/4_huzalu_animation_png/NPC_4_Huzalu_animation.png",
+    "bytes": 797,
+    "modified": "2025-11-21T07:50:36+07:00",
+    "git_date": "2025-11-18T16:40:09+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/characters/character animations/5_bissaya_animation_png/NPC_5_Bissaya_animation.png",
+    "bytes": 921,
+    "modified": "2025-11-21T07:50:36+07:00",
+    "git_date": "2025-11-18T16:40:09+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/characters/character animations/6_enkidu_animation_png/NPC_6_Enkidu_animationn.png",
+    "bytes": 720,
+    "modified": "2025-11-21T07:50:36+07:00",
+    "git_date": "2025-11-18T16:40:09+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/objects/gathering/stones.png",
+    "bytes": 441,
+    "modified": "2026-04-01T05:19:00.269164+07:00",
+    "git_date": "2026-03-17T20:52:45+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/pickup/stone/pickup_stone_animation.png",
+    "bytes": 596,
+    "modified": "2026-04-01T05:19:00.271401+07:00",
+    "git_date": "2026-03-21T20:22:15+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/ui/test panel 2 gelap.png",
+    "bytes": 213,
+    "modified": "2026-04-01T05:19:25.750184+07:00",
+    "git_date": "2026-03-27T05:29:47+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/ui/test panel 2.png",
+    "bytes": 367,
+    "modified": "2026-04-01T05:19:25.759045+07:00",
+    "git_date": "2026-03-27T05:29:47+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/ui/test panel 3 lis kayu.png",
+    "bytes": 276,
+    "modified": "2026-04-01T05:19:25.759045+07:00",
+    "git_date": "2026-03-27T05:29:47+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/bitmask_references_1.png",
+    "bytes": 3049,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/bitmask_references_2.png",
+    "bytes": 3416,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/doors.png",
+    "bytes": 463,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/fences.png",
+    "bytes": 483,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/grass.png",
+    "bytes": 3765,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/hills.png",
+    "bytes": 4321,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/tilled_dirt.png",
+    "bytes": 2972,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/tilled_dirt_wide.png",
+    "bytes": 2522,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/tilled_dirt_wide_v2.png",
+    "bytes": 1717,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/water.png",
+    "bytes": 251,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/wooden_house_roof_tilset.png",
+    "bytes": 2770,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  },
+  {
+    "path": "assets/temporer/game/tile_sets/wooden_house_walls_tilset.png",
+    "bytes": 698,
+    "modified": "2025-11-19T06:33:48+07:00",
+    "git_date": "2025-11-14T07:30:22+07:00",
+    "references": [],
+    "candidate": true
+  }
+]

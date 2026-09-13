@@ -356,7 +356,7 @@ Suggested hook:
 
 ### AI NPC Quest Integration
 
-Status: `Blocked`
+Status: `Runtime Validation`
 
 Relevant PR:
 - PR #74.
@@ -375,7 +375,7 @@ Not allowed as a current-progress claim:
 
 ### Complete Save System
 
-Status: `Blocked`
+Status: `Implementation Complete - Manual Playtest Pending`
 
 Current state:
 - Player state can persist across current runtime scene transitions.

@@ -17,6 +17,7 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 
 @export var speed: float = 50.0
 @export var debug_disable_player_needs: bool = false
+@export var debug_disable_fatigue: bool = false
 @export var fatigue: float = 0.5 # << Hanya Tester
 @export var min_fatigue: float = 0.0
 @export var max_fatigue: float = 1.0
@@ -85,6 +86,8 @@ var last_collapse_day: int = -1
 
 func _ready() -> void:
 	PlayerRuntimeState.restore(self)
+	if debug_disable_fatigue:
+		fatigue = min_fatigue
 	if debug_disable_player_needs:
 		_reset_debug_needs()
 
@@ -300,7 +303,7 @@ func reduce_fatigue(amount: float) -> bool:
 	return false
 
 func increase_fatigue(amount: float) -> bool:
-	if debug_disable_player_needs:
+	if debug_disable_player_needs or debug_disable_fatigue:
 		return false
 	if fatigue < max_fatigue and amount > 0.0:
 		fatigue = clampf(fatigue + amount, min_fatigue, max_fatigue)

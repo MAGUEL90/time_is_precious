@@ -1,0 +1,95 @@
+[gd_scene load_steps=6 format=3 uid="uid://c21e6tio314wf"]
+
+[ext_resource type="Script" uid="uid://bq0j30hkxlbke" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
+[ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
+[ext_resource type="PackedScene" uid="uid://cky0w0s6m5pnc" path="res://scenes/content_scene/worksites/worksite_stockpile.tscn" id="3_storage"]
+[ext_resource type="PackedScene" uid="uid://vj0r4ds7b63g" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
+
+[node name="Worksites" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_runtime")
+player_path = NodePath("../Player")
+inventory_ui_path = NodePath("../../InventoryUI")
+
+[node name="WorksiteMarkers" type="Node2D" parent="."]
+
+[node name="ClaySiteA" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-80, 0)
+
+[node name="Label" parent="WorksiteMarkers/ClaySiteA" index="1"]
+theme_type_variation = &"HudLabelShortcut"
+text = "Clay Site A"
+vertical_alignment = 1
+
+[node name="ClaySiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(80, 0)
+
+[node name="Label" parent="WorksiteMarkers/ClaySiteB" index="1"]
+theme_type_variation = &"HudLabelShortcut"
+text = "Clay Site B"
+vertical_alignment = 1
+
+[node name="WorkerDeparture" type="Marker2D" parent="."]
+position = Vector2(0, 80)
+
+[node name="NearSpawn" type="Marker2D" parent="WorkerDeparture"]
+position = Vector2(-48, 8)
+
+[node name="FarSpawn" type="Marker2D" parent="WorkerDeparture"]
+position = Vector2(96, 32)
+
+[node name="StorageA" parent="." instance=ExtResource("3_storage")]
+position = Vector2(-80, -72)
+display_name = "Storage A"
+
+[node name="StorageB" parent="." instance=ExtResource("3_storage")]
+position = Vector2(80, -72)
+display_name = "Storage B"
+
+[node name="GroundOutput" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="FixtureNotes" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="FixtureNotes"]
+theme = ExtResource("5_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 12
+
+[node name="InspectionUI" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="ClayWorksiteInspector" parent="InspectionUI" instance=ExtResource("4_inspector")]
+
+[node name="WorkTransition" type="CanvasLayer" parent="."]
+layer = 90
+
+[node name="Blackout" type="ColorRect" parent="WorkTransition"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="InterruptionMessage" type="Label" parent="WorkTransition/Blackout"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_right = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("5_theme")
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[editable path="WorksiteMarkers/ClaySiteA"]
+[editable path="WorksiteMarkers/ClaySiteB"]
+[editable path="StorageA"]
+[editable path="StorageB"]

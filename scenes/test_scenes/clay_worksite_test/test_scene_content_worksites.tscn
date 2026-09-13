@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/clay_worksite_test/test_scene_content_worksites.gd" id="1_content_test"]
+
+[node name="TestSceneContentWorksites" type="Node"]
+script = ExtResource("1_content_test")

@@ -1,0 +1,64 @@
+[gd_scene load_steps=7 format=3 uid="uid://cv10nc2fgxp1d"]
+
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2"]
+[ext_resource type="PackedScene" uid="uid://d0wn5ml4p5yv4" path="res://scenes/ui/item_grid/item_grid.tscn" id="3_grid"]
+[ext_resource type="PackedScene" uid="uid://dso2ctjch7gxw" path="res://scenes/ui/inventory_category_selector/inventory_category_selector.tscn" id="4_category"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_close"]
+
+[sub_resource type="AtlasTexture" id="Panel"]
+atlas = ExtResource("2")
+region = Rect2(1, 1, 168, 134)
+
+[node name="CityStorage" type="NinePatchRect"]
+texture_filter = 1
+custom_minimum_size = Vector2(270, 210)
+theme = ExtResource("1")
+texture = SubResource("Panel")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "City Storage"
+
+[node name="Header" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+
+[node name="Categories" parent="Margin/Content/Header" instance=ExtResource("4_category")]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Close" parent="Margin/Content/Header" instance=ExtResource("5_close")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BagGrid" parent="Margin/Content" instance=ExtResource("3_grid")]
+layout_mode = 2
+
+[node name="Feedback" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+autowrap_mode = 2
