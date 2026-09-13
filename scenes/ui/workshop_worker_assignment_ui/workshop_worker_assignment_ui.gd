@@ -106,7 +106,7 @@ func open_assignment(
 			continue
 		if not WorkerDatabase.has_worker_data(worker_id):
 			continue
-		if WorkerDatabase.get_worker_data(worker_id).is_working():
+		if WorkerDatabase.get_worker_data(worker_id).is_reserved():
 			continue
 
 		var empty_slot_index: int = _get_first_empty_slot_index()
@@ -361,7 +361,7 @@ func _refresh_worker_list() -> void:
 
 		if selected_worker_ids.has(worker_data.worker_id):
 			worker_button.disabled = true
-		elif worker_data.is_working():
+		elif worker_data.is_reserved():
 			worker_button.disabled = true
 		else:
 			worker_button.pressed.connect(
@@ -393,7 +393,7 @@ func _get_workers_in_requirement_order() -> Array:
 
 func _on_worker_selected(worker_id: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-	if worker == null or worker.is_working():
+	if worker == null or worker.is_reserved():
 		return
 	if worker_id.strip_edges().is_empty():
 		return
@@ -418,7 +418,7 @@ func _refresh_next_state() -> void:
 func _has_available_selected_worker() -> bool:
 	for worker_id in selected_worker_ids:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-		if worker != null and not worker.is_working():
+		if worker != null and not worker.is_reserved():
 			return true
 	return false
 
@@ -464,9 +464,7 @@ func _make_worker_text_label(text_value: String) -> Label:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 func _get_worker_status_text(worker_data: WorkerData) -> String:
-	if worker_data.is_working():
-		return "Working"
-	return "Idle"
+	return worker_data.get_work_activity_text()
 
 func _get_worker_profession_name(
 	profession: WorkerData.Profession

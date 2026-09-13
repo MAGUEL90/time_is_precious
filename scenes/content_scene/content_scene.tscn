@@ -11,7 +11,7 @@
 [ext_resource type="Script" uid="uid://cn6kidsseih1q" path="res://scenes/components/scene_door/scene_door.gd" id="9_lvuy0"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="10_7vn6b"]
 [ext_resource type="PackedScene" uid="uid://fsc270pc2u2v" path="res://scenes/pickup_item/pickup_item.tscn" id="11_lvuy0"]
-[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="11_sr7c1"]
+[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/workshop/workshop.tscn" id="11_sr7c1"]
 [ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="11_v5dai"]
 [ext_resource type="PackedScene" uid="uid://c11gc83v7mjib" path="res://scenes/nightmare_world/nightmare_world.tscn" id="13_5jflu"]
 [ext_resource type="PackedScene" uid="uid://dt406ppk2d04o" path="res://scenes/ui/work_progress_ui/work_progress_ui.tscn" id="15_s8nia"]

@@ -1,6 +1,6 @@
 [gd_scene load_steps=11 format=3 uid="uid://4yof1crcrd2u"]
 
-[ext_resource type="Script" uid="uid://cmv6qr3uuhsyc" path="res://scenes/work_shop/work_shop.gd" id="1_spw5o"]
+[ext_resource type="Script" uid="uid://cmv6qr3uuhsyc" path="res://scenes/workshop/workshop.gd" id="1_spw5o"]
 [ext_resource type="Script" uid="uid://mte3wqsqhem0" path="res://resources/job_data/job_data.gd" id="2_3fmud"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="3_2xuj5"]
 [ext_resource type="Resource" uid="uid://dtwxjv6s04vaa" path="res://resources/job_data/mudbrick_make.tres" id="3_legag"]

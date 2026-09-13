@@ -4,6 +4,7 @@ const WORKERS_PATH: String = "res://resources/worker_data"
 
 var workers_by_id: Dictionary[String, WorkerData] = {}
 var is_loaded: bool = false
+var dismissed_workers: Dictionary[String, WorkerData] = {}
 
 func _ready() -> void:
 	if not is_loaded:
@@ -89,7 +90,9 @@ func hire_applicant(
 	if has_worker_data(citizen_data.citizen_id):
 		return null
 
-	var worker_data: WorkerData = WorkerData.new()
+	# Preserve earned profession progress if this citizen is hired again.
+	var worker_data: WorkerData = dismissed_workers.get(citizen_data.citizen_id, WorkerData.new())
+	dismissed_workers.erase(citizen_data.citizen_id)
 	worker_data.worker_id = citizen_data.citizen_id
 	worker_data.display_name = citizen_data.display_name
 	worker_data.profession = citizen_data.profession
@@ -98,6 +101,19 @@ func hire_applicant(
 	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
 
 	return worker_data
+
+func dismiss_worker(worker_id: String) -> bool:
+	var worker: WorkerData = get_worker_data(worker_id)
+	if worker == null or worker.is_reserved() or worker.current_work_status == WorkerData.WorkStatus.TRAVELLING:
+		return false
+	var citizen: CitizenData = worker.get_linked_citizen()
+	if citizen != null and citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED:
+		return false
+	if citizen != null:
+		citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	dismissed_workers[worker_id] = worker
+	workers_by_id.erase(worker_id)
+	return true
 
 func assign_worker(worker_id: String) -> bool:
 	var worker_data: WorkerData = get_worker_data(worker_id)

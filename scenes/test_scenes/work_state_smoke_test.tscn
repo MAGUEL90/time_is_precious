@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="3_defl6"]
 [ext_resource type="PackedScene" uid="uid://oiihxv782kew" path="res://scenes/npc_children/npc_galsal/npc_galsal.tscn" id="4_p3cw6"]
 [ext_resource type="PackedScene" uid="uid://cwsby5kvnt7q8" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="5_aikyy"]
-[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/work_shop/work_shop.tscn" id="7_l4b4i"]
+[ext_resource type="PackedScene" uid="uid://4yof1crcrd2u" path="res://scenes/workshop/workshop.tscn" id="7_l4b4i"]
 [ext_resource type="PackedScene" uid="uid://dgdwdg7jy3cho" path="res://scenes/ui/inventory_ui/inventory_ui.tscn" id="7_p3cw6"]
 [ext_resource type="PackedScene" uid="uid://bhbr0kha3wbms" path="res://scenes/ui/gameplay_hud/gameplay_hud.tscn" id="9_defl6"]
 [ext_resource type="PackedScene" uid="uid://b72ntkdkju1bx" path="res://scenes/job_board/job_board.tscn" id="10_p3cw6"]

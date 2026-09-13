@@ -1,0 +1,515 @@
+[gd_scene load_steps=14 format=3 uid="uid://byn62k7nrayc7"]
+
+[ext_resource type="Script" uid="uid://cdia61myyxbw3" path="res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_window"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_close"]
+[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="6_simple"]
+[ext_resource type="Texture2D" uid="uid://dndirl2bat2wo" path="res://assets/ui/ui_icon/worker_portrait_icon.png" id="9_portrait"]
+[ext_resource type="Texture2D" uid="uid://dxbnjb72oma6d" path="res://assets/items/stone_hammer.png" id="10_hammer"]
+[ext_resource type="PackedScene" uid="uid://f2jp678rcivk" path="res://scenes/storage_destination/city_storage.tscn" id="11_city"]
+[ext_resource type="Texture2D" uid="uid://blnhrursc1xoj" path="res://assets/ui/ui_icon/plus_icon_3.png" id="12_plus"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_window"]
+atlas = ExtResource("3_window")
+region = Rect2(1, 1, 168, 134)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_simple"]
+atlas = ExtResource("6_simple")
+region = Rect2(116, 7, 52, 40)
+
+[sub_resource type="StyleBoxTexture" id="StyleBox_picker"]
+texture = SubResource("AtlasTexture_simple")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_aicqb"]
+atlas = ExtResource("3_window")
+region = Rect2(1, 1, 168, 134)
+
+[node name="WorkerControlUI" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(330, 200)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "Worker Hub"
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="CloseButton" parent="Root/Center/Window/Margin/MainVBox/Header" instance=ExtResource("4_close")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Tabs" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="StatusTab" type="Button" parent="Root/Center/Window/Margin/MainVBox/Tabs"]
+custom_minimum_size = Vector2(54, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+button_pressed = true
+text = "Status"
+
+[node name="ToolsTab" type="Button" parent="Root/Center/Window/Margin/MainVBox/Tabs"]
+custom_minimum_size = Vector2(54, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "Tools"
+
+[node name="LevelTab" type="Button" parent="Root/Center/Window/Margin/MainVBox/Tabs"]
+custom_minimum_size = Vector2(54, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "Level"
+
+[node name="PageStack" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StatusPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="StatusScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/StatusPage"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="StatusList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/StatusPage/StatusScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ToolsPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 2
+
+[node name="ToolsBody" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="ToolsWorkerScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody"]
+custom_minimum_size = Vector2(125, 88)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="ToolsWorkerList" type="GridContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsWorkerScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 2
+theme_override_constants/v_separation = 2
+columns = 4
+
+[node name="ToolsRightPane" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="Control" type="Control" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
+layout_mode = 2
+
+[node name="SelectedWorkerLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "Select a worker"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="PreviewRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="LeftSlots" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow"]
+custom_minimum_size = Vector2(38, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="ToolSlot" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_constants/h_separation = 0
+theme_override_font_sizes/font_size = 6
+text = "Tool"
+icon = ExtResource("12_plus")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="BodySlot" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_constants/h_separation = 0
+theme_override_font_sizes/font_size = 6
+text = "Body"
+icon = ExtResource("12_plus")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="AccessorySlot1" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_constants/h_separation = 0
+theme_override_font_sizes/font_size = 6
+disabled = true
+text = "Accessory"
+icon = ExtResource("12_plus")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="PreviewAnchor" type="Control" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow"]
+custom_minimum_size = Vector2(60, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="RightSlots" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow"]
+custom_minimum_size = Vector2(38, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="HandsSlot" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/RightSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_constants/h_separation = 0
+theme_override_font_sizes/font_size = 6
+text = "Hands"
+icon = ExtResource("9_portrait")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="FeetSlot" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/RightSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Feet"
+icon = ExtResource("10_hammer")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="AccessorySlot2" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/RightSlots"]
+custom_minimum_size = Vector2(38, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudShortcutButton"
+theme_override_constants/h_separation = 0
+theme_override_font_sizes/font_size = 6
+disabled = true
+text = "Accessory"
+icon = ExtResource("12_plus")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="ToolsPickerWindow" type="PanelContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
+visible = false
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBox_picker")
+
+[node name="PickerMargin" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 3
+
+[node name="PickerVBox" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="PickerLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin/PickerVBox"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Tools"
+
+[node name="ToolsUnitScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin/PickerVBox"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ToolsUnitList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin/PickerVBox/ToolsUnitScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="PickerBack" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin/PickerVBox"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+size_flags_horizontal = 8
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="FeedbackArea" type="Control" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ToolsFeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/FeedbackArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+clip_text = true
+max_lines_visible = 1
+text_overrun_behavior = 3
+
+[node name="CartRequiredLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/FeedbackArea"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
+theme_override_font_sizes/font_size = 6
+clip_text = true
+max_lines_visible = 1
+text_overrun_behavior = 3
+
+[node name="LevelPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LevelScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/LevelPage"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LevelList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack/LevelPage/LevelScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="CityStorage" parent="Root/Center" instance=ExtResource("11_city")]
+visible = false
+layout_mode = 2
+
+[node name="ManageWindow" type="NinePatchRect" parent="Root"]
+visible = false
+custom_minimum_size = Vector2(56, 64)
+layout_mode = 0
+mouse_filter = 0
+texture = SubResource("AtlasTexture_simple")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/ManageWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/ManageWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Actions" type="VBoxContainer" parent="Root/ManageWindow/Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="FireButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Fire"
+
+[node name="GotoButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Go to"
+
+[node name="DetailsButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Details"
+
+[node name="DetailsWindow" type="NinePatchRect" parent="Root"]
+visible = false
+custom_minimum_size = Vector2(150, 90)
+layout_mode = 0
+mouse_filter = 0
+texture = SubResource("AtlasTexture_aicqb")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/DetailsWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/DetailsWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "Worker"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="CloseButton" parent="Root/DetailsWindow/Margin/MainVBox/Header" instance=ExtResource("4_close")]
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 2
+
+[node name="DetailsLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Level: 0
+Wage:
+Location:
+Productive days: 0"
+autowrap_mode = 2

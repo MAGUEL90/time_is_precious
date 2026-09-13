@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/item_data/item_data.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/basic_glove.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "basic_glove"
+display_name = "Basic Glove"
+description = "A basic work glove for a laborer."
+icon = ExtResource("2")
+category = 2
+metadata/weight_pending = true

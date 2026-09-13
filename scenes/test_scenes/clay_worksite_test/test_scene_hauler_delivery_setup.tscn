@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/clay_worksite_test/test_scene_hauler_delivery_setup.gd" id="1"]
+
+[node name="HaulerDeliverySetupTest" type="Node2D"]
+script = ExtResource("1")

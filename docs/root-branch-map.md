@@ -81,8 +81,8 @@ time_is_precious
 |   |   |-- scripts/class/work_order
 |   |   `-- scripts/class/station_state
 |   `-- workshop
-|       |-- scenes/work_shop
-|       `-- scripts/autoload/work_shop_storage
+|       |-- scenes/workshop
+|       `-- scripts/autoload/workshop_storage
 |
 `-- time-world
     |-- time
@@ -115,7 +115,7 @@ flowchart TD
 | `gameplay-hud` | HUD utama, shortcut, quick consumable tray | `scenes/ui/gameplay_hud`, `scenes/ui/hud_shortcut_slot`, `scenes/ui/hud_side_action`, `resources/ui_gameplay_theme` | `feature/gameplay-hud/quick-consumable-tray` |
 | `player-interaction` | movement, interact, input ke object dunia | `scenes/player`, `scenes/components/interactable_component`, `scenes/components/interactable_label_component`, `scripts/game_input_events` | `feature/player-interaction/interact-prompt` |
 | `npc` | state NPC, data NPC, behavior turunan | `scenes/npc_base`, `scenes/npc_children`, `resources/npc_data`, `resources/npc_states` | `feature/npc/work-cycle` |
-| `process-workshop` | process crafting/produksi dan sistem workshop | `scripts/autoload/process_manager`, `scripts/autoload/work_manager`, `scripts/autoload/work_shop_storage`, `resources/process_data`, `scenes/work_shop` | `feature/process-workshop/claim-flow` |
+| `process-workshop` | process crafting/produksi dan sistem workshop | `scripts/autoload/process_manager`, `scripts/autoload/work_manager`, `scripts/autoload/workshop_storage`, `resources/process_data`, `scenes/workshop` | `feature/process-workshop/claim-flow` |
 | `time-world` | waktu, cuaca, test scene dunia | `scripts/autoload/time_component_manager`, `scenes/time_label`, `scenes/test_scenes` | `feature/time-world/day-night-balance` |
 
 > Catatan: tabel ini menunjukkan **lokasi teknis**, bukan status prioritas. Root yang ada di sini belum tentu sedang dikerjakan. Untuk prioritas aktual selalu cek `ROADMAP.md`.
@@ -191,6 +191,20 @@ Dengan model ini:
 6. Setelah merge, hapus branch.
 7. Update `DEVLOG.md` jika implementasi menghasilkan milestone berarti.
 8. Update `ROADMAP.md` hanya jika posisi, prioritas, atau phase gate benar-benar berubah.
+
+## Konvensi Nama File dan Folder
+
+- Gunakan `snake_case` untuk folder, scene `.tscn`, dan script `.gd`.
+- Scene dan script utama yang berpasangan memakai nama dasar yang sama, misalnya
+  `workshop/workshop.tscn` dan `workshop/workshop.gd`.
+- Tulis `workshop` sebagai satu kata: `workshop_storage`, bukan `work_shop_storage`.
+- Test scene baru mengikuti pola `test_scene_<feature>` untuk scene dan script pasangannya,
+  misalnya `clay_worksite_test/test_scene_clay_worksite.tscn` dan
+  `clay_worksite_test/test_scene_clay_worksite.gd`.
+- Saat rename, pertahankan UID, pindahkan sidecar `.gd.uid`, dan perbarui semua referensi path.
+- Nama class, autoload, signal, method, dan node path adalah kontrak tersendiri. Rename file
+  tidak otomatis mengganti kontrak itu; nama lama `WorkShop` dan `WorkShopStorage` tetap
+  kompatibel sampai ada migrasi API yang terpisah.
 
 ## Yang Tidak Boleh Dilakukan
 

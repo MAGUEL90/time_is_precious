@@ -101,7 +101,7 @@ func _on_job_selected(job_data: JobData) -> void:
 	feedback_label.text = "Choose workers for this job."
 
 func _on_worker_selected(worker_data: WorkerData) -> void:
-	if worker_data.is_working():
+	if worker_data.is_reserved():
 		feedback_label.text = "Worker is busy."
 		return
 	
@@ -167,10 +167,7 @@ func _on_start_job_button_pressed() -> void:
 # Display helpers
 
 func _get_worker_status_text(worker_data: WorkerData) -> String:
-	if worker_data.is_working():
-		return "Working"
-	
-	return "Idle"
+	return worker_data.get_work_activity_text()
 
 func _get_worker_profession_name(profession: WorkerData.Profession) -> String:
 	match profession:

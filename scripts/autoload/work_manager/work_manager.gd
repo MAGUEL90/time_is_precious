@@ -77,7 +77,7 @@ func start_job(
 		worker_data = WorkerDatabase.get_worker_data(resolved_worker_id)
 		if worker_data == null:
 			return ""
-		if worker_data.is_working():
+		if worker_data.is_reserved():
 			return ""
 
 	for item_identifier in job.inputs.keys():
@@ -283,7 +283,7 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 			if not _worker_matches_job(worker_data, job):
 				last_start_job_error = "Worker Profession doesn't match"
 				return ""
-			if worker_data.is_working():
+			if worker_data.is_reserved():
 				last_start_job_error = "Worker is already working"
 				return ""
 
@@ -293,7 +293,7 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 				if not (worker is WorkerData):
 					continue
 				var worker_data: WorkerData = worker as WorkerData
-				if worker_data.is_working():
+				if worker_data.is_reserved():
 					continue
 				if not _worker_matches_job(worker_data, job):
 					continue
