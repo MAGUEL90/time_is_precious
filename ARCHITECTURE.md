@@ -228,6 +228,168 @@ Current project setup includes a runtime work-state bootstrap/autoload path so w
 
 Do not add duplicate scene-local bootstrap instances without a specific architectural reason.
 
+### City Storage and equipment supply
+
+Content Worksites reuse one `CityToolStorage` child of the existing `WorkStateRuntime` host.
+It owns physical item stacks, unique equipment units, and their worker allocations for the current game session,
+so stock deposited from persistent player Inventory is not discarded on a home/city
+scene change. Isolated worksite fixtures still create their own scene-local providers.
+
+`Worksites/CityStorageArea` is a reusable Area2D access point. Player interaction uses the
+existing nearest-interactable selection and E input. Opening and confirming a transfer both
+require the player inside this area's collision shape. Its modal reuses `city_storage.tscn`
+and the Workshop quantity-selection UI; closing, leaving range, or deleting the area restores
+movement and the prior tree pause state. Inventory Send and right-click city deposits are removed.
+
+The area's child `DeliveryPoint` instances the existing `StorageDestination` and binds to
+that same runtime CityToolStorage. It is discovered as `City Storage` by the existing Hauler
+destination selector alongside Storage A/B; its arrival marker is at the physical entrance.
+`has_capacity_for()` and `try_add_item()` validate and receive eligible physical cargo
+directly into city stacks/unique equipment, without touching or signalling player Inventory.
+Receipts reject invalid quantities/items, corrupt counted stacks and reentrant mutations;
+successful receipts notify city observers once after installing the complete state.
+City capacity is currently unbounded; a numeric limit remains TBD.
+
+`CityToolStorage.accepts_item()` is the common item policy for deposit choices, whole-batch
+deposit validation and Hauler preflight/receipt. It accepts registered ready Consumables with
+positive food value, the explicit existing finished-clothing IDs in `CLOTHING_ITEM_IDS`,
+`shekel`, and `SUPPORTED_ITEM_IDS` worker equipment. Clothing uses an explicit list because
+most existing garment resources still carry the generic Resource category. This does not
+change their values or worker equipment support. Gold Nugget, raw ingredients and materials
+are rejected. Existing registered raw stock stays visible and preserved; intake rules are
+not a migration or a player withdrawal path.
+
+The shared worksite adapter disables City Storage for unsupported output, exposes a reason
+in the Hauler selector, and revalidates assignment and Start. Other storage providers keep
+their own acceptance/capacity rules. The transport's existing pre-pickup and unload checks
+retain responsibility for conserving source output and cargo if a standing route is stale.
+
+Hauling keeps the existing three-item trips, next-day schedule and accepted-delivery target/XP.
+Pickup moves worksite output into route cargo; only an accepted unload adds city stock and
+clears cargo. Rejected in-flight cargo returns to the worksite and retries through the standing
+plan when the endpoint is available. Storage A/B retain their independent authored stock and
+capacity; automatic onward routing is not implemented.
+
+Selecting a worker equipment slot reuses the City Storage panel for Equip/Unequip only,
+retaining the selected worker, slot, categories, equipment markers, and owner details.
+Worker Hub has no Deposit/Withdraw actions or separate City Storage tab. Both interfaces
+use the same provider. The worker-management adapter still enforces slots and active-work locks.
+
+CityToolStorage validates each complete deposit batch before committing Inventory, item
+stacks, and tool units and notifying observers. Supported worker equipment becomes distinct
+unallocated units; other eligible items become counted stacks. The physical access UI is
+deposit-only and explains that city deposits cannot be returned. The compatibility method
+`withdraw_items_to_inventory()` always rejects without state changes or notifications,
+including for unused or released equipment. Unequip releases units within the same city stock.
+Food and clothing remain physical items and are not converted into
+CityStockManager supply points on deposit. Daily food and clothing now use the physical
+city stock through the guarded consumption/allocation paths below.
+Content grants no playtest items by default; workshop stock remains owned by WorkShopStorage.
+
+This stock lifetime does not preserve worksite assignments, hauling progress, or output
+across scene changes, and it does not add disk saving or a new autoload.
+
+### Physical city food and daily needs
+
+`CityToolStorage.get_food_supply_points()` derives meal availability from registered
+Consumable items with positive food values plus retained prepared portions. Raw food
+resources, personal Inventory, Hauler cargo and workshop stock do not count as ready city
+meals. `food_portions` records unused points by source item ID after a whole food item is
+opened; those points no longer exist in the whole-item stack. Portions share the provider's
+runtime lifetime, remain city-owned, and have no withdrawal path.
+
+`consume_food_points()` validates the complete stock state and requested amount, consumes
+existing portions first, then whole food in ascending food-value/item-ID order, and retains
+any excess as portions. Its guarded commit installs items and portions together before one
+city change notification. Failure mutates nothing; Inventory and equipment are unaffected.
+
+`CitizenNeedsManager` uses one ordered recipient snapshot: residents, then legacy workers
+without a linked citizen, with each identity counted once. Its daily food transaction feeds
+the affordable recipients at the unchanged one-point/person rate; linked workers resolve
+the result through CitizenData. Food fulfilled/unfulfilled counters include this same set.
+The existing midnight event drives consumption, with per-day and reentrancy guards so time
+skips process every day and repeated notifications cannot eat the same day's ration twice.
+Existing shelter and reliability values are preserved. Satisfaction follows the approved
+daily basic-needs rule in `docs/game-concept.md` section 11.
+
+The physical City Storage food summary, legacy GameplayHUD food status and immigration food
+readiness query this same stock/recipient calculation. Full days remaining is whole days
+at the current population's daily need; zero recipients is displayed as no daily need.
+Reading a summary never creates a provider or consumes stock. The former
+`CityStockManager.food_supply` and legacy conversion helpers remain compatibility data/API;
+they are not the source for current daily food, food UI or immigration food readiness, and
+are not silently converted or added to the physical totals. The worker test scene now seeds
+physical bread explicitly instead of the old counter.
+
+### Physical clothing allocations and worker need results
+
+`CityToolStorage.get_clothing_item_count()` counts the approved finished-clothing IDs.
+`take_clothing_items(maximum)` removes up to the available whole units in stable item-ID
+order, committing once under the same transfer guard as other city transactions. It does
+not stage goods through Inventory or affect food portions or allocated tools.
+
+`CitizenNeedsManager.clothing_allocations` records item ID, issue day and last valid day
+per unique person. One item issued on day D covers D through D+6; replacement is due on D+7.
+The daily clothing pass uses the same resident-first recipient set as food. Linked workers
+resolve their citizen allocation; an unlinked worker receives at most one allocation.
+Valid allocations consume no new item. Expired or missing coverage requests replacement
+stock; an unsuccessful request marks clothing unfulfilled for that daily evaluation.
+Per-day and reentrant guards prevent repeated issue. Allocations remain on the existing
+autoload across scene transitions, without adding fields to CitizenData or WorkerData.
+
+`get_clothing_supply_summary()` reports available items, unique consumers, valid coverage
+and replacements currently due. Legacy GameplayHUD and immigration use this physical
+summary; the old CityStockManager clothing counter no longer fulfills current needs.
+The immigration bonus amounts and existing probabilities are unchanged.
+
+The physical City Storage modal reads this same summary beside the existing Food Supply
+panel. Covered is current valid coverage; Reserve is unused physical garments; Awaiting
+is replacements currently due; Short is `max(0, Awaiting - Reserve)`. Sufficient reserve
+for uncovered people displays `Ready next day`, without marking them covered before the
+daily evaluation. Both panels refresh on stock/time/population changes and the completed
+`needs_changed` signal, and disconnect their refresh listeners when closed. Opening or
+refreshing the modal never issues clothing or consumes food.
+
+After all three needs are evaluated, `last_needs_results` stores per-person flags, missing
+needs, clothing days remaining and actual clamped satisfaction/reliability changes.
+`needs_changed` is emitted once after the complete daily result. Worker-management rows
+read `get_worker_needs_summary()`; Worker Hub Details refreshes its visible scrollable
+popup from the signal. Missing evaluation displays unknown needs and current values without
+an invented delta. UI reads never issue clothing or process another day.
+
+This does not implement disk saving. A future persistence snapshot must retain city items,
+prepared portions, clothing allocations and processed-day markers coherently to prevent
+duplication on load.
+
+### Approved storage integration direction (staged, not fully implemented)
+
+The Game Director accepted Canva slide 2 on 2026-09-20 with permanent city ownership after
+deposit. See `docs/game-concept.md` section 20.2 for the approved behavior and `ROADMAP.md`
+for delivery gates. The target structure retains one central City Storage for the MVP,
+separate cargo in transit, and stock scoped to each workshop. Storage A/B are optional
+transit destinations with onward routing, not alternative global stock providers.
+The 2026-09-21 intake restriction supersedes the earlier general-material warehouse scope;
+city-to-workshop logistics remain deferred and may not bypass the approved item filter.
+
+Reuse the existing storage/delivery responsibilities rather than introducing another global
+manager. A shared transfer boundary must validate stable location IDs, item IDs/quantities,
+ownership, capacity, filters and access before applying a complete movement. UI requests a
+transfer; it is not the authority for ownership. Worker equipment allocation is not a second
+copy of the item. A failed delivery retains cargo; loading/delivery must not duplicate stock.
+
+Before enabling city-to-workshop supply, distinguish city-owned lots from existing personal
+workshop stock. Free/Held/Pending describe availability, not ownership; paying a fee must not
+make city goods personally withdrawable. Cargo, stock and output need consistent ownership
+through both transfers and save/load. Production of mixed-owner inputs must be specified
+before mixing those lots. The current player-deposit and inbound-Hauler checkpoints do not
+implement outbound city logistics or a cross-location ownership schema.
+
+Persist the authoritative stock/allocation/cargo/output data together, with validated
+cross-references and an explicit compatibility plan. The isolated worksite save fixture is
+not a complete production save system and must not be silently replaced or migrated.
+Ready-food consumption and the approved seven-day physical clothing distribution are
+integrated independently of the pending workshop route.
+
 ## Player Runtime / Scene Transition Responsibilities
 
 The current prototype keeps selected player/runtime state across scene transitions.

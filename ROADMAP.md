@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-09-05
+Last updated: 2026-09-22
 
 ## Purpose of This Document
 
@@ -118,9 +118,87 @@ Clay / straw / water
 
 Until this chain is complete, avoid starting another large production chain or major management feature.
 
+## Approved Storage Integration Checkpoints - 2026-09-20
+
+The Game Director accepted Canva slide 2 (`Storage Flow - Rekomendasi`) with permanent
+city ownership: player Inventory can deposit at City Storage Area2D + E, but city stock
+cannot return to personal Inventory. `docs/game-concept.md` section 20.2 is the design
+authority. These checkpoints support the production loop; accepting the direction does
+not mark the entire system implemented.
+
+On 2026-09-21 the Game Director confirmed the manual deposit/no-return/food-summary checklist,
+then approved the same intake restriction for players and Haulers: ready food, finished
+clothing, Shekel and supported worker equipment. Raw materials, raw food and Gold Nugget are
+excluded. This supersedes the previous all-registered-items intake. Old city stock is retained.
+The filter checkpoint is locally validated (10 regression suites, parse/launch and rendered
+UI checks). On 2026-09-22 the Game Director confirmed all three final playtest points passed,
+including intake, clay Hauler choices and daily food/portions. See
+`docs/task_reports/city-storage-item-filter.md`. No branch/domain transition is authorized.
+
+1. **City ownership gate - locally validated, awaiting human review.** Remove player
+   withdrawal from the city UI and reject it in the backend. Preserve physical goods,
+   deposit cancellation/atomicity and worker equip/unequip. Update diagram and design docs.
+2. **Hauling into the central warehouse - locally validated, awaiting human review.** The
+   existing City Storage Area now exposes a Hauler destination bound to the shared stock.
+   Cargo conservation, rejection/return/retry, accepted-only target/XP, UI and runtime stock
+   retention are covered by the City Storage hauling regression. Storage A/B remain available;
+   define their onward route before relying on them as transit. City capacity remains TBD.
+3. **Location stock and workshop logistics - deferred by the Game Director on 2026-09-21.**
+   City-to-workshop Hauler supply is not a prerequisite for closing this City Storage branch.
+   Finish review and validation of the approved City Storage supply checkpoints first.
+   Future integration adds stable location IDs,
+   ownership/access checks and stock per workshop while preserving Free/Held/Pending and
+   existing capacity/fee rules. City goods must not become withdrawable personal goods via
+   cargo, workshop storage, fee payment or reload. Preserve personal workshop access by
+   distinguishing ownership before enabling the city-to-workshop route. Define mixed-owner
+   production before allowing mixed lots. Save/load must conserve the full item chain;
+   the existing isolated worksite save fixture is not full-game persistence.
+4. **Physical citizen supply - food and clothing human-tested; summary UI locally validated.**
+   The approved food follow-up consumes ready-to-eat city items at the unchanged one point
+   per unique resident/unlinked legacy worker each midnight. Retain excess as prepared
+   portions; raw ingredients remain production stock. Availability, daily need and full
+   days remaining now share one calculation. Daily/reentrant guards, shortages, portions,
+   scene transitions and the physical menu are covered by food regressions. This central
+   food checkpoint is independent of step 3's pending workshop ownership route.
+   On 2026-09-22 the Game Director approved one physical clothing item per person for seven
+   days, automatic replacement when expired, and an unfulfilled need when stock is absent.
+   Physical issue/renewal, shortages/recovery and unique recipients are now implemented.
+   Worker Hub Details exposes daily needs, remaining clothing days and actual satisfaction/
+   reliability changes. Eleven targeted regression suites passed, including rendered UI
+   and clothing retention across scene transitions. Canva slide 3 documents the actual flow;
+   the earlier recommendation remains on slide 2. A dedicated F6 clothing fixture supports
+   quick day advancement and real deposit recovery. See `docs/task_reports/city-storage-clothing.md`.
+   Deposit does not convert goods to old abstract supply counters.
+   The Game Director subsequently confirmed the clothing lifecycle, Details and approved
+   +5/-5 satisfaction behavior worked in the F6 playtest. A Clothing Supply panel now shows
+   unique people, current coverage, spare garments, people awaiting supply and additional
+   stock needed. Deposit changes reserve immediately; coverage changes during the next
+   daily evaluation. The eight-person/seven-garment shortage, one-item restock and 8/8
+   next-day recovery passed backend and rendered UI regressions. The new summary still
+   needs the Game Director's visual check. See `docs/task_reports/city-storage-supply-summary.md`.
+
+Initial workshop construction handoff and new capacity values remain TBD. City food,
+portions and clothing allocations currently survive scene changes within the
+running game, not a restart. Workshop withdrawal rules, production values, project settings
+and the existing save format are unchanged. See `docs/task_reports/city-storage-food.md`
+for the food checkpoint's verification and remaining limits.
+
 # Immediate Priority Stack
 
 Work from top to bottom unless a concrete blocker requires otherwise.
+
+**Active task clarification - 2026-09-22:** remain on
+`feature/workers/city-storage-supply`. The Game Director's request to prioritize MVP meant
+continuing the current branch, not moving to personal workshop production. City-to-workshop
+Hauler supply remains deferred. The Game Director has confirmed the deposit/filter/Hauler/
+food checklist and the seven-day clothing lifecycle/Worker Details. The supply-summary
+follow-up is implemented and locally validated. Next, visually check its Clothing Supply
+panel through the same F6 fixture's Area2D/E menu, then review the prepared branch handoff
+for the Game Director's commit/PR and merge decisions. Broader production priorities below do not authorize a task/domain switch;
+agree the next branch and transition before starting that work.
+
+The separate, unmerged `feature/process-workshop/mvp-mudbrick-flow` worktree is parked.
+It is not integrated into this City Storage checkout and is not the current test target.
 
 ## Priority 1 - Finish Mudbrick Output Chain
 
