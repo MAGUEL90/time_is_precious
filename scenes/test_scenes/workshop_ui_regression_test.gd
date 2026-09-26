@@ -24,7 +24,7 @@ func _run() -> void:
 	_expect(info.has_theme_color_override("icon_hover_color") and info.has_theme_color_override("icon_pressed_color"), "Info needs hover and pressed feedback.")
 	info.pressed.emit()
 	_expect(production.production_info_panel.visible, "Info click must open details.")
-	production.production_info_panel.get_node("MarginContainer/DetailVBox/Header/CloseButton").pressed.emit()
+	production.production_info_panel.get_node("CloseButton").pressed.emit()
 	_expect(not production.production_info_panel.visible, "Detail close must hide the panel.")
 	await get_tree().process_frame
 	production.free()

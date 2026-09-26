@@ -55,8 +55,10 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+[node name="Header" type="MarginContainer" parent="Center/Panel/Margin/Body"]
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="Title" type="Label" parent="Center/Panel/Margin/Body/Header"]
 layout_mode = 2
@@ -64,11 +66,9 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.42, 0.32, 0.19, 1)
 theme_override_font_sizes/font_size = 12
 text = "Hauler Delivery"
-
-[node name="CloseButton" parent="Center/Panel/Margin/Body/Header" instance=ExtResource("4")]
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 2
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="WorkerLabel" type="Label" parent="Center/Panel/Margin/Body"]
 layout_mode = 2
@@ -164,3 +164,15 @@ layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Assign"
+
+[node name="CloseButton" parent="Center/Panel" instance=ExtResource("4")]
+focus_mode = 2
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -16
+offset_right = -8
+offset_top = 12
+offset_bottom = 20
+grow_horizontal = 0

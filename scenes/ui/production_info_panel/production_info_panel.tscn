@@ -55,9 +55,10 @@ theme_override_constants/margin_bottom = 4
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="MarginContainer/DetailVBox"]
+[node name="Header" type="MarginContainer" parent="MarginContainer/DetailVBox"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="ProcessNameLabel" type="Label" parent="MarginContainer/DetailVBox/Header"]
 custom_minimum_size = Vector2(0, 8)
@@ -70,10 +71,7 @@ vertical_alignment = 1
 autowrap_mode = 3
 clip_text = true
 max_lines_visible = 2
-
-[node name="CloseButton" parent="MarginContainer/DetailVBox/Header" instance=ExtResource("7_close")]
-layout_mode = 2
-size_flags_vertical = 0
+horizontal_alignment = 1
 
 [node name="InputLabel" type="Label" parent="MarginContainer/DetailVBox"]
 custom_minimum_size = Vector2(0, 8)
@@ -180,3 +178,14 @@ theme_type_variation = &"InventoryTextSmall"
 text = "2"
 horizontal_alignment = 2
 vertical_alignment = 1
+
+[node name="CloseButton" parent="." instance=ExtResource("7_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -14
+offset_right = -6
+offset_top = 6
+offset_bottom = 14
+grow_horizontal = 0

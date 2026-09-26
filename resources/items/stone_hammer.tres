@@ -10,4 +10,5 @@ display_name = "Stone Hammer"
 description = "A stone hammer. Crude, heavy, and loud about its purpose."
 icon = ExtResource("1_xcur8")
 weight = 3.0
+category = 2
 metadata/_custom_type_script = "uid://b21c8w6adaeov"

@@ -239,6 +239,11 @@ This means:
 - each food item can contribute a different amount of food supply.
 - the city consumes food supply to fulfill citizens' daily food needs.
 
+For the approved physical-storage flow (section 20.2), food points measure usable meals in
+City Storage. Deposit retains the food item. Daily consumption removes whole items as needed
+and retains any unused points as prepared portions; the same food is never counted both as
+a whole item and as portions. Raw production ingredients are not ready-to-eat city meals.
+
 Example:
 
 - a small food item may provide 1 food supply
@@ -374,7 +379,8 @@ belong in the project roadmap and task reports.
 - Commutes to the worksite and departures after work use ordinary walking without a cart.
   Active hauling uses cart animations; waiting at the worksite uses the idle-cart animation.
 - Storage destinations must be reusable for later warehouse, house and workshop locations.
-  Ownership, access and capacity rules for those different locations remain separate decisions.
+  The approved storage ownership and routing direction is defined in section 20.2;
+  location-specific capacity values and unresolved access rules remain TBD.
 
 #### Worker Hub and equipment
 
@@ -442,8 +448,11 @@ Satisfaction is the early emotional / social result of needs fulfillment.
 
 ### MVP Rule
 
-- if all basic needs are fulfilled, satisfaction rises slightly
-- if any basic need fails, satisfaction falls
+- Evaluate Food, Clothing and Shelter together once per game day for each unique person.
+- If all three needs are fulfilled, satisfaction rises by 5 percentage points.
+- If one or more needs are missing, satisfaction falls by 5 percentage points in total,
+  not once per missing need.
+- The approved MVP balance (2026-09-22) keeps satisfaction within the existing 1%-99% bounds.
 
 Satisfaction should not immediately cause extreme outcomes.
 It is a bridge system for future social consequences.
@@ -846,7 +855,8 @@ The current design direction remains:
 - city supply is separate from player inventory
 - workshop capacity is shared by Free Stock and fee-locked Held Output
 - paying an output fee converts Held Output into Free Stock
-- only Free Stock may be withdrawn or used by another production process
+- only Free Stock may be withdrawn or used by another production process, subject to ownership
+  and access rules; city-owned goods cannot be withdrawn into personal player Inventory
 - output that cannot fit becomes a blocking Pending Delivery, not extra storage
 - fee payment is attached to visible Held Output; Pending Delivery cannot be paid before storage space is available
 - fee deadlines and overdue penalties begin only after output becomes visible Held Output
@@ -873,6 +883,79 @@ player must deposit into an already-built workshop to construct the first worksh
 Once the workshop exists, the existing rule remains: production-facility construction and
 upgrades consume Workshop Free Stock, never fee-locked Held Output. Manual gathering output
 enters personal inventory; workshop production continues to follow its own storage rules.
+
+### 20.2 Approved Storage Structure and City Ownership
+
+Approved by the Game Director on 2026-09-20 from Canva slide 2, **Storage Flow - Rekomendasi**,
+with one explicit amendment: items in City Storage cannot be taken back by the player.
+This replaces the earlier withdrawable-city-stock direction. Design approval is distinct
+from implementation status; the staged delivery gates are tracked in `ROADMAP.md`.
+
+- **Player Inventory** holds personal carried items. The player must enter the City Storage
+  Area2D and interact with E to deposit. A successful deposit transfers the selected physical
+  goods to the city permanently. There is no City Storage withdrawal to player Inventory,
+  including unused equipment or tools later released by a worker. Cancelling before
+  confirmation or a rejected deposit leaves the goods in Inventory.
+- **City Storage** is one central supply store for the MVP. On 2026-09-21 the Game Director
+  narrowed incoming goods, for both player deposits and Hauler deliveries, to ready-to-eat
+  food, finished clothing, Shekel and supported worker equipment. Gold Nugget is raw material,
+  not currency. Raw ingredients, ores, construction materials and production intermediates
+  are not accepted. Eligible goods remain physical items; depositing them does not convert
+  them into supply points. Existing raw stock from earlier builds is retained, never silently
+  removed or returned to the player. City goods serve worker equipment and citizen supply;
+  any later workshop route must respect this intake policy and permanent city ownership.
+- **Worker equipment** is an allocation of unique city-owned units, through the same
+  City Storage view. Unequip and eligible firing return units to available city stock,
+  never personal Inventory. Existing slot, assignment and active-work restrictions remain.
+  Equipment allocation does not require physical tool-pickup animation in this MVP.
+- **Worksite output** can be picked up into personal Inventory or loaded by a Hauler.
+  **Hauler cargo** is a separate location while goods are in transit. Each shipment has
+  one source and one destination; source stock, cargo and destination stock must never
+  count the same goods twice. Delivery rejection retains cargo. Only accepted deliveries
+  count toward the existing daily target. The City Storage item filter applies before pickup
+  and again at receipt. Unsupported output cannot be assigned to City Storage; a stale
+  in-flight rejected load returns to its source without stock loss or delivery credit.
+  Existing raw-material destinations such as Storage A/B retain their current rules.
+- **Workshop stock** belongs to each workshop location. City-to-workshop supply and
+  workshop-to-city output use hauling; they do not teleport through the management UI.
+  Free Stock, Held Output and Pending Delivery remain distinct. Free + Held share capacity;
+  Pending is blocked delivery, not additional stored stock. Fee payment changes Held to
+  Free without changing ownership. Existing personal workshop stock retains its current
+  access rules; it must be distinguishable from city-owned stock before city supply is enabled.
+- **Storage A/B** may become optional transit locations with an onward route to the central
+  warehouse or a workshop. They are not required stops and must not become dead-end stock.
+- **Citizen food** uses ready-to-eat city stock: the existing Consumable category with a
+  positive food supply value. Raw grain, raw meat and raw eggs remain production ingredients
+  outside City Storage; any legacy city quantities do not count as ready food.
+  Preserve current item values and the current one-point daily need per resident or unlinked
+  legacy worker; a worker linked to a resident is the same person and consumes only once.
+  Process food once at the existing midnight day change, retaining resident-first shortage
+  priority. Use prepared portions first, then whole foods with smaller point values first.
+  Unused points become city-owned prepared portions for later days, preserving their source
+  item identity. No food expires in this checkpoint; no new spoilage rule is introduced.
+  Availability, daily need and complete days remaining use the same physical stock and
+  unique recipient set. With no recipients, show no daily need. This food rule was selected
+  explicitly by the Game Director on 2026-09-20.
+- **Citizen clothing supply** uses physical finished clothing in City Storage. On 2026-09-22
+  the Game Director approved one clothing item per person for seven days, with automatic
+  replacement when its lifetime ends. Issue on day D covers D through D+6; replacement is
+  due on D+7. If no replacement is available, clothing is unfulfilled until a subsequent
+  daily evaluation can issue an item. Current accepted clothing types provide the same
+  lifetime. Residents and linked workers share one allocation; preserve resident-first
+  shortage priority. Issuing removes the whole item from available city stock, without
+  converting it into the old abstract supply counter or returning it to player Inventory.
+  No visual outfit change, quality bonus or extra satisfaction penalty is introduced.
+- **Shared storage rules** identify location, owner, capacity, item filter and access rights.
+  Validate a complete transfer before committing it; failed transfers leave goods at the
+  source or in cargo. Future save/load must conserve location stock, ownership, unique
+  equipment allocations, in-flight cargo and workshop output states together.
+
+Apply this direction in stages: city deposit ownership first; hauling into the central
+warehouse; location/ownership-aware workshop logistics and persistence; citizen distribution
+as its rules are decided. The approved food follow-up can be implemented against central
+stock independently of the pending workshop route. The initial-building material handoff
+in section 20.1 remains TBD. This approval does not supply new capacity, item-weight, fee or
+production balance values.
 
 ## 21. Current Design Priorities
 

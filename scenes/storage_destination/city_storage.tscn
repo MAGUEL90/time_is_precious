@@ -12,7 +12,7 @@ region = Rect2(1, 1, 168, 134)
 
 [node name="CityStorage" type="NinePatchRect"]
 texture_filter = 1
-custom_minimum_size = Vector2(170, 155)
+custom_minimum_size = Vector2(178, 200)
 theme = ExtResource("1")
 texture = SubResource("Panel")
 patch_margin_left = 16
@@ -34,7 +34,7 @@ theme_override_constants/margin_bottom = 18
 
 [node name="Content" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="TitleRow" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
@@ -45,10 +45,14 @@ size_flags_horizontal = 3
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 12
 text = "City Storage"
+horizontal_alignment = 1
 
-[node name="Close" parent="Margin/Content/TitleRow" instance=ExtResource("5_close")]
+[node name="ContextLabel" type="Label" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
-size_flags_vertical = 4
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text_overrun_behavior = 3
 
 [node name="Header" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
@@ -62,7 +66,36 @@ alignment = 1
 layout_mode = 2
 
 [node name="Feedback" type="Label" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 autowrap_mode = 2
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="Footer" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Back" type="Button" parent="Margin/Content/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Margin/Content/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Close" parent="." instance=ExtResource("5_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 20.0
+offset_right = -16.0
+offset_bottom = 28.0
+grow_horizontal = 0

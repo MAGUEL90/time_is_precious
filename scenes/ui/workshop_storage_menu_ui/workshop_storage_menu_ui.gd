@@ -60,9 +60,12 @@ var selected_free_items: Dictionary[String, int] = {}
 var free_slots_by_item_id: Dictionary = {}
 var held_slots: Array[ItemSlot] = []
 var pay_all_available: bool = false
+var item_info: ItemInfoPanel
 
 func _ready() -> void:
 	visible = false
+	item_info = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate()
+	$Root.add_child(item_info)
 	deposit_button.pressed.connect(_on_deposit_button_pressed)
 	withdraw_button.pressed.connect(_on_withdraw_button_pressed)
 	clear_button.pressed.connect(_clear_withdraw_selection)
@@ -77,6 +80,7 @@ func open_menu(next_storage_state: Dictionary) -> void:
 	refresh_storage(next_storage_state)
 
 func refresh_storage(next_storage_state: Dictionary) -> void:
+	item_info.clear_item()
 	storage_state = next_storage_state.duplicate(true)
 	selected_free_items.clear()
 	free_slots_by_item_id.clear()
@@ -159,6 +163,7 @@ func _apply_workshop_slot_style(
 	persistent_selection: bool
 ) -> void:
 	slot.theme = GAMEPLAY_THEME
+	item_info.bind_slot(slot, back_button.get_parent())
 	slot.theme_type_variation = &"WorkshopSquareButton24"
 	slot.toggle_mode = persistent_selection
 	var default_icon: CanvasItem = slot.get_node_or_null("DefaultIcon") as CanvasItem

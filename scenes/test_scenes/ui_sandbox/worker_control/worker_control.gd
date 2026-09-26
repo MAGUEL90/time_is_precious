@@ -19,10 +19,11 @@ var can_open: Callable = Callable()
 @onready var overlay: Control = $Root/Overlay
 @onready var window: NinePatchRect = $Root/Center/Window
 @onready var city_storage_view: Control = $Root/Center/CityStorage
+@onready var city_context_label: Label = $Root/Center/CityStorage/Margin/Content/ContextLabel
 @onready var city_storage_list: GridContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var manage_window: NinePatchRect = $Root/ManageWindow
 @onready var details_window: NinePatchRect = $Root/DetailsWindow
-@onready var close_button: TextureButton = $Root/Center/Window/Margin/MainVBox/Header/CloseButton
+@onready var close_button: TextureButton = $Root/Center/Window/CloseButton
 @onready var status_tab_button: Button = $Root/Center/Window/Margin/MainVBox/Tabs/StatusTab
 @onready var tools_tab_button: Button = $Root/Center/Window/Margin/MainVBox/Tabs/ToolsTab
 @onready var level_tab_button: Button = $Root/Center/Window/Margin/MainVBox/Tabs/LevelTab
@@ -49,8 +50,9 @@ var can_open: Callable = Callable()
 @onready var manage_goto_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/GotoButton
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
 @onready var details_header_label: Label = $Root/DetailsWindow/Margin/MainVBox/Header/TitleLabel
-@onready var details_label: Label = $Root/DetailsWindow/Margin/MainVBox/DetailsLabel
-@onready var details_close_button: TextureButton = $Root/DetailsWindow/Margin/MainVBox/Header/CloseButton
+@onready var details_scroll: ScrollContainer = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll
+@onready var details_label: Label = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll/DetailsLabel
+@onready var details_close_button: TextureButton = $Root/DetailsWindow/CloseButton
 
 const CONFIRM_SCENE: PackedScene = preload("res://scenes/ui/confirm_discard_panel/confirm_discard_panel.tscn")
 const SEPARATOR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/separator_icon_2.png")
@@ -83,6 +85,7 @@ var _confirm_yes_button: Button
 var _confirm_label: Label
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
+var _needs_manager: Node
 
 
 func _ready() -> void:
@@ -91,6 +94,7 @@ func _ready() -> void:
 	$Root.add_child(city_item_info)
 	visible = false
 	close_button.pressed.connect(close)
+	city_storage_view.get_node("Margin/Content/Footer/Back").pressed.connect(_close_tools_picker)
 	status_tab_button.pressed.connect(_show_status_tab)
 	tools_tab_button.pressed.connect(_show_tools_tab)
 	level_tab_button.pressed.connect(_show_level_tab)
@@ -99,8 +103,9 @@ func _ready() -> void:
 	manage_goto_button.pressed.connect(_request_manage_goto)
 	manage_details_button.pressed.connect(_show_manage_details)
 	details_close_button.pressed.connect(_close_details)
+	_connect_needs_refresh_signal()
 	tools_hands_button.pressed.connect(_show_hands_picker)
-	city_storage_view.get_node("Margin/Content/TitleRow/Close").pressed.connect(_close_tools_picker)
+	city_storage_view.get_node("Close").pressed.connect(_close_tools_picker)
 	city_storage_list.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	tools_preview_anchor.resized.connect(_position_tools_preview)
 	tools_picker_window.get_node("PickerMargin/PickerVBox/PickerBack").pressed.connect(_close_tools_picker)
@@ -118,7 +123,27 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	_disconnect_needs_refresh_signal()
 	_restore_pause()
+
+
+func _connect_needs_refresh_signal() -> void:
+	_needs_manager = get_node_or_null("/root/CitizenNeedsManager")
+	if not is_instance_valid(_needs_manager) or not _needs_manager.has_signal("needs_changed"):
+		return
+	if not _needs_manager.is_connected("needs_changed", _on_needs_changed):
+		_needs_manager.connect("needs_changed", _on_needs_changed)
+
+
+func _disconnect_needs_refresh_signal() -> void:
+	if is_instance_valid(_needs_manager) and _needs_manager.has_signal("needs_changed") and _needs_manager.is_connected("needs_changed", _on_needs_changed):
+		_needs_manager.disconnect("needs_changed", _on_needs_changed)
+	_needs_manager = null
+
+
+func _on_needs_changed(_day: Variant = null) -> void:
+	if visible:
+		refresh()
 
 
 func _input(event: InputEvent) -> void:
@@ -174,6 +199,9 @@ func _input(event: InputEvent) -> void:
 func open() -> void:
 	if visible or not _can_open_now():
 		return
+	_manage_worker_id = ""
+	_close_manage()
+	_close_tools_picker()
 	_previous_tree_paused = get_tree().paused
 	_owns_pause = true
 	get_tree().paused = true
@@ -223,6 +251,7 @@ func refresh() -> void:
 			if manage_window.visible:
 				_position_popup(manage_window, _manage_source_button)
 			elif details_window.visible:
+				_render_details(managed_row)
 				_position_popup(details_window, _manage_source_button)
 
 
@@ -252,7 +281,7 @@ func _get_worker_rows() -> Array:
 
 
 func _get_tool_rows(worker_id: String) -> Array:
-	if worker_id.is_empty() or not tools_provider.is_valid():
+	if not tools_provider.is_valid():
 		return []
 	var value: Variant = tools_provider.call(worker_id)
 	return value if value is Array else []
@@ -352,6 +381,7 @@ func _render_tools_units(rows: Array) -> void:
 	city_item_info.clear_item()
 	_clear_children(tools_unit_list)
 	_clear_children(city_storage_list)
+	var units: Array = _get_tool_rows(_selected_worker_id)
 	var worker_row: Dictionary = _find_worker(rows, _selected_worker_id)
 	if worker_row.is_empty():
 		tools_selected_label.text = "Select a worker"
@@ -362,29 +392,39 @@ func _render_tools_units(rows: Array) -> void:
 		_clear_tools_preview()
 		tools_hands_button.disabled = true
 		tools_feet_button.disabled = true
+		_render_city_storage(units, true)
 		return
 	var worker_name := str(worker_row.get("name", "Unnamed worker"))
 	tools_selected_label.text = worker_name
 	var worker_locked := bool(worker_row.get("tools_locked", false))
 	var lock_reason := str(worker_row.get("lock_reason", ""))
 	tools_feedback_label.text = "Tools locked while working." if worker_locked else ""
-	var units: Array = _get_tool_rows(_selected_worker_id)
 	_render_tool_slots(worker_row, units)
 	_refresh_tools_preview(worker_row)
-	if _active_tool_slot.is_empty():
-		tools_picker_window.hide()
+	_render_city_storage(units, worker_locked)
+	tools_picker_window.hide()
+
+
+func _render_city_storage(units: Array, worker_locked: bool) -> void:
+	if not city_storage_view.visible:
 		return
 	tools_picker_label.text = _active_tool_slot.capitalize()
+	city_context_label.text = "%s / %s" % [tools_selected_label.text, _active_tool_slot.capitalize()]
 	var category: int = city_storage_view.get_node("Margin/Content/Header/Categories").get_selected_category()
 	var occupied := _has_equipped_tool_in_slot(units, _active_tool_slot)
-	for unit: Dictionary in units:
-		if category == -1 or category == ItemEnums.ItemCategory.EQUIPMENT:
+	var equipment_category: bool = category == -1 or category == ItemEnums.ItemCategory.EQUIPMENT
+	if equipment_category:
+		for unit: Dictionary in units:
 			_add_city_tool_cell(unit, worker_locked, occupied)
+	var empty_message: String = ""
+	if city_storage_list.get_child_count() == 0:
+		empty_message = "No equipment in this category." if not equipment_category else "No equipment in City Storage."
+	city_storage_view.get_node("Margin/Content/Feedback").text = empty_message
 	for index in range(maxi(15 - city_storage_list.get_child_count(), 0)):
 		var empty = preload("res://scenes/ui/item_slot/item_slot.tscn").instantiate()
 		city_storage_list.add_child(empty)
 		empty.set_empty()
-	tools_picker_window.hide()
+
 
 func _add_city_tool_cell(unit: Dictionary, worker_locked: bool, occupied: bool) -> void:
 	var cell := VBoxContainer.new()
@@ -458,16 +498,14 @@ func _show_city_item_info(unit: Dictionary) -> void:
 		city_item_info.show()
 	city_item_info.category_label.text = "category: EQUIP (%s)" % str(unit.get("slot", "tool")).capitalize()
 	var item_data: ItemData = ItemDatabase.get_item_data(str(unit.get("tool_id", "")))
+	if unit.get("tool_id") == "cart":
+		city_item_info.effect_label.text = "effect: 3 items / trip"
 	if item_data != null and bool(item_data.get_meta("weight_pending", false)):
 		city_item_info.weight_label.text = "weight: -"
+	city_item_info.description_label.text += "\nOwner: %s" % str(unit.get("owner_name", "City Storage"))
 	city_item_info._refresh_size()
-	var rect := city_storage_view.get_global_rect()
-	var viewport_size := get_viewport().get_visible_rect().size
-	var panel_size := city_item_info.size
-	city_item_info.global_position = Vector2(
-		clampf(rect.end.x + 4, 4, maxf(4, viewport_size.x - panel_size.x - 4)),
-		clampf(rect.position.y + (rect.size.y - panel_size.y) * 0.5, 4, maxf(4, viewport_size.y - panel_size.y - 4))
-	).round()
+	var footer: Control = city_storage_view.get_node("Margin/Content/Footer")
+	city_item_info.position_lower_center(footer.global_position.y)
 
 
 func _make_tool_row(unit: Dictionary, worker_locked: bool, slot_occupied: bool = false) -> Control:
@@ -643,12 +681,15 @@ func _find_manage_button(worker_id: String) -> Button:
 func _position_popup(popup: Control, source_button: Button) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var popup_size: Vector2 = popup.get_combined_minimum_size()
+	if popup == details_window:
+		popup_size.x = clampf(popup_size.x, details_window.custom_minimum_size.x, viewport_size.x - 4.0)
+		popup_size.y = clampf(popup_size.y, details_window.custom_minimum_size.y, viewport_size.y - 4.0)
 	popup.size = popup_size
 	var position := Vector2(
 		maxf((viewport_size.x - popup_size.x) * 0.5, 2.0),
 		maxf((viewport_size.y - popup_size.y) * 0.5, 2.0)
 	)
-	if is_instance_valid(source_button):
+	if popup != details_window and is_instance_valid(source_button):
 		var source_rect: Rect2 = source_button.get_global_rect()
 		position = source_rect.position + Vector2(source_rect.size.x + 2.0, 0.0)
 		if position.x + popup_size.x > viewport_size.x:
@@ -696,21 +737,116 @@ func _show_details(worker_id: String, return_tab: String = "") -> void:
 	_details_return_tab = return_tab if return_tab in ["status", "tools", "level", "manage"] else _active_tab
 	if _details_return_tab == "tools":
 		_close_tools_picker()
-	details_header_label.text = str(row.get("name", "Unnamed worker"))
-	details_label.text = (
-		"Level: %d\nWage: %s\nLocation: %s\nProductive days: %d"
-		% [
-			int(row.get("star", 0)),
-			str(row.get("wage", "")),
-			str(row.get("location", "")),
-			int(row.get("productive_days", 0))
-		]
-	)
+	_render_details(row, true)
 	manage_window.hide()
 	details_window.size = details_window.get_combined_minimum_size()
 	_position_popup(details_window, _manage_source_button)
 	details_window.show()
 	details_close_button.grab_focus()
+
+
+func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
+	details_header_label.text = str(row.get("name", "Unnamed worker"))
+	details_label.text = _format_details_text(row)
+	var visuals: VBoxContainer = details_scroll.get_node("Visuals")
+	visuals.get_node("Overview/Level").text = "Level %d" % int(row.get("star", 0))
+	visuals.get_node("Overview/WageRow/Wage").text = str(row.get("wage", "")).replace(" Shekel", "")
+	visuals.get_node("Location").text = "Location: %s" % str(row.get("location", ""))
+	visuals.get_node("ProductiveDays").text = "Productive days: %d" % int(row.get("productive_days", 0))
+	var needs_value: Variant = row.get("needs", {})
+	var needs: Dictionary = needs_value if needs_value is Dictionary else {}
+	var evaluated: bool = bool(needs.get("evaluated", false))
+	visuals.get_node("NeedsHeading").text = "Daily needs"
+	for need: String in ["Food", "Clothing", "Shelter"]:
+		var card: VBoxContainer = visuals.get_node("Needs/" + need)
+		var met: bool = bool(needs.get(need.to_lower(), false))
+		var status: Label = card.get_node("Status")
+		var check_icon: TextureRect = card.get_node_or_null("MetIcon")
+		if check_icon == null:
+			check_icon = TextureRect.new()
+			check_icon.name = "MetIcon"
+			var atlas := AtlasTexture.new()
+			atlas.atlas = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
+			atlas.region = Rect2(84, 68, 8, 8)
+			check_icon.texture = atlas
+			check_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			check_icon.custom_minimum_size = Vector2(8, 8)
+			check_icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+			check_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card.add_child(check_icon)
+		status.visible = not (evaluated and met)
+		check_icon.visible = evaluated and met
+		status.text = ("Met" if met else "Missing") if evaluated else "-"
+		status.modulate = (Color(0.7, 1.0, 0.6) if met else Color(1.0, 0.55, 0.45)) if evaluated else Color(0.85, 0.8, 0.65)
+	for metric: String in ["Satisfaction", "Reliability"]:
+		var key: String = metric.to_lower()
+		var bar: TextureProgressBar = visuals.get_node(metric + "Bar")
+		var label: Label = visuals.get_node(metric + "Label")
+		bar.value = clampf(float(needs.get(key, 0.0)), 0.0, 1.0) * 100.0
+		bar.tint_progress = Color(0.7, 1.0, 0.6) if key == "satisfaction" else Color(0.6, 0.85, 1.0)
+		bar.visible = needs.has(key)
+		label.text = ("%s: %d%%  %s" % [metric, roundi(bar.value), _format_daily_delta(needs.get(key + "_delta", 0.0)) if evaluated else ""]).strip_edges() if needs.has(key) else metric + ": -"
+	if reset_scroll and is_instance_valid(details_scroll):
+		details_scroll.scroll_vertical = 0
+
+
+func _format_details_text(row: Dictionary) -> String:
+	var lines: Array[String] = [
+		"Level: %d" % int(row.get("star", 0)),
+		"Wage: %s" % str(row.get("wage", "")),
+		"Location: %s" % str(row.get("location", "")),
+		"Productive days: %d" % int(row.get("productive_days", 0)),
+	]
+	var needs_value: Variant = row.get("needs", {})
+	if not needs_value is Dictionary:
+		lines.append("Daily needs: Not evaluated yet")
+		lines.append("Satisfaction: Not evaluated yet")
+		lines.append("Reliability: Not evaluated yet")
+		return "\n".join(lines)
+
+	var needs: Dictionary = needs_value
+	if not bool(needs.get("evaluated", false)):
+		lines.append("Daily needs: Not evaluated yet")
+		lines.append(_format_current_metric("Satisfaction", needs, "satisfaction"))
+		lines.append(_format_current_metric("Reliability", needs, "reliability"))
+		return "\n".join(lines)
+
+	var day: int = int(needs.get("day", -1))
+	var day_text: String = "Day %d" % day if day >= 0 else "latest"
+	lines.append("Daily needs (%s; last result):" % day_text)
+	lines.append("Food: %s" % ("Met" if bool(needs.get("food", false)) else "Missing"))
+	var clothing_text: String = "Met" if bool(needs.get("clothing", false)) else "Missing"
+	var clothing_days_left: int = int(needs.get("clothing_days_left", -1))
+	lines.append("Clothing: %s" % clothing_text)
+	if clothing_days_left >= 0:
+		lines.append("Clothing days remaining: %d" % clothing_days_left)
+	lines.append("Shelter: %s" % ("Met" if bool(needs.get("shelter", false)) else "Missing"))
+	var missing: Array = []
+	var missing_value: Variant = needs.get("missing", [])
+	if missing_value is Array:
+		missing = missing_value
+	var missing_names: PackedStringArray = []
+	for missing_name: Variant in missing:
+		missing_names.append(str(missing_name))
+	if not missing_names.is_empty():
+		lines.append("Reason: Missing %s." % ", ".join(missing_names))
+	else:
+		lines.append("Reason: All needs met.")
+	lines.append("Satisfaction: %d%% (%s)" % [roundi(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("satisfaction_delta", 0.0))])
+	lines.append("Reliability: %d%% (%s)" % [roundi(clampf(float(needs.get("reliability", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("reliability_delta", 0.0))])
+	return "\n".join(lines)
+
+
+func _format_current_metric(label: String, summary: Dictionary, key: String) -> String:
+	if not summary.has(key):
+		return "%s: Not evaluated yet" % label
+	return "%s: %d%% (current)" % [label, roundi(clampf(float(summary.get(key, 0.0)), 0.0, 1.0) * 100.0)]
+
+
+func _format_daily_delta(value: Variant) -> String:
+	var delta_percent: int = roundi(float(value) * 100.0)
+	var sign: String = "+" if delta_percent >= 0 else ""
+	return "%s%d%%" % [sign, delta_percent]
 
 
 func _close_details() -> void:
@@ -779,6 +915,7 @@ func _close_tools_picker() -> void:
 	_active_tool_slot = ""
 	city_storage_view.hide()
 	window.show()
+	overlay.show()
 	_clear_children(city_storage_list)
 	tools_preview_anchor.get_parent().show()
 	if is_instance_valid(tools_picker_window):
@@ -877,6 +1014,7 @@ func _configure_scrollbars() -> void:
 		tools_worker_list.get_parent() as ScrollContainer,
 		tools_unit_list.get_parent() as ScrollContainer,
 		level_list.get_parent() as ScrollContainer,
+		details_scroll,
 	]
 	for scroll: ScrollContainer in scroll_containers:
 		_narrow_scrollbar(scroll.get_v_scroll_bar(), true)

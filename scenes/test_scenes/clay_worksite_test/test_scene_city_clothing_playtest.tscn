@@ -1,0 +1,44 @@
+[gd_scene load_steps=4 format=3 uid="uid://6fy7lcaqwmet"]
+
+[ext_resource type="Script" uid="uid://bo8ktk1t6puc6" path="res://scenes/test_scenes/clay_worksite_test/test_scene_city_clothing_playtest.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_instruction"]
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+bg_color = Color(0.035, 0.035, 0.045, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.45, 0.25, 0.9)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="CityClothingPlaytest" type="Node2D"]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="InstructionLayer" type="CanvasLayer" parent="."]
+process_mode = 3
+
+[node name="InstructionPanel" type="PanelContainer" parent="InstructionLayer"]
+offset_left = 4.0
+offset_top = 160.0
+offset_right = 396.0
+offset_bottom = 221.0
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBox_instruction")
+
+[node name="InstructionLabel" type="Label" parent="InstructionLayer/InstructionPanel"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "CLOTHING TEST | N: day | R: Inventory garment | E: deposit | T: Worker Hub Details"
+vertical_alignment = 1
+autowrap_mode = 2

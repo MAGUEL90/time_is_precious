@@ -62,8 +62,10 @@ func evaluate_immigration() -> void:
 	var needs_bonus: float = 0.0
 	
 	var ready_need_count: int = 0
-	var standard_food_supply: bool = CityStockManager.has_food_supply(total_citizen)
-	var standard_cloth_supply: bool = CityStockManager.has_clothing_supply(total_citizen)
+	var food: Dictionary = CitizenNeedsManager.get_food_supply_summary()
+	var standard_food_supply: bool = int(food.daily_need) > 0 and int(food.points) >= int(food.daily_need)
+	var clothing: Dictionary = CitizenNeedsManager.get_clothing_supply_summary()
+	var standard_cloth_supply: bool = bool(clothing.can_cover_all)
 	var standard_shelter_supply: bool = CityStockManager.has_shelter_capacity(total_citizen)
 	
 	if standard_food_supply:

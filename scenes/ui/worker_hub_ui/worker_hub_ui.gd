@@ -3,7 +3,7 @@ class_name WorkerHubUI extends CanvasLayer
 const MUDBRICK_JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 const MAX_ACTIVE_TEAM_SLOTS: int = 3
 
-@onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Header/CloseButton
+@onready var close_button: Button = $Root/Center/Window/HeaderOverlay/CloseButton
 @onready var worker_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/WorkerPanel/WorkerScroll/WorkerList
 @onready var feedback_label: Label = $Root/Center/Window/Margin/MainVBox/Body/ActionPanel/FeedbackLabel
 @onready var team_slot_grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/TeamPanel/TeamSlotGrid

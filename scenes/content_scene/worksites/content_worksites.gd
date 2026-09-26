@@ -1,13 +1,24 @@
 extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd"
 
 ## Content adapter for the tested worksite loop. Uses the map's existing Player/HUD.
-## Session-local playtest data; never opens or overwrites the prototype save slot.
+## City stock uses the existing runtime host; other worksite data remains scene-local.
+## Never opens or overwrites the prototype save slot.
 @export_category("Content playtest")
-@export var seed_playtest_equipment: bool = true
+@export var seed_playtest_equipment: bool = false
 @export var seed_playtest_hauler: bool = true
 @export var enable_time_shortcuts: bool = true
 
 const PLAYTEST_HAULER_ID: String = "content_hauler_belum"
+
+func _create_city_tool_storage() -> Node:
+	# Inventory survives map changes. Its deposited goods must have the same lifetime.
+	# Reuse the existing provider under WorkStateRuntime, without another autoload.
+	var storage := WorkStateRuntime.get_node_or_null("CityToolStorage")
+	if storage == null:
+		storage = preload("res://scenes/storage_destination/city_tool_storage.gd").new()
+		storage.name = "CityToolStorage"
+		WorkStateRuntime.add_child(storage)
+	return storage
 
 func _ready() -> void:
 	if player == null or inventory_ui == null:
@@ -24,6 +35,7 @@ func _ready() -> void:
 	$FixtureNotes.hide()
 	$WorkerVisuals.y_sort_enabled = true
 	worker_control.can_open = _can_open_worker_hub
+	$CityStorageArea.configure(player, city_tools, _can_open_worker_hub)
 	if seed_playtest_equipment:
 		city_tools.add_tool_unit("content_cart", "cart", "Cart")
 		city_tools.add_tool_unit("content_glove", "basic_glove", "Basic Glove")

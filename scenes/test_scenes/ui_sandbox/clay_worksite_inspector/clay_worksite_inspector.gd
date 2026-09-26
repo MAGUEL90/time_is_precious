@@ -16,7 +16,7 @@ var _pending_remove_id: String = ""
 
 @onready var window: NinePatchRect = $Center/TextureWindow
 @onready var title: Label = $Center/TextureWindow/Margin/MainVBox/Header/TitleLabel
-@onready var close_button: TextureButton = $Center/TextureWindow/Margin/MainVBox/Header/CloseButton
+@onready var close_button: TextureButton = $Center/TextureWindow/CloseButton
 @onready var duration_buttons: HBoxContainer = $Center/HourlySetup/Margin/Body/DurationRow/DurationButtons
 const DURATIONS: Array[int] = [180, 360, 540]
 var selected_duration: int = 180
@@ -127,7 +127,6 @@ func show_site(site_name: String, player_ref: Player = null, preview_provider: C
 	if is_instance_valid(_player_ref):
 		_player_ref.condition_changed.connect(_refresh_preview)
 	title.text = site_name
-	title.tooltip_text = site_name
 	busy = false
 	select_duration(0)
 	show()
@@ -348,8 +347,10 @@ func _build_progress_panel() -> void:
 	var box := VBoxContainer.new()
 	box.name = "ProgressContent"
 	margin.add_child(box)
-	var header := HBoxContainer.new()
+	var header := MarginContainer.new()
 	header.name = "Header"
+	header.add_theme_constant_override("margin_left", 12)
+	header.add_theme_constant_override("margin_right", 12)
 	box.add_child(header)
 	var heading := Label.new()
 	heading.name = "TitleLabel"
@@ -357,10 +358,11 @@ func _build_progress_panel() -> void:
 	heading.theme_type_variation = &"HudLabelMain"
 	heading.add_theme_font_size_override("font_size", 12)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.clip_text = true
+	heading.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.add_child(heading)
-	var close: TextureButton = preload("res://scenes/ui/close_icon_button/close_icon_button.tscn").instantiate()
-	close.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	header.add_child(close)
+	var close: TextureButton = progress_panel.get_node("CloseButton")
 	close.pressed.connect(func(): close_requested.emit())
 	progress_list = VBoxContainer.new()
 	progress_list.name = "WorkerRows"

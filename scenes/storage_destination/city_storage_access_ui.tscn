@@ -1,0 +1,113 @@
+[gd_scene load_steps=7 format=3 uid="uid://5xm6cqyxwg38"]
+
+[ext_resource type="Script" uid="uid://14trcwpcrefn" path="res://scenes/storage_destination/city_storage_access_ui.gd" id="1_ui"]
+[ext_resource type="PackedScene" uid="uid://f2jp678rcivk" path="res://scenes/storage_destination/city_storage.tscn" id="2_view"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="4_4qt3y"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4urwx"]
+atlas = ExtResource("4_4qt3y")
+region = Rect2(1, 1, 168, 134)
+
+[sub_resource type="StyleBoxTexture" id="FoodPanelStyle"]
+content_margin_left = 14.0
+content_margin_top = 14.0
+content_margin_right = 14.0
+content_margin_bottom = 14.0
+texture = SubResource("AtlasTexture_4urwx")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+
+[node name="CityStorageAccessUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_ui")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -182.0
+offset_top = 12.0
+offset_right = -4.0
+offset_bottom = 212.0
+grow_horizontal = 2
+
+[node name="CityStorage" parent="Root/Center" instance=ExtResource("2_view")]
+layout_mode = 2
+
+[node name="CitySupplyPanel" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(178, 200)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 4.0
+offset_top = 12.0
+offset_right = 182.0
+offset_bottom = 212.0
+grow_horizontal = 2
+mouse_filter = 2
+theme = ExtResource("3_theme")
+theme_override_styles/panel = SubResource("FoodPanelStyle")
+
+[node name="Margin" type="MarginContainer" parent="Root/CitySupplyPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Content" type="VBoxContainer" parent="Root/CitySupplyPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Root/CitySupplyPanel/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "City Supply"
+horizontal_alignment = 1
+
+[node name="FoodSummary" type="Label" parent="Root/CitySupplyPanel/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Food Supply
+Available: 0 pt
+Need/day: 0 pt
+No daily need"
+autowrap_mode = 3
+
+[node name="ClothingSummary" type="Label" parent="Root/CitySupplyPanel/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Clothing Supply
+People: 0
+Covered: 0/0
+Reserve: 0
+Awaiting: 0
+Short: 0
+No daily need"
+autowrap_mode = 3

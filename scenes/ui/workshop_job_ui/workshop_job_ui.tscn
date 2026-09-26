@@ -68,22 +68,20 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+[node name="Header" type="MarginContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 12
 text = "WORKSHOP JOB"
-
-[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("5_close")]
-layout_mode = 2
-size_flags_vertical = 0
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="StatusRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 12)
@@ -177,6 +175,17 @@ size_flags_horizontal = 3
 [node name="RightBalance" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/Footer"]
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
+
+[node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("5_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 20.0
+offset_right = -16.0
+offset_bottom = 28.0
+grow_horizontal = 0
 
 [node name="ConfirmDiscardPanel" parent="Root/Center/TextureWindow" instance=ExtResource("3_63tax")]
 visible = false

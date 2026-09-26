@@ -4,6 +4,7 @@ signal confirmed(id: String, destination_path: NodePath, daily_target: int)
 signal cancelled
 
 var worker_id: String = ""
+var destination_reasons: Array[String] = []
 @onready var destination_button: OptionButton = $Center/Panel/Margin/Body/DestinationRow/DestinationButton
 @onready var target_edit: LineEdit = $Center/Panel/Margin/Body/TargetRow/TargetEdit
 @onready var feedback: Label = $Center/Panel/Margin/Body/Feedback
@@ -21,7 +22,7 @@ func _ready() -> void:
 	target_edit.add_theme_stylebox_override("focus", theme.get_stylebox("focus", "HudShortcutButton"))
 	destination_button.get_popup().theme = theme
 	hide()
-	$Center/Panel/Margin/Body/Header/CloseButton.pressed.connect(func(): cancelled.emit())
+	$Center/Panel/CloseButton.pressed.connect(func(): cancelled.emit())
 	$Center/Panel/Margin/Body/Footer/CancelButton.pressed.connect(func(): cancelled.emit())
 	$Center/Panel/Margin/Body/TargetRow/MinusButton.pressed.connect(_adjust_target.bind(-1))
 	$Center/Panel/Margin/Body/TargetRow/PlusButton.pressed.connect(_adjust_target.bind(1))
@@ -34,12 +35,16 @@ func open_for(id: String, worker_name: String, destinations: Array[Dictionary]) 
 	worker_id = id
 	$Center/Panel/Margin/Body/WorkerLabel.text = worker_name
 	destination_button.clear()
+	destination_reasons.clear()
 	var first_available: int = -1
 	for entry: Dictionary in destinations:
 		var index: int = destination_button.item_count
 		destination_button.add_item(str(entry.name))
 		destination_button.set_item_metadata(index, entry.path)
 		destination_button.set_item_disabled(index, not bool(entry.available))
+		var reason: String = str(entry.get("reason", ""))
+		destination_reasons.append(reason)
+		destination_button.set_item_tooltip(index, reason)
 		if first_available < 0 and bool(entry.available):
 			first_available = index
 	destination_button.select(first_available)
@@ -67,6 +72,8 @@ func _validate() -> void:
 	feedback.text = "Counts items received by storage."
 	if not has_destination:
 		feedback.text = "No available storage destination."
+		if selected >= 0 and selected < destination_reasons.size() and not destination_reasons[selected].is_empty():
+			feedback.text = destination_reasons[selected]
 	elif not valid_target:
 		feedback.text = "Enter at least 1 item per day."
 
