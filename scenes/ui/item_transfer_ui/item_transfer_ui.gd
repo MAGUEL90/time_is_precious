@@ -64,7 +64,7 @@ func _refresh_grid() -> void:
 		if item_data == null:
 			continue
 
-		if item_data.category != allowed_category:
+		if allowed_category != -1 and item_data.category != allowed_category:
 			continue
 
 		var slot_scene: PackedScene = preload("res://scenes/ui/item_slot/item_slot.tscn")

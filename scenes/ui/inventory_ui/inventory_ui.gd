@@ -181,9 +181,6 @@ func _refresh_inventory_grid() -> void:
 		if slot.has_signal("slot_clicked"):
 			slot.slot_clicked.connect(_on_item_slot_clicked)
 
-		if slot.has_signal("slot_deposit_requested"):
-			slot.slot_deposit_requested.connect(_on_slot_deposit_requested)
-
 		if slot.has_signal("slot_hovered"):
 			slot.slot_hovered.connect(_on_item_slot_hovered)
 
@@ -229,15 +226,19 @@ func _on_item_slot_clicked(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 
 	active_option_panel = option_panel_path.instantiate()
 	active_option_panel.use_requested.connect(_on_option_use_requested)
-	active_option_panel.send_requested.connect(_on_option_send_requested)
 	active_option_panel.drop_requested.connect(_on_option_drop_requested)
+	var send_action_wrapper: Control = active_option_panel.get_node_or_null(
+		^"OptionBackgroundTexture/OptionContainer/SendButtonTexture"
+	) as Control
+	if send_action_wrapper != null:
+		send_action_wrapper.hide()
 
 	_set_slots_hover_locked(true)
 	add_child(active_option_panel)
 
 	active_option_panel.set_actions_enabled(
 		_can_use_item(item_data),
-		_can_send_item(item_data),
+		false,
 		Inventory.has_item(item_id, 1)
 	)
 
@@ -252,9 +253,6 @@ func _on_item_slot_clicked(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 
 func _on_option_use_requested() -> void:
 	_open_item_action_confirm_panel("use")
-
-func _on_option_send_requested() -> void:
-	_open_item_action_confirm_panel("send")
 
 func _on_option_drop_requested() -> void:
 	_open_item_action_confirm_panel("drop")
@@ -330,23 +328,6 @@ func _open_drag_drop_confirm_panel(data: Dictionary) -> void:
 	var mouse_position: Vector2 = get_viewport().get_mouse_position()
 	active_action_confirm_panel.global_position = mouse_position.round()
 	_set_slots_interaction_locked(true)
-# Direct city stock deposit
-
-func _on_slot_deposit_requested(item_id: String, _quantity: int, _slot_ref: ItemSlot) -> void:
-	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-	if item_data == null:
-		return
-
-	if item_data.food_supply_value <= 0 and item_data.clothing_supply_value <= 0:
-		return
-
-	if item_data.food_supply_value > 0:
-		if CityStockManager.deposit_food_item(item_id, 1, Inventory):
-			_refresh_inventory_grid()
-
-	if item_data.clothing_supply_value > 0:
-		if CityStockManager.deposit_clothing_item(item_id, 1, Inventory):
-			_refresh_inventory_grid()
 
 # Player and worker summary
 
@@ -497,12 +478,6 @@ func _can_use_item(item_data: ItemData) -> bool:
 
 	return item_data.fatigue_reduction > 0.0 or item_data.hunger_reduction > 0.0
 
-func _can_send_item(item_data: ItemData) -> bool:
-	if item_data == null:
-		return false
-
-	return item_data.food_supply_value > 0 or item_data.clothing_supply_value > 0
-
 # Action confirmation
 
 func _open_item_action_confirm_panel(action: String) -> void:
@@ -542,12 +517,13 @@ func _close_item_action_confirm_panel() -> void:
 func _on_item_action_confirmed(action: String, item_id: String, quantity: int) -> void:
 	if is_inventory_action_busy:
 		return
+	if action != "use" and action != "drop":
+		_close_inventory_floating_panels()
+		return
 
 	match action:
 		"use":
 			_execute_use_item(item_id, quantity)
-		"send":
-			_execute_send_item(item_id, quantity)
 		"drop":
 			_execute_drop_item(item_id, quantity)
 
@@ -561,42 +537,6 @@ func _close_inventory_floating_panels() -> void:
 	_set_slots_interaction_locked(false)
 
 # Item actions
-
-func _execute_send_item(item_id: String, quantity: int) -> void:
-	if item_id.is_empty():
-		return
-
-	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-	if item_data == null:
-		return
-
-	if not _can_send_item(item_data):
-		_show_inventory_feedback("Cannot send %s" % item_data.display_name, true)
-		return
-
-	var send_quantity: int = max(quantity, 1)
-	if not Inventory.has_item(item_id, send_quantity):
-		return
-
-	var old_quantity: int = int(Inventory.items.get(item_id, 0))
-	var predicted_quantity: int = max(old_quantity - send_quantity, 0)
-	var slot_ref: ItemSlot = active_option_slot if active_option_slot != null and is_instance_valid(active_option_slot) else null
-
-	_set_inventory_action_busy(true)
-	await _play_slot_action_feedback(slot_ref, predicted_quantity)
-	_set_inventory_action_busy(false)
-
-	var did_send: bool = false
-	if item_data.food_supply_value > 0:
-		did_send = CityStockManager.deposit_food_item(item_id, send_quantity, Inventory)
-	elif item_data.clothing_supply_value > 0:
-		did_send = CityStockManager.deposit_clothing_item(item_id, send_quantity, Inventory)
-
-	if did_send:
-		_show_inventory_feedback("Sent %s x%d to city stock" % [item_data.display_name, send_quantity])
-		_refresh_inventory_grid()
-	else:
-		_show_inventory_feedback("Could not send %s" % item_data.display_name, true)
 
 func _execute_drop_item(item_id: String, quantity: int) -> void:
 	if item_id.is_empty():

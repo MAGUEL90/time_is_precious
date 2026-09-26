@@ -39,11 +39,25 @@ func _ready() -> void:
 	quick_consumable_tray.visible = false
 
 	TimeComponentManager.time_changed.connect(_on_time_changed)
+	_connect_food_refresh_signals()
 	_on_time_changed(
 		TimeComponentManager.current_day, 
 		TimeComponentManager.current_hour, 
 		int(TimeComponentManager.current_minute), 
 		TimeComponentManager.current_weather)
+
+func _exit_tree() -> void:
+	var citizen_manager: Node = get_node_or_null("/root/CitizenManager")
+	if is_instance_valid(citizen_manager) and citizen_manager.has_signal("citizen_added") and citizen_manager.is_connected("citizen_added", _on_citizen_added):
+		citizen_manager.disconnect("citizen_added", _on_citizen_added)
+
+func _connect_food_refresh_signals() -> void:
+	var citizen_manager: Node = get_node_or_null("/root/CitizenManager")
+	if is_instance_valid(citizen_manager) and citizen_manager.has_signal("citizen_added") and not citizen_manager.is_connected("citizen_added", _on_citizen_added):
+		citizen_manager.connect("citizen_added", _on_citizen_added)
+
+func _on_citizen_added(_citizen: Variant) -> void:
+	_refresh_player_status()
 
 func _process(_delta: float) -> void:
 	if quick_consumable_tray.visible:
@@ -136,34 +150,71 @@ func _refresh_player_status() -> void:
 		if player_ref == null:
 			return
 
-	label_alert_body.text = "FTG: %d%%, HGR: %d%%, FCS: %d%%\nFood: %d / %d (%s)\n%s\nClothing: %d / %d (%s)\n%s\n%s\nSAT: %d%%" % [
+	var food_summary: Dictionary = _get_food_supply_summary()
+	var food_points: int = int(food_summary.get("points", 0))
+	var food_daily_need: int = int(food_summary.get("daily_need", 0))
+	var clothing_summary: Dictionary = _get_clothing_supply_summary()
+	var status_lines: Array[String] = [
+		"FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
 		player_ref.get_fatigue_percent(),
 		player_ref.get_hunger_percent(),
-		player_ref.get_focus_percent(),
-		CityStockManager.food_supply,
-		CitizenNeedsManager.get_daily_food_supply_need(),
-		_get_food_supply_status(),
+		player_ref.get_focus_percent()],
+		"Food: %d pt / %d/day (%s)" % [food_points, food_daily_need, _get_food_supply_status(food_summary)],
 		_get_last_food_result_text(),
-		CityStockManager.clothing_supply,
-		CitizenNeedsManager.get_daily_clothing_supply_need(),
-		_get_clothing_supply_status(),
-		_get_last_clothing_result_text(),
+		_get_clothing_stock_text(clothing_summary),
+		_get_clothing_coverage_text(clothing_summary),
+		_get_last_clothing_result_text(clothing_summary),
 		_get_shelter_capacity_status(),
-		CitizenNeedsManager.get_average_satisfaction() * 100.0
-
+		"SAT: %d%%" % roundi(CitizenNeedsManager.get_average_satisfaction() * 100.0),
 	]
+	label_alert_body.text = "\n".join(status_lines)
 
-func _get_food_supply_status() -> String:
-	return "OK" if CityStockManager.food_supply >= CitizenNeedsManager.get_daily_food_supply_need() else "LOW"
+func _get_food_supply_status(summary: Dictionary) -> String:
+	var points: int = int(summary.get("points", 0))
+	var daily_need: int = int(summary.get("daily_need", 0))
+	var consumer_count: int = int(summary.get("consumer_count", 0))
+	var days_remaining: int = int(summary.get("days_remaining", -1))
+	if consumer_count <= 0 or daily_need <= 0 or days_remaining < 0:
+		return "No daily need"
+	if points < daily_need:
+		return "SHORTAGE"
+	return "%d full day(s)" % days_remaining
 
 func _get_last_food_result_text() -> String:
-	return "Fed: %d / %d" % [CitizenNeedsManager.last_food_fulfilled_count, CitizenNeedsManager.get_citizen_count()]
+	return "Fed: %d / %d" % [CitizenNeedsManager.last_food_fulfilled_count, CitizenNeedsManager.get_food_consumer_count()]
 
-func _get_clothing_supply_status() -> String:
-	return "OK" if CityStockManager.clothing_supply >= CitizenNeedsManager.get_daily_clothing_supply_need() else "LOW"
+func _get_food_supply_summary() -> Dictionary:
+	var manager: Node = get_node_or_null("/root/CitizenNeedsManager")
+	if not is_instance_valid(manager) or not manager.has_method("get_food_supply_summary"):
+		return {}
+	var result: Variant = manager.call("get_food_supply_summary")
+	return result if result is Dictionary else {}
 
-func _get_last_clothing_result_text() -> String:
-	return "Clothed: %d / %d" % [CitizenNeedsManager.last_clothing_fulfilled_count, CitizenNeedsManager.get_citizen_count()]
+func _get_clothing_supply_summary() -> Dictionary:
+	var manager: Node = get_node_or_null("/root/CitizenNeedsManager")
+	if is_instance_valid(manager) and manager.has_method("get_clothing_supply_summary"):
+		var result: Variant = manager.call("get_clothing_supply_summary")
+		if result is Dictionary:
+			return result
+	return {}
+
+func _get_clothing_stock_text(summary: Dictionary) -> String:
+	if not summary.has("stock_items") or not summary.has("replacement_need"):
+		return "Clothes stock: unavailable"
+	return "Clothes: %d stock / %d due" % [int(summary.get("stock_items", 0)), int(summary.get("replacement_need", 0))]
+
+func _get_clothing_coverage_text(summary: Dictionary) -> String:
+	if not summary.has("covered_count") or not summary.has("consumer_count") or not summary.has("can_cover_all"):
+		return "Clothing coverage: unavailable"
+	var covered_count: int = int(summary.get("covered_count", 0))
+	var consumer_count: int = int(summary.get("consumer_count", 0))
+	var status: String = "NONE" if consumer_count <= 0 else ("OK" if bool(summary.get("can_cover_all", false)) else "SHORT")
+	return "Coverage: %d/%d (%s)" % [covered_count, consumer_count, status]
+
+func _get_last_clothing_result_text(summary: Dictionary) -> String:
+	if not summary.has("consumer_count"):
+		return "Last clothed: unavailable"
+	return "Last clothed: %d/%d" % [CitizenNeedsManager.last_clothing_fulfilled_count, int(summary.get("consumer_count", 0))]
 
 func _get_shelter_capacity_status() -> String:
 	return "Shelter Capacity: %d, Need: %d" % [CityStockManager.shelter_capacity, CitizenNeedsManager.get_daily_shelter_capacity_need()]

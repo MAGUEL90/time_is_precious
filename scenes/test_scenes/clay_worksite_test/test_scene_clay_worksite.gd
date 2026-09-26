@@ -50,9 +50,7 @@ func _ready() -> void:
 		sites[site.name] = WorksiteSession.new()
 		sites[site.name].reserved_slots = daily.active_count.bind(site.name)
 	daily.setup(sites)
-	city_tools = preload("res://scenes/storage_destination/city_tool_storage.gd").new()
-	city_tools.name = "CityToolStorage"
-	add_child(city_tools)
+	city_tools = _create_city_tool_storage()
 	for index: int in range(test_hauler_carts):
 		city_tools.add_tool_unit("test_cart_%d" % index, "cart", "Cart %d" % (index + 1))
 	worker_management = preload("res://scenes/test_scenes/clay_worksite_test/clay_worker_management.gd").new()
@@ -77,6 +75,8 @@ func _ready() -> void:
 	worker_control.tools_provider = worker_management.tools_for
 	worker_control.can_open = func(): return not inspector.visible and not _working and not inventory_ui.visible and not player.is_collapsing and not SceneTransition.is_transitioning
 	add_child(worker_control)
+	Inventory.items_changed.connect(_refresh_equipment_ui, CONNECT_DEFERRED)
+	city_tools.changed.connect(_refresh_equipment_ui, CONNECT_DEFERRED)
 	worker_control.equip_requested.connect(func(id: String, unit_id: String):
 		var feedback: String = worker_management.equip(id, unit_id)
 		worker_control.refresh.call_deferred()
@@ -103,6 +103,16 @@ func _ready() -> void:
 	call_deferred("_prepare_overflow_test")
 	call_deferred("_prepare_nightmare_test")
 
+func _create_city_tool_storage() -> Node:
+	var storage := preload("res://scenes/storage_destination/city_tool_storage.gd").new()
+	storage.name = "CityToolStorage"
+	add_child(storage)
+	return storage
+
+func _refresh_equipment_ui() -> void:
+	if is_instance_valid(worker_control) and worker_control.visible:
+		worker_control.refresh()
+
 func _storage_destination(site_id: StringName):
 	return get_node_or_null(storage_destinations.get(site_id, NodePath(""))) if storage_destinations.has(site_id) else null
 
@@ -120,15 +130,29 @@ func _storage_choices() -> Array[Dictionary]:
 			destinations.append(node)
 	var choices: Array[Dictionary] = []
 	for node: StorageDestination in destinations:
-		choices.append({"path": get_path_to(node), "name": node.display_name, "available": node.is_available()})
+		var reason: String = _hauler_storage_reason(node)
+		choices.append({"path": get_path_to(node), "name": node.display_name,
+			"available": reason.is_empty(), "reason": reason})
 	choices.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.name).naturalnocasecmp_to(str(b.name)) < 0)
 	return choices
+
+func _hauler_storage_reason(destination: StorageDestination) -> String:
+	if destination == null or destination.is_queued_for_deletion() or not destination.is_available():
+		return "Storage is unavailable."
+	var provider: Node = destination.get_storage()
+	if provider.has_method("accepts_item") and not bool(provider.call("accepts_item", hauling.item_id)):
+		var item: ItemData = ItemDatabase.get_item_data(hauling.item_id)
+		var item_name: String = item.display_name if item != null else str(hauling.item_id)
+		return "%s does not accept %s." % [destination.display_name, item_name]
+	return ""
 
 func _assign_hauler(id: String, destination_path: NodePath, daily_target: int) -> String:
 	if _working or not inspector.visible or not is_instance_valid(_selected_site):
 		return "Worksite is unavailable."
 	for entry: Dictionary in _storage_choices():
-		if entry.path == destination_path and bool(entry.available):
+		if entry.path == destination_path:
+			if not bool(entry.available):
+				return str(entry.reason)
 			if daily.select_hauler(_selected_site.name, id, destination_path, str(entry.name), daily_target):
 				inspector.refresh_team()
 				return ""
@@ -159,8 +183,9 @@ func _hauler_ready(site_id: StringName, _count: int) -> String:
 			continue
 		var plan: Dictionary = daily.hauler_setups.get(id, {})
 		var destination = _assigned_storage_destination(plan.get("destination_path", NodePath("")))
-		if destination == null or destination.is_queued_for_deletion() or not destination.is_available():
-			return "Selected Hauler storage is unavailable."
+		var reason: String = _hauler_storage_reason(destination)
+		if not reason.is_empty():
+			return reason
 	return ""
 
 func _worker_tool_requirement(id: String) -> String:

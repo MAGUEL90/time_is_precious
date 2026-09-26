@@ -170,6 +170,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		var sleep_spot: SleepSpot = current_interactable as SleepSpot
 		sleep_spot.on_player_interact(self)
 
+	elif current_interactable.is_in_group("city_storage_areas"):
+		current_interactable.on_player_interact(self)
+
 # Interactable state
 
 func _on_interactable_activated(interactable_owner: Node):

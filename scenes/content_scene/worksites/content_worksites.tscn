@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://c21e6tio314wf"]
+[gd_scene load_steps=7 format=3 uid="uid://c21e6tio314wf"]
 
 [ext_resource type="Script" uid="uid://bq0j30hkxlbke" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
 [ext_resource type="PackedScene" uid="uid://cky0w0s6m5pnc" path="res://scenes/content_scene/worksites/worksite_stockpile.tscn" id="3_storage"]
 [ext_resource type="PackedScene" uid="uid://vj0r4ds7b63g" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="6_city_storage"]
 
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
@@ -50,6 +51,9 @@ display_name = "Storage B"
 [node name="GroundOutput" type="Node2D" parent="."]
 y_sort_enabled = true
 
+[node name="CityStorageArea" parent="." instance=ExtResource("6_city_storage")]
+position = Vector2(0, -96)
+
 [node name="FixtureNotes" type="CanvasLayer" parent="."]
 
 [node name="Label" type="Label" parent="FixtureNotes"]
@@ -93,3 +97,4 @@ autowrap_mode = 2
 [editable path="WorksiteMarkers/ClaySiteB"]
 [editable path="StorageA"]
 [editable path="StorageB"]
+[editable path="CityStorageArea"]

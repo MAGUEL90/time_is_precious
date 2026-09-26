@@ -408,6 +408,35 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 	var original_food_supply: int = CityStockManager.food_supply
 	var original_clothing_supply: int = CityStockManager.clothing_supply
 	var original_shelter_capacity: int = CityStockManager.shelter_capacity
+	var original_last_food_fulfilled_count: int = CitizenNeedsManager.last_food_fulfilled_count
+	var original_last_food_unfulfilled_count: int = CitizenNeedsManager.last_food_unfulfilled_count
+	var original_last_processed_day: int = CitizenNeedsManager.last_processed_day
+	var original_last_food_processed_day: int = CitizenNeedsManager.last_food_processed_day
+	var original_dynamic_needs_state: Dictionary = {}
+	for property_name: String in [
+		"last_clothing_fulfilled_count", "last_clothing_unfulfilled_count",
+		"last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count",
+		"last_clothing_processed_day", "_processing_daily_needs", "_processing_food",
+		"_processing_clothing", "clothing_allocations", "last_needs_results"
+	]:
+		if _has_property(CitizenNeedsManager, property_name):
+			var value: Variant = CitizenNeedsManager.get(property_name)
+			if value is Dictionary or value is Array:
+				value = value.duplicate(true)
+			original_dynamic_needs_state[property_name] = value
+	var original_provider: Node = WorkStateRuntime.get_node_or_null("CityToolStorage")
+	var created_provider: bool = false
+	var original_food_portions: Dictionary = {}
+	var original_food_items: Dictionary = {}
+	if original_provider == null:
+		original_provider = preload("res://scenes/storage_destination/city_tool_storage.gd").new()
+		original_provider.name = "CityToolStorage"
+		WorkStateRuntime.add_child(original_provider)
+		created_provider = true
+	if original_provider.get("food_portions") is Dictionary:
+		original_food_portions = original_provider.get("food_portions").duplicate(true)
+	if original_provider.get("items") is Dictionary:
+		original_food_items = original_provider.get("items").duplicate(true)
 
 	CitizenManager.citizens_by_id.clear()
 	WorkerDatabase.workers_by_id.clear()
@@ -487,9 +516,27 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 		"Unlinked worker reliability must retain its success chance."
 	)
 
-	CityStockManager.food_supply = 2
+	# City food and clothing are physical stock held by CityToolStorage. Keep the
+	# legacy abstract counters as read-only regression sentinels.
+	if original_provider.get("items") is Dictionary:
+		original_provider.set("items", {"barley_bread": 2, "simple_clothes": 1})
+	if original_provider.get("food_portions") is Dictionary:
+		original_provider.set("food_portions", {})
+	CityStockManager.food_supply = original_food_supply
 	CityStockManager.clothing_supply = 2
 	CityStockManager.shelter_capacity = 1
+	CitizenNeedsManager.last_processed_day = TimeComponentManager.current_day - 1
+	CitizenNeedsManager.last_food_processed_day = TimeComponentManager.current_day - 1
+	CitizenNeedsManager._processing_daily_needs = false
+	CitizenNeedsManager._processing_food = false
+	if _has_property(CitizenNeedsManager, "last_clothing_processed_day"):
+		CitizenNeedsManager.set("last_clothing_processed_day", TimeComponentManager.current_day - 1)
+	if _has_property(CitizenNeedsManager, "_processing_clothing"):
+		CitizenNeedsManager.set("_processing_clothing", false)
+	if _has_property(CitizenNeedsManager, "clothing_allocations"):
+		CitizenNeedsManager.set("clothing_allocations", {})
+	if _has_property(CitizenNeedsManager, "last_needs_results"):
+		CitizenNeedsManager.set("last_needs_results", {})
 
 	CitizenNeedsManager.process_daily_needs()
 
@@ -506,12 +553,18 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 		"Worker must resolve its matching CitizenData."
 	)
 	_expect(
-		CityStockManager.food_supply == 1,
-		"Linked workers must not consume food twice."
+		original_provider.get("items").get("barley_bread", 0) == 1
+			and original_provider.get("items").get("simple_clothes", 0) == 0
+			and resident.food_fulfilled
+			and resident.clothing_fulfilled
+			and CitizenNeedsManager.last_food_fulfilled_count == 1
+			and CitizenNeedsManager.last_food_unfulfilled_count == 0,
+		"Linked workers must consume one physical food point and one physical garment through their resident exactly once."
 	)
 	_expect(
-		CityStockManager.clothing_supply == 1,
-		"Linked workers must not consume clothing twice."
+		CityStockManager.food_supply == original_food_supply
+			and CityStockManager.clothing_supply == 2,
+		"Physical food and clothing must leave both old CityStockManager counters untouched."
 	)
 
 	WorkerDatabase.workers_by_id.clear()
@@ -523,8 +576,31 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 	CityStockManager.food_supply = original_food_supply
 	CityStockManager.clothing_supply = original_clothing_supply
 	CityStockManager.shelter_capacity = original_shelter_capacity
+	CitizenNeedsManager.last_food_fulfilled_count = original_last_food_fulfilled_count
+	CitizenNeedsManager.last_food_unfulfilled_count = original_last_food_unfulfilled_count
+	CitizenNeedsManager.last_processed_day = original_last_processed_day
+	CitizenNeedsManager.last_food_processed_day = original_last_food_processed_day
+	CitizenNeedsManager._processing_daily_needs = false
+	CitizenNeedsManager._processing_food = false
+	for property_name: String in original_dynamic_needs_state.keys():
+		if _has_property(CitizenNeedsManager, property_name):
+			CitizenNeedsManager.set(property_name, original_dynamic_needs_state[property_name])
+	if created_provider:
+		if is_instance_valid(original_provider):
+			original_provider.queue_free()
+	elif is_instance_valid(original_provider):
+		if original_provider.get("items") is Dictionary:
+			original_provider.set("items", original_food_items)
+		if original_provider.get("food_portions") is Dictionary:
+			original_provider.set("food_portions", original_food_portions)
 
 # Assertion helper
+
+func _has_property(target: Object, property_name: String) -> bool:
+	for property_info: Dictionary in target.get_property_list():
+		if str(property_info.get("name", "")) == property_name:
+			return true
+	return false
 
 func _expect(condition: bool, message: String) -> void:
 	if condition:

@@ -100,7 +100,7 @@ func _ready() -> void:
 	manage_details_button.pressed.connect(_show_manage_details)
 	details_close_button.pressed.connect(_close_details)
 	tools_hands_button.pressed.connect(_show_hands_picker)
-	city_storage_view.get_node("Margin/Content/TitleRow/Close").pressed.connect(_close_tools_picker)
+	city_storage_view.get_node("Close").pressed.connect(_close_tools_picker)
 	city_storage_list.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	tools_preview_anchor.resized.connect(_position_tools_preview)
 	tools_picker_window.get_node("PickerMargin/PickerVBox/PickerBack").pressed.connect(_close_tools_picker)

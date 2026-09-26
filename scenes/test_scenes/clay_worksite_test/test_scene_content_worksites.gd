@@ -229,8 +229,17 @@ func _run_daily_delivery() -> void:
 		"A Hauler without a cart must not enter the Daily roster.")
 	_expect(worksite.daily.unavailable(BELUM_ID).begins_with("Requires a cart"),
 		"The missing cart requirement must be exposed by the Daily roster.")
-	_expect(worksite.worker_management.equip(BELUM_ID, "content_cart") == "Tool equipped.",
-		"Belum must equip the content cart from City Storage.")
+	_expect(not worksite.seed_playtest_equipment and worksite.city_tools.units.is_empty(),
+		"Content equipment must begin empty instead of granting test tools.")
+	# Explicit acquisition fixture; production content does not grant this cart.
+	Inventory.add_item("cart", 1)
+	var deposit: Dictionary = worksite.city_tools.deposit_from_inventory("cart", 1)
+	_expect(bool(deposit.ok) and deposit.unit_ids.size() == 1,
+		"Player inventory must supply exactly one physical cart to City Storage.")
+	if not bool(deposit.ok) or deposit.unit_ids.is_empty():
+		return
+	_expect(worksite.worker_management.equip(BELUM_ID, str(deposit.unit_ids[0])) == "Tool equipped.",
+		"Belum must equip the cart deposited from player Inventory.")
 	_expect(worksite.daily.toggle(SITE_A, NARAM_ID),
 		"Existing Naram must be selectable as the Daily laborer.")
 	_expect(worksite.daily.select_hauler(
@@ -289,7 +298,7 @@ func _check_progress_and_go_to() -> void:
 	_expect(progress_text.contains("Storage A") and progress_text.contains("20 / 20"),
 		"Worker Progress must show the Hauler destination and accepted target.")
 	var progress_close: BaseButton = inspector.progress_panel.get_node(
-		"Margin/ProgressContent/Header/CloseButton"
+		"CloseButton"
 	) as BaseButton
 	progress_close.pressed.emit()
 	await get_tree().process_frame

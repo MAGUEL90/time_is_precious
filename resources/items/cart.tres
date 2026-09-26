@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/item_data/item_data.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/cart_icon.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "cart"
+display_name = "Cart"
+description = "A worker hauling cart. Holds 3 items per trip."
+icon = ExtResource("2")
+category = 2
+metadata/weight_pending = true
