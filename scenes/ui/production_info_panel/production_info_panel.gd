@@ -26,7 +26,7 @@ const SMALL_SHEKEL_ICON: Texture2D = preload(
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	$MarginContainer/DetailVBox/Header/CloseButton.pressed.connect(clear_details)
+	$CloseButton.pressed.connect(clear_details)
 	hide()
 	_refresh_size()
 

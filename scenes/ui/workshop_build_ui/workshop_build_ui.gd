@@ -7,7 +7,7 @@ const READY_COLOR: Color = Color(0.78, 1.0, 0.72, 1.0)
 const MISSING_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
 
 @onready var close_button: BaseButton = (
-	$Root/Center/TextureWindow/Margin/MainVBox/Header/CloseButton
+	$Root/Center/TextureWindow/CloseButton
 )
 @onready var selection_page: VBoxContainer = (
 	$Root/Center/TextureWindow/Margin/MainVBox/SelectionPage

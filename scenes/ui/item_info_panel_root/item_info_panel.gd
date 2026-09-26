@@ -1,6 +1,6 @@
 class_name ItemInfoPanel extends Control
 
-const PANEL_WIDTH: float = 184.0
+const PANEL_WIDTH: float = 260.0
 const PANEL_MIN_HEIGHT: float = 48.0
 const PANEL_HORIZONTAL_PADDING: float = 12.0
 const PANEL_VERTICAL_PADDING: float = 10.0
@@ -16,6 +16,8 @@ const PANEL_VERTICAL_PADDING: float = 10.0
 func _ready() -> void:
 	custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child: Control in find_children("*", "Control", true, false):
+		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_refresh_size()
 	visible = false
 
@@ -33,7 +35,7 @@ func display_item(item_id: String) -> bool:
 
 	name_label.text = "name: %s" % item_name
 	category_label.text = "category: %s" % _get_category_text(item_data.category)
-	weight_label.text = "weight: %.2f" % item_data.weight
+	weight_label.text = "weight: -" if bool(item_data.get_meta("weight_pending", false)) else "weight: %.2f" % item_data.weight
 	effect_label.text = "effect: %s" % _get_effect_text(item_data)
 	description_label.text = (
 		item_data.description
@@ -47,6 +49,20 @@ func display_item(item_id: String) -> bool:
 
 func clear_item() -> void:
 	visible = false
+
+func position_lower_center(bottom_limit: float) -> void:
+	var bounds: Vector2 = get_viewport().get_visible_rect().size
+	global_position = Vector2(
+		maxf(4, (bounds.x - size.x) * 0.5),
+		clampf(bottom_limit - size.y - 4, 4, maxf(4, bounds.y - size.y - 4))
+	).round()
+
+func bind_slot(slot: ItemSlot, footer: Control) -> void:
+	slot.slot_hovered.connect(func(item_id: String, _quantity: int, _slot: ItemSlot):
+		if display_item(item_id):
+			position_lower_center(footer.global_position.y)
+	)
+	slot.slot_unhovered.connect(func(_slot: ItemSlot): clear_item())
 
 func _get_category_text(category: ItemEnums.ItemCategory) -> String:
 	match category:

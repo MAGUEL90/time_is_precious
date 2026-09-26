@@ -21,7 +21,7 @@ func _ready() -> void:
 	target_edit.add_theme_stylebox_override("focus", theme.get_stylebox("focus", "HudShortcutButton"))
 	destination_button.get_popup().theme = theme
 	hide()
-	$Center/Panel/Margin/Body/Header/CloseButton.pressed.connect(func(): cancelled.emit())
+	$Center/Panel/CloseButton.pressed.connect(func(): cancelled.emit())
 	$Center/Panel/Margin/Body/Footer/CancelButton.pressed.connect(func(): cancelled.emit())
 	$Center/Panel/Margin/Body/TargetRow/MinusButton.pressed.connect(_adjust_target.bind(-1))
 	$Center/Panel/Margin/Body/TargetRow/PlusButton.pressed.connect(_adjust_target.bind(1))

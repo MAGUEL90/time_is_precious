@@ -145,14 +145,10 @@ func set_hover_locked(value: bool) -> void:
 	_refresh_target_lock_visibility()
 
 func _refresh_target_lock_visibility() -> void:
-	if interaction_locked:
-		target_lock_icon.visible = is_selected
-		return
-
 	target_lock_icon.visible = _should_show_target_lock()
 
 func _should_show_target_lock() -> bool:
-	return is_selected or (is_mouse_over and not hover_locked)
+	return not _item_id.is_empty() and (is_selected or (is_mouse_over and not hover_locked and not disabled))
 
 # Drag and interaction state
 

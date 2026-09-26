@@ -25,7 +25,7 @@ const MINIMUM_VISIBLE_SLOTS: int = 3
 const SLOT_SIZE: Vector2 = Vector2(24, 24)
 
 @onready var close_button: BaseButton = (
-	$Root/Center/TextureWindow/Margin/MainVBox/Header/CloseButton
+	$Root/Center/TextureWindow/CloseButton
 )
 @onready var assigned_info_label: Label = (
 	$Root/Center/TextureWindow/Margin/MainVBox/InfoRow/AssignedInfoLabel
@@ -62,7 +62,7 @@ const SLOT_SIZE: Vector2 = Vector2(24, 24)
 )
 @onready var worker_info_layer: Control = $Root/WorkerInfoLayer
 @onready var worker_info_close_button: BaseButton = (
-	$Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Header/CloseButton
+	$Root/WorkerInfoLayer/Center/InfoWindow/CloseButton
 )
 @onready var worker_info_name_label: Label = (
 	$Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Body/Details/NameLabel

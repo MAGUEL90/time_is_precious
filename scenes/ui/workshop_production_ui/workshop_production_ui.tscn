@@ -70,8 +70,10 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 3
 
-[node name="Header" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+[node name="Header" type="MarginContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
 layout_mode = 2
@@ -80,10 +82,9 @@ theme = ExtResource("3_4ltvf")
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 12
 text = "PRODUCTION"
-
-[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("4_422uc")]
-layout_mode = 2
-size_flags_vertical = 4
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="InfoLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
@@ -140,6 +141,17 @@ theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 disabled = true
 text = "Next"
+
+[node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("4_422uc")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 20.0
+offset_right = -16.0
+offset_bottom = 28.0
+grow_horizontal = 0
 
 [node name="ProductionInfoPanel" parent="Root" instance=ExtResource("8_3fpab")]
 layout_mode = 0

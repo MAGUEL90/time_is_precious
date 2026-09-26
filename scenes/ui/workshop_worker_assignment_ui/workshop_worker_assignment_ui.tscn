@@ -70,9 +70,11 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+[node name="Header" type="MarginContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Header"]
 layout_mode = 2
@@ -80,10 +82,9 @@ size_flags_horizontal = 3
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 12
 text = "ASSIGN WORKERS"
-
-[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/Header" instance=ExtResource("5_close")]
-layout_mode = 2
-size_flags_vertical = 4
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="InfoRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 10)
@@ -218,6 +219,17 @@ text = "Back"
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("5_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 20.0
+offset_right = -16.0
+offset_bottom = 28.0
+grow_horizontal = 0
+
 [node name="WorkerInfoLayer" type="Control" parent="Root"]
 visible = false
 layout_mode = 1
@@ -272,9 +284,11 @@ theme_override_constants/margin_bottom = 12
 layout_mode = 2
 theme_override_constants/separation = 3
 
-[node name="Header" type="HBoxContainer" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox"]
+[node name="Header" type="MarginContainer" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox"]
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Header"]
 layout_mode = 2
@@ -282,11 +296,10 @@ size_flags_horizontal = 3
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "WORKER INFO"
+horizontal_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 vertical_alignment = 1
-
-[node name="CloseButton" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Header" instance=ExtResource("5_close")]
-layout_mode = 2
-size_flags_vertical = 4
 
 [node name="Body" type="HBoxContainer" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox"]
 layout_mode = 2
@@ -329,3 +342,14 @@ layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Status"
+
+[node name="CloseButton" parent="Root/WorkerInfoLayer/Center/InfoWindow" instance=ExtResource("5_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 20.0
+grow_horizontal = 0

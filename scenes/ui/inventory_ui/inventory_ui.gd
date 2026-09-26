@@ -16,7 +16,6 @@ const ITEM_ACTION_CONFIRM_PANEL_SCENE: PackedScene = preload("res://scenes/ui/it
 const PICKUP_ITEM_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const CATEGORY_ALL: int = -1
 const ITEMS_PER_PAGE: int = 15
-const ITEM_INFO_PANEL_GAP: float = 4.0
 const OPTION_PANEL_GAP: float = 4.0
 const OPTION_PANEL_Y_OFFSET: float = -4.0
 const ACTION_FEEDBACK_DURATION: float = 3.0
@@ -469,13 +468,7 @@ func _position_item_info_panel() -> void:
 	if inventory_window == null or item_info_panel == null:
 		return
 
-	var window_rect: Rect2 = inventory_window.get_global_rect()
-	var panel_size: Vector2 = item_info_panel.size
-	var panel_position: Vector2 = Vector2(
-		window_rect.position.x + window_rect.size.x + ITEM_INFO_PANEL_GAP,
-		window_rect.position.y + (window_rect.size.y - panel_size.y) * 0.5
-	)
-	item_info_panel.global_position = panel_position.round()
+	item_info_panel.position_lower_center(page_selector.global_position.y)
 
 # Slot locking
 
