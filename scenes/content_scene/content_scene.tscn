@@ -1,6 +1,5 @@
-[gd_scene load_steps=19 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=18 format=4 uid="uid://dtqsj6h6lollc"]
 
-[ext_resource type="Script" uid="uid://bw8euggk8mqya" path="res://scenes/content_scene/content_scene.gd" id="1_xdgwu"]
 [ext_resource type="Texture2D" uid="uid://qja5s8pdaf37" path="res://assets/tile_set/tileset_base.png" id="2_fwfww"]
 [ext_resource type="Texture2D" uid="uid://dj6bhg4ije63j" path="res://assets/tile_set/tile_set_base_new.png" id="3_5jflu"]
 [ext_resource type="Texture2D" uid="uid://dhb7tt23j1ll" path="res://assets/tile_set/tileset_base_17.06.2026.png" id="3_6em08"]
@@ -307,7 +306,6 @@ sources/1 = SubResource("TileSetAtlasSource_sr7c1")
 size = Vector2(11.5, 8)
 
 [node name="ContentScene" type="Node2D"]
-script = ExtResource("1_xdgwu")
 metadata/_edit_vertical_guides_ = [355.0, 87.0, -133.0]
 metadata/_edit_horizontal_guides_ = [180.0, 24.0, 153.0]
 
@@ -363,11 +361,6 @@ position = Vector2(9744, 9792)
 
 [node name="Worksites" parent="YSortWorld" instance=ExtResource("16_worksites")]
 position = Vector2(-256, -208)
-
-[node name="Camera2D" type="Camera2D" parent="."]
-anchor_mode = 0
-
-[node name="ContentDirector" type="Node" parent="."]
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
 

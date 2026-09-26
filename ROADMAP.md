@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-09-22
+Last updated: 2026-09-26
 
 ## Purpose of This Document
 
@@ -187,18 +187,25 @@ for the food checkpoint's verification and remaining limits.
 
 Work from top to bottom unless a concrete blocker requires otherwise.
 
-**Active task clarification - 2026-09-22:** remain on
-`feature/workers/city-storage-supply`. The Game Director's request to prioritize MVP meant
-continuing the current branch, not moving to personal workshop production. City-to-workshop
-Hauler supply remains deferred. The Game Director has confirmed the deposit/filter/Hauler/
-food checklist and the seven-day clothing lifecycle/Worker Details. The supply-summary
-follow-up is implemented and locally validated. Next, visually check its Clothing Supply
-panel through the same F6 fixture's Area2D/E menu, then review the prepared branch handoff
-for the Game Director's commit/PR and merge decisions. Broader production priorities below do not authorize a task/domain switch;
-agree the next branch and transition before starting that work.
+**Current handoff - 2026-09-26:** City Storage supply work is merged into main
+through PR #105 (merge commit 2a7b773). The earlier instruction to remain on
+feature/workers/city-storage-supply is historical; do not reopen that completed
+branch merely because earlier checkpoint descriptions still say awaiting review.
+City-to-workshop Hauler supply remains deferred.
 
-The separate, unmerged `feature/process-workshop/mvp-mudbrick-flow` worktree is parked.
-It is not integrated into this City Storage checkout and is not the current test target.
+Godot MCP installation is proposed separately in PR #106 and is not yet in main.
+The bounded ContentScene cleanup removes the empty ContentDirector, inactive root
+camera and no-op root script. The Game Director accepted its playtest; automated
+ContentWorksitesIntegrationTest passed. Cleanup still requires PR/merge review.
+
+Next: review the parked feature/process-workshop/mvp-mudbrick-flow checkpoint
+against current main before integrating it. Its worktree at baseline 4de7d05 has
+uncommitted guidance UI and playtest/regression fixtures; preserve those changes.
+The checkpoint report records earlier successful tests, but they do not establish
+compatibility with merged City Storage changes. Rerun the relevant tests after
+reconciliation. Initial workshop access on the authored map still requires a
+Game Director decision; test-fixture starting resources are not approved gameplay.
+Do not treat the parked checkpoint as integrated or mark Priority 1 complete.
 
 ## Priority 1 - Finish Mudbrick Output Chain
 
