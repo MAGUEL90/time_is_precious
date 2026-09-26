@@ -83,6 +83,7 @@ func _run() -> void:
 	fixture.worker_control.manage_details_button.pressed.emit()
 	_expect(fixture.worker_control.details_label.text.contains("Productive days:") and fixture.worker_control.details_label.text.contains("Wage:"), "Details exposes requested worker data.")
 	await _capture("worker-hub-details.png")
+	await _check_needs_details()
 	fixture.worker_control._close_manage()
 	fixture.worker_control._show_manage(ids[0])
 	var player_before: Vector2 = fixture.player.global_position
@@ -148,13 +149,13 @@ func _run() -> void:
 	_tool_action("hammer_a").mouse_exited.emit()
 	fixture.worker_control.refresh()
 	_expect(fixture.worker_control.city_storage_view.visible and not fixture.worker_control.window.visible, "Storage refresh preserves navigation.")
-	fixture.worker_control.city_storage_view.get_node("Margin/Content/TitleRow/Close").pressed.emit()
+	fixture.worker_control.city_storage_view.get_node("Close").pressed.emit()
 	_expect(fixture.worker_control.window.visible and not fixture.worker_control.city_storage_view.visible, "Storage Back returns to Hub.")
 	for accessory: Button in [fixture.worker_control.tools_accessory_button_1, fixture.worker_control.tools_accessory_button_2]:
 		_expect(not accessory.disabled, "Accessory opens storage.")
 		accessory.pressed.emit()
 		_expect(fixture.worker_control.city_storage_view.visible and _tool_action("test_cart_0").disabled, "Accessory storage rejects incompatible carts.")
-		fixture.worker_control.city_storage_view.get_node("Margin/Content/TitleRow/Close").pressed.emit()
+		fixture.worker_control.city_storage_view.get_node("Close").pressed.emit()
 	management.unequip(ids[2], "hammer_b")
 	fixture.city_tools.add_tool_unit("storage_cart", "cart", "Spare Cart")
 	fixture.worker_control._select_worker_for_tools(ids[2])
@@ -271,6 +272,113 @@ func _run() -> void:
 	CitizenManager.citizens_by_id.erase(citizen.citizen_id)
 	print("WorkerControlTest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _check_needs_details() -> void:
+	var hub = fixture.worker_control
+	var worker: WorkerData = WorkerDatabase.get_worker_data(ids[0])
+	var original_results: Dictionary = CitizenNeedsManager.last_needs_results.duplicate(true)
+	var original_name: String = worker.display_name
+	var before_stock: Dictionary = fixture.city_tools.items.duplicate(true)
+	var before_units: Dictionary = fixture.city_tools.units.duplicate(true)
+	var before_inventory: Dictionary = Inventory.items.duplicate(true)
+	var before_allocations: Dictionary = CitizenNeedsManager.clothing_allocations.duplicate(true)
+	var before_day: int = CitizenNeedsManager.last_processed_day
+	var listener_count: int = CitizenNeedsManager.needs_changed.get_connections().size()
+	CitizenNeedsManager.last_needs_results.erase(ids[0])
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(hub.details_label.text.contains("Not evaluated yet") and not hub.details_label.text.contains("(-"),
+		"A worker without a daily result shows unknown needs, not an invented penalty.")
+	await _capture("worker-needs-unknown.png")
+	# Daily arithmetic is covered by CityClothingNeedsTest; these controlled results
+	# exercise the real summary -> management row -> visible Details signal path.
+	CitizenNeedsManager.last_needs_results[ids[0]] = {
+		"evaluated": true, "day": TimeComponentManager.current_day,
+		"food": true, "clothing": true, "shelter": true, "clothing_days_left": 7,
+		"satisfaction": 0.99, "reliability": 0.99,
+		"satisfaction_delta": 0.01, "reliability_delta": 0.01, "missing": []
+	}
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(hub.details_label.text.contains("Food: Met") and hub.details_label.text.contains("Clothing: Met")
+		and hub.details_label.text.contains("Clothing days remaining: 7") and hub.details_label.text.contains("Shelter: Met"),
+		"An already-open Details popup refreshes all three needs and clothing validity from the signal.")
+	_expect(hub.details_label.text.contains("99% (+1%)") and hub.details_label.text.contains("All needs met"),
+		"Details displays the actual clamped daily change, not an assumed full bonus.")
+	await _capture("worker-needs-met.png")
+	_check_details_bounds()
+	hub.details_scroll.scroll_vertical = 9999
+	await _capture("worker-needs-met-effects.png")
+	var last_result: Dictionary = CitizenNeedsManager.last_needs_results[ids[0]]
+	last_result.merge({"food": false, "clothing": false, "shelter": false,
+		"clothing_days_left": 0, "satisfaction": 0.45, "reliability": 0.45,
+		"satisfaction_delta": -0.05, "reliability_delta": -0.05,
+		"missing": ["Food", "Clothing", "Shelter"]}, true)
+	worker.display_name = "A very long worker name that must remain inside the Details header"
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(hub.details_header_label.text == worker.display_name and hub.details_label.text.contains("Missing Food, Clothing, Shelter"),
+		"Long names and every missing need are retained in the current Details result.")
+	_expect(hub.details_label.text.contains("Satisfaction: 45% (-5%)") and hub.details_label.text.contains("Reliability: 45% (-5%)"),
+		"Details displays the approved satisfaction penalty and the unchanged reliability penalty.")
+	hub.details_scroll.scroll_vertical = 0
+	await _capture("worker-needs-missing-top.png")
+	_check_details_bounds()
+	hub.details_scroll.scroll_vertical = 9999
+	await _capture("worker-needs-missing-effects.png")
+	var escape := InputEventAction.new()
+	escape.action = "ui_cancel"
+	escape.pressed = true
+	hub._input(escape)
+	_expect(not hub.details_window.visible and not hub.manage_window.visible and hub.visible,
+		"Escape dismisses the popup while retaining the Hub, preserving existing navigation.")
+	hub._show_manage(ids[0])
+	for index: int in range(2):
+		hub.manage_details_button.pressed.emit()
+		hub.details_close_button.pressed.emit()
+	_expect(CitizenNeedsManager.needs_changed.get_connections().size() == listener_count,
+		"Repeated Details navigation does not add needs listeners.")
+	_expect(fixture.city_tools.items == before_stock and fixture.city_tools.units == before_units
+		and Inventory.items == before_inventory and CitizenNeedsManager.clothing_allocations == before_allocations
+		and CitizenNeedsManager.last_processed_day == before_day,
+		"Opening, refreshing and scrolling Details never consumes stock, issues clothing or evaluates another day.")
+	worker.display_name = original_name
+	hub._show_details(ids[0])
+	hub.close()
+	_expect(not hub.details_window.visible and not hub.manage_window.visible, "Closing Hub closes its child popups.")
+	hub.open()
+	_expect(hub.visible and not hub.details_window.visible and not hub.manage_window.visible, "Reopening Hub does not reopen Details.")
+	for control: Control in hub.find_children("*", "Control", true, false):
+		_expect(control.tooltip_text.is_empty(), "Worker Hub has no native tooltip: " + str(control.name))
+	CitizenNeedsManager.last_needs_results = original_results
+	CitizenNeedsManager.needs_changed.emit()
+
+func _check_details_bounds() -> void:
+	var hub = fixture.worker_control
+	var visuals: VBoxContainer = hub.details_scroll.get_node("Visuals")
+	_expect(visuals.is_visible_in_tree() and not hub.details_label.visible,
+		"Visual worker details replace the full text block.")
+	for metric: String in ["Satisfaction", "Reliability"]:
+		var bar: TextureProgressBar = visuals.get_node(metric + "Bar")
+		var label: Label = visuals.get_node(metric + "Label")
+		_expect(bar.is_visible_in_tree() and label.text.contains("%d%%" % roundi(bar.value)),
+			"Visible metric bar and percentage agree: " + metric)
+		_expect(hub.details_window.get_global_rect().encloses(bar.get_global_rect()),
+			"Metric bar fits inside the worker popup: " + metric)
+	for need: String in ["Food", "Clothing", "Shelter"]:
+		var status: Label = visuals.get_node("Needs/" + need + "/Status")
+		var check_icon: TextureRect = visuals.get_node("Needs/" + need + "/MetIcon")
+		_expect(check_icon.visible == (status.text == "Met") and status.visible == not check_icon.visible,
+			"Fulfilled needs use the checklist icon instead of Met text: " + need)
+		_expect((status.is_visible_in_tree() or visuals.get_node("Needs/" + need + "/MetIcon").is_visible_in_tree()) and hub.details_label.text.contains(need + ": " + status.text),
+			"Visible need status agrees with the daily result: " + need)
+	var viewport_bounds: Rect2 = get_viewport().get_visible_rect()
+	_expect(hub.details_window.get_global_rect().get_center().distance_to(viewport_bounds.get_center()) <= 1.0,
+		"Worker Details stays centered independently of its source button.")
+	_expect(viewport_bounds.encloses(hub.details_window.get_global_rect()), "Details remains inside the 400x225 viewport.")
+	_expect(hub.details_window.get_global_rect().encloses(hub.details_header_label.get_global_rect()),
+		"The long worker name stays inside the Details popup.")
+	_expect(not hub.details_scroll.get_h_scroll_bar().visible,
+		"Need descriptions wrap without requiring horizontal scrolling.")
+	_expect(hub.details_scroll.size.y > 40 and hub.details_scroll.get_v_scroll_bar().size.x <= 4,
+		"Details preserves a usable scroll viewport and the compact four-pixel scrollbar.")
 
 func _capture(filename: String) -> void:
 	# Geometry checks depend on container layout even without a renderer.

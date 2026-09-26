@@ -107,8 +107,19 @@ func tools_for(id: String) -> Array[Dictionary]:
 			"slot": tool_slot(str(unit.tool_id)),
 			"can_unequip": not required_by_assignment,
 			"owner_name": owner.get_resolved_display_name() if owner != null else "City Storage",
-			"equipped": unit.worker_id == id, "available": str(unit.worker_id).is_empty()})
+			"equipped": not id.is_empty() and unit.worker_id == id, "available": str(unit.worker_id).is_empty()})
 	return rows
+
+
+func _get_worker_needs_summary(worker: WorkerData) -> Dictionary:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return {}
+	var manager: Node = tree.root.get_node_or_null("CitizenNeedsManager")
+	if not is_instance_valid(manager) or not manager.has_method("get_worker_needs_summary"):
+		return {}
+	var value: Variant = manager.call("get_worker_needs_summary", worker)
+	return value if value is Dictionary else {}
 
 func rows() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -137,7 +148,7 @@ func rows() -> Array[Dictionary]:
 			"contributions": int(contributions.get(id, 0)),
 			"tools_text": ", ".join(names) if not names.is_empty() else "None",
 			"can_remove": not site_id.is_empty() and not finishing, "tools_locked": not reason.is_empty(), "lock_reason": reason,
-			"assigned": worker.is_reserved()})
+			"assigned": worker.is_reserved(), "needs": _get_worker_needs_summary(worker)})
 		result[-1].merge({"working": working, "can_fire": not working and not workshop_assigned,
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,
 				"hair_style": profile.hair_style, "accessory": profile.accessory},

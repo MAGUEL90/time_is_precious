@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://byn62k7nrayc7"]
+[gd_scene load_steps=20 format=3 uid="uid://byn62k7nrayc7"]
 
 [ext_resource type="Script" uid="uid://cdia61myyxbw3" path="res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
@@ -9,6 +9,12 @@
 [ext_resource type="Texture2D" uid="uid://dxbnjb72oma6d" path="res://assets/items/stone_hammer.png" id="10_hammer"]
 [ext_resource type="PackedScene" uid="uid://f2jp678rcivk" path="res://scenes/storage_destination/city_storage.tscn" id="11_city"]
 [ext_resource type="Texture2D" uid="uid://blnhrursc1xoj" path="res://assets/ui/ui_icon/plus_icon_3.png" id="12_plus"]
+[ext_resource type="Texture2D" uid="uid://d4gsssre7os1x" path="res://assets/items/butcher’s_cut.png" id="detail_0"]
+[ext_resource type="Texture2D" uid="uid://ba36c56m8k3st" path="res://assets/items/trimmed_robe.png" id="detail_1"]
+[ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/house_level_1.png" id="detail_2"]
+[ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="detail_3"]
+[ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="detail_4"]
+[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="detail_coin"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_window"]
 atlas = ExtResource("3_window")
@@ -87,8 +93,10 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 3
 
-[node name="Header" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+[node name="Header" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/Header"]
 layout_mode = 2
@@ -99,10 +107,6 @@ text = "Worker Hub"
 horizontal_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
-
-[node name="CloseButton" parent="Root/Center/Window/Margin/MainVBox/Header" instance=ExtResource("4_close")]
-layout_mode = 2
-size_flags_vertical = 4
 
 [node name="Tabs" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
@@ -357,12 +361,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 2
+grow_horizontal = 2
+grow_vertical = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 clip_text = true
-max_lines_visible = 1
 text_overrun_behavior = 3
+max_lines_visible = 1
 
 [node name="CartRequiredLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/FeedbackArea"]
 visible = false
@@ -370,13 +375,14 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 2
+grow_horizontal = 2
+grow_vertical = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
 theme_override_font_sizes/font_size = 6
 clip_text = true
-max_lines_visible = 1
 text_overrun_behavior = 3
+max_lines_visible = 1
 
 [node name="LevelPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/PageStack"]
 visible = false
@@ -397,6 +403,17 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
+
+[node name="CloseButton" parent="Root/Center/Window" instance=ExtResource("4_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -26.0
+offset_top = 20.0
+offset_right = -18.0
+offset_bottom = 28.0
+grow_horizontal = 0
 
 [node name="CityStorage" parent="Root/Center" instance=ExtResource("11_city")]
 visible = false
@@ -458,8 +475,7 @@ theme_override_font_sizes/font_size = 6
 text = "Details"
 
 [node name="DetailsWindow" type="NinePatchRect" parent="Root"]
-visible = false
-custom_minimum_size = Vector2(150, 90)
+custom_minimum_size = Vector2(208, 208)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_aicqb")
@@ -478,16 +494,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/DetailsWindow/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 12
 
-[node name="Header" type="HBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
+[node name="Header" type="MarginContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
 layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
 
 [node name="TitleLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/Header"]
 layout_mode = 2
@@ -495,17 +513,18 @@ size_flags_horizontal = 3
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 12
 text = "Worker"
+horizontal_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="CloseButton" parent="Root/DetailsWindow/Margin/MainVBox/Header" instance=ExtResource("4_close")]
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 2
-
-[node name="DetailsLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox"]
+[node name="DetailsScroll" type="ScrollContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="DetailsLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Level: 0
@@ -513,3 +532,215 @@ Wage:
 Location:
 Productive days: 0"
 autowrap_mode = 2
+
+[node name="Visuals" type="VBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Overview" type="VBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Level" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Level 0"
+horizontal_alignment = 1
+
+[node name="WageRow" type="HBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview"]
+layout_mode = 2
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="Caption" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview/WageRow"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Wage:"
+
+[node name="Shekel" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview/WageRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("detail_coin")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Wage" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview/WageRow"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0 / day"
+
+[node name="Location" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Location: Unassigned"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="NeedsHeading" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Daily needs"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Needs" type="HBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Food" type="VBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Food"]
+texture_filter = 1
+custom_minimum_size = Vector2(20, 18)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("detail_0")
+expand_mode = 1
+stretch_mode = 3
+
+[node name="Name" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Food"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Food"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Status" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Food"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "-"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Clothing" type="VBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Clothing"]
+custom_minimum_size = Vector2(20, 18)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("detail_1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Clothing"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Clothing"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Status" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Clothing"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "-"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Shelter" type="VBoxContainer" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+theme_override_constants/separation = 2
+
+[node name="Icon" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Shelter"]
+custom_minimum_size = Vector2(20, 18)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("detail_2")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Shelter"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Shelter"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Status" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Shelter"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "-"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SatisfactionLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Satisfaction 50%"
+autowrap_mode = 3
+
+[node name="SatisfactionBar" type="TextureProgressBar" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+custom_minimum_size = Vector2(0, 7)
+layout_mode = 2
+mouse_filter = 2
+value = 50.0
+nine_patch_stretch = true
+stretch_margin_left = 3
+stretch_margin_top = 3
+stretch_margin_right = 3
+stretch_margin_bottom = 3
+texture_under = ExtResource("detail_3")
+texture_progress = ExtResource("detail_4")
+
+[node name="ReliabilityLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Reliability 50%"
+autowrap_mode = 3
+
+[node name="ReliabilityBar" type="TextureProgressBar" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+custom_minimum_size = Vector2(0, 7)
+layout_mode = 2
+mouse_filter = 2
+value = 50.0
+nine_patch_stretch = true
+stretch_margin_left = 3
+stretch_margin_top = 3
+stretch_margin_right = 3
+stretch_margin_bottom = 3
+texture_under = ExtResource("detail_3")
+texture_progress = ExtResource("detail_4")
+
+[node name="ProductiveDays" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Productive days: 0"
+autowrap_mode = 3
+
+[node name="CloseButton" parent="Root/DetailsWindow" instance=ExtResource("4_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 20.0
+offset_right = -16.0
+offset_bottom = 28.0
+grow_horizontal = 0
+focus_mode = 2
