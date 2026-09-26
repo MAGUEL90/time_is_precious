@@ -16,6 +16,7 @@ config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [autoload]
 
+godot_mcp_runtime="*res://addons/godot-mcp/runtime_bridge.gd"
 DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 BaseDialogueManager="*res://scripts/autoload/base_dialogue_manager/base_dialogue_manager.gd"
 TimeComponentManager="*res://scripts/autoload/time_component_manager/time_component_manager.tscn"
@@ -48,7 +49,7 @@ window/stretch/scale_mode="integer"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg")
+enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg", "res://addons/godot-mcp/plugin.cfg")
 
 [file_customization]
 
