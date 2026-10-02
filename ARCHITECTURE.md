@@ -228,6 +228,18 @@ Current project setup includes a runtime work-state bootstrap/autoload path so w
 
 Do not add duplicate scene-local bootstrap instances without a specific architectural reason.
 
+Each authored WorkshopPlot now uses its unique exported `plot_id` to retain a construction
+state under this runtime host. `main_workshop` retains the original `MainWorkshopConstruction`
+node; other identities use `WorkshopConstruction_` plus their SHA256 hash. Each state owns
+its material transaction, clearing/build deadlines, progress and worker order ID. Authored
+IDs must be unique and stable; unnamed fixtures fall back to the node name, with
+`WorkshopPlot` retaining the original primary identity. Completed workshop production and
+storage still use shared services; separate construction does not imply separate inventories.
+The map owns proximity, construction UI and the completed WorkShop instance. Scene changes
+replace map nodes but retain construction state; disk persistence is not implemented.
+Construction has no production-item output or escrow and does not create a WorkManager
+production order. Existing WorkManager and ProcessManager retain workshop production authority.
+
 ### City Storage and equipment supply
 
 Content Worksites reuse one `CityToolStorage` child of the existing `WorkStateRuntime` host.
@@ -421,6 +433,29 @@ Before implementing persistence, define schema ownership and migration rules. Do
 
 Current implementation uses a low logical viewport for pixel-art rendering and integer scaling. Project-wide viewport/stretch settings are configuration authority, not per-UI preferences.
 
+ContentScene uses YSortWorld at world z_index 0 for characters and object art.
+Nested WorkshopPlot/JobBoard/WorkShop visuals expose foot sorting pivots; sprite
+offsets retain authored placement. WorkshopPlot partitions its existing 48x48
+texture into rear wall, side posts and table regions, so the rear wall does not
+occlude a player already inside the plot and the table sorts at its own feet.
+Floor debris and terrain stay below characters,
+while captions and interaction prompts stay above them. PlayerVisual's body,
+clothes and head remain one sorted unit under Player.
+TableResources contains authored ResourceIcon/ResourceIcon2 Sprite2D slots.
+Their transforms define the material layout; runtime swaps only recipe textures
+and shows them after construction. A tool script draws the table reference only
+in the editor, so arranging any preview material works for other item icons.
+
+ContentScene's scene-local TimeDebugOverlay lives in scenes/debug, separate from
+gameplay panels. In debug builds its button/backtick toggle exposes clock speed
+and time jumps through existing TimeComponentManager minute/day signals. It
+respects gameplay pause/condition/transition guards, leaves physics speed and
+base clock configuration intact, and creates no autoload or persistent state.
+Its explicit Build materials button tops personal Inventory up to one construction
+kit using the construction state's requirements. It preserves surplus, preflights
+the complete missing weight and grants nothing automatically. Unlike clock controls,
+supplies remain available in a paused build menu, refreshing via items_changed.
+
 UI scripts/scenes may adapt layout, but they must not change `project.godot` display configuration as a local fix.
 
 Experimental UI should be isolated under the approved sandbox after agent activation:
@@ -522,3 +557,28 @@ Future AI NPC systems must remain expressive layers over deterministic validated
 Prefer small isolated changes over broad rewrites.
 
 When implementation evidence shows this document is stale, update the relevant snapshot/boundary; do not silently rewrite game design while doing so.
+
+### Shared material worksites (local integration, 2026-09-26)
+
+Content Worksites continues to own the existing inspector, manual sessions, daily scheduler,
+ground output and hauling. ResourceSiteMarker is configuration only (item, minutes/unit,
+stock); no parallel gathering controller is introduced. Session defaults retain Clay's
+contract. Hauling captures item identity per route, and matching storage determines which
+resource it accepts. The isolated Clay save fixture remains Clay-only; this is not a generic
+worksite persistence schema or a new global manager.
+
+Gameplay worker rosters now start empty. Job Board hiring populates WorkerDatabase;
+the main-map adapter no longer seeds its playtest Hauler by default. Legacy worker
+resources remain available through explicit reload_workers() calls in isolated fixtures.
+Map reloads retain hired workers rather than rebuilding or clearing the runtime roster.
+
+Authored Wood/Reed/Straw/Water stockpiles reuse StorageDestination and the existing
+single-resource stockpile backend. WorksiteStockpileAccess adds guarded E withdrawal
+to personal Inventory; workshop deposit continues through the existing workshop API.
+Stockpile quantities retain their existing scene-local lifetime (no disk or map-reload persistence).
+
+Workshop construction runtime now starts uncleared, then clearing, then empty (ready to
+build), building and built. Clearing reserves one worker or executes a guarded manual
+player time skip, without inventory transfer. Interrupted player clearing retains its
+remaining minutes and stops unattended progress. The existing runtime host preserves
+clearing/construction across maps; this adds no disk-save schema.
