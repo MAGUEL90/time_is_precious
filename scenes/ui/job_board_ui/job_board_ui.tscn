@@ -53,7 +53,7 @@ text = "Job Board"
 horizontal_alignment = 1
 
 [node name="ApplicantList" type="ItemList" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]

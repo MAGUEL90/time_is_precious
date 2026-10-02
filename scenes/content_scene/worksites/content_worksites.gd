@@ -5,7 +5,7 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 ## Never opens or overwrites the prototype save slot.
 @export_category("Content playtest")
 @export var seed_playtest_equipment: bool = false
-@export var seed_playtest_hauler: bool = true
+@export var seed_playtest_hauler: bool = false
 @export var enable_time_shortcuts: bool = true
 
 const PLAYTEST_HAULER_ID: String = "content_hauler_belum"
@@ -35,7 +35,10 @@ func _ready() -> void:
 	$FixtureNotes.hide()
 	$WorkerVisuals.y_sort_enabled = true
 	worker_control.can_open = _can_open_worker_hub
-	$CityStorageArea.configure(player, city_tools, _can_open_worker_hub)
+	# Resource-only map sections can reuse this adapter without a city warehouse.
+	var city_storage_area: Node = get_node_or_null("CityStorageArea")
+	if city_storage_area != null:
+		city_storage_area.configure(player, city_tools, _can_open_worker_hub)
 	if seed_playtest_equipment:
 		city_tools.add_tool_unit("content_cart", "cart", "Cart")
 		city_tools.add_tool_unit("content_glove", "basic_glove", "Basic Glove")

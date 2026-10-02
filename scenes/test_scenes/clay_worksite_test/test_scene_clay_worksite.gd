@@ -33,6 +33,8 @@ var worker_control
 var _previous_can_move: bool = true
 var sites: Dictionary = {}
 var daily = DailySchedule.new()
+var _site_highlight = preload("res://scenes/components/interactable_component/interaction_highlight.gd").new()
+var _highlighted_site: Marker2D
 var _selected_site: Marker2D
 var _working: bool = false
 var _pickup_focused: bool = false
@@ -48,6 +50,8 @@ func _ready() -> void:
 	inspector.assignment_ui.hauler_assignment = _assign_hauler
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		sites[site.name] = WorksiteSession.new()
+		if site.has_method("configure_session"):
+			site.configure_session(sites[site.name])
 		sites[site.name].reserved_slots = daily.active_count.bind(site.name)
 	daily.setup(sites)
 	city_tools = _create_city_tool_storage()
@@ -60,6 +64,7 @@ func _ready() -> void:
 	daily.gathered.connect(worker_management.record_contribution)
 	daily.journey_provider = worker_journey
 	hauling = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_hauling.gd").new()
+	hauling.item_provider = func(site_id: StringName) -> String: return sites[site_id].item_id
 	hauling.destination_provider = _storage_destination
 	hauling.assigned_destination_provider = _assigned_storage_destination
 	hauling.origin_provider = func(site_id: StringName, id: String): return worker_destination(site_id, id) - Vector2(0, 16)
@@ -136,13 +141,16 @@ func _storage_choices() -> Array[Dictionary]:
 	choices.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.name).naturalnocasecmp_to(str(b.name)) < 0)
 	return choices
 
-func _hauler_storage_reason(destination: StorageDestination) -> String:
+func _hauler_storage_reason(destination: StorageDestination, site_id: StringName = &"") -> String:
+	if site_id.is_empty() and is_instance_valid(_selected_site):
+		site_id = _selected_site.name
+	var resource_id: String = sites[site_id].item_id if sites.has(site_id) else "clay_lump"
 	if destination == null or destination.is_queued_for_deletion() or not destination.is_available():
 		return "Storage is unavailable."
 	var provider: Node = destination.get_storage()
-	if provider.has_method("accepts_item") and not bool(provider.call("accepts_item", hauling.item_id)):
-		var item: ItemData = ItemDatabase.get_item_data(hauling.item_id)
-		var item_name: String = item.display_name if item != null else str(hauling.item_id)
+	if provider.has_method("accepts_item") and not bool(provider.call("accepts_item", resource_id)):
+		var item: ItemData = ItemDatabase.get_item_data(resource_id)
+		var item_name: String = item.display_name if item != null else resource_id
 		return "%s does not accept %s." % [destination.display_name, item_name]
 	return ""
 
@@ -176,6 +184,7 @@ func _open_site_panel(site: Marker2D) -> void:
 	player.velocity = Vector2.ZERO
 	$FixtureNotes/Label.hide()
 	_hide_prompts()
+	inspector.output_name = ItemDatabase.get_item_data(sites[site.name].item_id).display_name
 	inspector.show_site(site.get_node("Label").text, player, _preview_work, _get_roster)
 func _hauler_ready(site_id: StringName, _count: int) -> String:
 	for id: String in daily.selected[site_id]:
@@ -183,7 +192,7 @@ func _hauler_ready(site_id: StringName, _count: int) -> String:
 			continue
 		var plan: Dictionary = daily.hauler_setups.get(id, {})
 		var destination = _assigned_storage_destination(plan.get("destination_path", NodePath("")))
-		var reason: String = _hauler_storage_reason(destination)
+		var reason: String = _hauler_storage_reason(destination, site_id)
 		if not reason.is_empty():
 			return reason
 	return ""
@@ -273,6 +282,7 @@ func _remove_worker(id: String) -> void:
 		inspector.refresh_team.call_deferred()
 
 func _exit_tree() -> void:
+	_site_highlight.clear()
 	if worker_management != null:
 		if daily.gathered.is_connected(worker_management.record_contribution):
 			daily.gathered.disconnect(worker_management.record_contribution)
@@ -438,7 +448,7 @@ func _start_work(minutes: int) -> void:
 	inspector.set_busy(false)
 	_close_inspector()
 	inspector.window.show()
-	$FixtureNotes/Label.text = "Gathered %d clay in %d min%s\nApproach a site and press E to work" % [
+	$FixtureNotes/Label.text = "Gathered %d units in %d min%s\nApproach a site and press E to work" % [
 		int(last_work_result.units), int(last_work_result.minutes),
 		" (interrupted)" if last_work_result.interrupted else ""
 	]
@@ -452,7 +462,8 @@ func _fade_work(alpha: float) -> void:
 	await tween.finished
 
 func _drop_output(quantity: int) -> bool:
-	return _drop_output_at(quantity, $GroundOutput.to_local(player.global_position + Vector2(0, 16)))
+	var resource_id: String = sites[_selected_site.name].item_id if is_instance_valid(_selected_site) else "clay_lump"
+	return _drop_output_at(quantity, $GroundOutput.to_local(player.global_position + Vector2(0, 16)), Callable(), resource_id)
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if not is_inside_tree() or is_queued_for_deletion():
@@ -462,19 +473,19 @@ func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 			stack.quantity += quantity
 			stack.get_node("QuantityLabel").text = "x%d" % stack.quantity
 			return true
-	if not _drop_output_at(quantity, $GroundOutput.to_local(site.global_position + Vector2(0, 24)), _drop_daily_output.bind(site)):
+	if not _drop_output_at(quantity, $GroundOutput.to_local(site.global_position + Vector2(0, 24)), _drop_daily_output.bind(site), sites[site.name].item_id):
 		return false
 	$GroundOutput.get_child(-1).set_meta("daily_site", str(site.name))
 	return true
 
-func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Callable = Callable()) -> bool:
+func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Callable = Callable(), resource_id: String = "clay_lump") -> bool:
 	if is_queued_for_deletion() or not is_inside_tree():
 		return false
 	var drop: PickUpItem = PICKUP_SCENE.instantiate()
 	if return_remainder.is_valid():
 		drop.set_script(DAILY_PICKUP_SCRIPT)
 		drop.return_remainder = return_remainder
-	drop.item_id = "clay_lump"
+	drop.item_id = resource_id
 	drop.quantity = quantity
 	drop.position = drop_position
 	$GroundOutput.add_child(drop)
@@ -497,10 +508,15 @@ func _process(_delta: float) -> void:
 			if candidate <= distance:
 				nearest = site
 				distance = candidate
+	if nearest != _highlighted_site:
+		_highlighted_site = nearest
+		_site_highlight.select(nearest)
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").visible = site == nearest
 
 func _hide_prompts() -> void:
+	_site_highlight.clear()
+	_highlighted_site = null
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").hide()
 

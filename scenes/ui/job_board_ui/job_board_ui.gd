@@ -7,6 +7,7 @@ signal closed
 @onready var hire_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/HireButton
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/CloseButton
 
+
 var applicants: Array[CitizenData] = []
 var daily_wage: int = 1
 
@@ -27,6 +28,7 @@ func open(default_daily_wage: int = 1) -> void:
 	get_tree().paused = true
 	visible = true
 	_refresh_applicants()
+
 
 func close() -> void:
 	visible = false

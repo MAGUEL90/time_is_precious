@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2m53ipsp0hyk"
-path="res://.godot/imported/reed_bundle.png-64112abf90c93837d3ae22e1c0130a3e.ctex"
+uid="uid://cfs1fve22di0s"
+path="res://.godot/imported/reed_bundle.png-677c665d7d8e35c174344df7c892355b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/items/reed_bundle.png"
-dest_files=["res://.godot/imported/reed_bundle.png-64112abf90c93837d3ae22e1c0130a3e.ctex"]
+source_file="res://assets/reed_bundle.png"
+dest_files=["res://.godot/imported/reed_bundle.png-677c665d7d8e35c174344df7c892355b.ctex"]
 
 [params]
 

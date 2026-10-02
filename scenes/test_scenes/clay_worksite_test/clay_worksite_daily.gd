@@ -280,9 +280,9 @@ func tick() -> void:
 				if session.stock <= 0 or int(minutes_by_worker.get(id, 0)) >= DAILY_LIMIT:
 					continue
 				minutes_by_worker[id] = int(minutes_by_worker.get(id, 0)) + 1
-				job.progress[id] = int(job.progress.get(id, 0)) + 1
-				if int(job.progress[id]) >= session.MINUTES_PER_CLAY:
-					job.progress[id] -= session.MINUTES_PER_CLAY
+				job.progress[id] = float(job.progress.get(id, 0)) + 1.0
+				if float(job.progress[id]) >= session.minutes_per_unit:
+					job.progress[id] -= session.minutes_per_unit
 					session.stock -= 1
 					job.units += 1
 					job.stats[id].output += 1
@@ -297,7 +297,7 @@ func tick() -> void:
 	var current_day: int = current / 1440
 	if current_day != last_stock_day:
 		for session in sites.values():
-			session.stock = rng.randi_range(stock_min, stock_max)
+			session.stock = rng.randi_range(session.daily_stock_min if session.daily_stock_min >= 0 else stock_min, session.daily_stock_max if session.daily_stock_max >= 0 else stock_max)
 		last_stock_day = current_day
 	if hauling != null:
 		hauling.tick(current, _hauler_eligible, _site_depleted)

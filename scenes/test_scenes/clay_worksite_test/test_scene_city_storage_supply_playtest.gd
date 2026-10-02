@@ -13,7 +13,7 @@ func _ready() -> void:
 	Inventory.add_item("shekel", 5)
 	Inventory.add_item("gold_nugget", 1)
 	Inventory.add_item("barley_grain_sack", 1)
-	var content := preload("res://scenes/content_scene/content_scene.tscn").instantiate()
+	var content := preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn").instantiate()
 	add_child(content)
 	_open_supply.call_deferred(content)
 

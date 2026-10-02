@@ -62,7 +62,13 @@ func _process(delta: float) -> void:
 					label.position = Vector2(0, -8)
 					label.add_theme_font_size_override("font_size", 6)
 					actor.add_child(label)
-				actor.get_node("CargoLabel").text = "Clay x%d" % int(hauling_visual.carrying) if int(hauling_visual.carrying) > 0 else ""
+				var cargo_quantity: int = int(hauling_visual.carrying)
+				var cargo_item_id: String = str(hauling_visual.get("item_id", "clay_lump"))
+				var cargo_item: ItemData = ItemDatabase.get_item_data(cargo_item_id)
+				if cargo_item == null:
+					cargo_item = ItemDatabase.get_item_data("clay_lump")
+				var cargo_name: String = cargo_item.display_name if cargo_item != null else "Clay"
+				actor.get_node("CargoLabel").text = "%s x%d" % [cargo_name, cargo_quantity] if cargo_quantity > 0 else ""
 				continue
 			if actor.has_node("CargoLabel"):
 				actor.get_node("CargoLabel").text = ""

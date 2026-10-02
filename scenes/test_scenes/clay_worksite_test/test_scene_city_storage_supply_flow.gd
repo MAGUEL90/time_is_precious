@@ -1,6 +1,6 @@
 extends Node
 
-const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const CONTENT_SCENE: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const HOME_SCENE: PackedScene = preload("res://scenes/player_home_interior/player_home_interior.tscn")
 const TEST_WORKER_ID: String = "city_storage_supply_flow_worker"
 const FORBIDDEN_PLAYER_IDS: Array[String] = [

@@ -14,6 +14,7 @@ const DRYING_PROCESS: ProcessData = preload(
 # Smoke test WorkState: job selesai -> wet bricks -> drying -> dry bricks
 
 func _ready() -> void:
+	WorkerDatabase.reload_workers()
 	randomize() # supaya failure chance (kalau dipakai) tidak selalu sama
 
 func _setup_process_data() -> void:

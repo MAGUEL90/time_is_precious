@@ -7,8 +7,9 @@ var is_loaded: bool = false
 var dismissed_workers: Dictionary[String, WorkerData] = {}
 
 func _ready() -> void:
-	if not is_loaded:
-		_load_all_workers(WORKERS_PATH)
+	# Gameplay starts without employees; Job Board hires populate this roster.
+	# Isolated legacy fixtures may explicitly call reload_workers().
+	is_loaded = true
 
 
 func _load_all_workers(path: String) -> void:

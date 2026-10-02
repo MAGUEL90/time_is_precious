@@ -21,6 +21,7 @@ var origin_provider: Callable
 var take_output: Callable
 var output_count: Callable
 var return_output: Callable
+var item_provider: Callable
 var item_id: String = "clay_lump"
 var speed: float = 10.0
 
@@ -29,11 +30,12 @@ func begin(id: String, site_id: StringName, now: int, plan: Dictionary = {}) -> 
 	if routes.has(id):
 		return
 	var origin: Vector2 = _origin(site_id, id)
+	var cargo_item_id: String = _item_for_site(site_id)
 	routes[id] = {
 		"id": id,
 		"site_id": site_id,
 		"phase": PHASE_IDLE,
-		"cargo": {"item_id": item_id, "quantity": 0},
+		"cargo": {"item_id": cargo_item_id, "quantity": 0},
 		"origin": origin,
 		"target": origin,
 		"position": origin,
@@ -99,7 +101,8 @@ func get_visual(id: String, time: float) -> Dictionary:
 		"position": position,
 		"moving": moving,
 		"direction": str(route.direction),
-		"carrying": _cargo_quantity(route)
+		"carrying": _cargo_quantity(route),
+		"item_id": str(route.cargo.get("item_id", item_id))
 	}
 
 
@@ -132,13 +135,16 @@ func _begin_trip(route: Dictionary, id: String, current: int, depleted: Callable
 	var quantity: int = mini(load_limit, available)
 	if quantity <= 0:
 		return
+	var cargo_item_id: String = str(route.cargo.get("item_id", item_id))
+	if cargo_item_id.is_empty():
+		cargo_item_id = item_id
 	var depleted_now: bool = depleted.is_valid() and bool(depleted.call(site_id))
 	if available < load_limit and not depleted_now:
 		return
 	var destination = _destination(route)
 	if not _valid_object(destination) or not destination.has_method("get_arrival_position"):
 		return
-	if not _destination_accepts(destination, quantity):
+	if not _destination_accepts(destination, quantity, cargo_item_id):
 		return
 	if not take_output.is_valid():
 		return
@@ -152,7 +158,7 @@ func _begin_trip(route: Dictionary, id: String, current: int, depleted: Callable
 	var target: Vector2 = _destination_position(destination)
 	var duration: int = _travel_minutes(origin.distance_to(target))
 	route.phase = PHASE_OUTBOUND
-	route.cargo = {"item_id": item_id, "quantity": taken}
+	route.cargo = {"item_id": cargo_item_id, "quantity": taken}
 	route.origin = origin
 	route.target = target
 	route.position = origin
@@ -240,8 +246,9 @@ func _destination_position(destination) -> Vector2:
 	return Vector2.ZERO
 
 
-func _destination_accepts(destination, quantity: int) -> bool:
-	return _valid_object(destination) and destination.has_method("accepts_cargo") and bool(destination.accepts_cargo(item_id, quantity))
+func _destination_accepts(destination, quantity: int, cargo_item_id: String = "") -> bool:
+	var accepted_item_id: String = cargo_item_id if not cargo_item_id.is_empty() else item_id
+	return _valid_object(destination) and destination.has_method("accepts_cargo") and bool(destination.accepts_cargo(accepted_item_id, quantity))
 
 
 func _destination_delivers(destination, cargo: Dictionary, position: Vector2) -> bool:
@@ -250,6 +257,14 @@ func _destination_delivers(destination, cargo: Dictionary, position: Vector2) ->
 
 func _return_cargo(site_id: StringName, quantity: int) -> bool:
 	return return_output.is_valid() and bool(return_output.call(site_id, quantity))
+
+
+func _item_for_site(site_id: StringName) -> String:
+	if item_provider.is_valid():
+		var provided_item_id: String = str(item_provider.call(site_id))
+		if not provided_item_id.is_empty():
+			return provided_item_id
+	return item_id
 
 
 func _cargo_quantity(route: Dictionary) -> int:

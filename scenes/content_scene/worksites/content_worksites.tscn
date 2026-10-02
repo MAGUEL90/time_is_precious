@@ -1,4 +1,12 @@
-[gd_scene load_steps=7 format=3 uid="uid://c21e6tio314wf"]
+[gd_scene load_steps=12 format=3 uid="uid://c21e6tio314wf"]
+
+[ext_resource type="Texture2D" path="res://assets/items/wood_log.png" id="icon_Wood"]
+
+[ext_resource type="Texture2D" uid="uid://cfs1fve22di0s" path="res://assets/reed_bundle.png" id="icon_Reed"]
+
+[ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
+
+[ext_resource type="Texture2D" path="res://assets/items/water_jar.png" id="icon_Water"]
 
 [ext_resource type="Script" uid="uid://bq0j30hkxlbke" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
@@ -6,6 +14,8 @@
 [ext_resource type="PackedScene" uid="uid://vj0r4ds7b63g" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="6_city_storage"]
+
+[ext_resource type="Script" path="res://scenes/content_scene/worksites/resource_site_marker.gd" id="7_resource_site"]
 
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
@@ -93,7 +103,135 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
+[node name="WoodSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-96, -40)
+script = ExtResource("7_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Label" parent="WorksiteMarkers/WoodSite" index="1"]
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSite"]
+texture_filter = 1
+
+[node name="ReedSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-32, -40)
+script = ExtResource("7_resource_site")
+item_id = "reed_bundle"
+minutes_per_unit = 7.5
+
+[node name="Label" parent="WorksiteMarkers/ReedSite" index="1"]
+text = "Reed Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ReedSite"]
+texture_filter = 1
+
+[node name="StrawSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(32, -40)
+script = ExtResource("7_resource_site")
+item_id = "straw_bundle"
+minutes_per_unit = 10.0
+
+[node name="Label" parent="WorksiteMarkers/StrawSite" index="1"]
+text = "Straw Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/StrawSite"]
+texture_filter = 1
+
+[node name="WaterSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(96, -40)
+script = ExtResource("7_resource_site")
+item_id = "water_jar"
+minutes_per_unit = 5.0
+
+[node name="Label" parent="WorksiteMarkers/WaterSite" index="1"]
+text = "Water Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WaterSite"]
+texture_filter = 1
+
 [editable path="WorksiteMarkers/ClaySiteA"]
+
+[node name="WoodStorage" parent="." instance=ExtResource("3_storage")]
+position = Vector2(-80, 30)
+display_name = "Wood"
+
+[node name="Sprite2D" parent="WoodStorage" index="3"]
+position = Vector2(0, -4)
+texture = ExtResource("icon_Wood")
+
+[node name="Label" parent="WoodStorage" index="4"]
+offset_left = -20.0
+offset_right = 20.0
+offset_top = -24.0
+offset_bottom = -16.0
+
+[node name="Storage" parent="WoodStorage" index="5"]
+compact_label = true
+item_id = "wood_log"
+
+[node name="ReedStorage" parent="." instance=ExtResource("3_storage")]
+position = Vector2(-40, 30)
+display_name = "Reed"
+
+[node name="Sprite2D" parent="ReedStorage" index="3"]
+position = Vector2(0, -4)
+texture = ExtResource("icon_Reed")
+
+[node name="Label" parent="ReedStorage" index="4"]
+offset_left = -20.0
+offset_right = 20.0
+offset_top = -24.0
+offset_bottom = -16.0
+
+[node name="Storage" parent="ReedStorage" index="5"]
+compact_label = true
+item_id = "reed_bundle"
+
+[node name="StrawStorage" parent="." instance=ExtResource("3_storage")]
+position = Vector2(40, 30)
+display_name = "Straw"
+
+[node name="Sprite2D" parent="StrawStorage" index="3"]
+position = Vector2(0, -4)
+texture = ExtResource("icon_Straw")
+
+[node name="Label" parent="StrawStorage" index="4"]
+offset_left = -20.0
+offset_right = 20.0
+offset_top = -24.0
+offset_bottom = -16.0
+
+[node name="Storage" parent="StrawStorage" index="5"]
+compact_label = true
+item_id = "straw_bundle"
+
+[node name="WaterStorage" parent="." instance=ExtResource("3_storage")]
+position = Vector2(80, 30)
+display_name = "Water"
+
+[node name="Sprite2D" parent="WaterStorage" index="3"]
+position = Vector2(0, -4)
+texture = ExtResource("icon_Water")
+
+[node name="Label" parent="WaterStorage" index="4"]
+offset_left = -20.0
+offset_right = 20.0
+offset_top = -24.0
+offset_bottom = -16.0
+
+[node name="Storage" parent="WaterStorage" index="5"]
+compact_label = true
+item_id = "water_jar"
+
+[editable path="WoodStorage"]
+
+[editable path="ReedStorage"]
+
+[editable path="StrawStorage"]
+
+[editable path="WaterStorage"]
 [editable path="WorksiteMarkers/ClaySiteB"]
 [editable path="StorageA"]
 [editable path="StorageB"]

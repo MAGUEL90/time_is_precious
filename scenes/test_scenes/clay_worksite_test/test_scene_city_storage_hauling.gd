@@ -1,6 +1,6 @@
 extends Node
 
-const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const CONTENT_SCENE: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const HAULING_SCRIPT: Script = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_hauling.gd")
 const SITE: StringName = &"ClaySiteA"
 const LABORER: String = "city_storage_filter_test_laborer"
