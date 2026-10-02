@@ -10,6 +10,8 @@
 radius = 4.1231055
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
+z_index = 0
+y_sort_enabled = false
 collision_layer = 2
 script = ExtResource("2_d4mna")
 
