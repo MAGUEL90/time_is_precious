@@ -1,0 +1,129 @@
+[gd_scene load_steps=13 format=3 uid="uid://yx4rvbmo0me4"]
+
+[ext_resource type="Script" uid="uid://brkli2l7x7668" path="res://scenes/workshop_plot/workshop_plot.gd" id="1_plot"]
+[ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_interaction"]
+[ext_resource type="Texture2D" uid="uid://bebneqmeeaeq6" path="res://assets/ui/building/plot_level_0.png" id="2_ysxfs"]
+[ext_resource type="Texture2D" uid="uid://yutg1ax64b0w" path="res://assets/ui/building/to_be_clean_1.png" id="3_kvint"]
+[ext_resource type="Texture2D" uid="uid://dxbnjb72oma6d" path="res://assets/items/stone_hammer.png" id="3_prompt"]
+[ext_resource type="Script" path="res://scenes/workshop_plot/workshop_table_resource_preview.gd" id="4_exh8n"]
+[ext_resource type="Texture2D" uid="uid://bhfqpsxp7xvha" path="res://assets/objects/object_board_0.png" id="4_kvint"]
+[ext_resource type="Texture2D" uid="uid://ca60ougclpgam" path="res://assets/items/clay_lump.png" id="5_gve8a"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
+[ext_resource type="Texture2D" uid="uid://byfbtmpuo2yuw" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="6_panel"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_access"]
+size = Vector2(15, 15)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_prompt_panel"]
+atlas = ExtResource("6_panel")
+region = Rect2(1, 1, 16, 16)
+
+[node name="WorkshopPlot" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_plot")
+
+[node name="Plot" type="Sprite2D" parent="."]
+position = Vector2(0, -11)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -6.5)
+region_enabled = true
+region_rect = Rect2(0, 0, 48, 13)
+
+[node name="LeftWall" type="Sprite2D" parent="."]
+position = Vector2(-18, 24)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -7.5)
+region_enabled = true
+region_rect = Rect2(0, 33, 12, 15)
+
+[node name="LeftWallTop" type="Sprite2D" parent="."]
+position = Vector2(-20, 24)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -25)
+region_enabled = true
+region_rect = Rect2(0, 13, 8, 20)
+
+[node name="RightWall" type="Sprite2D" parent="."]
+position = Vector2(18, 24)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -7.5)
+region_enabled = true
+region_rect = Rect2(36, 33, 12, 15)
+
+[node name="RightWallTop" type="Sprite2D" parent="."]
+position = Vector2(20, 24)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -25)
+region_enabled = true
+region_rect = Rect2(40, 13, 8, 20)
+
+[node name="Table" type="Sprite2D" parent="."]
+position = Vector2(0, 10)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, -11)
+region_enabled = true
+region_rect = Rect2(8, 13, 32, 20)
+
+[node name="TableLegs" type="Sprite2D" parent="."]
+position = Vector2(0, 10)
+texture = ExtResource("2_ysxfs")
+offset = Vector2(0, 6.5)
+region_enabled = true
+region_rect = Rect2(12, 33, 24, 15)
+
+[node name="ToBeClean" type="Sprite2D" parent="."]
+z_index = -1
+texture = ExtResource("3_kvint")
+
+[node name="TableResources" type="Node2D" parent="."]
+position = Vector2(0, 10)
+script = ExtResource("4_exh8n")
+
+[node name="ResourceIcon" type="Sprite2D" parent="TableResources"]
+editor_description = "Move this preview icon. Runtime swaps only its texture to the workshop recipe's first input."
+position = Vector2(-6, -17)
+texture = ExtResource("5_gve8a")
+
+[node name="ResourceIcon2" type="Sprite2D" parent="TableResources"]
+editor_description = "Move this preview icon. Runtime swaps only its texture to the workshop recipe's first input."
+position = Vector2(6, -11)
+texture = ExtResource("5_gve8a")
+
+[node name="Board" type="Sprite2D" parent="."]
+position = Vector2(16, 34)
+texture = ExtResource("4_kvint")
+offset = Vector2(0, -8)
+
+[node name="Label" type="Label" parent="."]
+z_index = 10
+offset_left = -42.0
+offset_top = -34.0
+offset_right = 42.0
+offset_bottom = -26.0
+theme = ExtResource("5_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Workshop Plot"
+horizontal_alignment = 1
+
+[node name="InteractableComponent" parent="." instance=ExtResource("2_interaction")]
+position = Vector2(16, 26)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractableComponent"]
+shape = SubResource("RectangleShape2D_access")
+
+[node name="InteractableLabelComponent" type="TextureRect" parent="."]
+visible = false
+z_index = 2
+offset_left = 8.0
+offset_right = 24.0
+offset_bottom = 16.0
+mouse_filter = 2
+texture = SubResource("AtlasTexture_prompt_panel")
+
+[node name="HammerIcon" type="TextureRect" parent="InteractableLabelComponent"]
+layout_mode = 0
+offset_right = 16.0
+offset_bottom = 16.0
+mouse_filter = 2
+texture = ExtResource("3_prompt")

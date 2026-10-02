@@ -1,5 +1,9 @@
 class_name WorkshopStorageMenuUI extends CanvasLayer
 
+const WORKSHOP_FLOW_HINT = preload(
+	"res://scenes/ui/workshop_menu_ui/workshop_flow_hint.gd"
+)
+
 signal action_selected(action_id: int)
 signal pay_lot_requested(lot_id: String, menu_ui: WorkshopStorageMenuUI)
 signal pay_all_requested(menu_ui: WorkshopStorageMenuUI)
@@ -33,6 +37,9 @@ const GAMEPLAY_THEME: Theme = preload(
 )
 @onready var feedback_label: Label = (
 	$Root/Center/TextureWindow/Margin/MainVBox/StatusBox/FeedbackLabel
+)
+@onready var next_step_label: Label = (
+	$Root/Center/TextureWindow/Margin/MainVBox/NextStepLabel
 )
 @onready var deposit_button: Button = (
 	$Root/Center/TextureWindow/Margin/MainVBox/Footer/PrimaryAction/DepositButton
@@ -208,6 +215,10 @@ func _refresh_status() -> void:
 		_format_active_processes(active_processes)
 		if not active_processes.is_empty()
 		else "Click Held Output to pay its fee."
+	)
+	next_step_label.text = WORKSHOP_FLOW_HINT.get_hint(
+		storage_state,
+		ProcessManager.get_process_availability("drying_mudbrick")
 	)
 
 func _format_active_processes(active_processes: Array) -> String:

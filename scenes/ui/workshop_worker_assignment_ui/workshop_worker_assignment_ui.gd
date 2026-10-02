@@ -78,6 +78,7 @@ var selected_worker_ids: Array[String] = ["", ""]
 var max_worker_slots: int = 2
 var required_profession: WorkerData.Profession = WorkerData.Profession.NONE
 var active_slot_index: int = 0
+var _selection_options_by_id: Dictionary = {}
 
 
 # Setup / Public API
@@ -93,10 +94,16 @@ func _ready() -> void:
 func open_assignment(
 	current_worker_ids: Array[String],
 	slot_count: int = 2,
-	job_profession: WorkerData.Profession = WorkerData.Profession.NONE
+	job_profession: WorkerData.Profession = WorkerData.Profession.NONE,
+	selection_options: Array[Dictionary] = []
 ) -> void:
 	required_profession = job_profession
 	max_worker_slots = maxi(slot_count, 1)
+	_selection_options_by_id.clear()
+	for option: Dictionary in selection_options:
+		var worker_id: String = str(option.get("id", ""))
+		if not worker_id.is_empty():
+			_selection_options_by_id[worker_id] = option
 	selected_worker_ids.clear()
 	for slot_index in range(max_worker_slots):
 		selected_worker_ids.append("")
@@ -106,7 +113,9 @@ func open_assignment(
 			continue
 		if not WorkerDatabase.has_worker_data(worker_id):
 			continue
-		if WorkerDatabase.get_worker_data(worker_id).is_reserved():
+		if not _is_worker_available_for_selection(
+			WorkerDatabase.get_worker_data(worker_id)
+		):
 			continue
 
 		var empty_slot_index: int = _get_first_empty_slot_index()
@@ -361,12 +370,14 @@ func _refresh_worker_list() -> void:
 
 		if selected_worker_ids.has(worker_data.worker_id):
 			worker_button.disabled = true
-		elif worker_data.is_reserved():
+		elif not _is_worker_available_for_selection(worker_data):
 			worker_button.disabled = true
+			worker_button.tooltip_text = _get_worker_unavailable_reason(worker_data)
 		else:
 			worker_button.pressed.connect(
 				_on_worker_selected.bind(worker_data.worker_id)
 			)
+		worker_button.set_meta("worker_id", worker_data.worker_id)
 		worker_list.add_child(worker_button)
 		worker_count += 1
 
@@ -393,7 +404,7 @@ func _get_workers_in_requirement_order() -> Array:
 
 func _on_worker_selected(worker_id: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-	if worker == null or worker.is_reserved():
+	if not _is_worker_available_for_selection(worker):
 		return
 	if worker_id.strip_edges().is_empty():
 		return
@@ -418,9 +429,27 @@ func _refresh_next_state() -> void:
 func _has_available_selected_worker() -> bool:
 	for worker_id in selected_worker_ids:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-		if worker != null and not worker.is_reserved():
+		if _is_worker_available_for_selection(worker):
 			return true
 	return false
+
+
+func _is_worker_available_for_selection(worker_data: WorkerData) -> bool:
+	if worker_data == null or worker_data.is_reserved():
+		return false
+	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
+	if option is Dictionary:
+		return bool(option.get("available", false))
+	return true
+
+
+func _get_worker_unavailable_reason(worker_data: WorkerData) -> String:
+	if worker_data == null:
+		return "Worker unavailable."
+	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
+	if option is Dictionary:
+		return str(option.get("reason", "Worker unavailable."))
+	return "Worker is busy."
 
 
 # Navigation callbacks
@@ -505,6 +534,11 @@ func _get_first_empty_slot_index() -> int:
 
 
 # Exit helpers
+
+func close_menu() -> void:
+	if not visible:
+		return
+	_finish_close()
 
 func _finish_back() -> void:
 	visible = false
