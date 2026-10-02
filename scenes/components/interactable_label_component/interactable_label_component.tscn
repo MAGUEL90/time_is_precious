@@ -2,22 +2,22 @@
 
 [ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_6ix38"]
 [ext_resource type="Script" uid="uid://bh0ypkem632ff" path="res://scenes/components/interactable_label_component/interactable_label_component.gd" id="1_ba5q2"]
-[ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_x1xbw"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="3_x1xbw"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6ix38"]
 atlas = ExtResource("3_x1xbw")
-region = Rect2(112, 51, 28, 10)
+region = Rect2(1, 1, 16, 16)
 
 [node name="InteractableLabelComponent" type="Control"]
 visible = false
-z_index = 2
-custom_minimum_size = Vector2(10, 10)
+z_index = 10
+custom_minimum_size = Vector2(16, 16)
 layout_mode = 3
 anchors_preset = 0
-offset_left = -5.0
+offset_left = -8.0
 offset_top = -30.0
-offset_right = 5.0
-offset_bottom = -20.0
+offset_right = 8.0
+offset_bottom = -14.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme = ExtResource("1_6ix38")

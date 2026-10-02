@@ -62,6 +62,7 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @onready var player_visual: PlayerVisual = $PlayerVisual
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
+var _interaction_highlight = preload("res://scenes/components/interactable_component/interaction_highlight.gd").new()
 var current_interactable: Node = null
 var nearby_interactables: Array[Node] = []
 var current_npc_dialogue: NPCBase = null
@@ -96,6 +97,7 @@ func _ready() -> void:
 	TimeComponentManager.minute_changed.connect(on_minute_changed)
 
 func _exit_tree() -> void:
+	_interaction_highlight.clear()
 	PlayerRuntimeState.capture(self)
 
 func _process(_delta: float) -> void:
@@ -172,6 +174,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif current_interactable.is_in_group("city_storage_areas"):
 		current_interactable.on_player_interact(self)
+	elif current_interactable.is_in_group("worksite_stockpiles"):
+		current_interactable.on_player_interact(self)
+	elif current_interactable.is_in_group("workshop_plots"):
+		current_interactable.on_player_interact(self)
 
 # Interactable state
 
@@ -225,6 +231,7 @@ func _set_current_interactable(next_interactable: Node) -> void:
 		if previous_label != null:
 			previous_label.hide()
 
+	_interaction_highlight.select(next_interactable)
 	current_interactable = next_interactable
 	can_interact = current_interactable != null
 	if current_interactable == null:
