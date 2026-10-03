@@ -1,6 +1,6 @@
 extends Node
 
-const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const CONTENT: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const HOME: PackedScene = preload("res://scenes/player_home_interior/player_home_interior.tscn")
 const NEED_FIELDS: Array[String] = [
 	"last_processed_day", "last_food_processed_day", "last_food_fulfilled_count",

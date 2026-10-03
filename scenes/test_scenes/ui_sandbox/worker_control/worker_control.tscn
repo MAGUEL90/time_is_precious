@@ -11,7 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://blnhrursc1xoj" path="res://assets/ui/ui_icon/plus_icon_3.png" id="12_plus"]
 [ext_resource type="Texture2D" uid="uid://d4gsssre7os1x" path="res://assets/items/butcher’s_cut.png" id="detail_0"]
 [ext_resource type="Texture2D" uid="uid://ba36c56m8k3st" path="res://assets/items/trimmed_robe.png" id="detail_1"]
-[ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/house_level_1.png" id="detail_2"]
+[ext_resource type="Texture2D" uid="uid://bnamumk83thiw" path="res://assets/ui/ui_icon/house_icon.png" id="detail_2"]
 [ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="detail_3"]
 [ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="detail_4"]
 [ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="detail_coin"]
@@ -633,12 +633,13 @@ mouse_filter = 0
 theme_override_constants/separation = 2
 
 [node name="Icon" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Clothing"]
+texture_filter = 1
 custom_minimum_size = Vector2(20, 18)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("detail_1")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 3
 
 [node name="Name" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Clothing"]
 layout_mode = 2
@@ -663,12 +664,13 @@ mouse_filter = 0
 theme_override_constants/separation = 2
 
 [node name="Icon" type="TextureRect" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Shelter"]
+texture_filter = 1
 custom_minimum_size = Vector2(20, 18)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("detail_2")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 3
 
 [node name="Name" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Needs/Shelter"]
 layout_mode = 2

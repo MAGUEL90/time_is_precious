@@ -37,9 +37,12 @@ func open_panel() -> void:
 		return
 
 	_refresh_entries()
+	# Map instances may hide this CanvasLayer while authoring the scene.
+	show()
 	root.show()
 	get_tree().paused = true
-	close_button.grab_focus()
+	if close_button.focus_mode != Control.FOCUS_NONE:
+		close_button.grab_focus()
 
 func close_panel() -> void:
 	if not root.visible:

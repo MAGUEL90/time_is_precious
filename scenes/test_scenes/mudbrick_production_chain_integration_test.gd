@@ -7,6 +7,7 @@ const DRYING_PROCESS: ProcessData = preload(
 var failures: int = 0
 
 func _ready() -> void:
+	WorkerDatabase.reload_workers()
 	_reset_runtime_state()
 	_run_facility_level_test()
 	_reset_runtime_state()

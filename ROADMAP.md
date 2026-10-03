@@ -177,7 +177,8 @@ including intake, clay Hauler choices and daily food/portions. See
    next-day recovery passed backend and rendered UI regressions. The new summary still
    needs the Game Director's visual check. See `docs/task_reports/city-storage-supply-summary.md`.
 
-Initial workshop construction handoff and new capacity values remain TBD. City food,
+Initial workshop construction now follows the fixed-plot MVP in game-concept section 20.1;
+new city capacity values remain TBD. City food,
 portions and clothing allocations currently survive scene changes within the
 running game, not a restart. Workshop withdrawal rules, production values, project settings
 and the existing save format are unchanged. See `docs/task_reports/city-storage-food.md`
@@ -186,6 +187,61 @@ for the food checkpoint's verification and remaining limits.
 # Immediate Priority Stack
 
 Work from top to bottom unless a concrete blocker requires otherwise.
+
+**Map authoring reset - 2026-09-28:** At the Game Director's request, ContentScene
+now has empty tile layers using `tile_set_base_new_28_09_2026.png`, retaining
+WorkshopPlot, Job Board and player/HUD support. Worksites, HomeDoor and the
+embedded NightmareWorld are removed from this authoring map. The previous map
+is preserved as `scenes/test_scenes/fixtures/content_worksites_map.tscn` for
+production, resource and City Storage regression tests. Earlier full-map flow
+results describe that fixture. See `docs/task_reports/content-tileset-reset.md`.
+
+**Resource map reintegration - 2026-10-01:** The newly authored space now contains
+Clay, Wood, Reed, Straw and Water worksites with one matching stockpile each,
+using the existing Hourly/Daily inspector, resource rates, hauling and E withdrawal.
+Tiles, player, both workshop plots and Job Board retain the Game Director's layout.
+MainMapWorksitesTest passes actual E inspection, cancellation, three-hour work,
+overflow conservation, full-bag storage guards, map reload and five simultaneous
+Daily/Hauler deliveries on the current ContentScene. ResourceWorksitesTest and
+ContentDepthTimeDebugTest also pass. Normal startup grants no personal materials
+and hires no workers; the initial city Cart is described below. This restores material access; complete current-map production
+and normal Shekel income remain separate unfinished gates.
+See `docs/task_reports/main-map-worksites-reintegration.md`.
+
+**Hauler onboarding - 2026-10-01:** Job Board now offers one Worksite Hauler
+alongside the existing Workshop Laborer, through the same citizen hiring and
+daily-wage rules. Reload preserves hired/dismissed identities. Haulers still
+require an explicitly equipped cart before worksite assignment. MainMapHaulerStartTest,
+InitialWorkshopStartTest, WorkshopHiringRosterAudit, WorkerControlTest and
+PopulationEmploymentIntegrationTest pass. Following the Game Director's request
+for a Cart on 2026-10-03, normal startup now supplies one city-owned Cart through
+Worker Hub's existing Tool slot. MainMapHaulerStartTest also passes normal hire,
+UI equip, Daily Wood delivery, E withdrawal, unique allocation, equipment retention
+on reload and return to city supplies on dismissal. The Cart is supplied once per
+city runtime; it is not a personal Inventory grant or automatic equipment.
+See `docs/task_reports/main-map-hauler-onboarding.md`.
+
+**Debug-assisted production retest - 2026-10-03:** The separate map Debug panel
+now supplies Shekel, construction and two-cycle production kits, with opt-in
+worker performance protection and a player protection toggle. Current-map testing
+with a normally hired Laborer completes two production/drying cycles, payments,
+yard upgrade and withdrawal. This is a debug-assisted result; normal Shekel
+access and needs balance remain unfinished. See `docs/task_reports/debug-production-testing.md`.
+
+**Content layout cleanup - 2026-10-03:** At the Game Director's request,
+ContentScene now retains two workshop plots and the Job Board, with resource
+sites and map stockpiles removed. WorkerRuntime preserves worker presentation
+and management; uncleared plots no longer show the world debug title.
+Earlier main-map gathering/hauling acceptance results describe the previous
+layout, not the current map. See `docs/task_reports/content-scene-cleanup-2026-10-03.md`.
+
+**Modal pause check - 2026-10-03:** Physical K opens Worker Hub and K/Esc/Close
+release its pause on the current map, with empty and hired rosters. A separate
+confirmed freeze-like case came from Work Progress (J): the map hides its
+CanvasLayer for authoring, but opening only showed its child and paused the game.
+Opening now shows both layers. MainMapWorkerHubTest and WorkshopPlotAccessTest
+pass; the user's K-specific symptom has not been reproduced. See
+`docs/task_reports/worker-hub-pause-investigation.md`.
 
 **Current handoff - 2026-09-26:** City Storage supply work is merged into main
 through PR #105 (merge commit 2a7b773). The earlier instruction to remain on
@@ -198,14 +254,29 @@ The bounded ContentScene cleanup removes the empty ContentDirector, inactive roo
 camera and no-op root script. The Game Director accepted its playtest; automated
 ContentWorksitesIntegrationTest passed. Cleanup still requires PR/merge review.
 
-Next: review the parked feature/process-workshop/mvp-mudbrick-flow checkpoint
-against current main before integrating it. Its worktree at baseline 4de7d05 has
-uncommitted guidance UI and playtest/regression fixtures; preserve those changes.
-The checkpoint report records earlier successful tests, but they do not establish
-compatibility with merged City Storage changes. Rerun the relevant tests after
-reconciliation. Initial workshop access on the authored map still requires a
-Game Director decision; test-fixture starting resources are not approved gameplay.
-Do not treat the parked checkpoint as integrated or mark Priority 1 complete.
+The parked feature/process-workshop/mvp-mudbrick-flow checkpoint was reviewed and its
+guidance UI and playtest/regression fixtures integrated locally into main-map-access.
+The original worktree at baseline 4de7d05 remains untouched. Current item-information
+UI additions were preserved. Five current-version suites passed, including a new
+authored-map test that builds the workshop and completes two production cycles,
+upgrades the Drying Yard with finished bricks, and withdraws final output.
+See docs/task_reports/mudbrick-main-map-integration.md. The Game Director approved fixed-plot, worker-built initial workshop
+construction on 2026-09-26. The 2026-09-27 follow-up adds a hand prompt and required
+three-hour clearing by player OR one worker, without materials, before the hammer prompt.
+Clearing, construction and main-map production regressions pass; see
+docs/task_reports/workshop-clearing.md. The local main-map-access branch implements
+direct requirements UI, team-based construction and existing workshop access after completion.
+See docs/task_reports/workshop-plot-access.md for validation. On 2026-09-26 the Game
+Director approved wood/reed/straw/water sources and one initial Laborer applicant at a
+physical Job Board. The subsequent correction now reuses the Clay Worksite inspector,
+Hourly/Daily work, stock and hauling with per-site resource/rate configuration; the separate
+Gather component has been removed. These are integrated locally; InitialWorkshopStartTest verifies an empty inventory and no hired
+workers through manual gathering, hiring, construction and map reload without material
+seeding. See docs/task_reports/shared-resource-worksites.md. Job Board audit confirms the original
+basic hiring UI is still current; Worker Hub has no alternative applicant-hiring flow.
+The integration is locally validated, not merged. Do not mark Priority 1 complete:
+normal access to Shekel for production fees is still undefined, and the full daily loop
+with normal player/citizen needs and final UI remains unvalidated.
 
 ## Priority 1 - Finish Mudbrick Output Chain
 

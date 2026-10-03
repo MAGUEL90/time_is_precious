@@ -37,6 +37,7 @@ func _ready() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 	keep_button.pressed.connect(_on_keep_pressed)
 	discard_button.pressed.connect(_on_discard_pressed)
+	_set_discard_guard_focus_cycle()
 
 func open_job(
 	workshop: WorkShop,
@@ -157,6 +158,20 @@ func _show_discard_guard() -> void:
 	back_button.release_focus()
 	start_button.release_focus()
 	_set_main_controls_disabled(true)
+	keep_button.grab_focus()
+
+func _set_discard_guard_focus_cycle() -> void:
+	_set_focus_neighbors(keep_button, discard_button)
+	_set_focus_neighbors(discard_button, keep_button)
+
+func _set_focus_neighbors(control: Control, neighbor: Control) -> void:
+	var neighbor_path: NodePath = control.get_path_to(neighbor)
+	control.focus_next = neighbor_path
+	control.focus_previous = neighbor_path
+	control.focus_neighbor_top = neighbor_path
+	control.focus_neighbor_bottom = neighbor_path
+	control.focus_neighbor_left = neighbor_path
+	control.focus_neighbor_right = neighbor_path
 
 func _set_main_controls_disabled(disabled: bool) -> void:
 	close_button.disabled = disabled
@@ -261,3 +276,13 @@ func _finish_close() -> void:
 	get_tree().paused = false
 	cancelled.emit()
 	queue_free()
+
+func _input(event: InputEvent) -> void:
+	if not visible or not event.is_action_pressed("ui_cancel"):
+		return
+
+	if confirm_discard_panel.visible:
+		_on_keep_pressed()
+	else:
+		_on_close_pressed()
+	get_viewport().set_input_as_handled()

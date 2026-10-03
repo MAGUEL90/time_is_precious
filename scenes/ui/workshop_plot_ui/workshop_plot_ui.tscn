@@ -1,0 +1,275 @@
+[gd_scene load_steps=7 format=3 uid="uid://cdq7e042cmm85"]
+
+[ext_resource type="Script" uid="uid://dd5r3qswdon72" path="res://scenes/ui/workshop_plot_ui/workshop_plot_ui.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_base"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="4_close"]
+[ext_resource type="Texture2D" uid="uid://chf23fqlamj2f" path="res://assets/ui/ui_icon/clock.png" id="5_clock"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_window"]
+atlas = ExtResource("3_base")
+region = Rect2(1, 1, 168, 134)
+
+[node name="WorkshopPlotUI" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme = ExtResource("2_theme")
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.15)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(220, 208)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Window"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="TitleHeader" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/TitleHeader"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_right = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = " BUILD WORKSHOP"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="RequirementsPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="MaterialsTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Materials"
+vertical_alignment = 1
+
+[node name="MaterialsList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="BuilderHeader" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="BuildersTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Builder team"
+vertical_alignment = 1
+
+[node name="AssignWorkersButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Assign"
+
+[node name="WorkerScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="WorkerList" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/WorkerScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="DurationRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ClockIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+texture_filter = 1
+texture = ExtResource("5_clock")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DurationLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "—"
+vertical_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Select available workers."
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="FlexibleSpacer" type="Control" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CancelButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Cancel"
+
+[node name="Control" type="Control" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BuildButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+disabled = true
+text = "Build"
+
+[node name="ProgressPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="ProgressTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Workshop construction in progress"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ProgressBar" type="ProgressBar" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+size_flags_horizontal = 3
+show_percentage = false
+
+[node name="RemainingLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Remaining: 3d 0h 0m"
+vertical_alignment = 1
+
+[node name="TeamLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "1 builder on the construction team"
+vertical_alignment = 1
+
+[node name="ProgressSpacer" type="Control" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ProgressPage/Footer"]
+custom_minimum_size = Vector2(44, 16)
+layout_mode = 2
+size_flags_horizontal = 8
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Close"
+
+[node name="CloseButton" parent="Root/Center/Window/Margin/MainVBox/TitleHeader" instance=ExtResource("4_close")]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -9.0
+offset_top = -4.0
+offset_right = -1.0
+offset_bottom = 4.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[editable path="Root/Center/Window/Margin/MainVBox/TitleHeader/CloseButton"]

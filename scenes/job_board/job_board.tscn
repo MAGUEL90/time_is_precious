@@ -10,11 +10,14 @@
 radius = 18.681541
 
 [node name="JobBoard" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_8wvv0")
 job_data = ExtResource("2_cjf2a")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 12)
 texture = ExtResource("3_0klxr")
+offset = Vector2(0, -12)
 
 [node name="InteractableComponent" parent="." instance=ExtResource("2_dpx32")]
 

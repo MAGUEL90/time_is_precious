@@ -5,6 +5,7 @@ signal work_requested(duration_minutes: int)
 signal participant_toggled(id: String)
 signal worker_setup_discarded
 signal worker_removed(id: String)
+var output_name: String = "clay"
 var progress_panel: NinePatchRect
 var progress_list: VBoxContainer
 var _progress_open: bool = false
@@ -389,9 +390,9 @@ func _refresh_progress_rows() -> void:
 		progress_list.add_child(row)
 		var label := Label.new()
 		label.theme_type_variation = &"HudLabelShortcut"
-		label.text = "%s\nProductive days: %d | Output: %d clay" % [worker.name, worker.days, worker.output]
+		label.text = "%s\nProductive days: %d | Output: %d %s" % [worker.name, worker.days, worker.output, output_name]
 		if worker.get("hauler", false):
-			label.text = "%s\nProductive days: %d | Delivered: %d clay" % [worker.name, worker.days, worker.output]
+			label.text = "%s\nProductive days: %d | Delivered: %d %s" % [worker.name, worker.days, worker.output, output_name]
 			if int(worker.get("daily_target", 0)) > 0:
 				label.text += "\nTo: %s\nToday: %d / %d items" % [worker.destination_name, worker.delivered_today, worker.daily_target]
 				label.clip_text = true
@@ -420,7 +421,7 @@ func _build_remove_confirmation() -> void:
 	remove_overlay.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	var label: Label = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
-	label.text = "Stop this worker now?\nCompleted clay will be kept.\nUnfinished progress will be lost."
+	label.text = "Stop this worker now?\nCompleted output will be kept.\nUnfinished progress will be lost."
 	label.add_theme_font_size_override("font_size", 6)
 	panel.custom_minimum_size = Vector2(180, 64)
 	remove_no_button = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton")
@@ -445,7 +446,7 @@ func _request_remove(id: String) -> void:
 		return
 	_pending_remove_id = id
 	var label: Label = remove_overlay.get_child(0).get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
-	label.text = "Stop this worker now?\nCompleted clay will be kept.\nUnfinished progress will be lost."
+	label.text = "Stop this worker now?\nCompleted output will be kept.\nUnfinished progress will be lost."
 	var plan: Dictionary = _preview_provider.call(selected_duration)
 	for worker: Dictionary in plan.get("worker_progress", []):
 		if str(worker.id) == id and worker.get("hauler", false):

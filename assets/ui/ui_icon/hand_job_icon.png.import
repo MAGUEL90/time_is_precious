@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2m53ipsp0hyk"
-path="res://.godot/imported/reed_bundle.png-64112abf90c93837d3ae22e1c0130a3e.ctex"
+uid="uid://bo2jl0k8c4vke"
+path="res://.godot/imported/hand_job_icon.png-defaf934e45a3587a28bac00ba393835.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/items/reed_bundle.png"
-dest_files=["res://.godot/imported/reed_bundle.png-64112abf90c93837d3ae22e1c0130a3e.ctex"]
+source_file="res://assets/ui/ui_icon/hand_job_icon.png"
+dest_files=["res://.godot/imported/hand_job_icon.png-defaf934e45a3587a28bac00ba393835.ctex"]
 
 [params]
 

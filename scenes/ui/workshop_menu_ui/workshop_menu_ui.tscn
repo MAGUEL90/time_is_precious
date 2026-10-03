@@ -1,5 +1,6 @@
 [gd_scene load_steps=7 format=3 uid="uid://bg1u86wqe8p0f"]
 
+
 [ext_resource type="Script" uid="uid://1tg0avsocwud" path="res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd" id="1_3apnb"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2_70o6a"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_jbrp8"]
@@ -43,7 +44,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(140, 125)
+custom_minimum_size = Vector2(200, 180)
 layout_mode = 2
 texture = SubResource("AtlasTexture_4l7um")
 patch_margin_left = 16
@@ -112,26 +113,28 @@ theme_override_font_sizes/font_size = 6
 text = "Pending: 0"
 vertical_alignment = 1
 
-[node name="StatusRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 12)
+[node name="StatusRow" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_constants/separation = 3
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
 [node name="HeldFeesLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/StatusRow"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
+size_flags_horizontal = 3
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Held Fees: -"
+horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="SeparatorIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/StatusRow"]
 visible = false
-custom_minimum_size = Vector2(4, 12)
+custom_minimum_size = Vector2(4, 4)
 layout_mode = 2
-size_flags_vertical = 4
+size_flags_horizontal = 4
 mouse_filter = 2
 texture = ExtResource("4_4l7um")
 expand_mode = 1
@@ -139,12 +142,27 @@ stretch_mode = 5
 
 [node name="ProcessingLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/StatusRow"]
 visible = false
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
+size_flags_horizontal = 3
 theme = ExtResource("2_jbrp8")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Processing: -"
+horizontal_alignment = 1
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="NextStepLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_jbrp8")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Deposit materials via Manage Storage, then Assign Work."
+horizontal_alignment = 1
+autowrap_mode = 3
 vertical_alignment = 1
 
 [node name="ActionGrid" type="GridContainer" parent="Root/Center/Window/Margin/MainVBox"]

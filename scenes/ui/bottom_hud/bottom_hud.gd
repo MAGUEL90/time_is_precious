@@ -24,10 +24,12 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 var player_ref: Player = null
 var nightmare_world_ref: NightmareWorld = null
 var drawer_tween: Tween
+var shekel_label: Label
 
 # Lifecycle
 
 func _ready() -> void:
+	_setup_shekel_display()
 	_setup_status_text()
 	_set_drawer_y(DRAWER_CLOSED_Y)
 	status_drawer.hide()
@@ -46,6 +48,46 @@ func _ready() -> void:
 	_on_experience_changed()
 
 # Input handling
+
+func _setup_shekel_display() -> void:
+	var panel := PanelContainer.new()
+	panel.name = "ShekelPanel"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.theme = GAMEPLAY_THEME
+	panel.add_theme_stylebox_override("panel", GAMEPLAY_THEME.get_stylebox("normal", "HudShortcutButton"))
+	$Root.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = -68
+	panel.offset_right = -6
+	panel.offset_top = -24
+	panel.offset_bottom = -6
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 4)
+	panel.add_child(row)
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(8, 8)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.texture = preload("res://assets/ui/ui_icon/small_shekel_8x8.png")
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(icon)
+	shekel_label = Label.new()
+	shekel_label.theme_type_variation = &"HudLabelShortcut"
+	shekel_label.add_theme_font_size_override("font_size", 6)
+	shekel_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shekel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	shekel_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	shekel_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(shekel_label)
+	Inventory.items_changed.connect(_refresh_shekel_display)
+	_refresh_shekel_display()
+
+func _refresh_shekel_display() -> void:
+	shekel_label.text = str(Inventory.items.get("shekel", 0))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(SHOW_STATUS_ACTION):

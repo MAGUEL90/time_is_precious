@@ -1,6 +1,6 @@
 extends Node
 
-const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const CONTENT_SCENE: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const EXTERNAL_PICKUP_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const EXTERNAL_WORKSHOP_SCENE: PackedScene = preload("res://scenes/workshop/workshop.tscn")
 const SITE_A: StringName = &"ClaySiteA"
@@ -36,8 +36,10 @@ func _expect(value: bool, message: String) -> void:
 
 
 func _run() -> void:
+	WorkerDatabase.reload_workers()
 	_save_and_freeze_clock()
 	content = CONTENT_SCENE.instantiate()
+	content.get_node("YSortWorld/Worksites").seed_playtest_hauler = true
 	add_child(content)
 	await get_tree().process_frame
 	await get_tree().process_frame

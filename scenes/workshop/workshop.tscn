@@ -17,6 +17,7 @@ radius = 8.923988
 height = 28.128658
 
 [node name="WorkShop" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_spw5o")
 available_jobs = Array[ExtResource("2_3fmud")]([ExtResource("3_legag")])
 available_processes = Array[ExtResource("4_bnmcp")]([ExtResource("5_1w5fp")])
@@ -33,7 +34,9 @@ offset_right = -5.0
 offset_bottom = -45.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 10)
 texture = ExtResource("8_legag")
+offset = Vector2(0, -10)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 

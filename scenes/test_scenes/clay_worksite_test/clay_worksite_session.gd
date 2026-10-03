@@ -7,6 +7,11 @@ const DURATIONS: Array[int] = [180, 360, 540]
 const WORKER_CAPACITY: int = 2 # Small worksite; Player occupies one slot.
 const ITEM_ID: String = "clay_lump"
 
+# Defaults retain the existing Clay Site contract; authored markers may override.
+var item_id: String = ITEM_ID
+var minutes_per_unit: float = MINUTES_PER_CLAY
+var daily_stock_min: int = -1
+var daily_stock_max: int = -1
 var stock: int = INITIAL_STOCK
 var working: bool = false
 var participants: Array[String] = []
@@ -41,13 +46,13 @@ func participant_unavailable_reason(id: String) -> String:
 	return ""
 
 func preview(requested_minutes: int, player: Player) -> Dictionary:
-	var clay: ItemData = ItemDatabase.get_item_data(ITEM_ID)
+	var clay: ItemData = ItemDatabase.get_item_data(item_id)
 	var capacity: int = 0
 	if clay != null and clay.weight > 0.0:
 		capacity = maxi(int(floor(Inventory.get_remaining_capacity() / clay.weight)), 0)
 	var count: int = participants.size()
-	var units: int = mini(maxi(requested_minutes * count / MINUTES_PER_CLAY, 0), stock)
-	var minutes: int = int(ceil(float(units * MINUTES_PER_CLAY) / maxi(count, 1)))
+	var units: int = mini(maxi(floori(requested_minutes * count / minutes_per_unit), 0), stock)
+	var minutes: int = int(ceil(float(units * minutes_per_unit) / maxi(count, 1)))
 	var includes_player: bool = participants.has("player")
 	var reason: String = ""
 	if participants.is_empty():
@@ -116,7 +121,7 @@ func _begin(minutes: int, player: Player, drop_output: Callable) -> bool:
 	return true
 
 func _earn_completed_work() -> void:
-	var earned: int = mini(int(_result.minutes) * int(_plan.worker_count) / MINUTES_PER_CLAY, int(_plan.units))
+	var earned: int = mini(floori(int(_result.minutes) * int(_plan.worker_count) / minutes_per_unit), int(_plan.units))
 	var additional: int = mini(earned - int(_result.units), stock)
 	stock -= additional
 	_result.units += additional
@@ -125,7 +130,7 @@ func _finish() -> void:
 	var result: Dictionary = _result
 	# Settle completed output once, using capacity at completion, not the preview.
 	var remaining: int = int(result.units)
-	while bool(_plan.includes_player) and remaining > 0 and Inventory.try_add_item(ITEM_ID, 1):
+	while bool(_plan.includes_player) and remaining > 0 and Inventory.try_add_item(item_id, 1):
 		result.to_bag += 1
 		remaining -= 1
 	if remaining > 0:

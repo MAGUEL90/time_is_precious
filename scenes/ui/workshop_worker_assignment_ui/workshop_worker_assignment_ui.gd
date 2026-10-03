@@ -27,6 +27,18 @@ const SLOT_SIZE: Vector2 = Vector2(24, 24)
 @onready var close_button: BaseButton = (
 	$Root/Center/TextureWindow/CloseButton
 )
+@onready var confirm_discard_overlay: ColorRect = (
+	$Root/ConfirmDiscardOverlay
+)
+@onready var confirm_discard_panel: NinePatchRect = (
+	$Root/ConfirmDiscardPanel
+)
+@onready var discard_guard_keep_button: Button = (
+	$Root/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton
+)
+@onready var discard_guard_discard_button: Button = (
+	$Root/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton
+)
 @onready var assigned_info_label: Label = (
 	$Root/Center/TextureWindow/Margin/MainVBox/InfoRow/AssignedInfoLabel
 )
@@ -78,13 +90,24 @@ var selected_worker_ids: Array[String] = ["", ""]
 var max_worker_slots: int = 2
 var required_profession: WorkerData.Profession = WorkerData.Profession.NONE
 var active_slot_index: int = 0
+var confirm_discard_on_exit: bool = false
+var _selection_options_by_id: Dictionary = {}
+var _pending_exit_action: int = -1
+
+const EXIT_TO_PRODUCTION: int = 0
+const EXIT_WORKSHOP: int = 1
 
 
 # Setup / Public API
 
 func _ready() -> void:
 	visible = false
+	confirm_discard_overlay.visible = false
+	confirm_discard_panel.visible = false
+	_set_discard_guard_focus_cycle()
 	close_button.pressed.connect(_on_cancel_pressed)
+	discard_guard_keep_button.pressed.connect(_on_discard_guard_keep_pressed)
+	discard_guard_discard_button.pressed.connect(_on_discard_guard_discard_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 	next_button.pressed.connect(_on_next_pressed)
 	selection_back_button.pressed.connect(_show_overview)
@@ -93,10 +116,16 @@ func _ready() -> void:
 func open_assignment(
 	current_worker_ids: Array[String],
 	slot_count: int = 2,
-	job_profession: WorkerData.Profession = WorkerData.Profession.NONE
+	job_profession: WorkerData.Profession = WorkerData.Profession.NONE,
+	selection_options: Array[Dictionary] = []
 ) -> void:
 	required_profession = job_profession
 	max_worker_slots = maxi(slot_count, 1)
+	_selection_options_by_id.clear()
+	for option: Dictionary in selection_options:
+		var worker_id: String = str(option.get("id", ""))
+		if not worker_id.is_empty():
+			_selection_options_by_id[worker_id] = option
 	selected_worker_ids.clear()
 	for slot_index in range(max_worker_slots):
 		selected_worker_ids.append("")
@@ -106,7 +135,9 @@ func open_assignment(
 			continue
 		if not WorkerDatabase.has_worker_data(worker_id):
 			continue
-		if WorkerDatabase.get_worker_data(worker_id).is_reserved():
+		if not _is_worker_available_for_selection(
+			WorkerDatabase.get_worker_data(worker_id)
+		):
 			continue
 
 		var empty_slot_index: int = _get_first_empty_slot_index()
@@ -145,6 +176,8 @@ func _refresh_slots() -> void:
 		max_worker_slots,
 		MINIMUM_VISIBLE_SLOTS
 	)
+	# Eight-worker teams fit in two rows instead of pushing the footer outside.
+	slot_grid.columns = 4 if visible_slot_count > 6 else 3
 	for slot_index in range(visible_slot_count):
 		if slot_index >= max_worker_slots:
 			_add_locked_slot()
@@ -361,12 +394,14 @@ func _refresh_worker_list() -> void:
 
 		if selected_worker_ids.has(worker_data.worker_id):
 			worker_button.disabled = true
-		elif worker_data.is_reserved():
+		elif not _is_worker_available_for_selection(worker_data):
 			worker_button.disabled = true
+			worker_button.tooltip_text = _get_worker_unavailable_reason(worker_data)
 		else:
 			worker_button.pressed.connect(
 				_on_worker_selected.bind(worker_data.worker_id)
 			)
+		worker_button.set_meta("worker_id", worker_data.worker_id)
 		worker_list.add_child(worker_button)
 		worker_count += 1
 
@@ -393,7 +428,7 @@ func _get_workers_in_requirement_order() -> Array:
 
 func _on_worker_selected(worker_id: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-	if worker == null or worker.is_reserved():
+	if not _is_worker_available_for_selection(worker):
 		return
 	if worker_id.strip_edges().is_empty():
 		return
@@ -418,9 +453,27 @@ func _refresh_next_state() -> void:
 func _has_available_selected_worker() -> bool:
 	for worker_id in selected_worker_ids:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-		if worker != null and not worker.is_reserved():
+		if _is_worker_available_for_selection(worker):
 			return true
 	return false
+
+
+func _is_worker_available_for_selection(worker_data: WorkerData) -> bool:
+	if worker_data == null or worker_data.is_reserved():
+		return false
+	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
+	if option is Dictionary:
+		return bool(option.get("available", false))
+	return true
+
+
+func _get_worker_unavailable_reason(worker_data: WorkerData) -> String:
+	if worker_data == null:
+		return "Worker unavailable."
+	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
+	if option is Dictionary:
+		return str(option.get("reason", "Worker unavailable."))
+	return "Worker is busy."
 
 
 # Navigation callbacks
@@ -436,10 +489,78 @@ func _on_next_pressed() -> void:
 	queue_free()
 
 func _on_cancel_pressed() -> void:
-	_finish_close()
+	_request_close()
 
 func _on_back_pressed() -> void:
+	_request_back()
+
+func _request_back() -> void:
+	if confirm_discard_on_exit and _has_worker_draft():
+		_show_discard_guard(EXIT_TO_PRODUCTION)
+		return
 	_finish_back()
+
+func _request_close() -> void:
+	if not visible or confirm_discard_panel.visible:
+		return
+	if confirm_discard_on_exit and _has_worker_draft():
+		_show_discard_guard(EXIT_WORKSHOP)
+		return
+	_finish_close()
+
+func _show_discard_guard(exit_action: int) -> void:
+	_pending_exit_action = exit_action
+	confirm_discard_overlay.visible = true
+	confirm_discard_panel.visible = true
+	close_button.disabled = true
+	back_button.disabled = true
+	next_button.disabled = true
+	selection_back_button.disabled = true
+	close_button.release_focus()
+	back_button.release_focus()
+	next_button.release_focus()
+	selection_back_button.release_focus()
+	discard_guard_keep_button.grab_focus()
+
+func _set_discard_guard_focus_cycle() -> void:
+	_set_focus_neighbors(discard_guard_keep_button, discard_guard_discard_button)
+	_set_focus_neighbors(discard_guard_discard_button, discard_guard_keep_button)
+
+func _set_focus_neighbors(control: Control, neighbor: Control) -> void:
+	var neighbor_path: NodePath = control.get_path_to(neighbor)
+	control.focus_next = neighbor_path
+	control.focus_previous = neighbor_path
+	control.focus_neighbor_top = neighbor_path
+	control.focus_neighbor_bottom = neighbor_path
+	control.focus_neighbor_left = neighbor_path
+	control.focus_neighbor_right = neighbor_path
+
+func _on_discard_guard_keep_pressed() -> void:
+	_pending_exit_action = -1
+	confirm_discard_panel.visible = false
+	confirm_discard_overlay.visible = false
+	close_button.disabled = false
+	back_button.disabled = false
+	selection_back_button.disabled = false
+	_refresh_next_state()
+
+func _on_discard_guard_discard_pressed() -> void:
+	if _pending_exit_action < 0:
+		return
+
+	var exit_action: int = _pending_exit_action
+	_pending_exit_action = -1
+	confirm_discard_panel.visible = false
+	confirm_discard_overlay.visible = false
+	selected_worker_ids.clear()
+	for _slot_index in range(max_worker_slots):
+		selected_worker_ids.append("")
+	assignment_changed.emit(_get_selected_worker_ids())
+
+	if exit_action == EXIT_TO_PRODUCTION:
+		_finish_back()
+	else:
+		_finish_close()
 
 
 # Display helpers
@@ -505,6 +626,25 @@ func _get_first_empty_slot_index() -> int:
 
 
 # Exit helpers
+
+func close_menu() -> void:
+	_request_close()
+
+func _input(event: InputEvent) -> void:
+	if not visible or not event.is_action_pressed("ui_cancel"):
+		return
+
+	if confirm_discard_panel.visible:
+		_on_discard_guard_keep_pressed()
+	else:
+		_request_close()
+	get_viewport().set_input_as_handled()
+
+func _has_worker_draft() -> bool:
+	for worker_id in selected_worker_ids:
+		if not worker_id.strip_edges().is_empty():
+			return true
+	return false
 
 func _finish_back() -> void:
 	visible = false

@@ -62,6 +62,7 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @onready var player_visual: PlayerVisual = $PlayerVisual
 
 var player_sprite_direction: Vector2 = Vector2.RIGHT
+var _interaction_highlight = preload("res://scenes/components/interactable_component/interaction_highlight.gd").new()
 var current_interactable: Node = null
 var nearby_interactables: Array[Node] = []
 var current_npc_dialogue: NPCBase = null
@@ -96,6 +97,7 @@ func _ready() -> void:
 	TimeComponentManager.minute_changed.connect(on_minute_changed)
 
 func _exit_tree() -> void:
+	_interaction_highlight.clear()
 	PlayerRuntimeState.capture(self)
 
 func _process(_delta: float) -> void:
@@ -172,6 +174,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif current_interactable.is_in_group("city_storage_areas"):
 		current_interactable.on_player_interact(self)
+	elif current_interactable.is_in_group("worksite_stockpiles"):
+		current_interactable.on_player_interact(self)
+	elif current_interactable.is_in_group("workshop_plots"):
+		current_interactable.on_player_interact(self)
 
 # Interactable state
 
@@ -225,6 +231,7 @@ func _set_current_interactable(next_interactable: Node) -> void:
 		if previous_label != null:
 			previous_label.hide()
 
+	_interaction_highlight.select(next_interactable)
 	current_interactable = next_interactable
 	can_interact = current_interactable != null
 	if current_interactable == null:
@@ -507,6 +514,7 @@ func _open_workshop_worker_assignment_ui(current_worker_ids: Array[String] = [])
 	worker_assignment_menu.assignment_cancelled.connect(_on_workshop_worker_assignment_cancelled)
 
 	claim_menu_is_open = false
+	worker_assignment_menu.confirm_discard_on_exit = true
 	worker_assignment_menu.open_assignment(
 		current_worker_ids,
 		claim_menu_workshop.get_max_assigned_worker_slots(),
@@ -519,7 +527,7 @@ func _on_workshop_worker_assignment_changed(
 	if claim_menu_workshop == null:
 		return
 
-	claim_menu_workshop.assign_workers(worker_ids)
+	_set_workshop_assigned_workers(worker_ids)
 
 func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) -> void:
 	if claim_menu_workshop == null:
@@ -536,11 +544,45 @@ func _on_workshop_worker_assignment_next_requested(worker_ids: Array[String]) ->
 	)
 
 func _on_workshop_worker_assignment_back_requested() -> void:
+	_release_workshop_assignment_draft()
 	_open_workshop_production_ui()
 
 func _on_workshop_worker_assignment_cancelled() -> void:
+	_release_workshop_assignment_draft()
 	_close_claim_menu()
 	_show_current_interact_label()
+
+func _set_workshop_assigned_workers(worker_ids: Array[String]) -> void:
+	if claim_menu_workshop == null:
+		return
+
+	var combined_worker_ids: Array[String] = (
+		_get_reserved_workshop_worker_ids(claim_menu_workshop)
+	)
+	for worker_id in worker_ids:
+		if worker_id.strip_edges().is_empty():
+			continue
+		if not combined_worker_ids.has(worker_id):
+			combined_worker_ids.append(worker_id)
+
+	claim_menu_workshop.assign_workers(combined_worker_ids)
+
+func _release_workshop_assignment_draft() -> void:
+	if claim_menu_workshop == null:
+		return
+
+	claim_menu_workshop.assign_workers(
+		_get_reserved_workshop_worker_ids(claim_menu_workshop)
+	)
+
+func _get_reserved_workshop_worker_ids(workshop: WorkShop) -> Array[String]:
+	var reserved_worker_ids: Array[String] = []
+	for worker_id in workshop.get_assigned_worker_ids():
+		var worker_data: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+		if worker_data == null or not worker_data.is_reserved():
+			continue
+		reserved_worker_ids.append(worker_id)
+	return reserved_worker_ids
 
 # Workshop transfer flow
 
@@ -728,6 +770,7 @@ func _on_workshop_job_back_requested(worker_ids: Array[String]) -> void:
 	_open_workshop_worker_assignment_ui(worker_ids)
 
 func _on_workshop_job_cancelled() -> void:
+	_release_workshop_assignment_draft()
 	_close_claim_menu()
 	_show_current_interact_label()
 

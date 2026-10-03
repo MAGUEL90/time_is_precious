@@ -7,6 +7,7 @@ var fraction: float = 0.0
 var work_cycles: Dictionary = {}
 var roaming: Dictionary = {}
 var rng := RandomNumberGenerator.new()
+var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence.gd").new()
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
@@ -22,30 +23,17 @@ func _process(delta: float) -> void:
 		last_minute = minute
 	else:
 		fraction = minf(fraction + delta / maxf(TimeComponentManager.seconds_per_minute, 0.001), 0.999)
-	var retained: Array[String] = []
+	var retained: Array[String] = plot_presence.update(self, delta)
+	var plot_workers: Array[String] = retained.duplicate()
 	for site_id in schedule.jobs:
 		var job: Dictionary = schedule.jobs[site_id]
 		for id: String in job.ids:
+			if plot_workers.has(id):
+				continue
 			retained.append(id)
-			if not actors.has(id):
-				var actor = VISUAL.instantiate()
-				actor.set_meta("worker_id", id)
-				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
-				var citizen: CitizenData = worker.get_linked_citizen()
-				if citizen != null and citizen.visual_profile != null:
-					var profile: VisualProfile = citizen.visual_profile
-					actor.skin_tone = profile.skin_tone
-					actor.clothes_id = profile.clothes_id
-					actor.hair_style = profile.hair_style
-					actor.accessory = profile.accessory
-				if schedule.is_hauler(id):
-					# Keep the supplied light appearance consistent with the cart sheets.
-					actor.skin_tone = "light"
-				add_child(actor)
-				actor.global_position = fixture.worker_spawn(site_id, id)
-				actor.hide()
-				actors[id] = actor
-			var actor = actors[id]
+			var actor = ensure_actor(id, fixture.worker_spawn(site_id, id))
+			if actor == null:
+				continue
 			if not fixture.enable_worker_commute:
 				actor.hide()
 				continue
@@ -62,7 +50,13 @@ func _process(delta: float) -> void:
 					label.position = Vector2(0, -8)
 					label.add_theme_font_size_override("font_size", 6)
 					actor.add_child(label)
-				actor.get_node("CargoLabel").text = "Clay x%d" % int(hauling_visual.carrying) if int(hauling_visual.carrying) > 0 else ""
+				var cargo_quantity: int = int(hauling_visual.carrying)
+				var cargo_item_id: String = str(hauling_visual.get("item_id", "clay_lump"))
+				var cargo_item: ItemData = ItemDatabase.get_item_data(cargo_item_id)
+				if cargo_item == null:
+					cargo_item = ItemDatabase.get_item_data("clay_lump")
+				var cargo_name: String = cargo_item.display_name if cargo_item != null else "Clay"
+				actor.get_node("CargoLabel").text = "%s x%d" % [cargo_name, cargo_quantity] if cargo_quantity > 0 else ""
 				continue
 			if actor.has_node("CargoLabel"):
 				actor.get_node("CargoLabel").text = ""
@@ -98,6 +92,26 @@ func _process(delta: float) -> void:
 			work_cycles.erase(id)
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
+
+func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
+	if actors.has(id):
+		return actors[id]
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker == null:
+		return null
+	var actor = VISUAL.instantiate()
+	actor.set_meta("worker_id", id)
+	var citizen: CitizenData = worker.get_linked_citizen()
+	var profile: VisualProfile = citizen.visual_profile if citizen != null and citizen.visual_profile != null else VisualProfile.new()
+	actor.skin_tone = "light" if get_parent().daily.is_hauler(id) else profile.skin_tone
+	actor.clothes_id = profile.clothes_id
+	actor.hair_style = profile.hair_style
+	actor.accessory = profile.accessory
+	add_child(actor)
+	actor.global_position = spawn_position
+	actor.hide()
+	actors[id] = actor
+	return actor
 
 func _roam(id: String, actor: Node2D, delta: float) -> void:
 	if not roaming.has(id):

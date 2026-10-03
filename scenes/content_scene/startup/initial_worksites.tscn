@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://d0mllxwbcq263"]
+
+[ext_resource type="Script" uid="uid://b5swwhus754i" path="res://scenes/content_scene/startup/initial_worksites.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://b72ntkdkju1bx" path="res://scenes/job_board/job_board.tscn" id="3"]
+
+[node name="InitialWorksites" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1")
+
+[node name="JobBoard" parent="." instance=ExtResource("3")]

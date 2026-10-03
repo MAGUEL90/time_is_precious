@@ -7,6 +7,7 @@ signal closed
 @onready var hire_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/HireButton
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/CloseButton
 
+
 var applicants: Array[CitizenData] = []
 var daily_wage: int = 1
 
@@ -14,6 +15,9 @@ var daily_wage: int = 1
 
 func _ready() -> void:
 	visible = false
+	# ItemList has no gameplay-theme variation; set its local font explicitly.
+	applicant_list.add_theme_font_override("font", preload("res://assets/font/pixel_rpg.ttf"))
+	applicant_list.add_theme_font_size_override("font_size", 6)
 	hire_button.pressed.connect(_on_hire_button_pressed)
 	close_button.pressed.connect(_on_close_button_pressed)
 
@@ -27,6 +31,7 @@ func open(default_daily_wage: int = 1) -> void:
 	get_tree().paused = true
 	visible = true
 	_refresh_applicants()
+
 
 func close() -> void:
 	visible = false

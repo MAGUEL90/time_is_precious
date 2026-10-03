@@ -6,7 +6,7 @@ extends Node2D
 ## City Storage and Worker Hub while restoring every shared runtime registry on
 ## exit. It never writes a save and does not auto-quit.
 
-const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const CONTENT: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const TEST_ID: String = "city_clothing_manual_test"
 const SIMPLE_CLOTHES: String = "simple_clothes"
 const BARLEY_BREAD: String = "barley_bread"

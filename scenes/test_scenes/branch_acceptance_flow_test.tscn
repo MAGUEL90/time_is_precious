@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/debug_production_flow_test.gd" id="1"]
+
+[node name="BranchAcceptanceFlowTest" type="Node2D"]
+process_mode = 3
+script = ExtResource("1")
+include_hauling = true

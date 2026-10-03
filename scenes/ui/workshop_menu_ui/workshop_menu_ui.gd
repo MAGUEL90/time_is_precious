@@ -1,5 +1,9 @@
 class_name WorkshopMenuUI extends CanvasLayer
 
+const WORKSHOP_FLOW_HINT = preload(
+	"res://scenes/ui/workshop_menu_ui/workshop_flow_hint.gd"
+)
+
 signal action_selected(action_id: int)
 signal closed()
 
@@ -23,6 +27,9 @@ enum Action {
 )
 @onready var processing_label: Label = (
 	$Root/Center/Window/Margin/MainVBox/StatusRow/ProcessingLabel
+)
+@onready var next_step_label: Label = (
+	$Root/Center/Window/Margin/MainVBox/NextStepLabel
 )
 @onready var manage_button: Button = $Root/Center/Window/Margin/MainVBox/ActionGrid/ManageButton
 @onready var assign_button: Button = $Root/Center/Window/Margin/MainVBox/ActionGrid/AssignButton
@@ -66,6 +73,10 @@ func _update_status(storage_state: Dictionary) -> void:
 	processing_label.visible = has_active_processes
 	processing_label.text = "Processing: %s" % (
 		_format_active_processes(active_processes)
+	)
+	next_step_label.text = WORKSHOP_FLOW_HINT.get_hint(
+		storage_state,
+		ProcessManager.get_process_availability("drying_mudbrick")
 	)
 
 func _format_active_processes(active_processes: Array) -> String:

@@ -140,8 +140,21 @@ This is a progression direction, not a claim that the empty-plot construction se
 already playable. Clay gathering is one step toward it; introducing that step does not require
 implementing construction, hiring changes, or facility expansion in the same task.
 
-The plot location, ownership or access conditions, construction materials and quantities,
-construction duration, builder, material handoff, and completion/unlock rules remain **TBD**.
+The initial MVP now uses an authored fixed plot and worker-built construction (section 20.1).
+Its final map placement and ownership/story conditions remain **TBD**. On 2026-09-26 the
+Game Director approved material sources and one initial Laborer applicant hired at the
+existing Job Board. The subsequent correction requires Wood, Water, Reed and Straw to use
+**the existing Clay Worksite mechanism**, not separate fixed-batch Gather interactions.
+Each source shares the worksite inspector, Player Hourly choices (3/6/9 hours), daily worker
+assignment, natural stock, interruption/overflow handling and hauling. Resource identity
+and rate are authored on each site: Wood 20 minutes/unit, Reed 7.5, Straw 10, Water 5.
+These preserve the provisional output rates previously delegated by the Game Director.
+New sites initially reuse Clay's 72-unit stock and daily replacement rule, editable per site;
+final balance remains pending. Clay's existing values stay unchanged.
+The initial applicant is created once per runtime citizen lifecycle, not again on each
+map visit; the normal hiring wage applies.
+The earlier hiring-after-construction
+sequence describes expansion; the MVP requires an available worker before the first build.
 No specific NPC or quest is assigned to this sequence yet.
 
 ## 6. NPC Structure
@@ -399,6 +412,9 @@ belong in the project roadmap and task reports.
   work shift; an assigned Hauler must be released from that assignment before its cart is removed.
 - Equipment preparation is abstracted into the time before the next workday. No warehouse
   tool-pickup animation is required for this MVP.
+- Initial-map MVP supply provides **one city-owned Cart**, following the Game Director's
+  request on 2026-10-03. The player equips it through Worker Hub's Tool slot. It remains
+  a unique city unit across map visits; no automatic hire, equip or personal Inventory grant.
 - Status shows Name, Role and Work/Idle activity. Manage offers Fire, Go to and Details.
   Go to opens the assigned worksite panel. Details shows Level, Wage, Location and Productive days.
   Tools manages equipment, and Level displays profession XP and the existing level/star value.
@@ -876,9 +892,24 @@ This supports chain-based gameplay:
 ### 20.1 Initial Workshop Construction and Later Facilities
 
 The empty-plot origin in section 5.1 precedes the established workshop production loop.
-Initial workshop construction must have an explicitly defined material handoff that works
-before the workshop and its storage exist; that handoff remains **TBD**. Do not assume the
-player must deposit into an already-built workshop to construct the first workshop.
+For the initial MVP, the Game Director approved a fixed authored spot and construction by
+workers on 2026-09-26: one worker takes three in-game days, with duration depending on team
+size. The implementation uses 4320 minutes divided by the selected worker count, rounded
+up to a whole minute. Materials and quantities were delegated to the implementation:
+6 Wood Logs, 12 Clay Lumps and 8 Reed Bundles, using existing item icons.
+
+On 2026-09-27 the Game Director approved a required clearing stage before construction:
+the initial plot displays a hand proximity prompt. E opens assignment without materials.
+Exactly one player OR one idle worker clears the site in three in-game hours. Player work
+advances time as a manual work session; assigning a worker leaves the player free to act.
+After clearing, the prompt becomes a hammer and E opens construction requirements.
+Materials are taken from personal Inventory once when construction starts, before workshop
+storage exists. Eligible idle hired/legacy workers form a fixed team for that build and
+remain reserved until completion. Elapsed world time advances construction, including time
+away from the map. Completion releases the builders and opens the existing workshop flow.
+This MVP adds no relocation, rotation, construction cancellation, fee or profession bonus.
+Runtime continuity across scenes does not imply save/load to disk. Material sources and
+the first-worker onboarding must be validated separately before claiming a playable start.
 
 Once the workshop exists, the existing rule remains: production-facility construction and
 upgrades consume Workshop Free Stock, never fee-locked Held Output. Manual gathering output
@@ -954,7 +985,7 @@ Apply this direction in stages: city deposit ownership first; hauling into the c
 warehouse; location/ownership-aware workshop logistics and persistence; citizen distribution
 as its rules are decided. The approved food follow-up can be implemented against central
 stock independently of the pending workshop route. The initial-building material handoff
-in section 20.1 remains TBD. This approval does not supply new capacity, item-weight, fee or
+is defined separately by the later MVP in section 20.1. This storage approval does not supply new capacity, item-weight, fee or
 production balance values.
 
 ## 21. Current Design Priorities
@@ -1002,7 +1033,7 @@ These are still intentionally open:
 - tool durability, repair, combined equipment effects, and additional role/worksite requirement lists
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
-- the empty workshop plot's access, construction recipe, material handoff, build time, and unlock rules
+- the fixed workshop plot's final placement, story/ownership conditions, material sources and first-builder onboarding
 - manual worksite stock cycles, recovery, tool bonuses, work duration, condition costs, and personal EXP
 - which events qualify as Good Deeds or Bad Deeds, how they are represented, and what consequences follow
 
