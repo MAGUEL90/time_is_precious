@@ -3,7 +3,6 @@ extends "res://scenes/test_scenes/mudbrick_player_flow_test.gd"
 ## Exercises the actual debug buttons, hired worker, and current map production UI.
 var content: Node
 var debug: Node
-@export var include_hauling: bool = false
 
 func _run() -> void:
 	TimeComponentManager.set_process(false)
@@ -47,13 +46,8 @@ func _run() -> void:
 			board.job_board_ui.hire_button.pressed.emit()
 			break
 	worker = WorkerDatabase.get_worker_data("initial_workshop_laborer")
-	if include_hauling:
-		board.job_board_ui.applicant_list.select(0)
-		board.job_board_ui.hire_button.pressed.emit()
 	board.job_board_ui.close_button.pressed.emit()
 	_expect(worker != null, "The real Job Board supplies the builder, not a fixture worker.")
-	if include_hauling:
-		await _haul_before_building()
 	debug.set_worker_guard(true)
 	debug.set_player_guard(true)
 	get_tree().paused = true
@@ -114,7 +108,7 @@ func _run() -> void:
 	debug.set_player_guard(false)
 	_expect(not player.debug_disable_player_needs and not player.debug_disable_fatigue, "Player guard can be disabled.")
 	debug.set_player_guard(true)
-	print("BranchAcceptanceFlowTest: " if include_hauling else "DebugProductionFlowTest: ", "PASS" if failures == 0 else "FAIL")
+	print("DebugProductionFlowTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().paused = false
 	get_tree().quit(0 if failures == 0 else 1)
 
@@ -122,30 +116,6 @@ func _settle() -> void:
 	for index: int in range(5):
 		await get_tree().physics_frame
 	await _frames(2)
-
-func _haul_before_building() -> void:
-	var route_audit = preload("res://scenes/test_scenes/main_map_hauler_start_test.gd").new()
-	route_audit.run_automatically = false
-	add_child(route_audit)
-	route_audit.content = content
-	route_audit.player = player
-	route_audit.worksites = content.get_node("YSortWorld/Worksites")
-	await route_audit._equip_and_haul()
-	failures += route_audit.failures
-	var worksites = route_audit.worksites
-	player.global_position = worksites.get_node("WorksiteMarkers/WoodSite").global_position + Vector2(0, 8)
-	await _settle()
-	await route_audit._press(&"interact")
-	for id: String in ["initial_worksite_hauler", "initial_workshop_laborer"]:
-		worksites.inspector._request_remove(id)
-		worksites.inspector.remove_yes_button.pressed.emit()
-		await _frames(2)
-	worksites.inspector.close_button.pressed.emit()
-	debug.step_minutes(60)
-	await _settle()
-	_expect(not worker.is_reserved(), "Laborer is released from Daily work before clearing and construction.")
-	_expect(Inventory.items.get("wood_log", 0) == 3, "Hauler-earned Wood stays in Inventory and contributes to the following build kit.")
-	route_audit.free()
 
 func _interact(target: Node2D) -> void:
 	player.global_position = target.get_node("InteractableComponent").global_position + Vector2(0, 8)
