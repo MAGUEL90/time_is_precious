@@ -38,6 +38,9 @@ current main map.
 | `test_scene_worker_rehire_regression.tscn` | Actual midnight reapplication, preserved profession/XP, first-time defaults and eligibility |
 | `test_scene_city_storage_overflow.tscn` | Atomic deposit/cargo rejection above the integer limit and exact-limit success |
 | `clay_worksite_test/test_scene_clay_worksite_teardown.tscn` | In-flight owner removal, cancellation, freed Player and payout reentry conservation |
+| `test_scene_clock_state_broadcast.tscn` | State refresh updates the time label without needs drain, duplicated work or day ticks; real minute/midnight advancement still works |
+| `test_scene_transition_timing.tscn` | Actual Home ExitDoor transition, movement on both sides of the fade, failed transition restrictions, playable Nightmare timing and return |
+| `test_scene_dialogue_runtime_regression.tscn` | Plugin singleton, runtime compilation, mutation/conditional choices and two real Player/NPC/balloon open/close cycles |
 
 The existing City Storage supply/content tests expect the approved single,
 unallocated startup Cart. The hauling fixture exposes seven authored destinations;
@@ -58,9 +61,17 @@ Headless execution does not validate rendering or screenshots.
 `content_depth_time_debug_test` require rendered frames and must use a graphical
 Godot session; their unconditional frame waits do not finish in headless mode.
 
-Dialogue Manager currently emits known ObjectDB/retained-resource diagnostics at
-shutdown. Keep them visible and report them separately; a passing assertion suite
-does not mean shutdown is clean. This exception does not cover other errors.
+Shutdown must also be clean: ObjectDB or retained-resource diagnostics are failures
+of that check even when gameplay assertions pass. Keep `DialogueManager` last in
+the existing autoload list; the audit follow-up verifies this order on Godot 4.5.2.
+Do not suppress errors or warnings to obtain a pass.
+
+The graphical audit used X11 with Mesa llvmpipe at the existing 400 x 225 logical
+viewport and 1200 x 675 window. Its exact driver warning about unsupported V-Sync
+changes is an environment limitation recorded separately. This does not validate
+another OS, physical GPU or Android. The depth test waits for construction splash
+animations to finish before comparing built-art pixels. The dialogue regression
+can also run graphically and saves a screenshot when `TEMP` names a writable folder.
 
 ## Retired prototypes
 

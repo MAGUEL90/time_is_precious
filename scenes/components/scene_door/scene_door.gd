@@ -14,7 +14,7 @@ func _ready() -> void:
 # Door interaction
 
 func _on_body_entered(body: Node2D) -> void:
-	if _is_triggered or not body is Player:
+	if _is_triggered or SceneTransition.is_transitioning or not body is Player:
 		return
 
 	if target_scene_path.is_empty():
@@ -23,15 +23,13 @@ func _on_body_entered(body: Node2D) -> void:
 
 	_is_triggered = true
 
-	var succeeded: bool = await SceneTransition.run_with_fade(
+	# A successful scene swap frees this door; the autoload owns the full fade.
+	SceneTransition.run_with_fade(
 		Callable(self, "_change_scene"),
 		0.35,
 		0.15,
 		transition_message
 	)
-
-	if not succeeded:
-		_is_triggered = false
 
 func _change_scene() -> bool:
 	SceneTransition.queue_spawn_point(target_spawn_point)
@@ -39,6 +37,7 @@ func _change_scene() -> bool:
 
 	if error != OK:
 		SceneTransition.clear_spawn_point()
+		_is_triggered = false
 		return false
 
 	return true

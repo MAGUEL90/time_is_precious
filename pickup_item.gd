@@ -97,8 +97,8 @@ func on_player_interact(player: Player) -> void:
 			collecting_tween = create_tween()
 			collecting_tween.tween_property(self, "global_position", player.global_position, 0.1).set_ease(Tween.EASE_IN_OUT)
 			collecting_tween.tween_property(self, "scale", Vector2.ZERO, 0.05)
-			await collecting_tween.tween_interval(0.2).finished
-			queue_free()
+			collecting_tween.tween_interval(0.2)
+			collecting_tween.tween_callback(queue_free)
 		else:
 			if not Inventory.has_capacity_for(item_id, quantity):
 				play_failed_pickup_shake()

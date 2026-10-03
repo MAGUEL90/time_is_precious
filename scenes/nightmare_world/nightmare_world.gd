@@ -71,7 +71,7 @@ func _ready() -> void:
 		)
 
 func _process(delta: float) -> void:
-	if not is_active:
+	if not is_active or SceneTransition.is_transitioning:
 		return
 
 	elapsed_seconds = minf(

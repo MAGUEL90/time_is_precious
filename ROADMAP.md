@@ -242,6 +242,15 @@ The production-chain suite preserves the rejected empty-wallet payment check.
 See `scenes/test_scenes/README.md` for active entrypoints and result criteria, and
 `docs/task_reports/audit-part-1-cleanup-2026-10-03.md` for validation evidence.
 
+**Audit technical follow-up - 2026-10-04:** The approved parts 2–8 fixes and the
+remaining clock, fade/Nightmare timing and shutdown cleanup have passed 41 unique
+regression suites on Godot 4.5.2, including graphical workshop/depth checks and
+real dialogue cycles. The Game Director chose to retain the minimal two-plot map;
+normal income, full normal-game integration and real disk saving remain separate
+unfinished features. Desktop software rendering was checked at the existing
+viewport/window settings; local hardware/OS and Android playtests remain unverified.
+See `docs/task_reports/audit-followup-2026-10-04.md`. Human PR/merge review is pending.
+
 **Modal pause check - 2026-10-03:** Physical K opens Worker Hub and K/Esc/Close
 release its pause on the current map, with empty and hired rosters. A separate
 confirmed freeze-like case came from Work Progress (J): the map hides its

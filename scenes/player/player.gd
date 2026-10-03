@@ -71,7 +71,11 @@ var _movement_enabled: bool = true
 var _movement_locks: Dictionary = {}
 var can_move: bool = true:
 	get:
-		return _movement_enabled and _movement_locks.is_empty()
+		return (
+			_movement_enabled
+			and _movement_locks.is_empty()
+			and not SceneTransition.is_transitioning
+		)
 	set(value):
 		_movement_enabled = value
 var can_interact: bool = false

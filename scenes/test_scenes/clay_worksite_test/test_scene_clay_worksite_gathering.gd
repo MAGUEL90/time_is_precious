@@ -86,6 +86,12 @@ func _run() -> void:
 	result = other.execute(540, player, fixture, fixture._drop_output)
 	_expect(player.is_collapsing and result.minutes == 25 and result.units == 2, "Long selection still stops on actual collapse.")
 	_expect(player.current_experience == exp_before, "No EXP tuning.")
+	# Finish the triggered entry before freeing the animation/transition owners.
+	get_tree().paused = false
+	var collapse_deadline: int = Time.get_ticks_msec() + 10000
+	while player.is_collapsing and Time.get_ticks_msec() < collapse_deadline:
+		await get_tree().process_frame
+	_expect(not player.is_collapsing and not SceneTransition.is_transitioning, "Collapse entry settles before fixture teardown.")
 	fixture.queue_free()
 	await get_tree().process_frame
 	get_tree().paused = false

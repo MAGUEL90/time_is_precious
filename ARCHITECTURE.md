@@ -226,6 +226,11 @@ It must not become the authority for unrelated city population, UI layout, quest
 
 Current project setup includes a runtime work-state bootstrap/autoload path so work/process systems can remain synchronized with world-time changes across the player-facing flow.
 
+`TimeComponentManager.emit_time_signal()` publishes the current `time_changed`
+snapshot for synchronization. Only elapsed time through `advance_one_minute()`
+emits `minute_changed`, `hour_changed` and `day_changed`; refreshing a snapshot
+must not charge Player needs or simulate another day.
+
 Do not add duplicate scene-local bootstrap instances without a specific architectural reason.
 
 Each authored WorkshopPlot now uses its unique exported `plot_id` to retain a construction
@@ -410,11 +415,17 @@ The current prototype keeps selected player/runtime state across scene transitio
   guards enabled. The Home scene and reusable scene/spawn routing remain available;
   the current map does not include the earlier Home Door or Nightmare composition.
 - `PlayerRuntimeState` supports runtime persistence across scene changes.
-- `SceneTransition` owns transition/routing behavior.
+- `SceneTransition` owns transition/routing behavior, including the complete fade
+  after the outgoing door is freed. A door starts that flow without awaiting it
+  on the outgoing scene and resets its trigger if loading fails.
 - `Player.can_move` combines the existing external movement gate with local action
-  locks. Pickup, dialogue, sleep, collapse, Nightmare return and worksite/plot modals
+  locks and the global transition guard. Pickup, dialogue, sleep, collapse,
+  Nightmare return and worksite/plot modals
   release only their own restriction, so one action cannot restore another action's
-  stale lock state.
+  stale lock state. Incoming and outgoing Players remain still during a fade.
+- `NightmareWorld` measures playable time after the entry fade; global transitions
+  do not consume its countdown. Existing durations and penalty conversion remain
+  unchanged.
 
 Runtime persistence is not the same as save/load to disk.
 
@@ -550,6 +561,13 @@ UI should display state and request actions. It should not become the hidden own
 
 ### Global-manager sprawl
 The project already has many autoloads. Adding another autoload is a high-impact architecture change and requires explicit justification/approval.
+
+Keep the existing `DialogueManager` registration after the game autoloads. On
+Godot 4.5.2, the earlier order retained 15 addon script resources on runtime exit
+(16 on editor import); moving only this registration to the end eliminated that
+reproducible shutdown issue. Game autoload initialization does not need its
+singleton; dialogue scenes use it after startup. This is a tested order dependency,
+not an addon upgrade or a proven diagnosis of the engine's internal cause.
 
 ### Save schema churn
 Do not lock persistence around unstable node structures before the daily loop is stable.
