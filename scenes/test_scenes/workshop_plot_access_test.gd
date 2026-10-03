@@ -36,7 +36,10 @@ func _run() -> void:
 		for index in range(atlas.get_tiles_count()):
 			var coords: Vector2i = atlas.get_tile_id(index)
 			_expect(coords.x < 18 and coords.y < 16, "Atlas tiles must stay inside the supplied 288x256 texture.")
-	_expect(content.has_node("YSortWorld/Worksites") and content.get_node("YSortWorld/Worksites").scene_file_path == "res://scenes/content_scene/worksites/main_map_worksites.tscn" and not content.has_node("YSortWorld/HomeDoor"), "Map retains the approved resource reintegration without restoring the old HomeDoor.")
+	_expect(not content.has_node("YSortWorld/Worksites") and content.has_node("YSortWorld/WorkerRuntime"), "Map removes worksites while preserving workshop worker runtime.")
+	_expect(content.get_node("YSortWorld/WorkerRuntime").sites.is_empty(), "Clean map contains no active resource sites.")
+	_expect(content.get_node("YSortWorld/WorkerRuntime").storage_destinations.is_empty(), "Clean map contains no worksite storage destinations.")
+	_expect(content.get_node("YSortWorld/WorkshopPlot/Label").text.is_empty(), "Uncleared plot has no debug title.")
 	_expect(player.debug_disable_player_needs, "Main-map playtest must disable player needs for time acceleration.")
 	player.focus = 0.0
 	player.fatigue = player.max_fatigue

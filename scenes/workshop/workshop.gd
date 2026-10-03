@@ -362,6 +362,11 @@ func start_job_from_storage(
 		return false
 
 	last_start_job_error = ""
+	# Presentation-only identity survives a map reload with the runtime order.
+	# Production ownership, timing and outputs remain with WorkManager.
+	var plot: Node = get_parent()
+	if plot.is_in_group("workshop_plots"):
+		WorkManager.active_orders[order_id].set_meta("visual_plot_id", plot.construction.order_id)
 	return true
 
 func _get_first_available_worker_for_job(worker_ids: Array[String], job: JobData) -> String:

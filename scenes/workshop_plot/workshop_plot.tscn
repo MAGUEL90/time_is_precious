@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://yx4rvbmo0me4"]
+[gd_scene load_steps=15 format=3 uid="uid://yx4rvbmo0me4"]
 
 [ext_resource type="Script" uid="uid://brkli2l7x7668" path="res://scenes/workshop_plot/workshop_plot.gd" id="1_plot"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_interaction"]
@@ -9,6 +9,8 @@
 [ext_resource type="Texture2D" uid="uid://bhfqpsxp7xvha" path="res://assets/objects/object_board_0.png" id="4_kvint"]
 [ext_resource type="Texture2D" uid="uid://ca60ougclpgam" path="res://assets/items/clay_lump.png" id="5_gve8a"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/empty_bar.png" id="7_empty_bar"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/filled_bar.png" id="8_filled_bar"]
 [ext_resource type="Texture2D" uid="uid://byfbtmpuo2yuw" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="6_panel"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_access"]
@@ -21,6 +23,9 @@ region = Rect2(1, 1, 16, 16)
 [node name="WorkshopPlot" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_plot")
+
+[node name="WorkerEntrance" type="Marker2D" parent="."]
+position = Vector2(0, 24)
 
 [node name="Plot" type="Sprite2D" parent="."]
 position = Vector2(0, -11)
@@ -103,8 +108,20 @@ offset_bottom = -26.0
 theme = ExtResource("5_theme")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Workshop Plot"
+text = ""
 horizontal_alignment = 1
+
+[node name="BuildingProgress" type="TextureProgressBar" parent="."]
+visible = false
+z_index = 10
+offset_left = -23.0
+offset_top = -33.0
+offset_right = 23.0
+offset_bottom = -26.0
+mouse_filter = 2
+step = 0.01
+texture_under = ExtResource("7_empty_bar")
+texture_progress = ExtResource("8_filled_bar")
 
 [node name="InteractableComponent" parent="." instance=ExtResource("2_interaction")]
 position = Vector2(16, 26)

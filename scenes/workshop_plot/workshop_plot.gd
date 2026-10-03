@@ -11,6 +11,67 @@ const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png"
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
+@export var worker_dust_enabled: bool = true
+## Local plot coordinates; keeps activity puffs inside the work area.
+@export var worker_dust_area: Rect2 = Rect2(-14, -14, 28, 36)
+@export_range(0.1, 5.0, 0.05) var worker_dust_interval_min: float = 0.45
+@export_range(0.1, 5.0, 0.05) var worker_dust_interval_max: float = 1.25
+var _last_worker_dust_msec: int = -1000
+var _worker_dust_remaining: float = 0.0
+var _worker_dust_rng := RandomNumberGenerator.new()
+var _arrived_worker_tasks: Dictionary = {}
+var _previous_construction_phase: String = ""
+var _completion_bar_remaining: float = 0.0
+
+func mark_worker_arrived(worker_id: String, task_key: String) -> void:
+	_arrived_worker_tasks[worker_id] = task_key
+
+func get_worker_entry_position() -> Vector2:
+	return $WorkerEntrance.global_position
+
+func show_worker_dust() -> void:
+	if not worker_dust_enabled or Time.get_ticks_msec() - _last_worker_dust_msec < 120:
+		return
+	_last_worker_dust_msec = Time.get_ticks_msec()
+	_spawn_worker_dust($WorkerEntrance.position)
+
+func _spawn_worker_dust(local_position: Vector2) -> void:
+	var dust := Node2D.new()
+	dust.set_script(preload("res://scenes/workshop_plot/worker_entry_dust.gd"))
+	add_child(dust)
+	dust.position = local_position
+
+func _update_worker_dust(delta: float) -> void:
+	# This plot processes while menus are open, but cosmetic activity must pause.
+	if get_tree().paused or TimeComponentManager.is_paused:
+		return
+	if not worker_dust_enabled or not _has_dust_activity():
+		_worker_dust_remaining = 0.0
+		return
+	_worker_dust_remaining -= delta
+	if _worker_dust_remaining > 0.0:
+		return
+	var minimum: float = maxf(0.1, minf(worker_dust_interval_min, worker_dust_interval_max))
+	var maximum: float = maxf(minimum, maxf(worker_dust_interval_min, worker_dust_interval_max))
+	_worker_dust_remaining = _worker_dust_rng.randf_range(minimum, maximum)
+	var area: Rect2 = worker_dust_area.abs()
+	_spawn_worker_dust(Vector2(
+		_worker_dust_rng.randf_range(area.position.x, area.end.x),
+		_worker_dust_rng.randf_range(area.position.y, area.end.y)
+	))
+
+func _has_dust_activity() -> bool:
+	if construction == null:
+		return false
+	if construction.phase in ["clearing", "building"]:
+		var task_key: String = construction.order_id + ":" + construction.phase
+		for worker_id: String in construction.worker_ids:
+			if str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
+				return true
+	for order: WorkOrder in WorkManager.active_orders.values():
+		if order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id and str(_arrived_worker_tasks.get(order.worker_id, "")) == order.order_id:
+			return true
+	return false
 
 @onready var interaction_area: Area2D = $InteractableComponent
 @onready var interactable_label_component: TextureRect = $InteractableLabelComponent
@@ -25,6 +86,7 @@ signal clearing_finished
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_worker_dust_rng.randomize()
 	add_to_group("workshop_plots")
 	# The authored board anchors both construction and completed-workshop access.
 	interaction_area.position = $Board.position + $Board.offset
@@ -98,6 +160,7 @@ func _on_build_requested(ids: Array[String]) -> void:
 		menu.show_error(str(result.get("message", "Could not start construction.")))
 
 func _sync_construction() -> void:
+	_sync_build_progress()
 	$ToBeClean.visible = construction.phase in ["uncleared", "clearing"]
 	$TableResources.visible = construction.phase == "built"
 	$InteractableLabelComponent/HammerIcon.texture = HAND_ICON if construction.phase in ["uncleared", "clearing"] else HAMMER_ICON
@@ -127,13 +190,34 @@ func _sync_construction() -> void:
 			add_child(workshop)
 			_show_table_resource(workshop)
 	elif construction.phase == "clearing":
-		var preview: Dictionary = construction.get_clearing_preview([] as Array[String], false)
-		$Label.text = "Clearing %d%%" % roundi(float(preview.progress_ratio) * 100.0)
+		$Label.text = "Clearing"
 	elif construction.phase == "building":
-		var preview: Dictionary = construction.get_preview([] as Array[String])
-		$Label.text = "Building %d%%" % roundi(float(preview.progress_ratio) * 100.0)
+		$Label.text = "Building"
 	else:
-		$Label.text = "Bekas Workshop" if construction.phase == "uncleared" else "Workshop Site"
+		$Label.text = "" if construction.phase == "uncleared" else "Workshop Site"
+
+func _sync_build_progress() -> void:
+	var completed: bool = (
+		(_previous_construction_phase == "building" and construction.phase == "built")
+		or (_previous_construction_phase == "clearing" and construction.phase == "empty")
+	)
+	_previous_construction_phase = construction.phase
+	var bar: TextureProgressBar = $BuildingProgress
+	if construction.phase in ["clearing", "building"]:
+		_completion_bar_remaining = 0.0
+		var preview: Dictionary = construction.get_clearing_preview([] as Array[String], false) if construction.phase == "clearing" else construction.get_preview([] as Array[String])
+		bar.value = float(preview.progress_ratio) * 100.0
+	elif completed:
+		bar.value = 100.0
+		_completion_bar_remaining = 1.0
+		var splash = preload("res://scenes/workshop_plot/construction_complete_splash.gd").new()
+		splash.texture = bar.texture_progress
+		splash.under_texture = bar.texture_under
+		splash.display_size = bar.size
+		add_child(splash)
+		splash.position = bar.position
+	bar.visible = construction.phase in ["clearing", "building"]
+	$Label.visible = not bar.visible and _completion_bar_remaining <= 0.0
 
 func _show_table_resource(workshop: WorkShop) -> void:
 	# Sprite positions/scales belong to the authored scene. Recipes swap only
@@ -152,7 +236,13 @@ func _show_table_resource(workshop: WorkShop) -> void:
 			prop.texture = item.icon
 	$TableResources.show()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_worker_dust(delta)
+	if not get_tree().paused and _completion_bar_remaining > 0.0:
+		_completion_bar_remaining = maxf(0.0, _completion_bar_remaining - delta)
+		if _completion_bar_remaining == 0.0:
+			$BuildingProgress.hide()
+			$Label.show()
 	if not _manual_clearing and is_instance_valid(menu) and not has_player_access():
 		close_menu()
 

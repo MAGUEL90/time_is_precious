@@ -9,7 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://yx4rvbmo0me4" path="res://scenes/workshop_plot/workshop_plot.tscn" id="17_workshop_plot"]
 [ext_resource type="PackedScene" uid="uid://d0mllxwbcq263" path="res://scenes/content_scene/startup/initial_worksites.tscn" id="18_initial"]
 [ext_resource type="PackedScene" path="res://scenes/debug/time_debug_overlay.tscn" id="19_debug_time"]
-[ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/main_map_worksites.tscn" id="20_worksites"]
+[ext_resource type="PackedScene" path="res://scenes/content_scene/workshop_worker_runtime.tscn" id="20_worksites"]
 
 [node name="ContentScene" type="Node2D"]
 metadata/_edit_vertical_guides_ = [355.0, 87.0, -133.0]
@@ -43,7 +43,7 @@ y_sort_enabled = true
 tile_set = ExtResource("1_ground")
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
-position = Vector2(-244, -250)
+position = Vector2(-258, -392)
 debug_disable_player_needs = true
 debug_disable_fatigue = true
 
@@ -63,7 +63,7 @@ plot_id = "workshop_2"
 [node name="InitialWorksites" parent="YSortWorld" instance=ExtResource("18_initial")]
 position = Vector2(-256, -443)
 
-[node name="Worksites" parent="YSortWorld" instance=ExtResource("20_worksites")]
+[node name="WorkerRuntime" parent="YSortWorld" instance=ExtResource("20_worksites")]
 position = Vector2(-256, -376)
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
