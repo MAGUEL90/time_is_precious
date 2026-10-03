@@ -3,6 +3,7 @@ extends Node2D
 ## Test-owned supplies and worker only; production content receives no free items.
 @export var run_automatically: bool = true
 @export var use_authored_map: bool = false
+@export var authored_map_scene: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 var plot: Node
 var completed_cycles: int = 0
 const JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
@@ -95,7 +96,7 @@ func _prepare_fixture() -> void:
 	Inventory.items.assign(initial_materials)
 	Inventory.add_item("shekel", 100)
 	if use_authored_map:
-		var content = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn").instantiate()
+		var content = authored_map_scene.instantiate()
 		content.get_node("YSortWorld/Worksites").seed_playtest_hauler = false
 		add_child(content)
 		player = content.get_node("YSortWorld/Player")
@@ -208,9 +209,17 @@ func _shape_wet_bricks() -> void:
 	_expect(not assignment.next_button.disabled, "The existing Laborer can be assigned through the UI.")
 	await _press(assignment.next_button)
 	var job_ui: WorkshopJobUI = _ui(WorkshopJobUI) as WorkshopJobUI
+	await _capture("mvp-job-review-before-start.png")
 	await _press(job_ui.start_button)
 	_expect(job_ui.job_started and worker.is_working(), "Starting Shape creates the actual WorkManager order.")
 	await _press(job_ui.close_button)
+	if not OS.get_environment("TIP_MVP_CAPTURE_DIR").is_empty():
+		var progress = preload("res://scenes/ui/work_progress_ui/work_progress_ui.tscn").instantiate()
+		add_child(progress)
+		progress.open_panel()
+		await _capture("mvp-active-work-progress.png")
+		progress.close_panel()
+		progress.queue_free()
 	# Keep the real worker success rules; a fixed test RNG makes the two runs repeatable.
 	seed(42)
 	TimeComponentManager.advance_minutes(JOB.base_duration_minutes)
@@ -234,6 +243,7 @@ func _pay_output(item_id: String, expected_next: String) -> void:
 	_expect(not lots.is_empty(), "The storage UI exposes the completed output lot.")
 	await _press(storage_ui.held_grid.get_child(0) as BaseButton)
 	var popup: WorkshopFeeConfirmUI = _ui(WorkshopFeeConfirmUI) as WorkshopFeeConfirmUI
+	await _capture("mvp-fee-confirmation.png")
 	await _press(popup.fee_panel.secondary_button)
 	_expect(Inventory.items == inventory_before and WorkShopStorage.get_storage_state() == storage_before,
 		"Cancelling a fee prompt changes neither currency nor output ownership.")
@@ -277,6 +287,7 @@ func _dry_wet_bricks() -> void:
 	await _choose_order(production, DRYING.process_id)
 	_expect(production.awaiting_process_confirmation,
 		"Drying opens the existing explicit Start confirmation.")
+	await _capture("mvp-process-confirmation.png")
 	var before: Dictionary = WorkShopStorage.items.duplicate(true)
 	await _press(production.process_confirm_panel.secondary_button)
 	_expect(WorkShopStorage.items == before and ProcessManager.get_active_progress_entries().is_empty(),
@@ -339,7 +350,14 @@ func _choose_order(production: WorkshopProductionUI, order_id: String) -> void:
 	for child: Node in production.work_order_grid.get_children():
 		var card: WorkOrderCard = child as WorkOrderCard
 		if card != null and card.work_order_id == order_id:
+			var capture_key: String = order_id.replace("/", "_")
+			await _capture("mvp-production-%s-list.png" % capture_key)
+			var info_button: BaseButton = card.get_node_or_null("InfoButton") as BaseButton
+			if info_button != null and info_button.is_visible_in_tree():
+				await _press(info_button)
+				await _capture("mvp-production-%s-details.png" % capture_key)
 			await _press(card)
+			await _capture("mvp-production-%s-selected.png" % capture_key)
 			await _press(production.next_button)
 			return
 	_expect(false, "Missing production card: " + order_id)

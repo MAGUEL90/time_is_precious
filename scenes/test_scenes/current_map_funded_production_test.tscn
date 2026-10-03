@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/mudbrick_player_flow_test.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/content_scene/content_scene.tscn" id="2"]
+
+[node name="CurrentMapFundedProductionTest" type="Node2D"]
+process_mode = 3
+script = ExtResource("1")
+use_authored_map = true
+authored_map_scene = ExtResource("2")

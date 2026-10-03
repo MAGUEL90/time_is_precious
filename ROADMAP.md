@@ -221,6 +221,20 @@ on reload and return to city supplies on dismissal. The Cart is supplied once pe
 city runtime; it is not a personal Inventory grant or automatic equipment.
 See `docs/task_reports/main-map-hauler-onboarding.md`.
 
+**Debug-assisted production retest - 2026-10-03:** The separate map Debug panel
+now supplies Shekel, construction and two-cycle production kits, with opt-in
+worker performance protection and a player protection toggle. Current-map testing
+with a normally hired Laborer completes two production/drying cycles, payments,
+yard upgrade and withdrawal. This is a debug-assisted result; normal Shekel
+access and needs balance remain unfinished. See `docs/task_reports/debug-production-testing.md`.
+
+**Content layout cleanup - 2026-10-03:** At the Game Director's request,
+ContentScene now retains two workshop plots and the Job Board, with resource
+sites and map stockpiles removed. WorkerRuntime preserves worker presentation
+and management; uncleared plots no longer show the world debug title.
+Earlier main-map gathering/hauling acceptance results describe the previous
+layout, not the current map. See `docs/task_reports/content-scene-cleanup-2026-10-03.md`.
+
 **Modal pause check - 2026-10-03:** Physical K opens Worker Hub and K/Esc/Close
 release its pause on the current map, with empty and hired rosters. A separate
 confirmed freeze-like case came from Work Progress (J): the map hides its

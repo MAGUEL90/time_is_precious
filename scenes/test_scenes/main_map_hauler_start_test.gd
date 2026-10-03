@@ -2,13 +2,15 @@ extends Node
 
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
 const STARTUP = preload("res://scenes/content_scene/startup/initial_worksites.gd")
+@export var run_automatically: bool = true
 var failures: int = 0
 var content: Node
 var player: Player
 var worksites: Node2D
 
 func _ready() -> void:
-	_run.call_deferred()
+	if run_automatically:
+		_run.call_deferred()
 
 func _expect(ok: bool, message: String) -> void:
 	if not ok:
@@ -137,6 +139,7 @@ func _equip_and_haul() -> void:
 	await _settle()
 	await _press(&"interact")
 	_expect(worksites.inspector.visible and worksites._selected_site == site, "E opens Wood Site for normal Daily setup.")
+	await _capture("main-map-worksite.png")
 	worksites.inspector.daily_button.pressed.emit()
 	var assignment = worksites.inspector.assignment_ui
 	assignment._open_worker_selection(0)
@@ -155,6 +158,7 @@ func _equip_and_haul() -> void:
 	await _capture("main-map-hauler-daily-setup.png")
 	setup.assign_button.pressed.emit()
 	assignment.next_button.pressed.emit()
+	await _capture("main-map-worksite-confirmation.png")
 	worksites.inspector.start_button.pressed.emit()
 	_expect(worksites.daily.jobs.has(&"WoodSite"), "Start Work commits the hired Laborer and equipped Hauler.")
 	if not worksites.daily.jobs.has(&"WoodSite"):
