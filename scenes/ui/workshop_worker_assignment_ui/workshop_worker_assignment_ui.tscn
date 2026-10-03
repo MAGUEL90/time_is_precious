@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://nfwsexi67ldf"]
+[gd_scene load_steps=9 format=3 uid="uid://nfwsexi67ldf"]
 
 [ext_resource type="Script" uid="uid://c1w4kx6tknvdp" path="res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2_base"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="4_separator"]
 [ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_close"]
 [ext_resource type="Texture2D" uid="uid://dndirl2bat2wo" path="res://assets/ui/ui_icon/worker_portrait_icon.png" id="6_worker_portrait"]
+[ext_resource type="PackedScene" uid="uid://dthjfx7bolaxo" path="res://scenes/ui/confirm_discard_panel/confirm_discard_panel.tscn" id="7_confirm_discard"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_window"]
 atlas = ExtResource("2_base")
@@ -258,7 +259,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="InfoWindow" type="NinePatchRect" parent="Root/WorkerInfoLayer/Center"]
-custom_minimum_size = Vector2(138, 70)
+custom_minimum_size = Vector2(180, 74)
 layout_mode = 2
 texture = SubResource("AtlasTexture_window")
 patch_margin_left = 16
@@ -328,6 +329,7 @@ layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Worker"
+autowrap_mode = 3
 
 [node name="ProfessionLabel" type="Label" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Body/Details"]
 custom_minimum_size = Vector2(0, 10)
@@ -335,6 +337,7 @@ layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Profession"
+autowrap_mode = 3
 
 [node name="StatusLabel" type="Label" parent="Root/WorkerInfoLayer/Center/InfoWindow/Margin/InfoVBox/Body/Details"]
 custom_minimum_size = Vector2(0, 10)
@@ -342,6 +345,7 @@ layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Status"
+autowrap_mode = 3
 
 [node name="CloseButton" parent="Root/WorkerInfoLayer/Center/InfoWindow" instance=ExtResource("5_close")]
 layout_mode = 1
@@ -353,3 +357,29 @@ offset_top = 12.0
 offset_right = -16.0
 offset_bottom = 20.0
 grow_horizontal = 0
+
+[node name="ConfirmDiscardOverlay" type="ColorRect" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.45)
+
+[node name="ConfirmDiscardPanel" parent="Root" instance=ExtResource("7_confirm_discard")]
+visible = false
+layout_mode = 1
+offset_left = -80.0
+offset_top = -24.0
+offset_right = 80.0
+offset_bottom = 24.0
+
+[node name="ConfirmLabel" parent="Root/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox" index="0"]
+text = "Leave Assign Work?
+Worker setup will be cleared."
+
+[node name="KeepButton" parent="Root/ConfirmDiscardPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons" index="0"]
+text = "Stay"

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3 uid="uid://6wjnpnc86qas"]
 
-[ext_resource type="Texture2D" uid="uid://dnep7d3bdhdxe" path="res://assets/items/shekel.png" id="1_7lqos"]
+[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="1_7lqos"]
 [ext_resource type="Script" uid="uid://b21c8w6adaeov" path="res://resources/item_data/item_data.gd" id="1_yhjvk"]
 
 [resource]

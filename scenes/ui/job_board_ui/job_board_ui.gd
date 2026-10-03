@@ -15,6 +15,9 @@ var daily_wage: int = 1
 
 func _ready() -> void:
 	visible = false
+	# ItemList has no gameplay-theme variation; set its local font explicitly.
+	applicant_list.add_theme_font_override("font", preload("res://assets/font/pixel_rpg.ttf"))
+	applicant_list.add_theme_font_size_override("font_size", 6)
 	hire_button.pressed.connect(_on_hire_button_pressed)
 	close_button.pressed.connect(_on_close_button_pressed)
 

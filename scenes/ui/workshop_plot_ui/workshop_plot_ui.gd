@@ -194,6 +194,8 @@ func _on_inventory_items_changed() -> void:
 func _refresh_view() -> void:
 	if _is_closing or not visible:
 		return
+	# Keep the parent form alive, but don't stack its frame behind the selector.
+	$Root/Center.visible = not is_instance_valid(_worker_assignment_menu)
 
 	var was_showing_progress: bool = progress_page.visible
 	var phase: String = _get_phase()
@@ -408,6 +410,7 @@ func _open_worker_assignment() -> void:
 		WorkerData.Profession.NONE,
 		worker_options
 	)
+	$Root/Center.hide()
 
 
 func _on_worker_assignment_changed(worker_ids: Array[String]) -> void:

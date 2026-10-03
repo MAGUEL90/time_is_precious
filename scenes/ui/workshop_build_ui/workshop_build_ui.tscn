@@ -226,11 +226,13 @@ theme_override_font_sizes/font_size = 6
 text = "Build"
 
 [node name="RightSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
+visible = false
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 
 [node name="RightBalance" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/Footer"]
-custom_minimum_size = Vector2(44, 0)
+visible = false
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 
 [node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("4_close")]

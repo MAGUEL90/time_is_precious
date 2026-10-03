@@ -97,6 +97,7 @@ func _run() -> void:
 	if not is_instance_valid(plot.menu):
 		_finish(content, state, ids)
 		return
+	await _capture("cleaning")
 	plot.menu.assign_workers_button.pressed.emit()
 	await get_tree().process_frame
 	var clearing_assignment = plot.menu._worker_assignment_menu
@@ -117,6 +118,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	var assignment: Node = plot.menu.get("_worker_assignment_menu") as Node
 	_expect(assignment != null and get_tree().paused, "Worker assignment opens above the paused construction panel.")
+	_expect(not plot.menu.get_node("Root/Center").visible, "The parent construction frame stays hidden while choosing workers.")
 	if assignment == null:
 		_finish(content, state, ids)
 		return
@@ -126,6 +128,7 @@ func _run() -> void:
 	var first_slot: Button = slot_grid.get_child(0) as Button
 	first_slot.pressed.emit()
 	await get_tree().process_frame
+	await _capture("worker-selection")
 	var busy_button: Button = _assignment_worker_button(assignment, "construction_ui_busy")
 	_expect(busy_button != null and busy_button.disabled, "Construction-ineligible workers stay disabled in the shared selector.")
 	var first_worker: Button = _assignment_worker_button(assignment, ids[0])
@@ -133,6 +136,10 @@ func _run() -> void:
 	if first_worker != null and not first_worker.disabled:
 		first_worker.pressed.emit()
 		await get_tree().process_frame
+		await _capture("worker-assigned")
+		assignment._on_worker_info_pressed(ids[0], WorkerDatabase.get_worker_data(ids[0]))
+		await _capture("worker-info")
+		assignment._hide_worker_info()
 	var back: Button = assignment.get_node(
 		"Root/Center/TextureWindow/Margin/MainVBox/OverviewPage/Footer/BackButton"
 	)
@@ -140,6 +147,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(is_instance_valid(plot.menu) and get_tree().paused, "Returning from worker assignment keeps the construction panel open and paused.")
+	_expect(plot.menu.get_node("Root/Center").visible, "Returning from assignment restores the construction form.")
 	_expect((plot.menu.get("_selected_worker_ids") as Array).size() == 1, "Worker choices persist when returning to construction.")
 	assign_workers.pressed.emit()
 	await get_tree().process_frame
