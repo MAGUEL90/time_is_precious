@@ -406,10 +406,15 @@ integrated independently of the pending workshop route.
 
 The current prototype keeps selected player/runtime state across scene transitions.
 
-- Player home is the main start flow.
-- Home <-> city transitions use reusable scene/spawn routing.
+- The current main scene is the ContentScene authoring map, with player-needs debug
+  guards enabled. The Home scene and reusable scene/spawn routing remain available;
+  the current map does not include the earlier Home Door or Nightmare composition.
 - `PlayerRuntimeState` supports runtime persistence across scene changes.
 - `SceneTransition` owns transition/routing behavior.
+- `Player.can_move` combines the existing external movement gate with local action
+  locks. Pickup, dialogue, sleep, collapse, Nightmare return and worksite/plot modals
+  release only their own restriction, so one action cannot restore another action's
+  stale lock state.
 
 Runtime persistence is not the same as save/load to disk.
 

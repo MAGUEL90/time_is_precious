@@ -269,8 +269,6 @@ func try_negotiate_contract() -> void:
 
 		player_reff = player
 
-	player_reff.increase_fatigue(0.03)
-	player_reff.increase_hunger(0.01)
 	TimeComponentManager.advance_minutes(negotiation_base_duration_minutes)
 
 	var player_focus: float = player_reff.get_focus()

@@ -79,7 +79,6 @@ func _has_dust_activity() -> bool:
 var player: Player
 var menu: CanvasLayer
 var construction: Node
-var _previous_can_move: bool = true
 var _previous_paused: bool = false
 var _manual_clearing: bool = false
 signal clearing_finished
@@ -135,10 +134,8 @@ func on_player_interact(interacting_player: Player) -> void:
 		return
 	if not player.can_move or player.current_interactable != self or get_tree().paused:
 		return
-	_previous_can_move = player.can_move
 	_previous_paused = get_tree().paused
-	player.can_move = false
-	player.velocity = Vector2.ZERO
+	player.set_movement_locked(&"workshop_plot", true)
 	interactable_label_component.hide()
 	menu = PLOT_MENU.instantiate()
 	add_child(menu)
@@ -270,14 +267,12 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	add_child(cover)
 	await get_tree().create_timer(0.15, true).timeout
 	# Match manual worksites: existing minute signals charge needs exactly once.
-	# Restore movement only during synchronous ticks so collapse remembers its prior state.
-	player.can_move = _previous_can_move
+	# The plot keeps its own restriction if a minute starts a collapse.
 	while construction.phase == "clearing" and is_inside_tree() and not is_queued_for_deletion():
 		if not has_player_access() or player.has_critical_condition():
 			break
 		TimeComponentManager.advance_minutes(1)
 	construction.interrupt_player_clearing()
-	player.can_move = false
 	await get_tree().create_timer(0.5, true).timeout
 	cover.queue_free()
 	_manual_clearing = false
@@ -294,7 +289,7 @@ func _on_menu_closed() -> void:
 	menu = null
 	get_tree().paused = _previous_paused
 	if is_instance_valid(player):
-		player.can_move = _previous_can_move and not player.is_sleeping and not player.is_collapsing and not SceneTransition.is_transitioning
+		player.set_movement_locked(&"workshop_plot", false)
 		if has_player_access() and player.current_interactable == self:
 			interactable_label_component.show()
 

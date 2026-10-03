@@ -107,9 +107,13 @@ func evaluate_daily_applications() -> int:
 		if not citizen_data.can_apply_for_work():
 			continue
 
+		var profession: WorkerData.Profession = citizen_data.profession
+		if profession == WorkerData.Profession.NONE:
+			profession = WorkerData.Profession.LABORER
+
 		var registered: bool = register_applicant(
 			citizen_data.citizen_id,
-			WorkerData.Profession.LABORER
+			profession
 		)
 		if registered:
 			registered_count += 1

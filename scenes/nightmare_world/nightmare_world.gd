@@ -196,8 +196,7 @@ func finish_nightmare(time_out: bool) -> void:
 		+ "Total world time: %d min" % total_minutes
 	)
 
-	var previous_can_move: bool = player_ref.can_move
-	player_ref.can_move = false
+	player_ref.set_movement_locked(&"nightmare_return", true)
 
 	await SceneTransition.run_with_fade(
 		Callable(self, "_return_to_world").bind(total_minutes),
@@ -210,7 +209,7 @@ func finish_nightmare(time_out: bool) -> void:
 	TimeComponentManager.is_paused = previous_time_paused
 	nightmare_active_changed.emit(false)
 
-	player_ref.can_move = previous_can_move
+	player_ref.set_movement_locked(&"nightmare_return", false)
 	nightmare_completed.emit(
 		base_minutes,
 		extra_minutes,

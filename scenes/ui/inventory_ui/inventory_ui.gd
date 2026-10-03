@@ -41,6 +41,8 @@ var active_action_confirm_panel: ItemActionConfirmPanel
 var action_feedback_token: int = 0
 var is_inventory_action_busy: bool = false
 var active_drag_data: Dictionary = {}
+var _tree_paused_before_open: bool = false
+var _has_pause_state_snapshot: bool = false
 
 # Lifecycle and input
 
@@ -63,6 +65,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_inventory_items_changed):
 		Inventory.items_changed.disconnect(_on_inventory_items_changed)
+	_restore_tree_pause_state()
 
 func _input(event: InputEvent) -> void:
 	if not visible:
@@ -79,6 +82,10 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("open_inventory"):
+		if not visible and get_tree().paused:
+			get_viewport().set_input_as_handled()
+			return
+
 		_clear_inventory_feedback()
 		toggle_inventory()
 
@@ -97,6 +104,10 @@ func toggle_inventory() -> void:
 		open_inventory()
 
 func open_inventory() -> void:
+	if not visible:
+		_tree_paused_before_open = get_tree().paused
+		_has_pause_state_snapshot = true
+
 	get_tree().paused = true
 	visible = true
 	_position_inventory_near_player()
@@ -126,9 +137,16 @@ func _position_inventory_near_player() -> void:
 func close_inventory() -> void:
 	_close_inventory_floating_panels()
 
-	get_tree().paused = false
 	item_info_panel.clear_item()
 	visible = false
+	_restore_tree_pause_state()
+
+func _restore_tree_pause_state() -> void:
+	if not _has_pause_state_snapshot:
+		return
+
+	get_tree().paused = _tree_paused_before_open
+	_has_pause_state_snapshot = false
 
 # Inventory grid
 

@@ -20,6 +20,8 @@ var last_result: Dictionary = {}
 var _plan: Dictionary = {}
 var _result: Dictionary = {}
 var _drop_output: Callable
+var _cancelled: bool = false
+var _settling: bool = false
 
 func toggle_participant(id: String) -> bool:
 	if working or id != "player":
@@ -88,7 +90,9 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 
 func execute(requested_minutes: int, player: Player, owner_node: Node, drop_output: Callable = Callable()) -> Dictionary:
 	var result: Dictionary = {"units": 0, "minutes": 0, "interrupted": false, "to_bag": 0, "to_ground": 0}
-	if not participants.has("player") or not is_instance_valid(owner_node) or owner_node.is_queued_for_deletion():
+	if (not participants.has("player") or not is_instance_valid(owner_node)
+		or owner_node.is_queued_for_deletion() or not owner_node.is_inside_tree()
+		or not is_instance_valid(player) or player.is_queued_for_deletion()):
 		return result
 	if not _begin(requested_minutes, player, drop_output):
 		return result
@@ -96,18 +100,43 @@ func execute(requested_minutes: int, player: Player, owner_node: Node, drop_outp
 	# Time skip uses the existing minute signals; never apply needs a second time.
 	# Recheck each minute because those signals may initiate collapse/scene changes.
 	for minute_index: int in range(int(_plan.minutes)):
+		if _cancelled:
+			result.interrupted = true
+			break
 		if stock <= 0:
+			break
+		# Check validity here, before passing either object to the typed helper.
+		# A minute listener may free the Player or detach/free this fixture.
+		if (not is_instance_valid(owner_node) or owner_node.is_queued_for_deletion()
+			or not owner_node.is_inside_tree() or not is_instance_valid(player)
+			or player.is_queued_for_deletion()):
+			cancel()
+			result.interrupted = true
 			break
 		if _interrupted(player, owner_node):
 			result.interrupted = true
 			break
-		TimeComponentManager.advance_minutes(1)
+		# Advancement emits signals synchronously. Record this minute first so a
+		# cancel from one of those signals stores the elapsed time accurately.
 		result.minutes += 1
+		TimeComponentManager.advance_minutes(1)
+		# cancel() can run synchronously from a minute signal during the call above.
+		# Its refund is final; do not earn or settle those units a second time.
+		if _cancelled:
+			result.interrupted = true
+			break
+		if (not is_instance_valid(owner_node) or owner_node.is_queued_for_deletion()
+			or not owner_node.is_inside_tree() or not is_instance_valid(player)
+			or player.is_queued_for_deletion()):
+			cancel()
+			result.interrupted = true
+			break
 		if _interrupted(player, owner_node):
 			result.interrupted = true
 			break
 		_earn_completed_work()
-	_finish()
+	if not _cancelled:
+		_finish()
 	return result
 
 func _begin(minutes: int, player: Player, drop_output: Callable) -> bool:
@@ -117,6 +146,8 @@ func _begin(minutes: int, player: Player, drop_output: Callable) -> bool:
 	_plan = plan
 	_result = {"units": 0, "minutes": 0, "interrupted": false, "to_bag": 0, "to_ground": 0}
 	_drop_output = drop_output
+	_cancelled = false
+	_settling = false
 	working = true
 	return true
 
@@ -127,6 +158,10 @@ func _earn_completed_work() -> void:
 	_result.units += additional
 
 func _finish() -> void:
+	if not working or _cancelled or _settling:
+		return
+	# Keep the session busy while callbacks run, and prevent duplicate settlement.
+	_settling = true
 	var result: Dictionary = _result
 	# Settle completed output once, using capacity at completion, not the preview.
 	var remaining: int = int(result.units)
@@ -146,17 +181,25 @@ func _finish() -> void:
 
 func cancel() -> void:
 	# Unsettled hourly output returns to natural stock on fixture teardown.
-	if working:
+	if working and not _settling:
 		stock += int(_result.units)
-	_clear_session()
+		_result.units = 0
+		_result.to_bag = 0
+		_result.to_ground = 0
+		_result.interrupted = true
+		_cancelled = true
+		last_result = _result.duplicate()
+		_clear_session()
 
 func _clear_session() -> void:
 	_drop_output = Callable()
+	_settling = false
 	working = false
 
 func _interrupted(player: Player, owner_node: Node) -> bool:
 	return (
 		not is_instance_valid(owner_node) or owner_node.is_queued_for_deletion()
+		or not owner_node.is_inside_tree()
 		or not is_instance_valid(player) or player.is_queued_for_deletion()
 		or player.is_sleeping or player.is_collapsing
 		or SceneTransition.is_transitioning or TimeComponentManager.is_paused

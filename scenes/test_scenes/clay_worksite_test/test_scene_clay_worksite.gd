@@ -30,7 +30,6 @@ var worker_control
 @onready var inventory_ui: CanvasLayer = get_node_or_null(inventory_ui_path)
 @onready var inspector: Control = $InspectionUI/ClayWorksiteInspector
 
-var _previous_can_move: bool = true
 var sites: Dictionary = {}
 var daily = DailySchedule.new()
 var _site_highlight = preload("res://scenes/components/interactable_component/interaction_highlight.gd").new()
@@ -178,10 +177,8 @@ func _go_to_worker(id: String) -> void:
 	_open_site_panel(site)
 
 func _open_site_panel(site: Marker2D) -> void:
-	_previous_can_move = player.can_move
 	_selected_site = site
-	player.can_move = false
-	player.velocity = Vector2.ZERO
+	player.set_movement_locked(&"worksite", true)
 	$FixtureNotes/Label.hide()
 	_hide_prompts()
 	inspector.output_name = ItemDatabase.get_item_data(sites[site.name].item_id).display_name
@@ -283,6 +280,8 @@ func _remove_worker(id: String) -> void:
 
 func _exit_tree() -> void:
 	_site_highlight.clear()
+	if is_instance_valid(player):
+		player.set_movement_locked(&"worksite", false)
 	if worker_management != null:
 		if daily.gathered.is_connected(worker_management.record_contribution):
 			daily.gathered.disconnect(worker_management.record_contribution)
@@ -340,8 +339,7 @@ func _close_inspector() -> void:
 		return
 	inspector.close_panel()
 	_reset_worker_draft()
-	if not player.is_collapsing and not SceneTransition.is_transitioning:
-		player.can_move = _previous_can_move
+	player.set_movement_locked(&"worksite", false)
 	$FixtureNotes/Label.show()
 
 func _preview_work(minutes: int) -> Dictionary:
@@ -413,20 +411,18 @@ func _start_work(minutes: int) -> void:
 	await _fade_work(1.0)
 	if is_queued_for_deletion():
 		return
-	# Keep the modal's tree pause during the synchronous time skip. Restore movement
-	# before signals run so collapse captures the correct pre-work movement state.
-	player.can_move = _previous_can_move
+	# Keep the modal restriction during the time skip; collapse owns a separate lock.
 	last_work_result = sites[_selected_site.name].execute(minutes, player, self, _drop_output)
 	if last_work_result.interrupted:
 		var reason: String = "Too exhausted to continue." if player.is_collapsing else "Work interrupted."
 		interruption_message.text = "%s\nWorked %d min." % [reason, int(last_work_result.minutes)]
 		interruption_message.show()
-	player.can_move = false
 	await get_tree().create_timer(WORK_BLACKOUT_SECONDS, true).timeout
 	if player.is_collapsing:
 		# Close behind opaque black, then resume the existing faint/Nightmare flow.
 		# Keep our cover until the global transition owns an opaque frame.
 		inspector.close_panel()
+		player.set_movement_locked(&"worksite", false)
 		$FixtureNotes/Label.hide()
 		while player.is_collapsing and SceneTransition.fade_overlay.modulate.a < 0.999:
 			await get_tree().process_frame

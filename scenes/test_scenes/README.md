@@ -27,12 +27,36 @@ use the preserved `fixtures/content_worksites_map.tscn` or isolated Clay fixture
 These fixtures do not establish that gathering or hauling is available on the
 current main map.
 
+## Audit regression cases
+
+| Scene | Coverage |
+| --- | --- |
+| `test_scene_player_action_locks.tscn` | Pickup/dialogue overlapping collapse, Nightmare escape/timeout, and independent movement restrictions |
+| `test_scene_plot_collapse_handoff.tscn` | Manual plot clearing interrupted by collapse, followed by playable Nightmare and world return |
+| `test_scene_negotiation_needs.tscn` | Negotiation applies only the configured elapsed-time needs costs |
+| `test_scene_inventory_modal_pause.tscn` | Inventory shortcuts, repeated open/close, underlying Workshop pause and exit cleanup |
+| `test_scene_worker_rehire_regression.tscn` | Actual midnight reapplication, preserved profession/XP, first-time defaults and eligibility |
+| `test_scene_city_storage_overflow.tscn` | Atomic deposit/cargo rejection above the integer limit and exact-limit success |
+| `clay_worksite_test/test_scene_clay_worksite_teardown.tscn` | In-flight owner removal, cancellation, freed Player and payout reentry conservation |
+
+The existing City Storage supply/content tests expect the approved single,
+unallocated startup Cart. The hauling fixture exposes seven authored destinations;
+City Storage still rejects clay.
+
+For automated Hauler fixtures, set `TIP_TEST_HAULER=1` for
+`clay_worksite_test/test_scene_clay_worksite_hauler.tscn`, or
+`TIP_TEST_HAULER_TARGET=1` for `clay_worksite_test/test_scene_hauler_delivery_setup.tscn`.
+Without those switches the scenes are interactive demos.
+
 ## Reading results
 
 An automated suite must reach its named `PASS`/`PASSED` result, exit successfully,
 and have no unexpected script or resource-loading errors. A forced `--quit-after`
 exit is only a bounded launch check. An unfinished or timed-out suite has not passed.
 Headless execution does not validate rendering or screenshots.
+`workshop_worker_presence_test`, `workshop_assignment_discard_test`, and
+`content_depth_time_debug_test` require rendered frames and must use a graphical
+Godot session; their unconditional frame waits do not finish in headless mode.
 
 Dialogue Manager currently emits known ObjectDB/retained-resource diagnostics at
 shutdown. Keep them visible and report them separately; a passing assertion suite
