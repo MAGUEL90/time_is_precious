@@ -230,7 +230,10 @@ func deposit_items_from_inventory(selected_items: Dictionary) -> Dictionary:
 			var stored_quantity: Variant = next_items.get(item_id, 0)
 			if not stored_quantity is int or int(stored_quantity) < 0:
 				return _transfer_result(false, "City Storage stack quantity is invalid.")
-			next_items[item_id] = int(stored_quantity) + quantity
+			var next_quantity: Dictionary = _safe_nonnegative_add(int(stored_quantity), quantity)
+			if not bool(next_quantity.ok):
+				return _transfer_result(false, "City Storage stack quantity would overflow.")
+			next_items[item_id] = int(next_quantity.value)
 			continue
 		for _index: int in range(quantity):
 			var generated: Dictionary = _next_unit_id_in_units(item_id, next_units, next_sequence)
@@ -269,7 +272,10 @@ func try_add_item(item_id: String, quantity: int) -> bool:
 		# beside the write so the receipt remains all-or-nothing if state changes.
 		if not stored_quantity is int or int(stored_quantity) < 0:
 			return false
-		next_items[item_id] = int(stored_quantity) + quantity
+		var next_quantity: Dictionary = _safe_nonnegative_add(int(stored_quantity), quantity)
+		if not bool(next_quantity.ok):
+			return false
+		next_items[item_id] = int(next_quantity.value)
 	_commit_city_receipt(next_units, next_items, next_sequence)
 	return true
 
@@ -362,7 +368,10 @@ func _can_receive_item(item_id: String, quantity: int) -> bool:
 	if SUPPORTED_ITEM_IDS.has(item_id):
 		return true
 	var stored_quantity: Variant = items.get(item_id, 0)
-	return stored_quantity is int and int(stored_quantity) >= 0
+	if not stored_quantity is int or int(stored_quantity) < 0:
+		return false
+	var next_quantity: Dictionary = _safe_nonnegative_add(int(stored_quantity), quantity)
+	return bool(next_quantity.ok)
 
 func _has_valid_counted_stacks() -> bool:
 	for item_id_value in items.keys():

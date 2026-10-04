@@ -15,6 +15,9 @@ const ACCEPTED_ITEMS: Array[String] = [
 	"plain_head_wrap", "simple_robe", "trimmed_robe", "reed_sandal", "shekel",
 	"cart", "basic_glove", "stone_hammer"
 ]
+const EXPECTED_STORAGE_DESTINATIONS: Array[String] = [
+	"City Storage", "Reed", "Storage A", "Storage B", "Straw", "Water", "Wood"
+]
 const BREAD_SOURCE_CAPACITY: int = 5
 
 var failures: int = 0
@@ -201,8 +204,8 @@ func _check_clay_destination_gate() -> void:
 			storage_a_choice = choice
 		elif str(choice.name) == "Storage B":
 			storage_b_choice = choice
-	_expect(names == ["City Storage", "Storage A", "Storage B"],
-		"Content exposes City Storage, Storage A, and Storage B in the Hauler destination list.")
+	_expect(names == EXPECTED_STORAGE_DESTINATIONS,
+		"Content exposes each of its seven authored endpoints in the Hauler destination list.")
 	_expect(not bool(city_choice.get("available", true))
 		and str(city_choice.get("reason", "")).contains("City Storage"),
 		"The real City destination is disabled for the clay worksite with a policy reason.")
@@ -219,9 +222,10 @@ func _check_clay_destination_gate() -> void:
 	var panel = assignment.hauler_setup
 	var city_index: int = _find_destination_index(panel, destination)
 	var a_index: int = _find_destination_index(panel, storage_a)
-	_expect(panel.visible and panel.destination_button.item_count == 3
-		and city_index >= 0 and panel.destination_button.is_item_disabled(city_index),
-		"The actual Hauler setup disables City Storage for clay.")
+	_expect(panel.visible and panel.destination_button.item_count == EXPECTED_STORAGE_DESTINATIONS.size(),
+		"The actual Hauler setup exposes all seven authored destinations.")
+	_expect(city_index >= 0 and panel.destination_button.is_item_disabled(city_index),
+		"The actual Hauler setup independently disables City Storage for clay.")
 	if city_index >= 0:
 		panel.destination_button.select(city_index)
 		panel.destination_button.item_selected.emit(city_index)
@@ -522,11 +526,20 @@ func _check_reload() -> void:
 	content.free()
 	await _frames(2)
 	await _load_content()
+	var reloaded_names: Array[String] = []
+	var unique_reloaded_names: Array[String] = []
+	for choice: Dictionary in worksite._storage_choices():
+		var destination_name: String = str(choice.name)
+		reloaded_names.append(destination_name)
+		if not unique_reloaded_names.has(destination_name):
+			unique_reloaded_names.append(destination_name)
 	_expect(storage == provider and storage.items == retained_items and storage.units == retained_units
 		and storage.food_portions == retained_food_portions,
 		"Accepted City stock and physical units survive replacement of the content scene through the shared provider.")
-	_expect(destination.get_storage() == provider and worksite._storage_choices().size() == 3,
-		"The replacement content scene binds one retained City endpoint without duplicates.")
+	_expect(destination.get_storage() == provider
+		and reloaded_names == EXPECTED_STORAGE_DESTINATIONS
+		and unique_reloaded_names.size() == EXPECTED_STORAGE_DESTINATIONS.size(),
+		"The replacement content scene retains exactly one of each of its seven authored destinations.")
 	storage.changed.connect(_on_city_changed)
 	destination.delivery_received.connect(_on_received)
 	Inventory.items_changed.connect(_on_inventory_changed)

@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scenes/test_scenes/main_map_worksites_test.gd" id="1_test"]
-
-[node name="MainMapWorksitesTest" type="Node"]
-script = ExtResource("1_test")

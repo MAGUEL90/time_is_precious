@@ -7,6 +7,7 @@ const SITE_A: StringName = &"ClaySiteA"
 const SITE_B: StringName = &"ClaySiteB"
 const NARAM_ID: String = "worker_laborer_01"
 const BELUM_ID: String = "content_hauler_belum"
+const INITIAL_CART_UNIT_ID: String = "initial_worksite_cart"
 
 var failures: int = 0
 var content: Node
@@ -228,12 +229,18 @@ func _run_daily_delivery() -> void:
 	saved_naram_xp = naram.profession_xp
 	naram.profession_xp = 0
 	_expect(not worksite.daily.toggle(SITE_A, BELUM_ID),
-		"A Hauler without a cart must not enter the Daily roster.")
+		"A Hauler without an equipped cart must not enter the Daily roster.")
 	_expect(worksite.daily.unavailable(BELUM_ID).begins_with("Requires a cart"),
 		"The missing cart requirement must be exposed by the Daily roster.")
-	_expect(not worksite.seed_playtest_equipment and worksite.city_tools.units.is_empty(),
-		"Content equipment must begin empty instead of granting test tools.")
-	# Explicit acquisition fixture; production content does not grant this cart.
+	_expect(not worksite.seed_playtest_equipment,
+		"Content must not grant playtest-seeded equipment.")
+	var expected_initial_units: Dictionary = {
+		INITIAL_CART_UNIT_ID: {"tool_id": "cart", "name": "Cart", "worker_id": ""}
+	}
+	_expect(worksite.city_tools.units == expected_initial_units
+		and worksite.city_tools.items.is_empty() and worksite.city_tools.food_portions.is_empty(),
+		"Content starts with only one unallocated city-owned Cart and no other City stock.")
+	# Deposit a separate player Inventory cart to exercise the physical acquisition path.
 	Inventory.add_item("cart", 1)
 	var deposit: Dictionary = worksite.city_tools.deposit_from_inventory("cart", 1)
 	_expect(bool(deposit.ok) and deposit.unit_ids.size() == 1,

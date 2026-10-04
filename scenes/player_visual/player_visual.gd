@@ -68,6 +68,9 @@ func play_pickup(direction: String) -> void:
 	var duration: float = _get_animation_duration(body_sprite, animation_name)
 	await get_tree().create_timer(duration).timeout
 
+	# Collapse may replace pickup before this timer finishes.
+	if current_action != "pickup":
+		return
 	is_action_locked = false
 	play_visual("idle", direction)
 

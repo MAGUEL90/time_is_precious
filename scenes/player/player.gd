@@ -67,7 +67,17 @@ var current_interactable: Node = null
 var nearby_interactables: Array[Node] = []
 var current_npc_dialogue: NPCBase = null
 
-var can_move: bool = true
+var _movement_enabled: bool = true
+var _movement_locks: Dictionary = {}
+var can_move: bool = true:
+	get:
+		return (
+			_movement_enabled
+			and _movement_locks.is_empty()
+			and not SceneTransition.is_transitioning
+		)
+	set(value):
+		_movement_enabled = value
 var can_interact: bool = false
 var dialogue_finished: bool = false
 var total_collapse_count: int = 0
@@ -253,11 +263,21 @@ func _get_interactable_label(interactable_owner: Node) -> CanvasItem:
 		return label_node as CanvasItem
 	return null
 
+# Movement restrictions
+
+func set_movement_locked(reason: StringName, locked: bool) -> void:
+	# Each asynchronous action releases only its own lock. Keep can_move writes
+	# available for existing interaction owners without capturing transient locks.
+	if locked:
+		_movement_locks[reason] = true
+		velocity = Vector2.ZERO
+	else:
+		_movement_locks.erase(reason)
+
 # Dialogue flow
 
 func on_dialogue_activated() -> void:
-	can_move = false
-	velocity = Vector2.ZERO
+	set_movement_locked(&"dialogue", true)
 
 	if current_npc_dialogue:
 		current_npc_dialogue.on_dialogue  = true
@@ -265,7 +285,7 @@ func on_dialogue_activated() -> void:
 		current_npc_dialogue.walk_cycle_duration.stop()
 
 func on_dialogue_deactivated() -> void:
-	can_move = true
+	set_movement_locked(&"dialogue", false)
 
 	time_component_manager.toggle_pause()
 	if current_npc_dialogue:
@@ -830,12 +850,13 @@ func _get_visual_direction_name() -> String:
 	return "right"
 
 func _play_pickup_action() -> void:
-	can_move = false
-	velocity = Vector2.ZERO
+	if _movement_locks.has(&"pickup"):
+		return
+	set_movement_locked(&"pickup", true)
 
 	await player_visual.play_pickup(_get_visual_direction_name())
 
-	can_move = true
+	set_movement_locked(&"pickup", false)
 
 # Focus and experience
 
@@ -913,11 +934,8 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 		1.0
 	)
 
-	var previous_can_move: bool = can_move
-
 	is_sleeping = true
-	can_move = false
-	velocity = Vector2.ZERO
+	set_movement_locked(&"sleep", true)
 
 	time_component_manager.advance_minutes(duration_minutes)
 	last_sleep_day = TimeComponentManager.current_day
@@ -949,7 +967,7 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 	condition_changed.emit()
 
 	is_sleeping = false
-	can_move = previous_can_move
+	set_movement_locked(&"sleep", false)
 
 	sleep_completed.emit(duration_minutes, recovery_quality)
 	return true
@@ -1012,9 +1030,7 @@ func collapse() -> void:
 		return
 
 	is_collapsing = true
-	var previous_can_move: bool = can_move
-	can_move = false
-	velocity = Vector2.ZERO
+	set_movement_locked(&"collapse", true)
 	collapse_started.emit()
 
 	await player_visual.play_faint(
@@ -1028,8 +1044,8 @@ func collapse() -> void:
 		NIGHTMARE_ENTRY_MESSAGE
 	)
 
-	can_move = previous_can_move
 	is_collapsing = false
+	set_movement_locked(&"collapse", false)
 
 	if not succeeded:
 		last_collapse_day = TimeComponentManager.current_day

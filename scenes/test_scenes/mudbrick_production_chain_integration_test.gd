@@ -152,7 +152,6 @@ func _run_chain_test() -> void:
 		),
 		"Drying Yard level 1 should unlock the Mudbrick chain."
 	)
-	Inventory.add_item("shekel", 20)
 
 	var wet_output: Dictionary[String, int] = {"wet_mudbrick": 20}
 	var shape_stored: bool = WorkShopStorage.receive_completed_output(
@@ -181,6 +180,21 @@ func _run_chain_test() -> void:
 	)
 
 	var wet_lot_id: String = _find_held_lot_id("wet_mudbrick")
+	var rejected_payment: Dictionary = WorkShopStorage.pay_output_lot(
+		wet_lot_id,
+		Inventory
+	)
+	_expect(
+		not bool(rejected_payment.get("success", false)),
+		"An empty wallet must not pay the Shape fee."
+	)
+	_expect(
+		int(Inventory.items.get("shekel", 0)) == 0
+		and WorkShopStorage.get_held_item_quantity("wet_mudbrick") == 20
+		and WorkShopStorage.get_free_item_quantity("wet_mudbrick") == 0,
+		"Rejected payment must preserve the wallet and all Held Output."
+	)
+	Inventory.add_item("shekel", 20)
 	var wet_payment: Dictionary = WorkShopStorage.pay_output_lot(
 		wet_lot_id,
 		Inventory

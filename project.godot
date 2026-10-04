@@ -17,7 +17,6 @@ config/features=PackedStringArray("4.5", "GL Compatibility")
 [autoload]
 
 godot_mcp_runtime="*res://addons/godot-mcp/runtime_bridge.gd"
-DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 BaseDialogueManager="*res://scripts/autoload/base_dialogue_manager/base_dialogue_manager.gd"
 TimeComponentManager="*res://scripts/autoload/time_component_manager/time_component_manager.tscn"
 Inventory="*res://scripts/autoload/inventory/inventory.gd"
@@ -36,6 +35,7 @@ ImmigrationManager="*res://scripts/autoload/immigration_manager/immigration_mana
 SceneTransition="*res://scenes/scene_transition/scene_transition.tscn"
 PlayerRuntimeState="*res://scripts/autoload/player_runtime_state/player_runtime_state.gd"
 WorkStateRuntime="*res://scenes/work_state_boot_strap/work_state_boot_strap.tscn"
+DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
 
 [display]
 

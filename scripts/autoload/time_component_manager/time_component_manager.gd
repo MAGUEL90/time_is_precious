@@ -77,10 +77,8 @@ func _process(delta: float) -> void:
 # Time progression
 
 func emit_time_signal() -> void:
-	emit_signal("minute_changed", current_minute) # kirim menit saat ini (bukan 60)
-	emit_signal("hour_changed", current_hour) # kirim jam saat ini (bukan 24)
-	emit_signal("day_changed", current_day) # kirim hari saat ini
-	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather) # sinkron sekali saat awal
+	# State snapshots sync consumers; elapsed-time signals belong to advance_one_minute().
+	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather)
 
 func advance_one_minute() -> void:
 	current_minute += 1

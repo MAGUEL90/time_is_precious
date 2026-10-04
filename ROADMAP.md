@@ -235,6 +235,22 @@ and management; uncleared plots no longer show the world debug title.
 Earlier main-map gathering/hauling acceptance results describe the previous
 layout, not the current map. See `docs/task_reports/content-scene-cleanup-2026-10-03.md`.
 
+**Audit part 1 cleanup - local validation:** Obsolete old-map test entrypoints and
+the inactive work-state prototype are retired. Current-map Worker Hub/Hauler tests
+use `WorkerRuntime`; resource regressions retain their populated-map fixtures.
+The production-chain suite preserves the rejected empty-wallet payment check.
+See `scenes/test_scenes/README.md` for active entrypoints and result criteria, and
+`docs/task_reports/audit-part-1-cleanup-2026-10-03.md` for validation evidence.
+
+**Audit technical follow-up - 2026-10-04:** The approved parts 2–8 fixes and the
+remaining clock, fade/Nightmare timing and shutdown cleanup have passed 41 unique
+regression suites on Godot 4.5.2, including graphical workshop/depth checks and
+real dialogue cycles. The Game Director chose to retain the minimal two-plot map;
+normal income, full normal-game integration and real disk saving remain separate
+unfinished features. Desktop software rendering was checked at the existing
+viewport/window settings; local hardware/OS and Android playtests remain unverified.
+See `docs/task_reports/audit-followup-2026-10-04.md`. Human PR/merge review is pending.
+
 **Modal pause check - 2026-10-03:** Physical K opens Worker Hub and K/Esc/Close
 release its pause on the current map, with empty and hired rosters. A separate
 confirmed freeze-like case came from Work Progress (J): the map hides its
@@ -249,7 +265,9 @@ feature/workers/city-storage-supply is historical; do not reopen that completed
 branch merely because earlier checkpoint descriptions still say awaiting review.
 City-to-workshop Hauler supply remains deferred.
 
-Godot MCP installation is proposed separately in PR #106 and is not yet in main.
+Godot MCP is installed on the current main baseline; its editor plugin and runtime
+autoload are enabled in `project.godot`. The addon includes the documented local
+Godot 4.5 compatibility patch; see `addons/godot-mcp/GODOT_MCP_SETUP.md`.
 The bounded ContentScene cleanup removes the empty ContentDirector, inactive root
 camera and no-op root script. The Game Director accepted its playtest; automated
 ContentWorksitesIntegrationTest passed. Cleanup still requires PR/merge review.

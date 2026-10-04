@@ -1,6 +1,7 @@
 extends Node
 
 const CONTENT = preload("res://scenes/content_scene/content_scene.tscn")
+const COMPLETION_SPLASH: Script = preload("res://scenes/workshop_plot/construction_complete_splash.gd")
 var failures: int = 0
 var player: Player
 var content: Node
@@ -137,6 +138,8 @@ func _run() -> void:
 	await _key(KEY_QUOTELEFT)
 	_expect(not debug.panel.visible, "Backtick closes the debug panel.")
 	player.can_move = false
+	# z=11 completion splashes overlap sampled pixels and invalidate built-art comparisons.
+	await _wait_for_completion_splashes(plot)
 	await _native_occlusion(plot.get_node("Plot"), "native-built-rear-wall")
 	await _native_occlusion(plot.get_node("Table"), "native-built-table")
 	await _native_occlusion(board, "native-built-board")
@@ -223,6 +226,18 @@ func _native_occlusion(target: Sprite2D, caption: String) -> void:
 		await _capture(caption + ("-front" if front else "-behind"))
 	if duplicate_visible:
 		duplicate.show()
+
+func _wait_for_completion_splashes(plot: Node) -> void:
+	var started_msec: int = Time.get_ticks_msec()
+	while _has_completion_splash(plot) and Time.get_ticks_msec() - started_msec < 3000:
+		await RenderingServer.frame_post_draw
+	_expect(not _has_completion_splash(plot), "Construction completion splashes must leave the plot before built depth checks.")
+
+func _has_completion_splash(plot: Node) -> bool:
+	for child: Node in plot.get_children():
+		if child.get_script() == COMPLETION_SPLASH:
+			return true
+	return false
 
 func _render_image() -> Image:
 	await RenderingServer.frame_post_draw

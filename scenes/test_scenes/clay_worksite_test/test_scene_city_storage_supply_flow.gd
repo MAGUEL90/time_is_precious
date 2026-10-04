@@ -3,6 +3,7 @@ extends Node
 const CONTENT_SCENE: PackedScene = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn")
 const HOME_SCENE: PackedScene = preload("res://scenes/player_home_interior/player_home_interior.tscn")
 const TEST_WORKER_ID: String = "city_storage_supply_flow_worker"
+const INITIAL_CART_UNIT_ID: String = "initial_worksite_cart"
 const FORBIDDEN_PLAYER_IDS: Array[String] = [
 	"gold_nugget", "egg", "butchers_cut", "barley_grain_sack", "clay_lump", "wood_log",
 	"reed_bundle", "straw_bundle", "water_jar", "copper_ore", "copper_chunk",
@@ -55,7 +56,12 @@ func _run() -> void:
 		return
 
 	player.debug_disable_player_needs = true
-	_expect(storage.units.is_empty() and storage.items.is_empty(), "Content starts without auto-seeded City Storage stock.")
+	var expected_initial_units: Dictionary = {
+		INITIAL_CART_UNIT_ID: {"tool_id": "cart", "name": "Cart", "worker_id": ""}
+	}
+	_expect(storage.units == expected_initial_units and storage.items.is_empty()
+		and storage.food_portions.is_empty(),
+		"City Storage starts with only one unallocated city-owned Cart and no other stock.")
 	await _test_physical_city_storage()
 	await _test_worker_equip_and_unequip_after_reload()
 	await _test_access_lifecycle()

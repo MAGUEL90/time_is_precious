@@ -34,7 +34,11 @@ func _run() -> void:
 	TimeComponentManager.environment.color = Color.WHITE
 	content = preload("res://scenes/content_scene/content_scene.tscn").instantiate()
 	add_child(content)
-	hub = content.get_node("YSortWorld/Worksites/WorkerControlUI")
+	hub = content.get_node_or_null("YSortWorld/WorkerRuntime/WorkerControlUI") as WorkerControlUI
+	_expect(hub != null, "Current-map WorkerRuntime must provide Worker Hub.")
+	if hub == null:
+		get_tree().quit(1)
+		return
 	await _frames()
 	await _key(KEY_K)
 	_expect(hub.visible and get_tree().paused, "Physical K opens Worker Hub and pauses the world.")
