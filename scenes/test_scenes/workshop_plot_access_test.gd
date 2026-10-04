@@ -36,15 +36,12 @@ func _run() -> void:
 		for index in range(atlas.get_tiles_count()):
 			var coords: Vector2i = atlas.get_tile_id(index)
 			_expect(coords.x < 18 and coords.y < 16, "Atlas tiles must stay inside the supplied 288x256 texture.")
-	_expect(not content.has_node("YSortWorld/Worksites") and content.has_node("YSortWorld/WorkerRuntime"), "Map removes worksites while preserving workshop worker runtime.")
-	_expect(content.get_node("YSortWorld/WorkerRuntime").sites.is_empty(), "Clean map contains no active resource sites.")
-	_expect(content.get_node("YSortWorld/WorkerRuntime").storage_destinations.is_empty(), "Clean map contains no worksite storage destinations.")
+	_expect(content.get_node("YSortWorld/WorkerRuntime").sites.size() == 5, "Main map contains five resource sites.")
+	_expect(content.get_node("YSortWorld/WorkerRuntime").storage_destinations.size() == 5, "Each site has a matching stockpile.")
 	_expect(content.get_node("YSortWorld/WorkshopPlot/Label").text.is_empty(), "Uncleared plot has no debug title.")
-	_expect(player.debug_disable_player_needs, "Main-map playtest must disable player needs for time acceleration.")
-	player.focus = 0.0
-	player.fatigue = player.max_fatigue
-	player.on_minute_changed(0)
-	_expect(not player.is_collapsing and player.focus == 1.0 and player.fatigue == player.min_fatigue, "Debug needs must restore conditions without collapse on a time tick.")
+	_expect(not player.debug_disable_player_needs and not player.debug_disable_fatigue, "Normal map startup enables player needs.")
+	# This separate construction access fixture intentionally accelerates multiple days.
+	content.get_node("TimeDebugOverlay").set_player_guard(true)
 	var stock_before: Dictionary = WorkShopStorage.items.duplicate(true)
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
 	plot.on_player_interact(player)

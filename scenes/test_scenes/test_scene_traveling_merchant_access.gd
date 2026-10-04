@@ -60,6 +60,8 @@ func _run() -> void:
 	await _settle()
 	_expect(player.current_interactable == merchant, "Approaching merchant selects E interaction.")
 	await _capture("arrival")
+	# Greeting interactions have a dedicated fixture; this test covers trading.
+	merchant.state.mark_greeting_shown_this_visit()
 	Inventory.add_item("shekel", 20)
 	await _press("interact")
 	_expect(is_instance_valid(merchant.menu) and not player.can_move, "E opens trading and locks player movement.")
@@ -114,6 +116,7 @@ func _run() -> void:
 	_expect(Inventory.items == inv_before, "Stale UI request after departure cannot trade.")
 	_clock(4, 8)
 	await _settle()
+	merchant.state.mark_greeting_shown_this_visit()
 	_expect(ledger.get_budget() == 120, "New visit receives configured finite budget.")
 	await _press("interact")
 	_expect(is_instance_valid(merchant.menu), "Standing at the stop on arrival enables interaction.")

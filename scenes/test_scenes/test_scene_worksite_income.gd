@@ -29,7 +29,7 @@ func _run() -> void:
 		var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
 		print("INCOME_AUDIT ", JSON.stringify({"scenario": scenario, "sites": runtime.sites.keys(), "inventory": Inventory.items,
 			"needs_disabled": player.debug_disable_player_needs, "fatigue_disabled": player.debug_disable_fatigue}))
-		_expect(runtime.sites.is_empty(), "Current main map has no gathering markers.")
+		_expect(runtime.sites.size() == 5 and not player.debug_disable_player_needs and not player.debug_disable_fatigue, "Main map exposes five worksites with active needs.")
 	else:
 		# Arrival-day comparison. Clock placement is a scenario boundary, not earned playtime.
 		TimeComponentManager.current_day = 1

@@ -19,6 +19,8 @@ func _run() -> void:
 	merchant = preload("res://scenes/traveling_merchant/traveling_merchant.tscn").instantiate()
 	merchant.position = Vector2(310, 127)
 	add_child(merchant)
+	# Greeting is covered separately; keep this fixture focused on production.
+	merchant.state.mark_greeting_shown_this_visit()
 	await _frames(3)
 	_expect(WorkShopStorage.items.is_empty(), "No raw materials or output are seeded into storage.")
 	_snapshot("start")

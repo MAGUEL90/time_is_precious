@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://b5a5uhbkkvnsu"
+path="res://.godot/imported/traveling_merchant.dialogue-d339ccbcfec6843c36b02e8144895dff.tres"
+
+[deps]
+
+source_file="res://dialogue/game_dialogue_conversations/traveling_merchant.dialogue"
+dest_files=["res://.godot/imported/traveling_merchant.dialogue-d339ccbcfec6843c36b02e8144895dff.tres"]
+
+[params]
+
+defaults=true

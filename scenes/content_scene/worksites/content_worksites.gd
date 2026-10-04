@@ -7,6 +7,8 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var seed_playtest_equipment: bool = false
 @export var seed_playtest_hauler: bool = false
 @export var enable_time_shortcuts: bool = true
+@export var retain_resource_stock: bool = false
+const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
 const PLAYTEST_HAULER_ID: String = "content_hauler_belum"
 
@@ -31,6 +33,8 @@ func _ready() -> void:
 			push_error("Worksites: set player_path and inventory_ui_path to the map's Player and InventoryUI.")
 		return
 	super._ready()
+	if retain_resource_stock:
+		_restore_resource_stock()
 	# Notes belong to the isolated fixture, not the content HUD.
 	$FixtureNotes.hide()
 	$WorkerVisuals.y_sort_enabled = true
@@ -79,3 +83,43 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	# Site footprints are authored nodes; the prototype grid is not part of the map.
 	pass
+
+# Session-only stocks survive a trip home; this does not introduce a disk save.
+func _exit_tree() -> void:
+	if retain_resource_stock and is_instance_valid(WorkStateRuntime):
+		for session in sites.values():
+			session.cancel()
+		var snapshot: Dictionary = {"day": TimeComponentManager.current_day, "sites": {}, "storages": {}, "ground": []}
+		for id: StringName in sites:
+			snapshot.sites[id] = sites[id].stock
+		for id: StringName in storage_destinations:
+			var endpoint: Node = get_node_or_null(storage_destinations[id])
+			if endpoint != null:
+				snapshot.storages[id] = endpoint.get_storage().quantity
+		for drop: Node in $GroundOutput.get_children():
+			if not drop.is_queued_for_deletion() and not drop.is_collecting:
+				snapshot.ground.append({"item_id": drop.item_id, "quantity": drop.quantity, "position": drop.position,
+					"site": str(drop.get_meta("daily_site", ""))})
+		WorkStateRuntime.set_meta(RESOURCE_STOCK_META, snapshot)
+	super._exit_tree()
+
+func _restore_resource_stock() -> void:
+	var snapshot: Dictionary = WorkStateRuntime.get_meta(RESOURCE_STOCK_META, {})
+	if snapshot.is_empty():
+		return
+	if int(snapshot.day) == TimeComponentManager.current_day:
+		for id: StringName in sites:
+			if snapshot.sites.has(id):
+				sites[id].stock = int(snapshot.sites[id])
+	for id: StringName in storage_destinations:
+		if snapshot.storages.has(id):
+			var storage: Node = get_node(storage_destinations[id]).get_storage()
+			storage.quantity = int(snapshot.storages[id])
+			storage.changed.emit()
+	for entry: Dictionary in snapshot.ground:
+		var site_id := StringName(entry.site)
+		var callback := Callable()
+		if sites.has(site_id):
+			callback = _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))
+		if _drop_output_at(entry.quantity, entry.position, callback, entry.item_id) and not str(site_id).is_empty():
+			$GroundOutput.get_child(-1).set_meta("daily_site", str(site_id))

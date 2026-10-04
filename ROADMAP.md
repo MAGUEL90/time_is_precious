@@ -32,7 +32,9 @@ Prices, stock and purchase quotas are explicitly provisional playtest configurat
 The merchant currently requests only six wood and twenty dry bricks per visit;
 buying goods from the merchant never restores those quotas. Selling
 personally held sun-dried mudbricks provides Shekel; this does not complete the
-normal starting-capital/material-acquisition loop or disk saving. Human gameplay
+full zero-capital workshop construction/production loop or disk saving.
+The main-map first-income loop is now verified with active needs: six hours of
+wood gathering produces seven logs, and the first visit buys six for 12 Shekel. Human gameplay
 review and merge remain pending. See
 `docs/task_reports/traveling-merchant-mvp-2026-10-04.md` for scope and validation.
 
@@ -41,8 +43,13 @@ review and merge remain pending. See
 Manual player gathering now integrates remaining energy (derived from fatigue)
 over each work minute. Confirmation shows estimated output; NPC daily production
 and existing needs drain rates are unchanged. The initial linear curve is provisional.
-See `docs/task_reports/player-energy-output-2026-10-04.md`. Current main-map debug
-needs flags still suppress energy drain; worksite placement remains a separate gap.
+See `docs/task_reports/player-energy-output-2026-10-04.md`. The merchant branch
+now restores five main-map worksites, existing home/sleep access and Nightmare,
+with needs active in both outdoor and home scenes. Resource stocks survive a
+trip home within the running session. A short Trade/Leave greeting appears once
+per merchant visit. See `docs/task_reports/merchant-main-map-loop-2026-10-04.md`.
+Food availability remains the next balancing dependency: hunger reaches 100%
+before the first sale in the measured starting route.
 
 ## Development Principle
 
