@@ -9,26 +9,31 @@ const GAMEPLAY_THEME: Theme = preload(
 const DEFAULT_ITEM_ICON: Texture2D = preload(
 	"res://assets/ui/default_icon.png"
 )
+const SELECTION_FRAME_TEXTURE: Texture2D = preload(
+	"res://assets/ui/ui_icon/icon_24.06.2026.png"
+)
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
 const SHEKEL_ITEM_ID: String = "shekel"
+const SELECTION_FRAME_REGION: Rect2 = Rect2(133, 101, 22, 22)
 const LIGHT_TEXT_COLOR: Color = Color(1.0, 0.90, 0.67, 1.0)
 const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 
-@onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerShekelLabel
-@onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/MerchantBudgetLabel
+@onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet/PlayerShekelLabel
+@onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet/MerchantBudgetLabel
 @onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
 @onready var catalog_list: VBoxContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll/CatalogList
-@onready var catalog_heading_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/CatalogHeading
 @onready var buy_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/BuyTab
 @onready var sell_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/SellTab
 @onready var selected_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow/SelectedIcon
 @onready var selected_name_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow/SelectedNameLabel
-@onready var unit_price_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceLabel
+@onready var unit_price_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceLabel
+@onready var unit_price_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceIcon
 @onready var quantity_spin_box: SpinBox = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/QuantitySpinBox
-@onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalLabel
+@onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalLabel
+@onready var total_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalIcon
 @onready var quote_message_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuoteMessageLabel
 @onready var confirm_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/ConfirmButton
-@onready var close_button: Button = $Root/Center/TextureWindow/CloseButton
+@onready var close_button: BaseButton = $Root/Center/TextureWindow/Margin/MainVBox/HeaderRow/CloseButton
 
 var merchant_state: Node
 var selected_item_id: String = ""
@@ -49,7 +54,6 @@ func _ready() -> void:
 	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
 	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
 	quantity_line_edit.add_theme_font_size_override("font_size", 8)
-	catalog_heading_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	quote_message_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_hover_color", LIGHT_TEXT_COLOR)
@@ -110,8 +114,18 @@ func close_menu() -> void:
 	queue_free()
 
 func show_result(message: String) -> void:
-	_result_message = message
+	if message.begins_with("Bought ") or message.begins_with("Sold "):
+		_result_message = message.get_slice(" for ", 0).trim_suffix(".") + "."
+	else:
+		_result_message = _present_result_message(message)
 	_refresh_quote()
+
+func _present_result_message(message: String) -> String:
+	if message == "Not enough Shekel.":
+		return "Insufficient funds."
+	if message == "The merchant does not have enough Shekel.":
+		return "Trader has insufficient funds."
+	return message
 
 func _connect_inventory() -> void:
 	if Inventory == null or not Inventory.has_signal("items_changed"):
@@ -146,7 +160,7 @@ func _refresh_view() -> void:
 	if not visible:
 		return
 
-	player_shekel_label.text = "You: %d Shekel" % int(Inventory.items.get(SHEKEL_ITEM_ID, 0))
+	player_shekel_label.text = str(int(Inventory.items.get(SHEKEL_ITEM_ID, 0)))
 	var budget: int = 0
 	var status_text: String = ""
 	var next_catalog_rows: Array[Dictionary] = []
@@ -163,7 +177,7 @@ func _refresh_view() -> void:
 					if row_value is Dictionary:
 						next_catalog_rows.append(row_value.duplicate())
 
-	merchant_budget_label.text = "Trader: %d Shekel" % budget
+	merchant_budget_label.text = str(budget)
 	status_label.text = status_text if not status_text.is_empty() else "Merchant is in town."
 	var catalog_changed: bool = _catalog_rows != next_catalog_rows
 	_catalog_rows = next_catalog_rows
@@ -209,7 +223,7 @@ func _render_catalog() -> void:
 				item_icon = item_data.icon
 
 		var row_button := Button.new()
-		row_button.custom_minimum_size = Vector2(180, 17)
+		row_button.custom_minimum_size = Vector2(188, 20)
 		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row_button.theme = GAMEPLAY_THEME
 		row_button.theme_type_variation = &"HudShortcutButton"
@@ -217,26 +231,38 @@ func _render_catalog() -> void:
 		row_button.button_pressed = item_id == selected_item_id
 		row_button.set_meta("merchant_item_id", item_id)
 		row_button.pressed.connect(_on_catalog_item_pressed.bind(item_id))
+		row_button.mouse_entered.connect(_on_catalog_row_hovered.bind(row_button))
+		row_button.mouse_exited.connect(_on_catalog_row_unhovered.bind(row_button))
+		var empty_style := StyleBoxEmpty.new()
+		for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+			row_button.add_theme_stylebox_override(style_name, empty_style)
 		catalog_list.add_child(row_button)
 
 		var row_box := HBoxContainer.new()
 		row_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		row_box.offset_left = 3.0
-		row_box.offset_top = 1.0
+		row_box.offset_top = 0.0
 		row_box.offset_right = -3.0
-		row_box.offset_bottom = -1.0
-		row_box.add_theme_constant_override("separation", 2)
+		row_box.offset_bottom = 0.0
+		row_box.add_theme_constant_override("separation", 3)
 		row_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row_button.add_child(row_box)
 
+		var icon_center := CenterContainer.new()
+		icon_center.custom_minimum_size = Vector2(20, 20)
+		icon_center.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row_box.add_child(icon_center)
+
 		var icon_rect := TextureRect.new()
-		icon_rect.custom_minimum_size = Vector2(11, 11)
+		icon_rect.custom_minimum_size = Vector2(16, 16)
 		icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		icon_rect.texture = item_icon
-		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon_rect.expand_mode = TextureRect.EXPAND_KEEP_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row_box.add_child(icon_rect)
+		icon_center.add_child(icon_rect)
 
 		var name_label := _make_label(item_name, 6)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -248,23 +274,26 @@ func _render_catalog() -> void:
 			"x%d" % int(row.get(available_key, 0)),
 			6
 		)
-		stock_label.custom_minimum_size = Vector2(18, 0)
+		stock_label.custom_minimum_size = Vector2(34, 0)
 		stock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row_box.add_child(stock_label)
 
-		var prices_label := _make_label(
-			"B%s/S%s" % [
-				_format_price(int(row.get("buy_price", 0))),
-				_format_price(int(row.get("sell_price", 0)))
-			],
-			6
-		)
-		prices_label.custom_minimum_size = Vector2(43, 0)
-		prices_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		row_box.add_child(prices_label)
-
-func _format_price(price: int) -> String:
-	return str(price) if price > 0 else "-"
+		var selection_frame := NinePatchRect.new()
+		var frame_texture := AtlasTexture.new()
+		frame_texture.atlas = SELECTION_FRAME_TEXTURE
+		frame_texture.region = SELECTION_FRAME_REGION
+		selection_frame.texture = frame_texture
+		selection_frame.name = "SelectionFrame"
+		selection_frame.patch_margin_left = 5
+		selection_frame.patch_margin_top = 5
+		selection_frame.patch_margin_right = 5
+		selection_frame.patch_margin_bottom = 5
+		selection_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		selection_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		selection_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		selection_frame.set_meta("merchant_item_id", item_id)
+		selection_frame.visible = item_id == selected_item_id
+		row_button.add_child(selection_frame)
 
 func _make_label(label_text: String, font_size: int) -> Label:
 	var label := Label.new()
@@ -279,15 +308,29 @@ func _make_label(label_text: String, font_size: int) -> Label:
 func _on_catalog_item_pressed(item_id: String) -> void:
 	selected_item_id = item_id
 	_result_message = ""
-	for child in catalog_list.get_children():
-		if child is Button:
-			var row_button: Button = child as Button
-			row_button.button_pressed = false
-	for child in catalog_list.get_children():
-		if child is Button and str(child.get_meta("merchant_item_id", "")) == item_id:
-			(child as Button).button_pressed = true
+	_update_catalog_selection_frames()
 	_refresh_selected_item()
 	_refresh_quote()
+
+func _on_catalog_row_hovered(button: Button) -> void:
+	_set_catalog_row_frame(button, true)
+
+func _on_catalog_row_unhovered(button: Button) -> void:
+	_set_catalog_row_frame(button, false)
+
+func _set_catalog_row_frame(button: Button, hovered: bool) -> void:
+	var frame := button.get_node_or_null("SelectionFrame") as NinePatchRect
+	if frame == null:
+		return
+	var is_selected: bool = str(button.get_meta("merchant_item_id", "")) == selected_item_id
+	button.button_pressed = is_selected
+	frame.visible = hovered or is_selected
+
+func _update_catalog_selection_frames() -> void:
+	for child in catalog_list.get_children():
+		if child is Button:
+			var button := child as Button
+			_set_catalog_row_frame(button, button.is_hovered())
 
 func _refresh_selected_item() -> void:
 	var row: Dictionary = _get_selected_row()
@@ -295,6 +338,7 @@ func _refresh_selected_item() -> void:
 		selected_name_label.text = "Select an item"
 		selected_icon.texture = DEFAULT_ITEM_ICON
 		unit_price_label.text = ""
+		unit_price_icon.hide()
 		quantity_spin_box.editable = false
 		return
 
@@ -309,12 +353,10 @@ func _refresh_selected_item() -> void:
 		if item_data != null and item_data.icon != null
 		else DEFAULT_ITEM_ICON
 	)
+	selected_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var unit_price: int = int(row.get("buy_price" if buying else "sell_price", 0))
-	unit_price_label.text = (
-		"Price: %d Shekel each" % unit_price
-		if unit_price > 0
-		else "Not available"
-	)
+	unit_price_label.text = str(unit_price) if unit_price > 0 else "—"
+	unit_price_icon.visible = unit_price > 0
 	quantity_spin_box.editable = true
 	_update_quantity_limit(row)
 
@@ -356,11 +398,6 @@ func _set_buying(next_buying: bool) -> void:
 func _update_mode_tabs() -> void:
 	buy_tab.button_pressed = buying
 	sell_tab.button_pressed = not buying
-	catalog_heading_label.text = (
-		"Trader Qty  B=Buy / S=Sell"
-		if buying
-		else "Your Qty  B=Buy / S=Sell"
-	)
 
 func _on_quantity_changed(_value: float) -> void:
 	if _updating_quantity:
@@ -385,11 +422,13 @@ func _refresh_quote() -> void:
 		return
 	var quote: Dictionary = _current_quote()
 	var quote_ok: bool = bool(quote.get("ok", false))
-	var reason: String = str(quote.get("message", ""))
+	var reason: String = _present_result_message(str(quote.get("message", "")))
 	if quote_ok:
-		total_label.text = "Total: %d Shekel" % int(quote.get("total", 0))
+		total_label.text = str(int(quote.get("total", 0)))
+		total_icon.show()
 	else:
-		total_label.text = "Total: —"
+		total_label.text = "—"
+		total_icon.hide()
 	quote_message_label.text = (
 		_result_message
 		if not _result_message.is_empty()
