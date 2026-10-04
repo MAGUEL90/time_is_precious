@@ -9,12 +9,8 @@ const GAMEPLAY_THEME: Theme = preload(
 const DEFAULT_ITEM_ICON: Texture2D = preload(
 	"res://assets/ui/default_icon.png"
 )
-const SELECTION_FRAME_TEXTURE: Texture2D = preload(
-	"res://assets/ui/ui_icon/icon_24.06.2026.png"
-)
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
 const SHEKEL_ITEM_ID: String = "shekel"
-const SELECTION_FRAME_REGION: Rect2 = Rect2(133, 101, 22, 22)
 const LIGHT_TEXT_COLOR: Color = Color(1.0, 0.90, 0.67, 1.0)
 const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 
@@ -54,6 +50,11 @@ func _ready() -> void:
 	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
 	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
 	quantity_line_edit.add_theme_font_size_override("font_size", 8)
+	quantity_line_edit.add_theme_stylebox_override("normal", GAMEPLAY_THEME.get_stylebox("normal", "HudShortcutButton"))
+	quantity_line_edit.add_theme_stylebox_override("read_only", GAMEPLAY_THEME.get_stylebox("disabled", "HudShortcutButton"))
+	quantity_line_edit.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	quantity_line_edit.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
+	quantity_line_edit.add_theme_color_override("caret_color", LIGHT_TEXT_COLOR)
 	quote_message_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_hover_color", LIGHT_TEXT_COLOR)
@@ -227,15 +228,12 @@ func _render_catalog() -> void:
 		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row_button.theme = GAMEPLAY_THEME
 		row_button.theme_type_variation = &"HudShortcutButton"
-		row_button.toggle_mode = true
-		row_button.button_pressed = item_id == selected_item_id
 		row_button.set_meta("merchant_item_id", item_id)
 		row_button.pressed.connect(_on_catalog_item_pressed.bind(item_id))
-		row_button.mouse_entered.connect(_on_catalog_row_hovered.bind(row_button))
-		row_button.mouse_exited.connect(_on_catalog_row_unhovered.bind(row_button))
 		var empty_style := StyleBoxEmpty.new()
-		for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		for style_name: String in ["normal", "disabled"]:
 			row_button.add_theme_stylebox_override(style_name, empty_style)
+		row_button.focus_mode = Control.FOCUS_NONE
 		catalog_list.add_child(row_button)
 
 		var row_box := HBoxContainer.new()
@@ -278,22 +276,6 @@ func _render_catalog() -> void:
 		stock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row_box.add_child(stock_label)
 
-		var selection_frame := NinePatchRect.new()
-		var frame_texture := AtlasTexture.new()
-		frame_texture.atlas = SELECTION_FRAME_TEXTURE
-		frame_texture.region = SELECTION_FRAME_REGION
-		selection_frame.texture = frame_texture
-		selection_frame.name = "SelectionFrame"
-		selection_frame.patch_margin_left = 5
-		selection_frame.patch_margin_top = 5
-		selection_frame.patch_margin_right = 5
-		selection_frame.patch_margin_bottom = 5
-		selection_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		selection_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		selection_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		selection_frame.set_meta("merchant_item_id", item_id)
-		selection_frame.visible = item_id == selected_item_id
-		row_button.add_child(selection_frame)
 
 func _make_label(label_text: String, font_size: int) -> Label:
 	var label := Label.new()
@@ -308,29 +290,9 @@ func _make_label(label_text: String, font_size: int) -> Label:
 func _on_catalog_item_pressed(item_id: String) -> void:
 	selected_item_id = item_id
 	_result_message = ""
-	_update_catalog_selection_frames()
 	_refresh_selected_item()
 	_refresh_quote()
 
-func _on_catalog_row_hovered(button: Button) -> void:
-	_set_catalog_row_frame(button, true)
-
-func _on_catalog_row_unhovered(button: Button) -> void:
-	_set_catalog_row_frame(button, false)
-
-func _set_catalog_row_frame(button: Button, hovered: bool) -> void:
-	var frame := button.get_node_or_null("SelectionFrame") as NinePatchRect
-	if frame == null:
-		return
-	var is_selected: bool = str(button.get_meta("merchant_item_id", "")) == selected_item_id
-	button.button_pressed = is_selected
-	frame.visible = hovered or is_selected
-
-func _update_catalog_selection_frames() -> void:
-	for child in catalog_list.get_children():
-		if child is Button:
-			var button := child as Button
-			_set_catalog_row_frame(button, button.is_hovered())
 
 func _refresh_selected_item() -> void:
 	var row: Dictionary = _get_selected_row()

@@ -41,3 +41,18 @@ Status: PASSED — NEEDS HUMAN REVIEW.
 
 Backend economy and balance remain as previously tested in the MVP report. This
 revision does not claim new Android, hardware or long-session validation.
+
+## Follow-up: project quantity panel and hover-only rows
+
+The Game Director subsequently requested removing the selector frame and using
+mouse hover only. Catalog buttons now use the shared HudShortcutButton hover and
+pressed styles with an empty idle background and no persistent selection frame.
+The active item remains available in the detail panel. Like existing work-order
+cards, row keyboard focus is disabled so clicking does not leave a focus outline.
+
+The quantity LineEdit now reuses the project's textured HudShortcutButton panel
+for normal/read-only states and removes the engine's default white focus outline.
+The existing quantity editing and SpinBox behavior are preserved. The final
+TravelingMerchantAccessTest passes graphically on Godot 4.5.2; the resulting panel
+was inspected, with only the known virtual-driver V-Sync warning. No economic
+logic or amounts change.
