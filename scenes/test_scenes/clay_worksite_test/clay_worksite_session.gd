@@ -22,6 +22,7 @@ var _result: Dictionary = {}
 var _drop_output: Callable
 var _cancelled: bool = false
 var _settling: bool = false
+var _productive_minutes: float = 0.0
 
 func toggle_participant(id: String) -> bool:
 	if working or id != "player":
@@ -53,8 +54,9 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 	if clay != null and clay.weight > 0.0:
 		capacity = maxi(int(floor(Inventory.get_remaining_capacity() / clay.weight)), 0)
 	var count: int = participants.size()
-	var units: int = mini(maxi(floori(requested_minutes * count / minutes_per_unit), 0), stock)
-	var minutes: int = int(ceil(float(units * minutes_per_unit) / maxi(count, 1)))
+	var forecast: Dictionary = _forecast(requested_minutes, player)
+	var units: int = int(forecast.units) if count > 0 else 0
+	var minutes: int = int(forecast.minutes) if count > 0 else 0
 	var includes_player: bool = participants.has("player")
 	var reason: String = ""
 	if participants.is_empty():
@@ -69,8 +71,6 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 		reason = "Choose 3, 6 or 9 hours."
 	elif stock <= 0:
 		reason = "Site depleted."
-	elif units <= 0:
-		reason = "Choose at least 10 minutes."
 	elif not is_instance_valid(player) or player.is_queued_for_deletion():
 		reason = "Player unavailable."
 	elif includes_player and (player.is_sleeping or player.is_collapsing or player.has_critical_condition()):
@@ -82,7 +82,7 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 			if not participant_unavailable_reason(id).is_empty():
 				reason = "Selected worker is unavailable."
 				break
-	return {"units": units, "minutes": minutes, "stock": stock, "reason": reason,
+	return {"units": units, "minutes": minutes, "duration": requested_minutes, "energy_start": forecast.energy_start, "energy_end": forecast.energy_end, "stock": stock, "reason": reason,
 		"to_bag": mini(units, capacity) if includes_player else 0,
 		"to_ground": maxi(units - capacity, 0) if includes_player else units,
 		"worker_capacity": WORKER_CAPACITY, "worker_count": participants.size(),
@@ -99,7 +99,7 @@ func execute(requested_minutes: int, player: Player, owner_node: Node, drop_outp
 	result = _result
 	# Time skip uses the existing minute signals; never apply needs a second time.
 	# Recheck each minute because those signals may initiate collapse/scene changes.
-	for minute_index: int in range(int(_plan.minutes)):
+	for minute_index: int in range(int(_plan.duration)):
 		if _cancelled:
 			result.interrupted = true
 			break
@@ -134,7 +134,7 @@ func execute(requested_minutes: int, player: Player, owner_node: Node, drop_outp
 		if _interrupted(player, owner_node):
 			result.interrupted = true
 			break
-		_earn_completed_work()
+		_earn_completed_work(player)
 	if not _cancelled:
 		_finish()
 	return result
@@ -144,6 +144,7 @@ func _begin(minutes: int, player: Player, drop_output: Callable) -> bool:
 	if not plan.reason.is_empty():
 		return false
 	_plan = plan
+	_productive_minutes = 0.0
 	_result = {"units": 0, "minutes": 0, "interrupted": false, "to_bag": 0, "to_ground": 0}
 	_drop_output = drop_output
 	_cancelled = false
@@ -151,9 +152,37 @@ func _begin(minutes: int, player: Player, drop_output: Callable) -> bool:
 	working = true
 	return true
 
-func _earn_completed_work() -> void:
-	var earned: int = mini(floori(int(_result.minutes) * int(_plan.worker_count) / minutes_per_unit), int(_plan.units))
-	var additional: int = mini(earned - int(_result.units), stock)
+func _energy(fatigue: float, player: Player) -> float:
+	var span: float = player.max_fatigue - player.min_fatigue
+	return clampf((player.max_fatigue - fatigue) / span, 0.0, 1.0) if span > 0.0 else 0.0
+
+func _forecast(requested_minutes: int, player: Player) -> Dictionary:
+	var forecast: Dictionary = {"units": 0, "minutes": 0, "energy_start": 0.0, "energy_end": 0.0}
+	if not is_instance_valid(player) or stock <= 0 or minutes_per_unit <= 0.0:
+		return forecast
+	var fatigue: float = player.fatigue
+	forecast.energy_start = _energy(fatigue, player)
+	var productive: float = 0.0
+	# Read-only estimate of normal clock drain. Actual execution samples live energy.
+	for index: int in range(maxi(requested_minutes, 0)):
+		forecast.minutes += 1
+		if player.debug_disable_player_needs:
+			fatigue = player.min_fatigue
+		elif not player.debug_disable_fatigue:
+			fatigue = clampf(fatigue + player.fatigue_increase_per_min, player.min_fatigue, player.max_fatigue)
+		if not player.debug_disable_player_needs and fatigue >= player.fatigue_critical_threshold:
+			break
+		productive += _energy(fatigue, player)
+		forecast.units = mini(floori(productive / minutes_per_unit + 0.000000001), stock)
+		if forecast.units >= stock:
+			break
+	forecast.energy_end = _energy(fatigue, player)
+	return forecast
+
+func _earn_completed_work(player: Player) -> void:
+	_productive_minutes += _energy(player.fatigue, player)
+	var earned: int = floori(_productive_minutes / minutes_per_unit + 0.000000001)
+	var additional: int = mini(maxi(earned - int(_result.units), 0), stock)
 	stock -= additional
 	_result.units += additional
 

@@ -36,6 +36,14 @@ normal starting-capital/material-acquisition loop or disk saving. Human gameplay
 review and merge remain pending. See
 `docs/task_reports/traveling-merchant-mvp-2026-10-04.md` for scope and validation.
 
+## Player worksite energy — branch checkpoint (2026-10-04)
+
+Manual player gathering now integrates remaining energy (derived from fatigue)
+over each work minute. Confirmation shows estimated output; NPC daily production
+and existing needs drain rates are unchanged. The initial linear curve is provisional.
+See `docs/task_reports/player-energy-output-2026-10-04.md`. Current main-map debug
+needs flags still suppress energy drain; worksite placement remains a separate gap.
+
 ## Development Principle
 
 Build a small playable prototype first.
