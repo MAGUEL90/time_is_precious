@@ -103,6 +103,7 @@ func _fit_greeting_to_viewport() -> void:
 	panel.position = Vector2.ZERO
 	panel.size = Vector2(176, 60)
 	panel.scale = Vector2.ONE
+	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
 	var responses: Control = greeting_balloon.responses_menu
 	responses.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	responses.offset_left = -45.0

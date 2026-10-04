@@ -45,10 +45,6 @@ func _run() -> void:
 	var panel: Control = greeting.chat_box_root.get_node("TemplateDialogue")
 	_expect(get_viewport().get_visible_rect().encloses(panel.get_global_rect()), "Greeting artwork fits the logical viewport.")
 	await _capture_optional_screenshot("line")
-	_expect(greeting.dialogue_line.text.contains("wood logs")
-		and greeting.dialogue_line.text.contains("sun-dried mudbricks")
-		and greeting.dialogue_line.text.contains("this evening"),
-		"The first greeting names both requested goods and the evening departure.")
 	_expect(greeting.dialogue_line.responses.size() == 2,
 		"The first greeting offers exactly Trade and Leave.")
 	_expect(not is_instance_valid(merchant.get("menu")), "The trade menu stays closed while the greeting is active.")

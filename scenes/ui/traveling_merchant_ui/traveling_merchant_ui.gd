@@ -348,8 +348,6 @@ func _refresh_selected_item() -> void:
 	quantity_label.text = "Quantity" if buying else "Have %d" % int(row.get("player_qty", 0))
 	quantity_label.clip_text = true
 	quantity_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	quantity_label.tooltip_text = quantity_label.text
-	quantity_spin_box.tooltip_text = "Quantity to buy" if buying else "Quantity to sell"
 	quantity_spin_box.editable = true
 	_update_quantity_limit(row)
 
@@ -471,3 +469,6 @@ func _set_quantity_arrows() -> void:
 	arrows.blit_rect(down, Rect2i(Vector2i.ZERO, down.get_size()), Vector2i(0, up.get_height() + gap))
 	quantity_spin_box.add_theme_icon_override("updown", ImageTexture.create_from_image(arrows))
 	quantity_spin_box.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	for direction: String in ["up", "down"]:
+		for state: String in ["", "_hovered", "_pressed", "_disabled"]:
+			quantity_spin_box.add_theme_stylebox_override(direction + "_background" + state, StyleBoxEmpty.new())

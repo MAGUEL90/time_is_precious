@@ -1,6 +1,6 @@
 ~ traveling_merchant_greeting
 do merchant_dialogue_started()
-Merchant: Hello! I'm buying wood logs and sun-dried mudbricks. I'll leave town this evening.
+Merchant: Ah, a friendly face! Come, take a look. No need to hurry.
 - Trade
 	do merchant_select_trade()
 	do merchant_dialogue_finished()
