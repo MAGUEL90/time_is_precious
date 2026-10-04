@@ -19,7 +19,7 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
-## Traveling merchant MVP — branch checkpoint (2026-10-04)
+## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 
 The Game Director selected the common traveling merchant as the next economy step,
 with customer quests and Rare visitors deferred. The feature branch adds finite
@@ -34,10 +34,15 @@ bricks (10–20), with fixed prices and a stable request ledger during the visit
 buying goods from the merchant never restores those quotas. Selling
 personally held sun-dried mudbricks provides Shekel; this does not complete the
 full zero-capital workshop construction/production loop or disk saving.
-The main-map first-income loop is now verified with active needs: six hours of
-wood gathering produces seven logs, and the first visit buys six for 12 Shekel. Human gameplay
-review and merge remain pending. See
-`docs/task_reports/traveling-merchant-mvp-2026-10-04.md` for scope and validation.
+The fixed-profile accounting regression verifies seven logs from six hours of
+wood gathering and a six-log sale for 12 Shekel. Randomized gameplay does not
+guarantee that request on the first visit; the randomized ledger passed a separate
+20-visit test. Human review and merge remain pending in PR #110.
+
+The Game Director closed the merchant MVP scope: no additional request-explanation
+dialogue or quest flow. Keep the two-item request pool for this MVP. Broader goods,
+Rare tiers and city-stat-driven visitors remain future work. No further merchant
+features are planned before review. See `docs/task_reports/merchant-mvp-closure-2026-10-04.md`.
 
 ## Player worksite energy — branch checkpoint (2026-10-04)
 
