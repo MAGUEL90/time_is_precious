@@ -10,10 +10,13 @@ const DEFAULT_ITEM_ICON: Texture2D = preload(
 	"res://assets/ui/default_icon.png"
 )
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
+const BUY_FLOW_ARROW: Texture2D = preload("res://assets/ui/ui_icon/right_arrow_icon.png")
+const SELL_FLOW_ARROW: Texture2D = preload("res://assets/ui/ui_icon/left_arrow_icon.png")
 const SHEKEL_ITEM_ID: String = "shekel"
 const LIGHT_TEXT_COLOR: Color = Color(1.0, 0.90, 0.67, 1.0)
 const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 
+@onready var money_flow_arrow: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/WalletSpacer/MoneyFlowArrow
 @onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet/PlayerShekelLabel
 @onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet/MerchantBudgetLabel
 @onready var catalog_list: VBoxContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll/CatalogList
@@ -192,6 +195,7 @@ func _refresh_view() -> void:
 						next_catalog_rows.append(row_value.duplicate())
 
 	merchant_budget_label.text = str(budget)
+	money_flow_arrow.texture = BUY_FLOW_ARROW if buying else SELL_FLOW_ARROW
 	var catalog_changed: bool = _catalog_rows != next_catalog_rows
 	_catalog_rows = next_catalog_rows
 	if not _contains_selected_item():
