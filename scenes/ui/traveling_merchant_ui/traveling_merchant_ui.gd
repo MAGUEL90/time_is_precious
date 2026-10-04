@@ -1,0 +1,408 @@
+class_name TravelingMerchantUI extends CanvasLayer
+
+signal closed
+signal trade_requested(item_id: String, quantity: int, buying: bool)
+
+const GAMEPLAY_THEME: Theme = preload(
+	"res://resources/ui_gameplay_theme/ui_gameplay_theme.tres"
+)
+const DEFAULT_ITEM_ICON: Texture2D = preload(
+	"res://assets/ui/default_icon.png"
+)
+const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
+const SHEKEL_ITEM_ID: String = "shekel"
+const LIGHT_TEXT_COLOR: Color = Color(1.0, 0.90, 0.67, 1.0)
+const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
+
+@onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerShekelLabel
+@onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/MerchantBudgetLabel
+@onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
+@onready var catalog_list: VBoxContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll/CatalogList
+@onready var catalog_heading_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/CatalogHeading
+@onready var buy_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/BuyTab
+@onready var sell_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/SellTab
+@onready var selected_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow/SelectedIcon
+@onready var selected_name_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow/SelectedNameLabel
+@onready var unit_price_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceLabel
+@onready var quantity_spin_box: SpinBox = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/QuantitySpinBox
+@onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalLabel
+@onready var quote_message_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuoteMessageLabel
+@onready var confirm_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/ConfirmButton
+@onready var close_button: Button = $Root/Center/TextureWindow/CloseButton
+
+var merchant_state: Node
+var selected_item_id: String = ""
+var buying: bool = true
+var _catalog_rows: Array[Dictionary] = []
+var _result_message: String = ""
+var _updating_quantity: bool = false
+
+func _ready() -> void:
+	visible = false
+	buy_tab.toggle_mode = true
+	sell_tab.toggle_mode = true
+	buy_tab.pressed.connect(_on_buy_tab_pressed)
+	sell_tab.pressed.connect(_on_sell_tab_pressed)
+	quantity_spin_box.value_changed.connect(_on_quantity_changed)
+	confirm_button.pressed.connect(_on_confirm_pressed)
+	close_button.pressed.connect(close_menu)
+	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
+	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
+	quantity_line_edit.add_theme_font_size_override("font_size", 8)
+	catalog_heading_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
+	quote_message_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
+	confirm_button.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
+	confirm_button.add_theme_color_override("font_hover_color", LIGHT_TEXT_COLOR)
+	confirm_button.add_theme_color_override("font_pressed_color", LIGHT_TEXT_COLOR)
+	confirm_button.add_theme_color_override("font_focus_color", LIGHT_TEXT_COLOR)
+	confirm_button.add_theme_color_override("font_disabled_color", DISABLED_TEXT_COLOR)
+	_update_mode_tabs()
+
+func _exit_tree() -> void:
+	_disconnect_inventory()
+	_unbind_state()
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		close_menu()
+		get_viewport().set_input_as_handled()
+		return
+	for action_name: String in [
+		"interact",
+		"open_inventory",
+		"open_work_progress",
+		"open_worker_hub",
+		"show_player_status"
+	]:
+		if event.is_action_pressed(action_name):
+			get_viewport().set_input_as_handled()
+			return
+
+func open_menu(state: Node) -> void:
+	if not is_instance_valid(state):
+		return
+
+	if merchant_state != state:
+		_unbind_state()
+		merchant_state = state
+
+	if merchant_state.has_signal("changed"):
+		var changed_callable: Callable = Callable(self, "_on_state_changed")
+		if not merchant_state.is_connected("changed", changed_callable):
+			merchant_state.connect("changed", changed_callable)
+
+	_connect_inventory()
+	visible = true
+	_result_message = ""
+	_refresh_view()
+
+func close_menu() -> void:
+	if not visible:
+		return
+
+	visible = false
+	_disconnect_inventory()
+	_unbind_state()
+	merchant_state = null
+	closed.emit()
+	queue_free()
+
+func show_result(message: String) -> void:
+	_result_message = message
+	_refresh_quote()
+
+func _connect_inventory() -> void:
+	if Inventory == null or not Inventory.has_signal("items_changed"):
+		return
+	var items_callable: Callable = Callable(self, "_on_inventory_changed")
+	if not Inventory.is_connected("items_changed", items_callable):
+		Inventory.items_changed.connect(items_callable)
+
+func _disconnect_inventory() -> void:
+	if Inventory == null or not Inventory.has_signal("items_changed"):
+		return
+	var items_callable: Callable = Callable(self, "_on_inventory_changed")
+	if Inventory.is_connected("items_changed", items_callable):
+		Inventory.items_changed.disconnect(items_callable)
+
+func _unbind_state() -> void:
+	if not is_instance_valid(merchant_state):
+		return
+	if not merchant_state.has_signal("changed"):
+		return
+	var changed_callable: Callable = Callable(self, "_on_state_changed")
+	if merchant_state.is_connected("changed", changed_callable):
+		merchant_state.disconnect("changed", changed_callable)
+
+func _on_state_changed() -> void:
+	_refresh_view()
+
+func _on_inventory_changed() -> void:
+	_refresh_view()
+
+func _refresh_view() -> void:
+	if not visible:
+		return
+
+	player_shekel_label.text = "You: %d Shekel" % int(Inventory.items.get(SHEKEL_ITEM_ID, 0))
+	var budget: int = 0
+	var status_text: String = ""
+	var next_catalog_rows: Array[Dictionary] = []
+
+	if is_instance_valid(merchant_state):
+		if merchant_state.has_method("get_budget"):
+			budget = int(merchant_state.call("get_budget"))
+		if merchant_state.has_method("get_status_text"):
+			status_text = str(merchant_state.call("get_status_text"))
+		if merchant_state.has_method("get_catalog"):
+			var catalog_value: Variant = merchant_state.call("get_catalog")
+			if catalog_value is Array:
+				for row_value in catalog_value:
+					if row_value is Dictionary:
+						next_catalog_rows.append(row_value.duplicate())
+
+	merchant_budget_label.text = "Trader: %d Shekel" % budget
+	status_label.text = status_text if not status_text.is_empty() else "Merchant is in town."
+	var catalog_changed: bool = _catalog_rows != next_catalog_rows
+	_catalog_rows = next_catalog_rows
+	if not _contains_selected_item():
+		selected_item_id = ""
+		if not _catalog_rows.is_empty():
+			selected_item_id = str(_catalog_rows[0].get("item_id", ""))
+
+	if catalog_changed:
+		_render_catalog()
+	_refresh_selected_item()
+	_refresh_quote()
+
+func _contains_selected_item() -> bool:
+	if selected_item_id.is_empty():
+		return false
+	for row in _catalog_rows:
+		if str(row.get("item_id", "")) == selected_item_id:
+			return true
+	return false
+
+func _render_catalog() -> void:
+	for child in catalog_list.get_children():
+		catalog_list.remove_child(child)
+		child.queue_free()
+
+	if _catalog_rows.is_empty():
+		var empty_label := _make_label("No goods offered", 6)
+		empty_label.custom_minimum_size = Vector2(0, 16)
+		catalog_list.add_child(empty_label)
+		return
+
+	for row in _catalog_rows:
+		var item_id: String = str(row.get("item_id", ""))
+		if item_id.is_empty():
+			continue
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		var item_name: String = item_id.replace("_", " ").capitalize()
+		var item_icon: Texture2D = DEFAULT_ITEM_ICON
+		if item_data != null:
+			item_name = item_data.display_name
+			if item_data.icon != null:
+				item_icon = item_data.icon
+
+		var row_button := Button.new()
+		row_button.custom_minimum_size = Vector2(180, 17)
+		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row_button.theme = GAMEPLAY_THEME
+		row_button.theme_type_variation = &"HudShortcutButton"
+		row_button.toggle_mode = true
+		row_button.button_pressed = item_id == selected_item_id
+		row_button.set_meta("merchant_item_id", item_id)
+		row_button.pressed.connect(_on_catalog_item_pressed.bind(item_id))
+		catalog_list.add_child(row_button)
+
+		var row_box := HBoxContainer.new()
+		row_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		row_box.offset_left = 3.0
+		row_box.offset_top = 1.0
+		row_box.offset_right = -3.0
+		row_box.offset_bottom = -1.0
+		row_box.add_theme_constant_override("separation", 2)
+		row_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row_button.add_child(row_box)
+
+		var icon_rect := TextureRect.new()
+		icon_rect.custom_minimum_size = Vector2(11, 11)
+		icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon_rect.texture = item_icon
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row_box.add_child(icon_rect)
+
+		var name_label := _make_label(item_name, 6)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		row_box.add_child(name_label)
+
+		var available_key: String = "stock" if buying else "player_qty"
+		var stock_label := _make_label(
+			"x%d" % int(row.get(available_key, 0)),
+			6
+		)
+		stock_label.custom_minimum_size = Vector2(18, 0)
+		stock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row_box.add_child(stock_label)
+
+		var prices_label := _make_label(
+			"B%s/S%s" % [
+				_format_price(int(row.get("buy_price", 0))),
+				_format_price(int(row.get("sell_price", 0)))
+			],
+			6
+		)
+		prices_label.custom_minimum_size = Vector2(43, 0)
+		prices_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row_box.add_child(prices_label)
+
+func _format_price(price: int) -> String:
+	return str(price) if price > 0 else "-"
+
+func _make_label(label_text: String, font_size: int) -> Label:
+	var label := Label.new()
+	label.text = label_text
+	label.theme = GAMEPLAY_THEME
+	label.theme_type_variation = &"HudLabelShortcut"
+	label.add_theme_font_size_override("font_size", font_size)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+func _on_catalog_item_pressed(item_id: String) -> void:
+	selected_item_id = item_id
+	_result_message = ""
+	for child in catalog_list.get_children():
+		if child is Button:
+			var row_button: Button = child as Button
+			row_button.button_pressed = false
+	for child in catalog_list.get_children():
+		if child is Button and str(child.get_meta("merchant_item_id", "")) == item_id:
+			(child as Button).button_pressed = true
+	_refresh_selected_item()
+	_refresh_quote()
+
+func _refresh_selected_item() -> void:
+	var row: Dictionary = _get_selected_row()
+	if row.is_empty():
+		selected_name_label.text = "Select an item"
+		selected_icon.texture = DEFAULT_ITEM_ICON
+		unit_price_label.text = ""
+		quantity_spin_box.editable = false
+		return
+
+	var item_data: ItemData = ItemDatabase.get_item_data(selected_item_id)
+	selected_name_label.text = (
+		item_data.display_name
+		if item_data != null
+		else selected_item_id.replace("_", " ").capitalize()
+	)
+	selected_icon.texture = (
+		item_data.icon
+		if item_data != null and item_data.icon != null
+		else DEFAULT_ITEM_ICON
+	)
+	var unit_price: int = int(row.get("buy_price" if buying else "sell_price", 0))
+	unit_price_label.text = (
+		"Price: %d Shekel each" % unit_price
+		if unit_price > 0
+		else "Not available"
+	)
+	quantity_spin_box.editable = true
+	_update_quantity_limit(row)
+
+func _update_quantity_limit(row: Dictionary) -> void:
+	var maximum: int = int(
+		row.get("stock" if buying else "player_qty", 0)
+	)
+	maximum = clampi(maximum, 1, 999)
+	_updating_quantity = true
+	quantity_spin_box.min_value = 1
+	quantity_spin_box.max_value = maximum
+	quantity_spin_box.step = 1
+	quantity_spin_box.value = clampi(int(quantity_spin_box.value), 1, maximum)
+	_updating_quantity = false
+
+func _get_selected_row() -> Dictionary:
+	for row in _catalog_rows:
+		if str(row.get("item_id", "")) == selected_item_id:
+			return row
+	return {}
+
+func _on_buy_tab_pressed() -> void:
+	_set_buying(true)
+
+func _on_sell_tab_pressed() -> void:
+	_set_buying(false)
+
+func _set_buying(next_buying: bool) -> void:
+	if buying == next_buying:
+		_update_mode_tabs()
+		return
+	buying = next_buying
+	_result_message = ""
+	_update_mode_tabs()
+	_render_catalog()
+	_refresh_selected_item()
+	_refresh_quote()
+
+func _update_mode_tabs() -> void:
+	buy_tab.button_pressed = buying
+	sell_tab.button_pressed = not buying
+	catalog_heading_label.text = (
+		"Trader Qty  B=Buy / S=Sell"
+		if buying
+		else "Your Qty  B=Buy / S=Sell"
+	)
+
+func _on_quantity_changed(_value: float) -> void:
+	if _updating_quantity:
+		return
+	_result_message = ""
+	_refresh_quote()
+
+func _current_quote() -> Dictionary:
+	if not is_instance_valid(merchant_state) or not merchant_state.has_method("quote"):
+		return {"ok": false, "message": "Merchant is unavailable."}
+	if selected_item_id.is_empty():
+		return {"ok": false, "message": "Select an item."}
+	return merchant_state.call(
+		"quote",
+		selected_item_id,
+		int(quantity_spin_box.value),
+		buying
+	)
+
+func _refresh_quote() -> void:
+	if not visible:
+		return
+	var quote: Dictionary = _current_quote()
+	var quote_ok: bool = bool(quote.get("ok", false))
+	var reason: String = str(quote.get("message", ""))
+	if quote_ok:
+		total_label.text = "Total: %d Shekel" % int(quote.get("total", 0))
+	else:
+		total_label.text = "Total: —"
+	quote_message_label.text = (
+		_result_message
+		if not _result_message.is_empty()
+		else reason
+	)
+	confirm_button.text = "Buy" if buying else "Sell"
+	confirm_button.disabled = not quote_ok
+
+func _on_confirm_pressed() -> void:
+	var quote: Dictionary = _current_quote()
+	if not bool(quote.get("ok", false)):
+		_refresh_quote()
+		return
+	_result_message = ""
+	_refresh_quote()
+	trade_requested.emit(selected_item_id, int(quantity_spin_box.value), buying)

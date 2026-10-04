@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=12 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" uid="uid://d0mllxwbcq263" path="res://scenes/content_scene/startup/initial_worksites.tscn" id="18_initial"]
 [ext_resource type="PackedScene" path="res://scenes/debug/time_debug_overlay.tscn" id="19_debug_time"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/workshop_worker_runtime.tscn" id="20_worksites"]
+
+[ext_resource type="PackedScene" path="res://scenes/traveling_merchant/traveling_merchant.tscn" id="21_merchant"]
 
 [node name="ContentScene" type="Node2D"]
 metadata/_edit_vertical_guides_ = [355.0, 87.0, -133.0]
@@ -65,6 +67,9 @@ position = Vector2(-256, -443)
 
 [node name="WorkerRuntime" parent="YSortWorld" instance=ExtResource("20_worksites")]
 position = Vector2(-256, -376)
+
+[node name="TravelingMerchant" parent="YSortWorld" instance=ExtResource("21_merchant")]
+position = Vector2(-170, -380)
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
 visible = false

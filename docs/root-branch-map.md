@@ -117,6 +117,7 @@ flowchart TD
 | `npc` | state NPC, data NPC, behavior turunan | `scenes/npc_base`, `scenes/npc_children`, `resources/npc_data`, `resources/npc_states` | `feature/npc/work-cycle` |
 | `process-workshop` | process crafting/produksi dan sistem workshop | `scripts/autoload/process_manager`, `scripts/autoload/work_manager`, `scripts/autoload/workshop_storage`, `resources/process_data`, `scenes/workshop` | `feature/process-workshop/claim-flow` |
 | `time-world` | waktu, cuaca, test scene dunia | `scripts/autoload/time_component_manager`, `scenes/time_label`, `scenes/test_scenes` | `feature/time-world/day-night-balance` |
+| `economy` | kunjungan pedagang dan transaksi personal Shekel | `scenes/traveling_merchant`, `scenes/ui/traveling_merchant_ui`, `resources/traveling_merchant` | `feature/economy/traveling-merchant-mvp` |
 
 > Catatan: tabel ini menunjukkan **lokasi teknis**, bukan status prioritas. Root yang ada di sini belum tentu sedang dikerjakan. Untuk prioritas aktual selalu cek `ROADMAP.md`.
 

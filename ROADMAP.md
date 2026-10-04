@@ -19,6 +19,21 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Traveling merchant MVP — branch checkpoint (2026-10-04)
+
+The Game Director selected the common traveling merchant as the next economy step,
+with customer quests and Rare visitors deferred. The feature branch adds finite
+stock, a finite Shekel wallet, buy/sell access and runtime visit continuity to the
+minimal map. The approved MVP schedule starts on game day 1, repeats every three
+days, and runs 08:00–18:00. Later arrival/tier rules must depend on city statistics;
+those statistics and rules do not exist yet.
+
+Prices and stock are explicitly provisional playtest configuration. Selling
+personally held sun-dried mudbricks provides Shekel; this does not complete the
+normal starting-capital/material-acquisition loop or disk saving. Human gameplay
+review and merge remain pending. See
+`docs/task_reports/traveling-merchant-mvp-2026-10-04.md` for scope and validation.
+
 ## Development Principle
 
 Build a small playable prototype first.

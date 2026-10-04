@@ -605,3 +605,25 @@ build), building and built. Clearing reserves one worker or executes a guarded m
 player time skip, without inventory transfer. Interrupted player clearing retains its
 remaining minutes and stops unattended progress. The existing runtime host preserves
 clearing/construction across maps; this adds no disk-save schema.
+
+## Traveling Merchant Runtime (MVP)
+
+The authored `TravelingMerchant` in ContentScene is a view/interaction adapter.
+It acquires one `CommonTravelingMerchant` child under the existing WorkStateRuntime
+host. This ledger owns visit stock, the merchant wallet and schedule progress across
+map reloads. No new autoload, disk-save schema or city treasury authority is added.
+The existing Player E dispatcher recognizes the `traveling_merchants` group.
+
+`common_merchant.tres` contains the approved MVP schedule and provisional playtest
+offers. Prices are from the player's perspective. Finite stock and wallet reset once
+at a new scheduled arrival, never on menu reopen, scene reload or a clock rewind.
+The MVP schedule is deterministic; city-statistics-based arrivals and Rare tiers
+remain future design work.
+
+The ledger preflights both balances, integer limits and final personal inventory
+weight (including Shekel) before committing all changes. It publishes Inventory's
+existing change signal only after both sides agree, so existing HUD/storage readers
+never observe a half trade. UI only requests actions; the scene adapter revalidates
+physical access, departure, collapse and transitions. Browsing locks movement but
+keeps world time running; departure closes the menu. Trading consumes/produces only
+personal Inventory goods, never held workshop output or city-owned stock.
