@@ -34,3 +34,7 @@ The new main-map loop also verifies same-day natural depletion after sleeping, n
 Final graphical checks at the normal 1200x675 window / 400x225 logical viewport passed for main-map loop, greeting, trade access, hiring/equipment, plot access and collapse handoff after the map placement correction. Greeting was rerun after the local layout fix, with assertions that artwork and both responses fit the viewport. Screenshots inspected: main map, full greeting text, response choices. Only the expected virtual-display VSync warning appeared. Windows hands-on and Android not tested. No disk-save compatibility claim.
 
 Earlier report statements that main-map worksites are absent and needs are disabled describe the previous checkpoint and are superseded by this report.
+
+## UI follow-up — 2026-10-04
+
+Per the Game Director's screenshot feedback, the merchant greeting now uses the balloon artwork at its native 176x60 logical size instead of 352x120 (scale 1 instead of 2); its text and Trade/Leave choices are correspondingly smaller. Quantity's internal LineEdit explicitly uses font size 6. SpinBox's native up/down texture is composed from the existing left/right arrow assets rotated clockwise, preserving native input and stepping behavior. No shared theme/balloon or economy rules changed. Greeting and merchant-access graphical regressions passed at the normal 1200x675 window / 400x225 viewport, and all three relevant screenshots were inspected. Only the expected VSync warning remains.

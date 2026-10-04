@@ -94,18 +94,22 @@ func _start_greeting() -> void:
 func _fit_greeting_to_viewport() -> void:
 	# Reuse the existing balloon artwork; its generic defaults exceed 400x225.
 	var root: Control = greeting_balloon.chat_box_root
-	root.custom_minimum_size = Vector2(352, 120)
+	root.custom_minimum_size = Vector2(176, 60)
 	root.size = root.custom_minimum_size
 	var panel: Control = root.get_node("TemplateDialogue")
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	panel.position = Vector2.ZERO
 	panel.size = Vector2(176, 60)
+	panel.scale = Vector2.ONE
 	var responses: Control = greeting_balloon.responses_menu
 	responses.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	responses.offset_left = -90.0
-	responses.offset_right = 90.0
-	responses.offset_top = -26.0
-	responses.offset_bottom = 26.0
+	responses.offset_left = -45.0
+	responses.offset_right = 45.0
+	responses.offset_top = -16.0
+	responses.offset_bottom = 16.0
+	var choice: Button = responses.get_node("ResponseExample")
+	choice.custom_minimum_size = Vector2(90, 14)
+	choice.add_theme_font_size_override("font_size", 6)
 
 func merchant_dialogue_started() -> void:
 	if _greeting_dialogue_active or not _has_live_greeting_balloon():

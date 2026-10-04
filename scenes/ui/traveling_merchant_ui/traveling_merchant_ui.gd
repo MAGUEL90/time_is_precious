@@ -52,7 +52,8 @@ func _ready() -> void:
 	close_button.pressed.connect(close_menu)
 	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
 	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
-	quantity_line_edit.add_theme_font_size_override("font_size", 8)
+	quantity_line_edit.add_theme_font_size_override("font_size", 6)
+	_set_quantity_arrows()
 	quantity_line_edit.add_theme_stylebox_override("normal", GAMEPLAY_THEME.get_stylebox("normal", "HudShortcutButton"))
 	quantity_line_edit.add_theme_stylebox_override("read_only", GAMEPLAY_THEME.get_stylebox("disabled", "HudShortcutButton"))
 	quantity_line_edit.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
@@ -457,3 +458,15 @@ func _on_confirm_pressed() -> void:
 	_result_message = ""
 	_refresh_quote()
 	trade_requested.emit(selected_item_id, int(quantity_spin_box.value), buying)
+
+func _set_quantity_arrows() -> void:
+	# Keep native SpinBox input/stepping; rotate the game's existing arrow art.
+	var up: Image = preload("res://assets/ui/ui_icon/left_arrow_icon.png").get_image()
+	var down: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
+	up.rotate_90(CLOCKWISE)
+	down.rotate_90(CLOCKWISE)
+	var arrows := Image.create(up.get_width(), up.get_height() + down.get_height(), false, Image.FORMAT_RGBA8)
+	arrows.blit_rect(up, Rect2i(Vector2i.ZERO, up.get_size()), Vector2i.ZERO)
+	arrows.blit_rect(down, Rect2i(Vector2i.ZERO, down.get_size()), Vector2i(0, up.get_height()))
+	quantity_spin_box.add_theme_icon_override("updown", ImageTexture.create_from_image(arrows))
+	quantity_spin_box.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
