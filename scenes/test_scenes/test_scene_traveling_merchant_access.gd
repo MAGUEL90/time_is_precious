@@ -126,6 +126,38 @@ func _run() -> void:
 	_expect(Inventory.items.get("shekel", 0) == 22 and not Inventory.items.has("sun_dried_mudbrick"), "Finished workshop goods produce real Shekel.")
 	await _capture("trade")
 	_expect(merchant.menu.confirm_button.disabled, "Selling the last owned goods disables another sale.")
+	# Controlled screenshot scenario: 20 bricks, merchant can afford only 18.
+	Inventory.items["sun_dried_mudbrick"] = 20
+	ledger._budget = 54
+	Inventory.items_changed.emit()
+	merchant.menu.quantity_spin_box.value = 20
+	await _settle()
+	_expect(merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Merchant can afford only 18.", "Invalid sale has one concise affordability reason.")
+	_expect(merchant.menu.total_label.text == "60", "Invalid quantity still shows its requested total.")
+	var button_rect: Rect2 = merchant.menu.confirm_button.get_global_rect()
+	await _capture("sell-invalid")
+	merchant.menu.max_button.pressed.emit()
+	await _settle()
+	_expect(merchant.menu.quantity_spin_box.value == 18 and not merchant.menu.confirm_button.disabled, "Max selects the affordable sale without trading.")
+	_expect(merchant.menu.quote_message_label.text.is_empty() and merchant.menu.total_label.text == "54", "Valid selection clears the message.")
+	_expect(merchant.menu.confirm_button.get_global_rect() == button_rect, "Clearing the warning does not move Sell.")
+	_expect(Inventory.items["sun_dried_mudbrick"] == 20 and ledger.get_budget() == 54, "Max is selection only.")
+	await _capture("sell-valid")
+	merchant.menu.buy_tab.pressed.emit()
+	merchant.menu._on_catalog_item_pressed("clay_lump")
+	merchant.menu.quantity_spin_box.value = 20
+	_expect(merchant.menu.quote_message_label.text == "Only 12 in stock.", "Stock warning does not silently clamp quantity.")
+	merchant.menu.max_button.pressed.emit()
+	_expect(merchant.menu.quantity_spin_box.value == 7, "Buy Max respects capacity with coins exchanged, two clay, and twenty carried bricks.")
+	merchant.menu.quantity_spin_box.value = 8
+	_expect(merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Not enough bag space.", "One above capacity Max is rejected with a compact reason.")
+	Inventory.items["shekel"] = 4
+	Inventory.items_changed.emit()
+	merchant.menu.max_button.pressed.emit()
+	_expect(merchant.menu.quantity_spin_box.value == 2 and not merchant.menu.confirm_button.disabled, "Max respects player funds.")
+	Inventory.items["shekel"] = 0
+	Inventory.items_changed.emit()
+	_expect(merchant.menu.max_button.disabled and merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Not enough coins.", "No affordable purchase disables Max and Buy.")
 	Inventory.items["shekel"] = 9223372036854775807
 	Inventory.items_changed.emit()
 	await get_tree().process_frame

@@ -304,7 +304,7 @@ text = "Quantity"
 vertical_alignment = 1
 
 [node name="QuantitySpinBox" type="SpinBox" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow"]
-custom_minimum_size = Vector2(66, 16)
+custom_minimum_size = Vector2(52, 16)
 layout_mode = 2
 theme = ExtResource("2_theme")
 theme_override_font_sizes/font_size = 6
@@ -313,6 +313,15 @@ max_value = 99.0
 value = 1.0
 allow_greater = false
 allow_lesser = false
+
+[node name="MaxButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow"]
+custom_minimum_size = Vector2(25, 16)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Max"
 
 [node name="TotalRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
 custom_minimum_size = Vector2(0, 10)

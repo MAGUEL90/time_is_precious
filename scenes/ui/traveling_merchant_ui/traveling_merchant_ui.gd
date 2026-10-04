@@ -25,6 +25,7 @@ const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 @onready var unit_price_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceLabel
 @onready var unit_price_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceIcon
 @onready var quantity_spin_box: SpinBox = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/QuantitySpinBox
+@onready var max_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/MaxButton
 @onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalLabel
 @onready var total_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalIcon
 @onready var quote_message_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuoteMessageLabel
@@ -46,6 +47,7 @@ func _ready() -> void:
 	sell_tab.pressed.connect(_on_sell_tab_pressed)
 	quantity_spin_box.value_changed.connect(_on_quantity_changed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
+	max_button.pressed.connect(_on_max_pressed)
 	close_button.pressed.connect(close_menu)
 	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
 	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
@@ -123,9 +125,19 @@ func show_result(message: String) -> void:
 
 func _present_result_message(message: String) -> String:
 	if message == "Not enough Shekel.":
-		return "Insufficient funds."
+		return "Not enough coins."
 	if message == "The merchant does not have enough Shekel.":
-		return "Trader has insufficient funds."
+		var row: Dictionary = _get_selected_row()
+		var price: int = int(row.get("sell_price", 0))
+		@warning_ignore("integer_division")
+		var affordable: int = merchant_state.get_budget() / maxi(price, 1)
+		return "Merchant can afford only %d." % affordable
+	if message == "Not enough merchant stock.":
+		return "Only %d in stock." % int(_get_selected_row().get("stock", 0))
+	if message == "Not enough inventory capacity for this trade.":
+		return "Not enough bag space."
+	if message == "Not enough items in your inventory.":
+		return "Not enough items."
 	return message
 
 func _connect_inventory() -> void:
@@ -322,17 +334,38 @@ func _refresh_selected_item() -> void:
 	quantity_spin_box.editable = true
 	_update_quantity_limit(row)
 
-func _update_quantity_limit(row: Dictionary) -> void:
-	var maximum: int = int(
-		row.get("stock" if buying else "player_qty", 0)
-	)
-	maximum = clampi(maximum, 1, 999)
+func _update_quantity_limit(_row: Dictionary) -> void:
+	# Preserve the player's choice even when stock or affordability changes.
 	_updating_quantity = true
 	quantity_spin_box.min_value = 1
-	quantity_spin_box.max_value = maximum
+	quantity_spin_box.max_value = 999
 	quantity_spin_box.step = 1
-	quantity_spin_box.value = clampi(int(quantity_spin_box.value), 1, maximum)
 	_updating_quantity = false
+
+func _maximum_quantity() -> int:
+	if not is_instance_valid(merchant_state):
+		return 0
+	var row: Dictionary = _get_selected_row()
+	var available: int = int(row.get("stock" if buying else "player_qty", 0))
+	var price: int = int(row.get("buy_price" if buying else "sell_price", 0))
+	if price <= 0:
+		return 0
+	var wallet: int = int(Inventory.items.get(SHEKEL_ITEM_ID, 0)) if buying else int(merchant_state.get_budget())
+	@warning_ignore("integer_division")
+	var affordable: int = wallet / price
+	var upper: int = mini(999, mini(available, affordable))
+	# Bounded by the input control; authoritative quotes include exchanged coin weight.
+	for quantity: int in range(upper, 0, -1):
+		if merchant_state.quote(selected_item_id, quantity, buying).get("ok", false):
+			return quantity
+	return 0
+
+func _on_max_pressed() -> void:
+	var maximum: int = _maximum_quantity()
+	if maximum > 0:
+		_result_message = ""
+		quantity_spin_box.value = maximum
+		_refresh_quote()
 
 func _get_selected_row() -> Dictionary:
 	for row in _catalog_rows:
@@ -385,17 +418,15 @@ func _refresh_quote() -> void:
 	var quote: Dictionary = _current_quote()
 	var quote_ok: bool = bool(quote.get("ok", false))
 	var reason: String = _present_result_message(str(quote.get("message", "")))
-	if quote_ok:
-		total_label.text = str(int(quote.get("total", 0)))
-		total_icon.show()
-	else:
-		total_label.text = "—"
-		total_icon.hide()
-	quote_message_label.text = (
-		_result_message
-		if not _result_message.is_empty()
-		else reason
-	)
+	var price: int = int(_get_selected_row().get("buy_price" if buying else "sell_price", 0))
+	var quantity: int = int(quantity_spin_box.value)
+	@warning_ignore("integer_division")
+	var total_safe: bool = price > 0 and price <= 9223372036854775807 / maxi(quantity, 1)
+	total_label.text = str(price * quantity) if total_safe else "—"
+	total_icon.visible = total_safe
+	quote_message_label.text = _result_message if not _result_message.is_empty() else ("" if quote_ok else reason)
+	quote_message_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR if quote_ok else Color(1.0, 0.79, 0.48))
+	max_button.disabled = _maximum_quantity() == 0
 	confirm_button.text = "Buy" if buying else "Sell"
 	confirm_button.disabled = not quote_ok
 
