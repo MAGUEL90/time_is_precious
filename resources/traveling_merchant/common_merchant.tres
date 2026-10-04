@@ -1,0 +1,31 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/traveling_merchant/merchant_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+first_day = 1
+interval_days = 3
+arrival_hour = 8
+departure_hour = 18
+starting_shekel = 120
+randomize_requests = true
+offers = Array[Dictionary]([{
+"item_id": "clay_lump", "stock": 12, "buy_price": 2
+}, {
+"item_id": "straw_bundle", "stock": 12, "buy_price": 2
+}, {
+"item_id": "water_jar", "stock": 12, "buy_price": 2
+}, {
+"item_id": "wood_log", "stock": 8, "buy_price": 4
+}, {
+"item_id": "stone_hammer", "stock": 2, "buy_price": 15
+}, {
+"item_id": "sun_dried_mudbrick", "stock": 0, "buy_price": 6
+}])
+
+requests = Array[Dictionary]([{
+"item_id": "wood_log", "quantity_min": 3, "quantity": 6, "sell_price": 2
+}, {
+"item_id": "sun_dried_mudbrick", "quantity_min": 10, "quantity": 20, "sell_price": 3
+}])

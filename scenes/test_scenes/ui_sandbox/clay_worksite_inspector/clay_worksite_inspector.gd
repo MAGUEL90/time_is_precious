@@ -300,7 +300,7 @@ func _refresh_preview() -> void:
 		includes_player = bool(plan.includes_player)
 		$Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel.text = "Workers: %d / %d" % [int(plan.worker_count), int(plan.worker_capacity)]
 		if hourly:
-			$Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel.text = "Worker: Player"
+			$Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel.text = "Player | Output ~%d" % int(plan.units)
 		if work_mode == "Daily" and plan.has("worker_names") and not str(plan.worker_names).is_empty():
 			_show_daily_duration(plan)
 		if work_mode == "Daily":
@@ -327,10 +327,10 @@ func _refresh_preview() -> void:
 	var fatigue_span: float = _player_ref.max_fatigue - _player_ref.min_fatigue
 	var hunger_span: float = _player_ref.max_hunger - _player_ref.min_hunger
 	if fatigue_span > 0.0:
-		var energy_used: float = maxf(_player_ref.fatigue_increase_per_min * minutes, 0.0)
+		var energy_used: float = 0.0 if _player_ref.debug_disable_player_needs or _player_ref.debug_disable_fatigue else maxf(_player_ref.fatigue_increase_per_min * minutes, 0.0)
 		energy_label.text = "Energy -%.0f%%" % (energy_used / fatigue_span * 100.0)
 	if hunger_span > 0.0:
-		var satiety_used: float = maxf(_player_ref.hunger_increase_per_min * minutes, 0.0)
+		var satiety_used: float = 0.0 if _player_ref.debug_disable_player_needs else maxf(_player_ref.hunger_increase_per_min * minutes, 0.0)
 		satiety_label.text = "Satiety -%.0f%%" % (satiety_used / hunger_span * 100.0)
 
 func _show_daily_duration(plan: Dictionary) -> void:

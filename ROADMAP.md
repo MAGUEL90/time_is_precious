@@ -19,6 +19,44 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
+
+The Game Director selected the common traveling merchant as the next economy step,
+with customer quests and Rare visitors deferred. The feature branch adds finite
+stock, a finite Shekel wallet, buy/sell access and runtime visit continuity to the
+minimal map. The approved MVP schedule starts on game day 1, repeats every three
+days, and runs 08:00–18:00. Later arrival/tier rules must depend on city statistics;
+those statistics and rules do not exist yet.
+
+Prices, stock and purchase quotas are explicitly provisional playtest configuration.
+Each visit now randomly selects one or two requests from wood (3–6) and dry
+bricks (10–20), with fixed prices and a stable request ledger during the visit;
+buying goods from the merchant never restores those quotas. Selling
+personally held sun-dried mudbricks provides Shekel; this does not complete the
+full zero-capital workshop construction/production loop or disk saving.
+The fixed-profile accounting regression verifies seven logs from six hours of
+wood gathering and a six-log sale for 12 Shekel. Randomized gameplay does not
+guarantee that request on the first visit; the randomized ledger passed a separate
+20-visit test. Human review and merge remain pending in PR #110.
+
+The Game Director closed the merchant MVP scope: no additional request-explanation
+dialogue or quest flow. Keep the two-item request pool for this MVP. Broader goods,
+Rare tiers and city-stat-driven visitors remain future work. No further merchant
+features are planned before review. See `docs/task_reports/merchant-mvp-closure-2026-10-04.md`.
+
+## Player worksite energy — branch checkpoint (2026-10-04)
+
+Manual player gathering now integrates remaining energy (derived from fatigue)
+over each work minute. Confirmation shows estimated output; NPC daily production
+and existing needs drain rates are unchanged. The initial linear curve is provisional.
+See `docs/task_reports/player-energy-output-2026-10-04.md`. The merchant branch
+now restores five main-map worksites, existing home/sleep access and Nightmare,
+with needs active in both outdoor and home scenes. Resource stocks survive a
+trip home within the running session. A short Trade/Leave greeting appears at every
+merchant interaction. The transaction panel omits the departure schedule. See `docs/task_reports/merchant-main-map-loop-2026-10-04.md`.
+Food availability remains the next balancing dependency: hunger reaches 100%
+before the first sale in the measured starting route.
+
 ## Development Principle
 
 Build a small playable prototype first.

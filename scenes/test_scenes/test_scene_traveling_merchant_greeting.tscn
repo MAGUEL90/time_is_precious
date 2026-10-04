@@ -1,0 +1,12 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/test_scene_traveling_merchant_greeting.gd" id="1_test"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/traveling_merchant/traveling_merchant.tscn" id="3_merchant"]
+
+[node name="TravelingMerchantGreetingTest" type="Node2D"]
+script = ExtResource("1_test")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="TravelingMerchant" parent="." instance=ExtResource("3_merchant")]

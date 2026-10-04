@@ -408,7 +408,7 @@ tile_set = ExtResource("2_nddy8")
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("3_nddy8")]
 position = Vector2(0, -74)
-debug_disable_player_needs = true
+debug_disable_player_needs = false
 
 [node name="SleepSpot" parent="YSortWorld" instance=ExtResource("4_a5njf")]
 position = Vector2(28, -76)

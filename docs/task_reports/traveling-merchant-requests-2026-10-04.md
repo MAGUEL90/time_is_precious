@@ -1,0 +1,16 @@
+# Separate merchant offers and purchase requests — 2026-10-04
+
+User authorized implementation of the discussed selective merchant concept. Provisional default requests: six wood at 2 Shekel each, twenty sun-dried mudbricks at 3 each. Other offered resources cannot be sold to this visitor. Maximum player sale receipts from these requests: 72 per visit, regardless of how much money the player spends with the merchant. Prices for offered goods remain unchanged; no fractional currency or player energy mechanics introduced.
+
+Config separates offers (item_id, stock, buy_price) from requests (item_id, quantity, sell_price). The ledger validates both, supports request-only items, consumes quota atomically with money/items, and restores quota only at a new scheduled arrival. Buying goods, reopening menus, repeated time snapshots and clock rewinds cannot restore demand. Sold goods can enter Buy stock when that item has a configured offer; buying them back does not permit an exhausted request to be sold again. The current common visitor repeats the same request list; visit variation, Rare tiers, city stats and energy-based output remain deferred.
+
+Buy shows offered goods. Sell shows only requested goods, `Need N` remaining demand, and `Have N` player holdings by the quantity input. Max includes remaining demand alongside inventory, funds and carry capacity. Over-quota attempts show `Merchant needs only N more.`; completed requests disable Sell and Max and can display `Request fulfilled.`. Existing successful transaction feedback is retained. Empty request lists show an empty-state message. Long owned counts are clipped with an ellipsis and full tooltip to preserve the panel width.
+
+Validation on Godot 4.5.2:
+- TravelingMerchantTest PASS: default unrequested-resource rejection, partial/exact/over-quota sales, no refill by buyback, same-visit refresh or rewind, next-arrival reset; broad custom request fixtures retain wallet/weight/overflow/atomicity regressions.
+- TravelingMerchantAccessTest PASS, headless and graphical: only wood/bricks visible in Sell; concise quota warning, Max and existing access/closure/reload checks. Screenshots visually inspected at 400x225 logical viewport using project desktop window; only virtual-driver VSync warning.
+- TravelingMerchantProductionTest PASS: bought inputs, shaped/dried/released/withdrew/sold twenty actual bricks for net +35; request exhausted; buying one back costs six but cannot be resold to restore income.
+- WorksiteIncomeTest main, WoodSite, WaterSite, MixedNeeds PASS: nine harvested wood sell only six for 12, leaving three; water and clay generate no money. Main-map audit still finds no gathering markers.
+- git diff --check PASS. No backend parse/runtime errors in successful test runs.
+
+Historical worksite/production income reports describe the earlier unrestricted catalog and are superseded by these limits. The current income harness now measures selective requests. Full fresh-start main-map economy remains unverified because worksite markers are not installed there. Windows/manual gameplay review remains pending. No protected engine settings, autoload registrations, addons, save formats or unrelated resource balance changed.

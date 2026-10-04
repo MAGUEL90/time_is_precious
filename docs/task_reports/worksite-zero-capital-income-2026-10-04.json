@@ -1,0 +1,785 @@
+[
+  {
+    "kind": "INCOME_AUDIT",
+    "scenario": "main",
+    "measurement": {
+      "fatigue_disabled": true,
+      "inventory": {},
+      "needs_disabled": true,
+      "scenario": "main",
+      "sites": []
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "ClaySiteA",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "shekel": 18
+      },
+      "item": "clay_lump",
+      "merchant": 102,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18
+      },
+      "sale": {
+        "message": "Sold 18 Clay Lump for 18 Shekel.",
+        "ok": true,
+        "total": 18
+      },
+      "scenario": "ClaySiteA",
+      "stock_left": 54
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WoodSite",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "shekel": 18
+      },
+      "item": "wood_log",
+      "merchant": 102,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 9,
+        "to_ground": 0,
+        "units": 9,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 9,
+        "to_ground": 0,
+        "units": 9
+      },
+      "sale": {
+        "message": "Sold 9 Wood Log for 18 Shekel.",
+        "ok": true,
+        "total": 18
+      },
+      "scenario": "WoodSite",
+      "stock_left": 63
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "StrawSite",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "shekel": 18
+      },
+      "item": "straw_bundle",
+      "merchant": 102,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18
+      },
+      "sale": {
+        "message": "Sold 18 Straw Bundle for 18 Shekel.",
+        "ok": true,
+        "total": 18
+      },
+      "scenario": "StrawSite",
+      "stock_left": 54
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterSite",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "shekel": 33
+      },
+      "item": "water_jar",
+      "merchant": 87,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "WaterSite",
+      "stock_left": 36
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "ReedSite",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "reed_bundle": 24
+      },
+      "item": "reed_bundle",
+      "merchant": 120,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 24,
+        "to_ground": 0,
+        "units": 24,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 24,
+        "to_ground": 0,
+        "units": 24
+      },
+      "sale": {
+        "message": "Choose an available item and a positive quantity.",
+        "ok": false,
+        "total": 0
+      },
+      "scenario": "ReedSite",
+      "stock_left": 48
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterRepeat",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 11,
+      "inventory": {
+        "shekel": 33
+      },
+      "item": "water_jar",
+      "merchant": 87,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "WaterRepeat",
+      "stock_left": 36
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterRepeat",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 2,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 14,
+      "inventory": {
+        "shekel": 66
+      },
+      "item": "water_jar",
+      "merchant": 54,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 36,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "WaterRepeat",
+      "stock_left": 0
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterRepeat",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "batch": 3,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": true,
+      "hour": 14,
+      "inventory": {
+        "shekel": 66
+      },
+      "item": "water_jar",
+      "merchant": 54,
+      "minute": 0,
+      "needs_disabled": true,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 0,
+        "reason": "Site depleted.",
+        "stock": 0,
+        "to_bag": 0,
+        "to_ground": 0,
+        "units": 0,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 0,
+        "to_bag": 0,
+        "to_ground": 0,
+        "units": 0
+      },
+      "sale": {
+        "message": "Choose an available item and a positive quantity.",
+        "ok": false,
+        "total": 0
+      },
+      "scenario": "WaterRepeat",
+      "stock_left": 0
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0900000000000001,
+        "focus": 0.955000000000005,
+        "hunger": 0.18
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": false,
+      "hour": 11,
+      "inventory": {
+        "shekel": 33
+      },
+      "item": "water_jar",
+      "merchant": 87,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "WaterNeeds",
+      "stock_left": 36
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.18,
+        "focus": 0.91000000000001,
+        "hunger": 0.36
+      },
+      "batch": 2,
+      "before": {
+        "fatigue": 0.0900000000000001,
+        "focus": 0.955000000000005,
+        "hunger": 0.18
+      },
+      "fatigue_disabled": false,
+      "hour": 14,
+      "inventory": {
+        "shekel": 66
+      },
+      "item": "water_jar",
+      "merchant": 54,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 36,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "WaterNeeds",
+      "stock_left": 0
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "WaterNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.18,
+        "focus": 0.91000000000001,
+        "hunger": 0.36
+      },
+      "batch": 3,
+      "before": {
+        "fatigue": 0.18,
+        "focus": 0.91000000000001,
+        "hunger": 0.36
+      },
+      "fatigue_disabled": false,
+      "hour": 14,
+      "inventory": {
+        "shekel": 66
+      },
+      "item": "water_jar",
+      "merchant": 54,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 0,
+        "reason": "Site depleted.",
+        "stock": 0,
+        "to_bag": 0,
+        "to_ground": 0,
+        "units": 0,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 0,
+        "to_bag": 0,
+        "to_ground": 0,
+        "units": 0
+      },
+      "sale": {
+        "message": "Choose an available item and a positive quantity.",
+        "ok": false,
+        "total": 0
+      },
+      "scenario": "WaterNeeds",
+      "stock_left": 0
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.0900000000000001,
+        "focus": 0.955000000000005,
+        "hunger": 0.18
+      },
+      "batch": 1,
+      "before": {
+        "fatigue": 0.0,
+        "focus": 1.0,
+        "hunger": 0.0
+      },
+      "fatigue_disabled": false,
+      "hour": 11,
+      "inventory": {
+        "shekel": 33
+      },
+      "item": "water_jar",
+      "merchant": 87,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "MixedNeeds",
+      "stock_left": 36
+    }
+  },
+  {
+    "kind": "INCOME_RECOVERED",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "batch": 1,
+      "merchant": 84,
+      "recovered": 3,
+      "wallet": 36
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.18,
+        "focus": 0.91000000000001,
+        "hunger": 0.36
+      },
+      "batch": 2,
+      "before": {
+        "fatigue": 0.0900000000000001,
+        "focus": 0.955000000000005,
+        "hunger": 0.18
+      },
+      "fatigue_disabled": false,
+      "hour": 14,
+      "inventory": {
+        "shekel": 69
+      },
+      "item": "water_jar",
+      "merchant": 51,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 36,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 33,
+        "to_ground": 3,
+        "units": 36
+      },
+      "sale": {
+        "message": "Sold 33 Water Jar for 33 Shekel.",
+        "ok": true,
+        "total": 33
+      },
+      "scenario": "MixedNeeds",
+      "stock_left": 0
+    }
+  },
+  {
+    "kind": "INCOME_RECOVERED",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "batch": 2,
+      "merchant": 48,
+      "recovered": 3,
+      "wallet": 72
+    }
+  },
+  {
+    "kind": "INCOME_MEASURE",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "after": {
+        "fatigue": 0.27,
+        "focus": 0.864426000000014,
+        "hunger": 0.54
+      },
+      "batch": 3,
+      "before": {
+        "fatigue": 0.18,
+        "focus": 0.91000000000001,
+        "hunger": 0.36
+      },
+      "fatigue_disabled": false,
+      "hour": 17,
+      "inventory": {
+        "shekel": 90
+      },
+      "item": "clay_lump",
+      "merchant": 30,
+      "minute": 0,
+      "needs_disabled": false,
+      "preview": {
+        "includes_player": true,
+        "manual_only": true,
+        "minutes": 180,
+        "reason": "",
+        "stock": 72,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18,
+        "worker_capacity": 2,
+        "worker_count": 1,
+        "working": false
+      },
+      "result": {
+        "interrupted": false,
+        "minutes": 180,
+        "to_bag": 18,
+        "to_ground": 0,
+        "units": 18
+      },
+      "sale": {
+        "message": "Sold 18 Clay Lump for 18 Shekel.",
+        "ok": true,
+        "total": 18
+      },
+      "scenario": "MixedNeeds",
+      "stock_left": 54
+    }
+  },
+  {
+    "kind": "INCOME_RECOVERED",
+    "scenario": "MixedNeeds",
+    "measurement": {
+      "batch": 3,
+      "merchant": 30,
+      "recovered": 0,
+      "wallet": 90
+    }
+  }
+]

@@ -35,10 +35,10 @@ func _run() -> void:
 		_expect(site.execute(rejected, player, fixture).minutes == 0 and _now() == before, "Rejected duration has no cost.")
 	var before: int = _now()
 	var result: Dictionary = site.execute(180, player, fixture, fixture._drop_output)
-	_expect(result.units == 18 and result.minutes == 180 and _now() - before == 180, "Three-hour output and clock.")
-	_expect(result.to_bag == 2 and result.to_ground == 16, "Three-hour overflow splits two/sixteen.")
+	_expect(result.units == 8 and result.minutes == 180 and _now() - before == 180, "Three-hour output and clock.")
+	_expect(result.to_bag == 2 and result.to_ground == 6, "Three-hour overflow splits two/six.")
 	var drop: PickUpItem = fixture.get_node("GroundOutput").get_child(0)
-	_expect(drop.quantity == 16 and site.stock == 54 and other.stock == 72, "Exact stack and separate stocks.")
+	_expect(drop.quantity == 6 and site.stock == 64 and other.stock == 72, "Exact stack and separate stocks.")
 	_expect(is_equal_approx(player.fatigue, 0.59) and is_equal_approx(player.hunger, 0.18), "Three-hour normal condition costs.")
 	drop.on_player_interact(player)
 	_expect(not drop.is_collecting, "Full bag preserves stack.")
@@ -46,13 +46,13 @@ func _run() -> void:
 	var clay_before: int = Inventory.items.get("clay_lump", 0)
 	drop.on_player_interact(player)
 	drop.on_player_interact(player)
-	_expect(Inventory.items.get("clay_lump", 0) == clay_before + 16, "Stack collects once after freeing space.")
+	_expect(Inventory.items.get("clay_lump", 0) == clay_before + 6, "Stack collects once after freeing space.")
 	player.fatigue = 0.0
 	player.hunger = 0.0
 	player.focus = 1.0
 	before = _now()
 	result = other.execute(540, player, fixture, fixture._drop_output)
-	_expect(result.units == 54 and _now() - before == 540 and not result.interrupted, "Player completes nine hours without worker requirement.")
+	_expect(result.units == 46 and _now() - before == 540 and not result.interrupted, "Player completes nine hours without worker requirement.")
 	_expect(is_equal_approx(player.fatigue, 0.27) and is_equal_approx(player.hunger, 0.54), "Nine-hour condition costs.")
 	get_tree().paused = false
 	await get_tree().create_timer(0.5).timeout
@@ -73,18 +73,18 @@ func _run() -> void:
 		if fixture.get_node("WorkTransition/Blackout").modulate.a < 0.999:
 			_expect(not fixture.inspector.window.is_visible_in_tree(), "No panel flash on return fade.")
 		await get_tree().process_frame
-	_expect(_now() - before == 180 and fixture.last_work_result.units == 18, "Default UI starts three hours exactly once.")
+	_expect(_now() - before == 180 and fixture.last_work_result.units == 12, "Default UI starts three hours exactly once.")
 	_expect(player.can_move and not get_tree().paused and not fixture.inspector.visible, "Completion releases modal.")
 	get_tree().paused = true
 	site.stock = 5
 	result = site.execute(360, player, fixture, fixture._drop_output)
-	_expect(result.units == 5 and result.minutes == 50 and site.stock == 0, "Stock still caps work.")
+	_expect(result.units == 5 and result.minutes == 81 and site.stock == 0, "Stock still caps work.")
 	other.stock = 72
 	player.fatigue = 0.88775
 	player.hunger = 0.0
 	player.focus = 1.0
 	result = other.execute(540, player, fixture, fixture._drop_output)
-	_expect(player.is_collapsing and result.minutes == 25 and result.units == 2, "Long selection still stops on actual collapse.")
+	_expect(player.is_collapsing and result.minutes == 25 and result.units == 0, "Long selection still stops on actual collapse.")
 	_expect(player.current_experience == exp_before, "No EXP tuning.")
 	# Finish the triggered entry before freeing the animation/transition owners.
 	get_tree().paused = false

@@ -1,0 +1,11 @@
+~ traveling_merchant_greeting
+do merchant_dialogue_started()
+Merchant: Ah, a friendly face! Come, take a look. No need to hurry.
+- Trade
+	do merchant_select_trade()
+	do merchant_dialogue_finished()
+	=> END
+- Leave
+	do merchant_select_leave()
+	do merchant_dialogue_finished()
+	=> END

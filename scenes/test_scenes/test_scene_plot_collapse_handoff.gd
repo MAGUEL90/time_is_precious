@@ -15,10 +15,7 @@ func _run() -> void:
 	var plot = content.get_node("YSortWorld/WorkshopPlot")
 	content.get_node("TimeDebugOverlay").set_player_guard(false)
 	content.get_node("TimeDebugOverlay").set_process(false)
-	# The authoring map has no Nightmare. Supply the existing component in this fixture.
-	var nightmare: NightmareWorld = load("res://scenes/nightmare_world/nightmare_world.tscn").instantiate() as NightmareWorld
-	nightmare.position = Vector2(3000, 3000)
-	content.add_child(nightmare)
+	var nightmare: NightmareWorld = content.get_node("YSortWorld/NightmareWorld")
 	player.global_position = plot.get_node("InteractableComponent").global_position + Vector2(0, 4)
 	for _frame: int in range(3):
 		await get_tree().physics_frame

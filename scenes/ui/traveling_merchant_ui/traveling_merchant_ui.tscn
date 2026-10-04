@@ -1,0 +1,379 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/traveling_merchant_ui/traveling_merchant_ui.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
+[ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="4_inventory_theme"]
+[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="6_shekel"]
+
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_panel"]
+atlas = ExtResource("3_panel")
+region = Rect2(1, 1, 168, 134)
+
+[node name="TravelingMerchantUI" type="CanvasLayer"]
+process_mode = 3
+layer = 80
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.18)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureWindow" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(376, 209)
+layout_mode = 2
+texture = SubResource("AtlasTexture_panel")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/TextureWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="TitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "TRAVELING MERCHANT"
+vertical_alignment = 1
+
+[node name="WalletRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PlayerWallet" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="PlayerTitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "You"
+vertical_alignment = 1
+
+[node name="PlayerShekelIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("6_shekel")
+texture_filter = 1
+stretch_mode = 3
+mouse_filter = 2
+
+[node name="PlayerShekelLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0"
+vertical_alignment = 1
+
+[node name="WalletSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TraderWallet" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 2
+theme_override_constants/separation = 3
+
+[node name="TraderTitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Trader"
+vertical_alignment = 1
+
+[node name="TraderShekelIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("6_shekel")
+texture_filter = 1
+stretch_mode = 3
+mouse_filter = 2
+
+[node name="MerchantBudgetLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0"
+vertical_alignment = 1
+
+[node name="ModeRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 13)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="BuyTab" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/ModeRow"]
+custom_minimum_size = Vector2(38, 13)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "BUY"
+
+[node name="SellTab" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/ModeRow"]
+custom_minimum_size = Vector2(38, 13)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "SELL"
+
+[node name="ModeSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/ModeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Body" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="CatalogColumn" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body"]
+custom_minimum_size = Vector2(192, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 1
+
+[node name="CatalogScroll" type="ScrollContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="CatalogList" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="TradePanel" type="PanelContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body"]
+custom_minimum_size = Vector2(144, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_inventory_theme")
+theme_type_variation = &"InventoryTransparentPanel"
+
+[node name="TradeMargin" type="MarginContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="TradeVBox" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="SelectedRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="SelectedIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+texture_filter = 1
+expand_mode = 0
+stretch_mode = 3
+
+[node name="SelectedNameLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Select an item"
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="UnitPriceRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="PriceTitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Unit price"
+vertical_alignment = 1
+
+[node name="UnitPriceLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="UnitPriceIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("6_shekel")
+texture_filter = 1
+stretch_mode = 3
+mouse_filter = 2
+
+[node name="QuantityRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="QuantityLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Quantity"
+vertical_alignment = 1
+
+[node name="QuantitySpinBox" type="SpinBox" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_override_font_sizes/font_size = 6
+min_value = 1.0
+max_value = 99.0
+value = 1.0
+allow_greater = false
+allow_lesser = false
+
+[node name="MaxButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow"]
+custom_minimum_size = Vector2(25, 16)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Max"
+
+[node name="TotalRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="TotalTitleLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Total"
+vertical_alignment = 1
+
+[node name="TotalLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="TotalIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("6_shekel")
+texture_filter = 1
+stretch_mode = 3
+mouse_filter = 2
+
+[node name="QuoteMessageLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_vertical = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelSub"
+theme_override_font_sizes/font_size = 6
+text = ""
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="FooterRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConfirmButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Buy"
