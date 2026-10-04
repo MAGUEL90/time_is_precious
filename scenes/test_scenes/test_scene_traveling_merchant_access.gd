@@ -46,6 +46,8 @@ func _press(action: String) -> void:
 		await _accept_greeting()
 
 func _run() -> void:
+	# Fixed profile keeps the existing accounting regression reproducible.
+	preload("res://resources/traveling_merchant/common_merchant.tres").set("randomize_requests", false)
 	TimeComponentManager.set_process(false)
 	_clock(0, 10)
 	_load_map()

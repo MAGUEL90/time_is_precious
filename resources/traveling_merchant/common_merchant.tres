@@ -9,6 +9,7 @@ interval_days = 3
 arrival_hour = 8
 departure_hour = 18
 starting_shekel = 120
+randomize_requests = true
 offers = Array[Dictionary]([{
 "item_id": "clay_lump", "stock": 12, "buy_price": 2
 }, {
@@ -24,7 +25,7 @@ offers = Array[Dictionary]([{
 }])
 
 requests = Array[Dictionary]([{
-"item_id": "wood_log", "quantity": 6, "sell_price": 2
+"item_id": "wood_log", "quantity_min": 3, "quantity": 6, "sell_price": 2
 }, {
-"item_id": "sun_dried_mudbrick", "quantity": 20, "sell_price": 3
+"item_id": "sun_dried_mudbrick", "quantity_min": 10, "quantity": 20, "sell_price": 3
 }])

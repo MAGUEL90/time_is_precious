@@ -29,7 +29,8 @@ days, and runs 08:00–18:00. Later arrival/tier rules must depend on city stati
 those statistics and rules do not exist yet.
 
 Prices, stock and purchase quotas are explicitly provisional playtest configuration.
-The merchant currently requests only six wood and twenty dry bricks per visit;
+Each visit now randomly selects one or two requests from wood (3–6) and dry
+bricks (10–20), with fixed prices and a stable request ledger during the visit;
 buying goods from the merchant never restores those quotas. Selling
 personally held sun-dried mudbricks provides Shekel; this does not complete the
 full zero-capital workshop construction/production loop or disk saving.

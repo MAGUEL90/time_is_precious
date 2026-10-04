@@ -25,6 +25,8 @@ func _ready() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	# Fixed profile keeps the existing accounting regression reproducible.
+	preload("res://resources/traveling_merchant/common_merchant.tres").set("randomize_requests", false)
 	_snapshot_globals()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = true

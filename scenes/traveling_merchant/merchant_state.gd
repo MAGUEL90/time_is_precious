@@ -15,6 +15,7 @@ var _latest_minute: int = -1
 var _present: bool = false
 var _trading: bool = false
 var _valid: bool = false
+var _request_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_valid = _validate_config()
@@ -34,6 +35,8 @@ func _validate_config() -> bool:
 		_offers[id] = offer.duplicate(true)
 		_offers[id]["sell_price"] = 0
 		_offers[id]["requested"] = 0
+	if config.randomize_requests and (config.request_count_min < 1 or config.request_count_max < config.request_count_min or config.request_count_max > config.requests.size()):
+		return false
 	var seen: Dictionary = {}
 	for request: Dictionary in config.requests:
 		var id: String = str(request.get("item_id", ""))
@@ -42,6 +45,9 @@ func _validate_config() -> bool:
 		for key: String in ["quantity", "sell_price"]:
 			if not request.get(key) is int or int(request[key]) <= 0:
 				return false
+		var minimum: Variant = request.get("quantity_min", request.quantity)
+		if not minimum is int or minimum <= 0 or minimum > request.quantity:
+			return false
 		seen[id] = true
 		if not _offers.has(id):
 			_offers[id] = {"stock": 0, "buy_price": 0}
@@ -70,10 +76,27 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		_budget = config.starting_shekel
 		_stock.clear()
 		_demand.clear()
+		_roll_visit_requests()
 		for id: String in _offers:
 			_stock[id] = int(_offers[id].stock)
 			_demand[id] = int(_offers[id].requested)
 	changed.emit()
+
+func _roll_visit_requests() -> void:
+	# Snapshot the chosen request set in this ledger, never in a scene/menu.
+	for id: String in _offers:
+		_offers[id].requested = 0
+	var pool: Array = config.requests.duplicate()
+	var count: int = pool.size()
+	if config.randomize_requests:
+		count = _request_rng.randi_range(config.request_count_min, config.request_count_max)
+	for index: int in range(count):
+		var picked: int = _request_rng.randi_range(0, pool.size() - 1) if config.randomize_requests else 0
+		var request: Dictionary = pool.pop_at(picked)
+		var quantity: int = request.quantity
+		if config.randomize_requests:
+			quantity = _request_rng.randi_range(int(request.get("quantity_min", quantity)), quantity)
+		_offers[str(request.item_id)].requested = quantity
 
 func _is_visit_time(day: int, hour: int) -> bool:
 	return day >= config.first_day and (day - config.first_day) % config.interval_days == 0 and hour >= config.arrival_hour and hour < config.departure_hour
@@ -89,7 +112,7 @@ func get_budget() -> int:
 func get_catalog() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for id: String in _offers:
-		rows.append({"item_id": id, "stock": _stock.get(id, 0), "buy_price": _offers[id].buy_price, "sell_price": _offers[id].sell_price, "player_qty": Inventory.items.get(id, 0), "demand": _demand.get(id, 0), "requested": _offers[id].requested})
+		rows.append({"item_id": id, "stock": _stock.get(id, 0), "buy_price": _offers[id].buy_price, "sell_price": _offers[id].sell_price if _offers[id].requested > 0 else 0, "player_qty": Inventory.items.get(id, 0), "demand": _demand.get(id, 0), "requested": _offers[id].requested})
 	return rows
 
 func get_status_text() -> String:

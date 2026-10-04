@@ -43,6 +43,8 @@ func _capture(suffix: String = "main-map") -> void:
 	get_viewport().get_texture().get_image().save_png(folder.path_join("merchant-" + suffix + ".png"))
 
 func _run() -> void:
+	# Fixed profile keeps the existing accounting regression reproducible.
+	preload("res://resources/traveling_merchant/common_merchant.tres").set("randomize_requests", false)
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
 	# Keep the driver outside current_scene so real doors can replace the map.

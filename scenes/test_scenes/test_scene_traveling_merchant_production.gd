@@ -4,6 +4,8 @@ extends "res://scenes/test_scenes/mudbrick_player_flow_test.gd"
 var merchant: Node2D
 
 func _run() -> void:
+	# Fixed profile keeps the existing accounting regression reproducible.
+	preload("res://resources/traveling_merchant/common_merchant.tres").set("randomize_requests", false)
 	_prepare_fixture()
 	TimeComponentManager.set_process(false)
 	Inventory.items.clear()
