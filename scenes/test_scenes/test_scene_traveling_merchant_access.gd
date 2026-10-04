@@ -119,6 +119,9 @@ func _run() -> void:
 	_expect(is_instance_valid(merchant.menu), "Standing at the stop on arrival enables interaction.")
 	Inventory.add_item("sun_dried_mudbrick", 2)
 	merchant.menu.sell_tab.pressed.emit()
+	_expect(merchant.menu.catalog_list.get_child_count() == 2, "Sell displays only the two requested goods.")
+	for row: Node in merchant.menu.catalog_list.get_children():
+		_expect(row.get_meta("merchant_item_id") in ["wood_log", "sun_dried_mudbrick"], "Unrequested resources are hidden from Sell.")
 	merchant.menu._on_catalog_item_pressed("sun_dried_mudbrick")
 	merchant.menu.quantity_spin_box.value = 2
 	_expect(not merchant.menu.confirm_button.disabled, "Sell mode quotes owned workshop output.")
@@ -130,6 +133,8 @@ func _run() -> void:
 	Inventory.items["sun_dried_mudbrick"] = 20
 	ledger._budget = 54
 	Inventory.items_changed.emit()
+	ledger._demand["sun_dried_mudbrick"] = 20
+	ledger.changed.emit()
 	merchant.menu.quantity_spin_box.value = 20
 	await _settle()
 	_expect(merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Merchant can afford only 18.", "Invalid sale has one concise affordability reason.")
@@ -143,6 +148,9 @@ func _run() -> void:
 	_expect(merchant.menu.confirm_button.get_global_rect() == button_rect, "Clearing the warning does not move Sell.")
 	_expect(Inventory.items["sun_dried_mudbrick"] == 20 and ledger.get_budget() == 54, "Max is selection only.")
 	await _capture("sell-valid")
+	merchant.menu.quantity_spin_box.value = 21
+	_expect(merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Merchant needs only 20 more.", "Over-quota request explains remaining demand.")
+	await _capture("request-limit")
 	merchant.menu.buy_tab.pressed.emit()
 	merchant.menu._on_catalog_item_pressed("clay_lump")
 	merchant.menu.quantity_spin_box.value = 20

@@ -29,6 +29,7 @@ func _run() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = true
 	Inventory.items_changed.connect(_on_inventory_items_changed)
+	_test_default_requests()
 	_test_visit_schedule_and_ledger()
 	_test_atomic_trades_and_catalog_copy()
 	_test_rejections_are_transactional()
@@ -51,13 +52,20 @@ func _snapshot_globals() -> void:
 	_saved_clock_paused = TimeComponentManager.is_paused
 	_saved_clock_processing = TimeComponentManager.is_processing()
 
-func _new_merchant(starting_shekel: int = 120, clay_stock: int = -1) -> Variant:
+func _new_merchant(starting_shekel: int = 120, clay_stock: int = -1, use_default_requests: bool = false) -> Variant:
 	if is_instance_valid(merchant):
 		merchant.free()
 	merchant = null
 	_set_clock(0, 0, 0)
 	var config: Resource = MERCHANT_CONFIG.duplicate(true) as Resource
 	config.set("starting_shekel", starting_shekel)
+	# Broad trading fixtures isolate ledger edge cases from the limited default catalog.
+	if not use_default_requests:
+		var requests: Array[Dictionary] = []
+		var prices: Dictionary = {"clay_lump": 1, "straw_bundle": 1, "water_jar": 1, "wood_log": 2, "stone_hammer": 5, "sun_dried_mudbrick": 3}
+		for id: String in prices:
+			requests.append({"item_id": id, "quantity": 1000, "sell_price": prices[id]})
+		config.set("requests", requests)
 	if clay_stock >= 0:
 		var offers: Array = config.get("offers")
 		for index: int in range(offers.size()):
@@ -72,6 +80,27 @@ func _new_merchant(starting_shekel: int = 120, clay_stock: int = -1) -> Variant:
 	WorkStateRuntime.add_child(state)
 	merchant = state
 	return state
+
+func _test_default_requests() -> void:
+	var state: Variant = _new_merchant(120, -1, true)
+	_set_inventory({"shekel": 100, "clay_lump": 1, "water_jar": 1, "wood_log": 7})
+	_jump_to(1, 8, 0)
+	_assert_rejected_without_mutation(state, "clay_lump", 1, false, "Unrequested clay")
+	_assert_rejected_without_mutation(state, "water_jar", 1, false, "Unrequested water")
+	_assert_rejected_without_mutation(state, "wood_log", 7, false, "Sale over six-wood request")
+	_expect(state.trade("wood_log", 2, false).ok, "Partial request sale succeeds.")
+	_expect(_row_for(state.get_catalog(), "wood_log").demand == 4, "Partial sale consumes two request units.")
+	_expect(state.trade("wood_log", 4, false).ok, "Remaining request can be filled exactly.")
+	_expect(state.trade("wood_log", 1, true).ok, "Sold goods can still be bought from offered stock.")
+	_assert_rejected_without_mutation(state, "wood_log", 1, false, "Buying from merchant does not restore demand")
+	_jump_to(1, 8, 0)
+	_expect(_row_for(state.get_catalog(), "wood_log").demand == 0, "Same-visit refresh does not refill demand.")
+	_jump_to(4, 8, 0)
+	_expect(_row_for(state.get_catalog(), "wood_log").demand == 6, "Next arrival restores the configured request once.")
+	_expect(state.trade("wood_log", 1, false).ok, "Next visit accepts a new request sale.")
+	_jump_to(1, 8, 0)
+	_jump_to(4, 8, 0)
+	_expect(_row_for(state.get_catalog(), "wood_log").demand == 5, "Rewinding and returning cannot refill a partially used quota.")
 
 func _test_visit_schedule_and_ledger() -> void:
 	var state: Variant = _new_merchant()

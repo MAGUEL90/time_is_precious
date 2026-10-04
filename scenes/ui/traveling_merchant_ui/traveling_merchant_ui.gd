@@ -24,6 +24,7 @@ const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 @onready var selected_name_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/SelectedRow/SelectedNameLabel
 @onready var unit_price_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceLabel
 @onready var unit_price_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/UnitPriceRow/UnitPriceIcon
+@onready var quantity_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/QuantityLabel
 @onready var quantity_spin_box: SpinBox = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/QuantitySpinBox
 @onready var max_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuantityRow/MaxButton
 @onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalLabel
@@ -132,6 +133,9 @@ func _present_result_message(message: String) -> String:
 		@warning_ignore("integer_division")
 		var affordable: int = merchant_state.get_budget() / maxi(price, 1)
 		return "Merchant can afford only %d." % affordable
+	if message == "Merchant request limit reached.":
+		var remaining: int = int(_get_selected_row().get("demand", 0))
+		return "Request fulfilled." if remaining == 0 else "Merchant needs only %d more." % remaining
 	if message == "Not enough merchant stock.":
 		return "Only %d in stock." % int(_get_selected_row().get("stock", 0))
 	if message == "Not enough inventory capacity for this trade.":
@@ -196,19 +200,24 @@ func _refresh_view() -> void:
 	_catalog_rows = next_catalog_rows
 	if not _contains_selected_item():
 		selected_item_id = ""
-		if not _catalog_rows.is_empty():
-			selected_item_id = str(_catalog_rows[0].get("item_id", ""))
+		for row: Dictionary in _catalog_rows:
+			if _row_visible(row):
+				selected_item_id = str(row.get("item_id", ""))
+				break
 
 	if catalog_changed:
 		_render_catalog()
 	_refresh_selected_item()
 	_refresh_quote()
 
+func _row_visible(row: Dictionary) -> bool:
+	return int(row.get("buy_price" if buying else "sell_price", 0)) > 0
+
 func _contains_selected_item() -> bool:
 	if selected_item_id.is_empty():
 		return false
 	for row in _catalog_rows:
-		if str(row.get("item_id", "")) == selected_item_id:
+		if _row_visible(row) and str(row.get("item_id", "")) == selected_item_id:
 			return true
 	return false
 
@@ -217,13 +226,17 @@ func _render_catalog() -> void:
 		catalog_list.remove_child(child)
 		child.queue_free()
 
-	if _catalog_rows.is_empty():
-		var empty_label := _make_label("No goods offered", 6)
+	var visible_rows: Array[Dictionary] = []
+	for row: Dictionary in _catalog_rows:
+		if _row_visible(row):
+			visible_rows.append(row)
+	if visible_rows.is_empty():
+		var empty_label := _make_label("No goods offered" if buying else "No requests this visit", 6)
 		empty_label.custom_minimum_size = Vector2(0, 16)
 		catalog_list.add_child(empty_label)
 		return
 
-	for row in _catalog_rows:
+	for row in visible_rows:
 		var item_id: String = str(row.get("item_id", ""))
 		if item_id.is_empty():
 			continue
@@ -279,9 +292,9 @@ func _render_catalog() -> void:
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		row_box.add_child(name_label)
 
-		var available_key: String = "stock" if buying else "player_qty"
+		var available_key: String = "stock" if buying else "demand"
 		var stock_label := _make_label(
-			"x%d" % int(row.get(available_key, 0)),
+			("x%d" if buying else "Need %d") % int(row.get(available_key, 0)),
 			6
 		)
 		stock_label.custom_minimum_size = Vector2(34, 0)
@@ -331,6 +344,11 @@ func _refresh_selected_item() -> void:
 	var unit_price: int = int(row.get("buy_price" if buying else "sell_price", 0))
 	unit_price_label.text = str(unit_price) if unit_price > 0 else "—"
 	unit_price_icon.visible = unit_price > 0
+	quantity_label.text = "Quantity" if buying else "Have %d" % int(row.get("player_qty", 0))
+	quantity_label.clip_text = true
+	quantity_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	quantity_label.tooltip_text = quantity_label.text
+	quantity_spin_box.tooltip_text = "Quantity to buy" if buying else "Quantity to sell"
 	quantity_spin_box.editable = true
 	_update_quantity_limit(row)
 
@@ -348,6 +366,8 @@ func _maximum_quantity() -> int:
 	var row: Dictionary = _get_selected_row()
 	var available: int = int(row.get("stock" if buying else "player_qty", 0))
 	var price: int = int(row.get("buy_price" if buying else "sell_price", 0))
+	if not buying:
+		available = mini(available, int(row.get("demand", 0)))
 	if price <= 0:
 		return 0
 	var wallet: int = int(Inventory.items.get(SHEKEL_ITEM_ID, 0)) if buying else int(merchant_state.get_budget())
@@ -369,7 +389,7 @@ func _on_max_pressed() -> void:
 
 func _get_selected_row() -> Dictionary:
 	for row in _catalog_rows:
-		if str(row.get("item_id", "")) == selected_item_id:
+		if _row_visible(row) and str(row.get("item_id", "")) == selected_item_id:
 			return row
 	return {}
 
@@ -387,8 +407,7 @@ func _set_buying(next_buying: bool) -> void:
 	_result_message = ""
 	_update_mode_tabs()
 	_render_catalog()
-	_refresh_selected_item()
-	_refresh_quote()
+	_refresh_view()
 
 func _update_mode_tabs() -> void:
 	buy_tab.button_pressed = buying

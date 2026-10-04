@@ -28,7 +28,9 @@ minimal map. The approved MVP schedule starts on game day 1, repeats every three
 days, and runs 08:00–18:00. Later arrival/tier rules must depend on city statistics;
 those statistics and rules do not exist yet.
 
-Prices and stock are explicitly provisional playtest configuration. Selling
+Prices, stock and purchase quotas are explicitly provisional playtest configuration.
+The merchant currently requests only six wood and twenty dry bricks per visit;
+buying goods from the merchant never restores those quotas. Selling
 personally held sun-dried mudbricks provides Shekel; this does not complete the
 normal starting-capital/material-acquisition loop or disk saving. Human gameplay
 review and merge remain pending. See

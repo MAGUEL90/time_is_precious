@@ -22,7 +22,7 @@ func _run() -> void:
 	await _frames(3)
 	_expect(WorkShopStorage.items.is_empty(), "No raw materials or output are seeded into storage.")
 	_snapshot("start")
-	for cycle: int in range(1, 4):
+	for cycle: int in range(1, 2):
 		await _approach(merchant)
 		merchant.on_player_interact(player)
 		for item_id: String in JOB.inputs:
@@ -41,29 +41,21 @@ func _run() -> void:
 		_snapshot("cycle%d_ready_to_sell" % cycle)
 		await _approach(merchant)
 		merchant.on_player_interact(player)
-		if cycle < 3:
-			await _trade_ui("sun_dried_mudbrick", 20, false)
-			_expect(Inventory.items.get("shekel", 0) == 100 + 35 * cycle, "Completed cycle earns 35 after material and service fees.")
-			_expect(merchant.state.get_budget() == 120 - 42 * cycle, "Merchant wallet reconciles purchases and sales.")
-		else:
-			var before: Dictionary = Inventory.items.duplicate()
-			var catalog_before: Array = merchant.state.get_catalog()
-			var rejected: Dictionary = merchant.state.trade("sun_dried_mudbrick", 20, false)
-			_expect(not rejected.ok and Inventory.items == before and merchant.state.get_catalog() == catalog_before and merchant.state.get_budget() == 54,
-				"Oversized sale is rejected without partial mutation when merchant cannot pay.")
-			await _trade_ui("sun_dried_mudbrick", 18, false)
-			_expect(merchant.state.get_budget() == 0 and Inventory.items.get("sun_dried_mudbrick", 0) == 2,
-				"Partial sale exhausts merchant money and leaves two player bricks.")
+		await _trade_ui("sun_dried_mudbrick", 20, false)
+		_expect(Inventory.items.get("shekel", 0) == 135 and merchant.state.get_budget() == 78, "One batch earns 35 after materials and fees.")
 		_snapshot("cycle%d_sold" % cycle)
 		await _close_merchant()
-	_expect(completed_cycles == 3, "Three real production cycles complete.")
-	_expect(TimeComponentManager.current_hour == 10 and TimeComponentManager.current_minute == 0, "Three batches advance 120 game minutes in this fixture.")
+	_expect(completed_cycles == 1, "One real production cycle fills the visit's brick request.")
+	_expect(TimeComponentManager.current_hour == 8 and TimeComponentManager.current_minute == 40, "Batch advances 40 game minutes.")
 	await _approach(merchant)
 	merchant.on_player_interact(player)
 	await _trade_ui("sun_dried_mudbrick", 1, true)
-	_expect(Inventory.items.get("shekel", 0) == 193 and merchant.state.get_budget() == 6, "Buying back a sold brick costs six.")
-	await _trade_ui("sun_dried_mudbrick", 1, false)
-	_expect(Inventory.items.get("shekel", 0) == 196 and merchant.state.get_budget() == 3, "Reselling the same brick returns only three.")
+	_expect(Inventory.items.get("shekel", 0) == 129 and merchant.state.get_budget() == 84, "Buying back a sold brick costs six.")
+	merchant.menu._set_buying(false)
+	merchant.menu._on_catalog_item_pressed("sun_dried_mudbrick")
+	_expect(merchant.menu.confirm_button.disabled and merchant.menu.max_button.disabled, "Exhausted request disables Sell and Max even after buying back stock.")
+	var rejected: Dictionary = merchant.state.trade("sun_dried_mudbrick", 1, false)
+	_expect(not rejected.ok and Inventory.items.get("sun_dried_mudbrick", 0) == 1 and Inventory.items.get("shekel", 0) == 129, "Exhausted quota rejects buyback resale without changing balances.")
 	_snapshot("buyback_and_resale")
 	await _close_merchant()
 	print("TravelingMerchantProductionTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)

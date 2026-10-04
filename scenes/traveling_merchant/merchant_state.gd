@@ -8,6 +8,7 @@ const MAX_INT: int = 9223372036854775807
 @export var config: Resource = preload("res://resources/traveling_merchant/common_merchant.tres")
 var _stock: Dictionary[String, int] = {}
 var _offers: Dictionary = {}
+var _demand: Dictionary[String, int] = {}
 var _budget: int = 0
 var _visit_day: int = -1
 var _latest_minute: int = -1
@@ -27,12 +28,27 @@ func _validate_config() -> bool:
 		var id: String = str(offer.get("item_id", ""))
 		if id.is_empty() or id == "shekel" or _offers.has(id) or ItemDatabase.get_item_data(id) == null:
 			return false
-		for key: String in ["stock", "buy_price", "sell_price"]:
+		for key: String in ["stock", "buy_price"]:
 			if not offer.get(key) is int or int(offer[key]) < 0:
 				return false
-		if offer.buy_price > 0 and offer.sell_price > offer.buy_price:
-			return false
 		_offers[id] = offer.duplicate(true)
+		_offers[id]["sell_price"] = 0
+		_offers[id]["requested"] = 0
+	var seen: Dictionary = {}
+	for request: Dictionary in config.requests:
+		var id: String = str(request.get("item_id", ""))
+		if id.is_empty() or id == "shekel" or seen.has(id) or ItemDatabase.get_item_data(id) == null:
+			return false
+		for key: String in ["quantity", "sell_price"]:
+			if not request.get(key) is int or int(request[key]) <= 0:
+				return false
+		seen[id] = true
+		if not _offers.has(id):
+			_offers[id] = {"stock": 0, "buy_price": 0}
+		if _offers[id].buy_price > 0 and request.sell_price > _offers[id].buy_price:
+			return false
+		_offers[id]["sell_price"] = request.sell_price
+		_offers[id]["requested"] = request.quantity
 	return not _offers.is_empty()
 
 func _sync_clock() -> void:
@@ -53,8 +69,10 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		_visit_day = day
 		_budget = config.starting_shekel
 		_stock.clear()
+		_demand.clear()
 		for id: String in _offers:
 			_stock[id] = int(_offers[id].stock)
+			_demand[id] = int(_offers[id].requested)
 	changed.emit()
 
 func _is_visit_time(day: int, hour: int) -> bool:
@@ -71,7 +89,7 @@ func get_budget() -> int:
 func get_catalog() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for id: String in _offers:
-		rows.append({"item_id": id, "stock": _stock.get(id, 0), "buy_price": _offers[id].buy_price, "sell_price": _offers[id].sell_price, "player_qty": Inventory.items.get(id, 0)})
+		rows.append({"item_id": id, "stock": _stock.get(id, 0), "buy_price": _offers[id].buy_price, "sell_price": _offers[id].sell_price, "player_qty": Inventory.items.get(id, 0), "demand": _demand.get(id, 0), "requested": _offers[id].requested})
 	return rows
 
 func get_status_text() -> String:
@@ -117,6 +135,8 @@ func quote(item_id: String, quantity: int, buying: bool) -> Dictionary:
 		if owned > MAX_INT - quantity or _budget > MAX_INT - total:
 			return _failure("Trade would exceed the balance limit.")
 	else:
+		if quantity > _demand.get(item_id, 0):
+			return _failure("Merchant request limit reached.")
 		if owned < quantity:
 			return _failure("Not enough items in your inventory.")
 		if _budget < total:
@@ -145,6 +165,8 @@ func trade(item_id: String, quantity: int, buying: bool) -> Dictionary:
 	_set_inventory_stack("shekel", Inventory.items.get("shekel", 0) - direction * total)
 	_stock[item_id] -= direction * quantity
 	_budget += direction * total
+	if not buying:
+		_demand[item_id] -= quantity
 	Inventory.items_changed.emit()
 	_trading = false
 	changed.emit()

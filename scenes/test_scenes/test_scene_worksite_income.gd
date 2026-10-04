@@ -58,28 +58,33 @@ func _run() -> void:
 			var preview: Dictionary = site.preview(180, player)
 			var result: Dictionary = site.execute(180, player, worksites, worksites._drop_output)
 			var quantity: int = int(Inventory.items.get(site.item_id, 0))
-			var sale: Dictionary = merchant.trade(site.item_id, quantity, false)
+			var demand: int = 0
+			for row: Dictionary in merchant.get_catalog():
+				if row.item_id == site.item_id:
+					demand = int(row.demand)
+			var sale: Dictionary = merchant.trade(site.item_id, mini(quantity, demand) if demand > 0 else quantity, false)
 			print("INCOME_MEASURE ", JSON.stringify({"scenario": scenario, "batch": index + 1, "preview": preview, "result": result,
 				"item": site.item_id, "sale": sale, "inventory": Inventory.items, "merchant": merchant.get_budget(), "stock_left": site.stock,
 				"hour": TimeComponentManager.current_hour, "minute": TimeComponentManager.current_minute,
 				"before": before, "after": {"fatigue": player.fatigue, "hunger": player.hunger, "focus": player.focus},
 				"needs_disabled": player.debug_disable_player_needs, "fatigue_disabled": player.debug_disable_fatigue}))
 			if scenario == "MixedNeeds":
+				var carried_before_pickup: int = int(Inventory.items.get(site.item_id, 0))
 				for drop: Node2D in worksites.get_node("GroundOutput").get_children():
 					if not drop.is_collecting:
 						player.global_position = drop.global_position
 						drop.on_player_interact(player)
 				var recovered: int = int(Inventory.items.get(site.item_id, 0))
 				if recovered > 0:
-					_expect(merchant.trade(site.item_id, recovered, false).ok, "Overflow can be picked up after selling and sold normally.")
-				print("INCOME_RECOVERED ", JSON.stringify({"batch": index + 1, "recovered": recovered, "wallet": Inventory.items.get("shekel", 0), "merchant": merchant.get_budget()}))
-				_expect(Inventory.items.get("shekel", 0) == [36, 72, 90][index], "Mixed route income reconciles without grants.")
+					_expect(not merchant.trade(site.item_id, recovered, false).ok, "Unrequested overflow cannot become income.")
+				print("INCOME_RECOVERED ", JSON.stringify({"batch": index + 1, "recovered": recovered - carried_before_pickup, "wallet": Inventory.items.get("shekel", 0), "merchant": merchant.get_budget()}))
+				_expect(Inventory.items.get("shekel", 0) == 0, "Water and clay are not requested and generate no cash.")
 			if index == 0:
 				_expect(result.minutes == 180 and not result.interrupted, "First three-hour gathering completes without seeded inputs.")
-			if site_id == "ReedSite":
-				_expect(not sale.ok, "Merchant does not buy reed in the current catalog.")
+			if site_id != "WoodSite":
+				_expect(not sale.ok, "Merchant rejects resources outside its request list.")
 			elif result.units > 0:
-				_expect(sale.ok, "Gathered goods can be sold for actual Shekel.")
+				_expect(sale.ok, "Wood is sold up to the remaining request quota.")
 		merchant.queue_free()
 	content.queue_free()
 	await get_tree().process_frame

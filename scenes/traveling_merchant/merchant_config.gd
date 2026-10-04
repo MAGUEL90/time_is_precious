@@ -6,5 +6,8 @@ extends Resource
 @export_range(0, 23) var arrival_hour: int = 8
 @export_range(1, 24) var departure_hour: int = 18
 @export var starting_shekel: int = 120
-## Prices are from the player's perspective: buy pays, sell receives.
+## Goods offered to the player: item_id, stock, buy_price.
 @export var offers: Array[Dictionary] = []
+
+## Goods requested from the player: item_id, quantity, sell_price.
+@export var requests: Array[Dictionary] = []
