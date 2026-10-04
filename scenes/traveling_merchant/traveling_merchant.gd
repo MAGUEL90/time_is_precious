@@ -62,10 +62,7 @@ func on_player_interact(interacting_player: Player) -> void:
 		return
 	player.set_movement_locked(&"traveling_merchant", true)
 	interactable_label_component.hide()
-	if state.should_show_greeting_this_visit() and state.mark_greeting_shown_this_visit():
-		_start_greeting()
-	else:
-		_open_trade_menu()
+	_start_greeting()
 	get_viewport().set_input_as_handled()
 
 func _open_trade_menu() -> void:

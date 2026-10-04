@@ -46,8 +46,8 @@ and existing needs drain rates are unchanged. The initial linear curve is provis
 See `docs/task_reports/player-energy-output-2026-10-04.md`. The merchant branch
 now restores five main-map worksites, existing home/sleep access and Nightmare,
 with needs active in both outdoor and home scenes. Resource stocks survive a
-trip home within the running session. A short Trade/Leave greeting appears once
-per merchant visit. See `docs/task_reports/merchant-main-map-loop-2026-10-04.md`.
+trip home within the running session. A short Trade/Leave greeting appears at every
+merchant interaction. The transaction panel omits the departure schedule. See `docs/task_reports/merchant-main-map-loop-2026-10-04.md`.
 Food availability remains the next balancing dependency: hunger reaches 100%
 before the first sale in the measured starting route.
 

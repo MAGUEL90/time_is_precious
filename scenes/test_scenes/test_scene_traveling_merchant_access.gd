@@ -42,6 +42,9 @@ func _press(action: String) -> void:
 	get_viewport().push_input(event)
 	await get_tree().process_frame
 
+	if action == "interact" and merchant._has_live_greeting_balloon():
+		await _accept_greeting()
+
 func _run() -> void:
 	TimeComponentManager.set_process(false)
 	_clock(0, 10)
@@ -60,8 +63,6 @@ func _run() -> void:
 	await _settle()
 	_expect(player.current_interactable == merchant, "Approaching merchant selects E interaction.")
 	await _capture("arrival")
-	# Greeting interactions have a dedicated fixture; this test covers trading.
-	merchant.state.mark_greeting_shown_this_visit()
 	Inventory.add_item("shekel", 20)
 	await _press("interact")
 	_expect(is_instance_valid(merchant.menu) and not player.can_move, "E opens trading and locks player movement.")
@@ -116,7 +117,6 @@ func _run() -> void:
 	_expect(Inventory.items == inv_before, "Stale UI request after departure cannot trade.")
 	_clock(4, 8)
 	await _settle()
-	merchant.state.mark_greeting_shown_this_visit()
 	_expect(ledger.get_budget() == 120, "New visit receives configured finite budget.")
 	await _press("interact")
 	_expect(is_instance_valid(merchant.menu), "Standing at the stop on arrival enables interaction.")
@@ -204,3 +204,25 @@ func _finish() -> void:
 		content.free()
 	print("TravelingMerchantAccessTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _accept_greeting() -> void:
+	var balloon: BaseGameDialogueBalloon = merchant.greeting_balloon
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while is_instance_valid(balloon) and not is_instance_valid(balloon.dialogue_line) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	if not is_instance_valid(balloon) or not is_instance_valid(balloon.dialogue_line):
+		_expect(false, "Merchant greeting loaded before Trade.")
+		return
+	balloon.dialogue_label.skip_typing()
+	balloon.show_responses()
+	for item: Control in balloon.responses_menu.get_menu_items():
+		var response: DialogueResponse = item.get_meta("response")
+		if response.text.strip_edges() == "Trade":
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = true
+			item.gui_input.emit(click)
+			break
+	while not is_instance_valid(merchant.menu) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(is_instance_valid(merchant.menu), "Trade choice opens the transaction panel.")

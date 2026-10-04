@@ -19,14 +19,13 @@ func _run() -> void:
 	merchant = preload("res://scenes/traveling_merchant/traveling_merchant.tscn").instantiate()
 	merchant.position = Vector2(310, 127)
 	add_child(merchant)
-	# Greeting is covered separately; keep this fixture focused on production.
-	merchant.state.mark_greeting_shown_this_visit()
 	await _frames(3)
 	_expect(WorkShopStorage.items.is_empty(), "No raw materials or output are seeded into storage.")
 	_snapshot("start")
 	for cycle: int in range(1, 2):
 		await _approach(merchant)
 		merchant.on_player_interact(player)
+		await _accept_greeting()
 		for item_id: String in JOB.inputs:
 			await _trade_ui(item_id, 3, true)
 		_snapshot("cycle%d_bought" % cycle)
@@ -43,6 +42,7 @@ func _run() -> void:
 		_snapshot("cycle%d_ready_to_sell" % cycle)
 		await _approach(merchant)
 		merchant.on_player_interact(player)
+		await _accept_greeting()
 		await _trade_ui("sun_dried_mudbrick", 20, false)
 		_expect(Inventory.items.get("shekel", 0) == 135 and merchant.state.get_budget() == 78, "One batch earns 35 after materials and fees.")
 		_snapshot("cycle%d_sold" % cycle)
@@ -51,6 +51,7 @@ func _run() -> void:
 	_expect(TimeComponentManager.current_hour == 8 and TimeComponentManager.current_minute == 40, "Batch advances 40 game minutes.")
 	await _approach(merchant)
 	merchant.on_player_interact(player)
+	await _accept_greeting()
 	await _trade_ui("sun_dried_mudbrick", 1, true)
 	_expect(Inventory.items.get("shekel", 0) == 129 and merchant.state.get_budget() == 84, "Buying back a sold brick costs six.")
 	merchant.menu._set_buying(false)
@@ -100,3 +101,25 @@ func _withdraw_batch() -> void:
 func _snapshot(stage: String) -> void:
 	print("ECONOMY ", JSON.stringify({"stage": stage, "player": Inventory.items, "merchant_shekel": merchant.state.get_budget(),
 		"hour": TimeComponentManager.current_hour, "minute": TimeComponentManager.current_minute, "catalog": merchant.state.get_catalog()}))
+
+func _accept_greeting() -> void:
+	var balloon: BaseGameDialogueBalloon = merchant.greeting_balloon
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while is_instance_valid(balloon) and not is_instance_valid(balloon.dialogue_line) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	if not is_instance_valid(balloon) or not is_instance_valid(balloon.dialogue_line):
+		_expect(false, "Merchant greeting loaded before Trade.")
+		return
+	balloon.dialogue_label.skip_typing()
+	balloon.show_responses()
+	for item: Control in balloon.responses_menu.get_menu_items():
+		var response: DialogueResponse = item.get_meta("response")
+		if response.text.strip_edges() == "Trade":
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = true
+			item.gui_input.emit(click)
+			break
+	while not is_instance_valid(merchant.menu) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(is_instance_valid(merchant.menu), "Trade choice opens the transaction panel.")

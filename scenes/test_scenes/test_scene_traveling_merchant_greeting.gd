@@ -34,7 +34,6 @@ func _run() -> void:
 		player._on_interactable_activated(merchant)
 	await _settle()
 	_expect(merchant.call("has_player_access"), "The fixture Player has physical access to the merchant.")
-	_expect(merchant.get("state").should_show_greeting_this_visit(), "The first scheduled visit starts with an unused greeting.")
 
 	await _press("interact")
 	var greeting: BaseGameDialogueBalloon = await _wait_for_greeting()
@@ -63,20 +62,18 @@ func _run() -> void:
 		return
 	_expect(not TimeComponentManager.is_paused and not player.can_move,
 		"Ending the greeting resumes time while the trade menu keeps its own movement lock.")
-	_expect(not merchant.get("state").should_show_greeting_this_visit(),
-		"Showing the greeting consumes this visit's one-time greeting flag.")
 	merchant.call("close_menu")
 	await _settle()
 	_set_clock(1, 8, 1)
-	_expect(not merchant.get("state").should_show_greeting_this_visit(),
-		"A same-visit clock update does not restore the greeting.")
 	await _press("interact")
-	_expect(is_instance_valid(merchant.get("menu")) and not merchant.call("_has_live_greeting_balloon"),
-		"Later interactions in the same visit open trading directly.")
+	greeting = await _wait_for_greeting()
+	_expect(not is_instance_valid(merchant.get("menu")), "Every interaction begins with dialogue before trading.")
+	await _wait_for_greeting_line(greeting)
+	await _choose_response(greeting, "Trade")
+	await _wait_until(func(): return is_instance_valid(merchant.get("menu")), "Trade opens after the repeated greeting.")
 	merchant.call("close_menu")
 	await _settle()
 
-	var ledger: Node = merchant.get("state")
 	merchant.queue_free()
 	await get_tree().process_frame
 	merchant = MERCHANT_SCENE.instantiate() as Node2D
@@ -87,17 +84,17 @@ func _run() -> void:
 		merchant.call("_on_body_entered", player)
 	if player.current_interactable != merchant:
 		player._on_interactable_activated(merchant)
-	_expect(merchant.get("state") == ledger and not ledger.should_show_greeting_this_visit(),
-		"Recreating the merchant view keeps its runtime greeting status.")
 	await _press("interact")
-	_expect(is_instance_valid(merchant.get("menu")) and not merchant.call("_has_live_greeting_balloon"),
-		"A map-style merchant reload continues directly to trading for this visit.")
+	greeting = await _wait_for_greeting()
+	_expect(not is_instance_valid(merchant.get("menu")), "Every interaction begins with dialogue before trading.")
+	await _wait_for_greeting_line(greeting)
+	await _choose_response(greeting, "Trade")
+	await _wait_until(func(): return is_instance_valid(merchant.get("menu")), "Trade opens after the repeated greeting.")
 	merchant.call("close_menu")
 	await _settle()
 
 	_set_clock(4, 8, 0)
 	await _settle()
-	_expect(ledger.should_show_greeting_this_visit(), "A newly reached scheduled visit resets the greeting exactly once.")
 	await _press("interact")
 	greeting = await _wait_for_greeting()
 	if not is_instance_valid(greeting):
@@ -111,10 +108,12 @@ func _run() -> void:
 		_finish()
 		return
 	_expect(not is_instance_valid(merchant.get("menu")), "Leave never opens the trade menu.")
-	_expect(not ledger.should_show_greeting_this_visit(), "Leaving still consumes this visit's greeting.")
 	await _press("interact")
-	_expect(is_instance_valid(merchant.get("menu")) and not merchant.call("_has_live_greeting_balloon"),
-		"After choosing Leave, the next interaction trades directly.")
+	greeting = await _wait_for_greeting()
+	_expect(not is_instance_valid(merchant.get("menu")), "Every interaction begins with dialogue before trading.")
+	await _wait_for_greeting_line(greeting)
+	await _choose_response(greeting, "Trade")
+	await _wait_until(func(): return is_instance_valid(merchant.get("menu")), "Trade opens after the repeated greeting.")
 	merchant.call("close_menu")
 	await _settle()
 

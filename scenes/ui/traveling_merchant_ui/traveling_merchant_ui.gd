@@ -16,7 +16,6 @@ const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 
 @onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet/PlayerShekelLabel
 @onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet/MerchantBudgetLabel
-@onready var status_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/StatusLabel
 @onready var catalog_list: VBoxContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll/CatalogList
 @onready var buy_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/BuyTab
 @onready var sell_tab: Button = $Root/Center/TextureWindow/Margin/MainVBox/ModeRow/SellTab
@@ -180,14 +179,11 @@ func _refresh_view() -> void:
 
 	player_shekel_label.text = str(int(Inventory.items.get(SHEKEL_ITEM_ID, 0)))
 	var budget: int = 0
-	var status_text: String = ""
 	var next_catalog_rows: Array[Dictionary] = []
 
 	if is_instance_valid(merchant_state):
 		if merchant_state.has_method("get_budget"):
 			budget = int(merchant_state.call("get_budget"))
-		if merchant_state.has_method("get_status_text"):
-			status_text = str(merchant_state.call("get_status_text"))
 		if merchant_state.has_method("get_catalog"):
 			var catalog_value: Variant = merchant_state.call("get_catalog")
 			if catalog_value is Array:
@@ -196,7 +192,6 @@ func _refresh_view() -> void:
 						next_catalog_rows.append(row_value.duplicate())
 
 	merchant_budget_label.text = str(budget)
-	status_label.text = status_text if not status_text.is_empty() else "Merchant is in town."
 	var catalog_changed: bool = _catalog_rows != next_catalog_rows
 	_catalog_rows = next_catalog_rows
 	if not _contains_selected_item():

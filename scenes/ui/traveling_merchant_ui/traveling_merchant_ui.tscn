@@ -158,15 +158,6 @@ theme_override_font_sizes/font_size = 6
 text = "0"
 vertical_alignment = 1
 
-[node name="StatusLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 9)
-layout_mode = 2
-theme = ExtResource("2_theme")
-theme_type_variation = &"HudLabelShortcut"
-theme_override_font_sizes/font_size = 6
-text = "Merchant is in town."
-text_overrun_behavior = 3
-
 [node name="ModeRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 13)
 layout_mode = 2

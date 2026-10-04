@@ -13,7 +13,6 @@ var _budget: int = 0
 var _visit_day: int = -1
 var _latest_minute: int = -1
 var _present: bool = false
-var _greeting_shown_this_visit: bool = false
 var _trading: bool = false
 var _valid: bool = false
 
@@ -68,8 +67,6 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	_present = _is_visit_time(day, hour)
 	if _present and day > _visit_day:
 		_visit_day = day
-		# The flag belongs to the visit ledger, so rebuilding its scene view cannot replay it.
-		_greeting_shown_this_visit = false
 		_budget = config.starting_shekel
 		_stock.clear()
 		_demand.clear()
@@ -85,15 +82,6 @@ func is_present() -> bool:
 	var clock := TimeComponentManager
 	var now: int = clock.current_day * 1440 + clock.current_hour * 60 + clock.current_minute
 	return _valid and _present and now >= _latest_minute and clock.current_day == _visit_day and _is_visit_time(clock.current_day, clock.current_hour)
-
-func should_show_greeting_this_visit() -> bool:
-	return is_present() and not _greeting_shown_this_visit
-
-func mark_greeting_shown_this_visit() -> bool:
-	if not should_show_greeting_this_visit():
-		return false
-	_greeting_shown_this_visit = true
-	return true
 
 func get_budget() -> int:
 	return _budget
