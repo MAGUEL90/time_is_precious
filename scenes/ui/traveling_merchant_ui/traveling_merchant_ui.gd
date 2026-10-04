@@ -10,13 +10,10 @@ const DEFAULT_ITEM_ICON: Texture2D = preload(
 	"res://assets/ui/default_icon.png"
 )
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
-const BUY_FLOW_ARROW: Texture2D = preload("res://assets/ui/ui_icon/right_arrow_icon.png")
-const SELL_FLOW_ARROW: Texture2D = preload("res://assets/ui/ui_icon/left_arrow_icon.png")
 const SHEKEL_ITEM_ID: String = "shekel"
 const LIGHT_TEXT_COLOR: Color = Color(1.0, 0.90, 0.67, 1.0)
 const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 
-@onready var money_flow_arrow: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/WalletSpacer/MoneyFlowArrow
 @onready var player_shekel_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/PlayerWallet/PlayerShekelLabel
 @onready var merchant_budget_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/WalletRow/TraderWallet/MerchantBudgetLabel
 @onready var catalog_list: VBoxContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/CatalogColumn/CatalogScroll/CatalogList
@@ -32,8 +29,8 @@ const DISABLED_TEXT_COLOR: Color = Color(0.76, 0.69, 0.56, 1.0)
 @onready var total_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalLabel
 @onready var total_icon: TextureRect = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/TotalRow/TotalIcon
 @onready var quote_message_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/QuoteMessageLabel
-@onready var confirm_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox/ConfirmButton
-@onready var close_button: BaseButton = $Root/Center/TextureWindow/Margin/MainVBox/HeaderRow/CloseButton
+@onready var confirm_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/FooterRow/ConfirmButton
+@onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/FooterRow/BackButton
 
 var merchant_state: Node
 var selected_item_id: String = ""
@@ -51,7 +48,7 @@ func _ready() -> void:
 	quantity_spin_box.value_changed.connect(_on_quantity_changed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	max_button.pressed.connect(_on_max_pressed)
-	close_button.pressed.connect(close_menu)
+	back_button.pressed.connect(close_menu)
 	var quantity_line_edit: LineEdit = quantity_spin_box.get_line_edit()
 	quantity_line_edit.add_theme_font_override("font", PIXEL_FONT)
 	quantity_line_edit.add_theme_font_size_override("font_size", 6)
@@ -195,7 +192,6 @@ func _refresh_view() -> void:
 						next_catalog_rows.append(row_value.duplicate())
 
 	merchant_budget_label.text = str(budget)
-	money_flow_arrow.texture = BUY_FLOW_ARROW if buying else SELL_FLOW_ARROW
 	var catalog_changed: bool = _catalog_rows != next_catalog_rows
 	_catalog_rows = next_catalog_rows
 	if not _contains_selected_item():

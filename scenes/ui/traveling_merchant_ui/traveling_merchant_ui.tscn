@@ -1,13 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/traveling_merchant_ui/traveling_merchant_ui.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
 [ext_resource type="Theme" uid="uid://chw135qrjyvvj" path="res://resources/ui_inventory_theme/ui_inventory_theme.tres" id="4_inventory_theme"]
-[ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_close"]
 [ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="6_shekel"]
 
-[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="7_flow_arrow"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_panel"]
 atlas = ExtResource("3_panel")
@@ -86,10 +84,6 @@ theme_override_font_sizes/font_size = 12
 text = "TRAVELING MERCHANT"
 vertical_alignment = 1
 
-[node name="CloseButton" parent="Root/Center/TextureWindow/Margin/MainVBox/HeaderRow" instance=ExtResource("5_close")]
-layout_mode = 2
-size_flags_vertical = 4
-
 [node name="WalletRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
@@ -128,24 +122,6 @@ vertical_alignment = 1
 [node name="WalletSpacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="MoneyFlowArrow" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow/WalletSpacer"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -4.0
-offset_top = -4.0
-offset_right = 4.0
-offset_bottom = 4.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("7_flow_arrow")
-texture_filter = 1
-stretch_mode = 4
-mouse_filter = 2
 
 [node name="TraderWallet" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/WalletRow"]
 layout_mode = 2
@@ -377,9 +353,26 @@ text = ""
 autowrap_mode = 3
 vertical_alignment = 1
 
-[node name="ConfirmButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/TradePanel/TradeMargin/TradeVBox"]
-custom_minimum_size = Vector2(0, 15)
+[node name="FooterRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
 layout_mode = 2
+
+[node name="BackButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConfirmButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/FooterRow"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+focus_mode = 0
 theme = ExtResource("2_theme")
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6

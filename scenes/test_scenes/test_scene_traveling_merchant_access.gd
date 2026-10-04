@@ -100,8 +100,12 @@ func _run() -> void:
 	for i: int in range(3):
 		await _press("interact")
 		_expect(is_instance_valid(merchant.menu), "Repeated open succeeds.")
-		await _press("ui_cancel")
+		if i == 0:
+			merchant.menu.back_button.pressed.emit()
+		else:
+			await _press("ui_cancel")
 		await _settle()
+	_expect(player.can_move, "Back and Escape release the merchant movement lock.")
 	_expect(merchant.get_child_count() == base_child_count, "Repeated open/close frees old menu nodes.")
 	await _press("interact")
 	player.set_movement_locked(&"test_other_action", true)
