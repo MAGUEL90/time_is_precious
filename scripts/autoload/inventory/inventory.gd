@@ -67,7 +67,7 @@ func try_add_item(item_id: String, qty: int) -> bool:
 	if get_item_data(item_id) == null:
 		return false
 
-	if get_item_total_weight(item_id, qty) <= 0:
+	if get_item_data(item_id).weight < 0.0:
 		return false
 
 	if not has_capacity_for(item_id, qty):

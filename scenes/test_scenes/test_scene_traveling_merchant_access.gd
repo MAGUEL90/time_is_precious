@@ -148,8 +148,8 @@ func _run() -> void:
 	merchant.menu.quantity_spin_box.value = 20
 	_expect(merchant.menu.quote_message_label.text == "Only 12 in stock.", "Stock warning does not silently clamp quantity.")
 	merchant.menu.max_button.pressed.emit()
-	_expect(merchant.menu.quantity_spin_box.value == 7, "Buy Max respects capacity with coins exchanged, two clay, and twenty carried bricks.")
-	merchant.menu.quantity_spin_box.value = 8
+	_expect(merchant.menu.quantity_spin_box.value == 8, "Buy Max ignores currency weight with two clay and twenty carried bricks.")
+	merchant.menu.quantity_spin_box.value = 9
 	_expect(merchant.menu.confirm_button.disabled and merchant.menu.quote_message_label.text == "Not enough bag space.", "One above capacity Max is rejected with a compact reason.")
 	Inventory.items["shekel"] = 4
 	Inventory.items_changed.emit()

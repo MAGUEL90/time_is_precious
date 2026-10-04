@@ -354,7 +354,7 @@ func _maximum_quantity() -> int:
 	@warning_ignore("integer_division")
 	var affordable: int = wallet / price
 	var upper: int = mini(999, mini(available, affordable))
-	# Bounded by the input control; authoritative quotes include exchanged coin weight.
+	# Bounded by the input control; authoritative quotes enforce final inventory capacity.
 	for quantity: int in range(upper, 0, -1):
 		if merchant_state.quote(selected_item_id, quantity, buying).get("ok", false):
 			return quantity

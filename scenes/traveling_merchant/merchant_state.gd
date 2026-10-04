@@ -123,7 +123,7 @@ func quote(item_id: String, quantity: int, buying: bool) -> Dictionary:
 			return _failure("The merchant does not have enough Shekel.")
 		if stock > MAX_INT - quantity or wallet > MAX_INT - total:
 			return _failure("Trade would exceed the balance limit.")
-	# Shekel has weight too. Check the complete exchange, not just incoming goods.
+	# Check the final inventory using item data; Shekel has zero weight.
 	var item_weight: float = Inventory.get_item_total_weight(item_id, quantity)
 	var money_weight: float = Inventory.get_item_total_weight("shekel", total)
 	var delta: float = item_weight - money_weight if buying else money_weight - item_weight

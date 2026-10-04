@@ -33,7 +33,7 @@ func _run() -> void:
 	_test_atomic_trades_and_catalog_copy()
 	_test_rejections_are_transactional()
 	_test_last_shekel_and_last_stock()
-	_test_exchange_weight_uses_final_inventory()
+	_test_weightless_currency()
 	_test_integer_overflow_guards()
 	await _restore_globals()
 	print("TravelingMerchantTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
@@ -177,7 +177,7 @@ func _test_rejections_are_transactional() -> void:
 	_assert_rejected_without_mutation(state, "clay_lump", -1, true, "Negative quantity")
 	_assert_rejected_without_mutation(state, "missing_item", 1, true, "Unknown item")
 	_assert_rejected_without_mutation(state, "clay_lump", 13, true, "Insufficient merchant stock")
-	Inventory.max_load = 2.9
+	Inventory.max_load = 1.9
 	_set_inventory({"shekel": 100})
 	_assert_rejected_without_mutation(state, "clay_lump", 1, true, "Insufficient carry capacity")
 	Inventory.max_load = 100.0
@@ -215,26 +215,21 @@ func _test_last_shekel_and_last_stock() -> void:
 	_expect(_stock_for(state, "clay_lump") == 0,
 		"The failed purchase leaves the sold-out stock at zero.")
 
-func _test_exchange_weight_uses_final_inventory() -> void:
+func _test_weightless_currency() -> void:
 	var state: Variant = _new_merchant()
-	_set_inventory({"shekel": 198})
-	Inventory.max_load = 3.96
+	_set_inventory({"shekel": 1000000})
+	Inventory.max_load = 2.0
+	_expect(Inventory.get_total_inventory_weight() == 0.0, "A large Shekel balance takes no inventory capacity.")
 	_jump_to(1, 8, 0)
 	var purchase: Dictionary = state.trade("clay_lump", 1, true)
-	_expect(bool(purchase.get("ok", false)),
-		"A purchase fits when removing its payment makes the final inventory fit exactly.")
-	_expect(is_equal_approx(Inventory.get_total_inventory_weight(), 3.96),
-		"The purchase capacity check includes the Shekel removed from the player's bag.")
-
-	state = _new_merchant()
-	_set_inventory({"clay_lump": 1})
-	Inventory.max_load = 2.005
-	_jump_to(1, 8, 0)
+	_expect(bool(purchase.get("ok", false)) and Inventory.get_total_inventory_weight() == 2.0,
+		"Only the purchased clay contributes weight, filling the bag exactly.")
+	_expect(Inventory.try_add_item("shekel", 10) and Inventory.get_remaining_capacity() == 0.0,
+		"A full bag can receive weightless currency through the inventory API.")
+	_assert_rejected_without_mutation(state, "clay_lump", 1, true, "Buying another clay into a full bag")
 	var sale: Dictionary = state.trade("clay_lump", 1, false)
-	_expect(bool(sale.get("ok", false)),
-		"Selling an item frees its weight before the received Shekel is checked.")
-	_expect(Inventory.get_total_inventory_weight() <= Inventory.max_load,
-		"The resulting inventory remains within capacity after receiving Shekel.")
+	_expect(bool(sale.get("ok", false)) and Inventory.get_total_inventory_weight() == 0.0,
+		"Selling frees all item weight; received Shekel adds no weight.")
 
 func _test_integer_overflow_guards() -> void:
 	var state: Variant = _new_merchant()
