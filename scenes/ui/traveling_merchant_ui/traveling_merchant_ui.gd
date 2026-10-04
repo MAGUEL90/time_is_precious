@@ -58,7 +58,7 @@ func _ready() -> void:
 	quantity_line_edit.add_theme_stylebox_override("read_only", GAMEPLAY_THEME.get_stylebox("disabled", "HudShortcutButton"))
 	quantity_line_edit.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	quantity_line_edit.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
-	quantity_line_edit.add_theme_color_override("caret_color", LIGHT_TEXT_COLOR)
+	quantity_line_edit.add_theme_color_override("caret_color", Color.TRANSPARENT)
 	quote_message_label.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_color", LIGHT_TEXT_COLOR)
 	confirm_button.add_theme_color_override("font_hover_color", LIGHT_TEXT_COLOR)
@@ -465,8 +465,9 @@ func _set_quantity_arrows() -> void:
 	var down: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
 	up.rotate_90(CLOCKWISE)
 	down.rotate_90(CLOCKWISE)
-	var arrows := Image.create(up.get_width(), up.get_height() + down.get_height(), false, Image.FORMAT_RGBA8)
+	var gap: int = 4
+	var arrows := Image.create(up.get_width(), up.get_height() + gap + down.get_height(), false, Image.FORMAT_RGBA8)
 	arrows.blit_rect(up, Rect2i(Vector2i.ZERO, up.get_size()), Vector2i.ZERO)
-	arrows.blit_rect(down, Rect2i(Vector2i.ZERO, down.get_size()), Vector2i(0, up.get_height()))
+	arrows.blit_rect(down, Rect2i(Vector2i.ZERO, down.get_size()), Vector2i(0, up.get_height() + gap))
 	quantity_spin_box.add_theme_icon_override("updown", ImageTexture.create_from_image(arrows))
 	quantity_spin_box.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

@@ -89,7 +89,9 @@ func _start_greeting() -> void:
 		return
 	add_child(greeting_balloon)
 	_fit_greeting_to_viewport()
-	greeting_balloon.start(GREETING_DIALOGUE, "traveling_merchant_greeting", [self])
+	greeting_balloon.speaker_chat_box_vertical_offset = 0.0
+	# Limit speaker bounds to the NPC sprites, excluding the balloon progress icon.
+	greeting_balloon.start(GREETING_DIALOGUE, "traveling_merchant_greeting", [$MerchantVisual, self])
 
 func _fit_greeting_to_viewport() -> void:
 	# Reuse the existing balloon artwork; its generic defaults exceed 400x225.
