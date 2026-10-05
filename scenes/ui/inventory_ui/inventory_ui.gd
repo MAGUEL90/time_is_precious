@@ -264,7 +264,6 @@ func _on_item_slot_clicked(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 	active_option_item_id = item_id
 	active_option_slot.set_selected(true)
 
-	_show_item_info(item_id, slot_ref)
 	_position_option_panel_near_slot(slot_ref)
 
 # Option menu callbacks
@@ -290,9 +289,6 @@ func _on_item_slot_hovered(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 	_show_item_info(item_id, slot_ref)
 
 func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
-	if active_option_panel != null and is_instance_valid(active_option_panel):
-		return
-
 	item_info_panel.clear_item()
 
 # Drag and drop
