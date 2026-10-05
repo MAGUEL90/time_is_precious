@@ -16,6 +16,8 @@ func run() -> void:
 	for frame in range(6):
 		await get_tree().physics_frame
 	var player: Player = map.get_node("YSortWorld/Player")
+	# This fixture tests interaction and refill, not starvation during clock jumps.
+	player.debug_disable_player_needs = true
 	var tree = map.get_node("YSortWorld/DatePalmTree")
 	var event := InputEventAction.new()
 	event.action = "interact"
@@ -39,5 +41,7 @@ func run() -> void:
 	await get_tree().process_frame
 	expect(tree.state.available.count(true) == 3, "Current policy refills in storm")
 	print("DatePickupAccessTest: ", "PASS" if failures == 0 else "FAIL")
-	await get_tree().create_timer(1.0).timeout
-	get_tree().quit(0 if failures == 0 else 1)
+	map.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_tree().call_deferred("quit", 0 if failures == 0 else 1)

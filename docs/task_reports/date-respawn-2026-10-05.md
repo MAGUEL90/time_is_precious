@@ -8,7 +8,7 @@ Each tree starts full (default max_pickups 3). The first successful collection d
 
 DatePalmTree uses date_palm_spawner.gd, instantiating the same pickup_item.tscn used by other items. PickUpItem publishes collected only after inventory accepts its quantity. A state node per stable unique tree_id lives beneath the existing WorkStateRuntime, following the merchant's session-state ownership pattern. The minute_changed elapsed-time signal decrements the timer while views are absent and during time skips. Snapshot time_changed signals cannot accelerate it. No new autoload or disk-save schema.
 
-Inspector: max_pickups configures capacity; pickup_positions must provide at least that many local offsets. Default three offsets preserve the user's placement. Each additional tree needs a unique tree_id. Configuration is initialized once per running session. Positions are authored, not randomized; the approved randomness concerns time. Weather does not block refill; no weather policy was approved in this implementation request.
+Inspector: max_pickups configures capacity; pickup_positions must provide at least that many local offsets. Default three offsets preserve the user's placement. Tree identity is now generated from its containing scene and node path; duplicating a node gives it independent stock without entering an ID. Keep node names and paths stable during a running session. Configuration is initialized once per running session. Positions are authored, not randomized; the approved randomness concerns time. Weather does not block refill; no weather policy was approved in this implementation request.
 
 ## Verification
 
@@ -26,3 +26,7 @@ Files: pickup_item.gd, ContentScene integration, two tree scripts with UIDs, res
 The existing Debug panel (backtick / Debug button, debug builds only) now includes DATE PICKUPS. It shows each registered tree's stock/capacity and remaining hours/minutes. Refill dates (all trees) fills only missing ground pickups and cancels their timers without advancing the clock or granting inventory. The button is disabled when all trees are full or the normal debug supply guard disallows changes. Existing clock-step controls remain available for natural timer testing. Release builds reject the refill method.
 
 The extended DateRespawnTest passes read-only panel viewing, stock label, button availability, real button callback, timer clearing, inventory conservation and repeated-refill cap. Visual layout still needs manual review; the section uses the existing scroll container.
+
+## Final QA follow-up
+
+See `food-mvp-final-qa-2026-10-05.md` for subsequent duplication safety, graphical evidence, corrected test teardown and multi-tree balance comparisons. Earlier validation limitations above describe the initial checkpoint.

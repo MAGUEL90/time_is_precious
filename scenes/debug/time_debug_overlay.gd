@@ -434,7 +434,7 @@ func _refresh_date_controls() -> void:
 		var timer_text: String = "full"
 		if remaining > 0:
 			timer_text = "%dh %02dm" % [floori(float(remaining) / 60.0), remaining % 60]
-		lines.append("%s: %d/%d | %s" % [str(state.name).trim_prefix("DatePalm_"), count, capacity, timer_text])
+		lines.append("%s: %d/%d | %s" % [str(state.get_meta("display_name", state.name)), count, capacity, timer_text])
 		has_missing = has_missing or count < capacity
 	date_status.text = "No date trees loaded yet." if lines.is_empty() else "\n".join(lines)
 	date_refill_button.disabled = not has_missing or not can_supply_materials()

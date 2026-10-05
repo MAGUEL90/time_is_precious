@@ -53,9 +53,12 @@ func run() -> void:
 	check(is_equal_approx(player.hunger, 0.46), "Existing date hunger effect")
 	check(Inventory.items.get("date_cluster", 0) == 2, "Eating consumes date")
 	print("DatePickupTest: ", "PASS" if failures == 0 else "FAIL")
-	await get_tree().create_timer(2.0).timeout
+	var feedback_deadline: int = Time.get_ticks_msec() + 5000
+	while ui.action_feedback_label.modulate.a > 0.0 and Time.get_ticks_msec() < feedback_deadline:
+		await get_tree().process_frame
+	check(is_zero_approx(ui.action_feedback_label.modulate.a), "Inventory feedback settles before teardown")
 	legacy.queue_free()
 	map.queue_free()
 	await get_tree().process_frame
-	await get_tree().create_timer(0.5).timeout
-	get_tree().quit(0 if failures == 0 else 1)
+	await get_tree().process_frame
+	get_tree().call_deferred("quit", 0 if failures == 0 else 1)

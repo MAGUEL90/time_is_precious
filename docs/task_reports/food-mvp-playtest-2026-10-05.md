@@ -53,3 +53,7 @@ DatePickupTest, DateRespawnTest dan run survival masih mengeluarkan warning Obje
 Pertahankan aturan waktu acak dan batas pickup yang sudah disepakati. Keputusan berikutnya: menambah jumlah pohon atau isi item per pickup, lalu ulangi playtest. Patokan kasarnya perlu sekitar 4,75 kali pasokan rata-rata sekarang untuk menutup hunger penuh, sebelum buffer untuk jeda buruk dan waktu perjalanan. Ini perkiraan untuk diskusi balancing, bukan nilai yang otomatis diterapkan.
 
 Tunda penalti produksi saat badai sampai pasokan dasar dan cadangan makanan cukup. Perbaiki warning shutdown sebelum menyatakan QA branch sepenuhnya bersih. Human review tetap diperlukan; tidak melakukan merge.
+
+## Pemeriksaan lanjutan
+
+Hasil penambahan pohon dalam fixture, identitas pohon otomatis, dan pemeriksaan grafis tersedia di `food-mvp-final-qa-2026-10-05.md`. Laporan ini tetap merekam kondisi awal satu pohon.

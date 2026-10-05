@@ -12,12 +12,17 @@ func check(value: bool, message: String) -> void:
 func _ready() -> void:
 	call_deferred("run")
 
+func disable_player_needs(map_instance: Node) -> void:
+	var fixture_player: Player = map_instance.get_node("YSortWorld/Player")
+	fixture_player.debug_disable_player_needs = true
+
 func run() -> void:
 	TimeComponentManager.set_process(false)
 	var map = MAP.instantiate()
 	add_child(map)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	disable_player_needs(map)
 	var tree = map.get_node("YSortWorld/DatePalmTree")
 	var state = tree.state
 	var player: Player = map.get_node("YSortWorld/Player")
@@ -48,6 +53,7 @@ func run() -> void:
 	add_child(map)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	disable_player_needs(map)
 	tree = map.get_node("YSortWorld/DatePalmTree")
 	check(tree.state == state and state.remaining_minutes == delay - 1, "Map return preserves elapsed timer")
 	check(tree._pickups.size() == 2, "Map return preserves missing slot")
@@ -58,6 +64,7 @@ func run() -> void:
 	add_child(map)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	disable_player_needs(map)
 	tree = map.get_node("YSortWorld/DatePalmTree")
 	check(tree._pickups.size() == 3, "Refill completes while map absent")
 	var overlay = map.get_node("TimeDebugOverlay")
@@ -95,4 +102,4 @@ func run() -> void:
 	print("DateRespawnTest: ", "PASS" if failures == 0 else "FAIL")
 	map.queue_free()
 	await get_tree().process_frame
-	get_tree().quit(0 if failures == 0 else 1)
+	get_tree().call_deferred("quit", 0 if failures == 0 else 1)

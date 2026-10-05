@@ -10,6 +10,8 @@ var eaten: int = 0
 var first_cap: String = ""
 var delays: Array[int] = []
 var seed_value: int = 1
+var tree_count: int = 1
+const TREE_SCRIPT: Script = preload("res://scenes/pickup_item/date_palm_spawner.gd")
 
 func _ready() -> void:
 	call_deferred("run")
@@ -23,12 +25,33 @@ func stamp() -> String:
 	return "D%d %02d:%02d" % [TimeComponentManager.current_day, TimeComponentManager.current_hour, TimeComponentManager.current_minute]
 
 func measure(stage: String) -> void:
-	print("FOOD_MEASURE ", JSON.stringify({"seed": seed_value, "stage": stage, "time": stamp(), "hunger": player.hunger, "energy": 1.0 - player.fatigue, "focus": player.focus, "harvested": harvested, "eaten": eaten, "inventory": Inventory.items.get("date_cluster", 0), "remaining": state.remaining_minutes}))
+	print("FOOD_MEASURE ", JSON.stringify({"seed": seed_value, "trees": tree_count, "stage": stage, "time": stamp(), "hunger": player.hunger, "energy": 1.0 - player.fatigue, "focus": player.focus, "harvested": harvested, "eaten": eaten, "inventory": Inventory.items.get("date_cluster", 0), "remaining": state.remaining_minutes}))
 
 func bind_map() -> void:
 	content = get_tree().current_scene
 	player = content.get_node("YSortWorld/Player")
 	tree = content.get_node_or_null("YSortWorld/DatePalmTree")
+	if is_instance_valid(tree):
+		for index in range(1, tree_count):
+			var copy_name: String = "DatePalmTree%d" % (index + 1)
+			if not tree.get_parent().has_node(copy_name):
+				var copy = tree.duplicate(Node.DUPLICATE_SCRIPTS)
+				copy.name = copy_name
+				copy.position += Vector2(48 * (index % 3), 72 * (floori(float(index) / 3.0) + 1))
+				tree.get_parent().add_child(copy)
+		for candidate in get_trees():
+			if not candidate.state.has_meta("test_seeded"):
+				candidate.state._rng.seed = seed_value + 1009 * get_trees().find(candidate)
+				candidate.state.set_meta("test_seeded", true)
+
+func get_trees() -> Array[Node]:
+	var trees: Array[Node] = []
+	if not is_instance_valid(tree):
+		return trees
+	for candidate in tree.get_parent().get_children():
+		if candidate.get_script() == TREE_SCRIPT:
+			trees.append(candidate)
+	return trees
 
 func settle() -> void:
 	for frame in range(6):
@@ -41,17 +64,17 @@ func door(path: String) -> void:
 	await settle()
 
 func harvest_and_eat() -> void:
-	if is_instance_valid(tree):
-		for pickup in tree._pickups.values():
+	for candidate in get_trees():
+		for pickup in candidate._pickups.values():
 			if not is_instance_valid(pickup) or pickup.is_collecting:
 				continue
 			player.global_position = pickup.global_position
 			var before: int = Inventory.items.get("date_cluster", 0)
-			var prior_timer: int = state.remaining_minutes
+			var prior_timer: int = candidate.state.remaining_minutes
 			pickup.on_player_interact(player)
 			harvested += int(Inventory.items.get("date_cluster", 0)) - before
-			if prior_timer == 0 and state.remaining_minutes > 0:
-				delays.append(floori(float(state.remaining_minutes) / 60.0))
+			if prior_timer == 0 and candidate.state.remaining_minutes > 0:
+				delays.append(floori(float(candidate.state.remaining_minutes) / 60.0))
 	var qty: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / 0.04))
 	if qty > 0:
 		var ui = content.get_node("InventoryUI")
@@ -65,6 +88,7 @@ func run() -> void:
 	var seed_text := OS.get_environment("TIP_FOOD_SEED")
 	if not seed_text.is_empty():
 		seed_value = seed_text.to_int()
+	tree_count = maxi(1, OS.get_environment("TIP_FOOD_TREES").to_int())
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
 	get_tree().current_scene = null
@@ -74,7 +98,6 @@ func run() -> void:
 	bind_map()
 	await settle()
 	state = tree.state
-	state._rng.seed = seed_value
 	expect(Inventory.items.is_empty() and not player.debug_disable_player_needs, "Fresh inventory and active needs")
 	measure("start")
 	var start_minutes: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
@@ -112,7 +135,15 @@ func run() -> void:
 		if TimeComponentManager.current_hour == 10:
 			measure("daily")
 	measure(stop_reason)
-	print("FOOD_RESULT ", JSON.stringify({"seed": seed_value, "stop": stop_reason, "time": stamp(), "first_hunger_cap": first_cap, "harvested": harvested, "eaten": eaten, "delays_hours": delays, "failures": failures}))
-	# Let any collapse transition/animation finish before teardown.
-	await get_tree().create_timer(3.0).timeout
-	get_tree().quit(0 if failures == 0 else 1)
+	print("FOOD_RESULT ", JSON.stringify({"seed": seed_value, "trees": tree_count, "stop": stop_reason, "time": stamp(), "first_hunger_cap": first_cap, "harvested": harvested, "eaten": eaten, "delays_hours": delays, "failures": failures}))
+	# Let feedback, faint animation and the existing scene transition finish before shutdown.
+	var teardown_deadline_msec: int = Time.get_ticks_msec() + 6000
+	while Time.get_ticks_msec() < teardown_deadline_msec:
+		await get_tree().process_frame
+	var final_scene: Node = get_tree().current_scene
+	get_tree().current_scene = null
+	if is_instance_valid(final_scene):
+		final_scene.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_tree().call_deferred("quit", 0 if failures == 0 else 1)

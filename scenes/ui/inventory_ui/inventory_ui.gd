@@ -38,7 +38,7 @@ var active_option_item_id: String
 var active_option_slot: ItemSlot
 var active_option_panel: OptionPanel
 var active_action_confirm_panel: ItemActionConfirmPanel
-var action_feedback_token: int = 0
+var action_feedback_tween: Tween
 var is_inventory_action_busy: bool = false
 var active_drag_data: Dictionary = {}
 var _tree_paused_before_open: bool = false
@@ -705,8 +705,7 @@ func _execute_use_item(item_id: String, quantity: int) -> void:
 # Inventory feedback
 
 func _show_inventory_feedback(message: String, is_error: bool = false) -> void:
-	action_feedback_token += 1
-	var current_token: int = action_feedback_token
+	_cancel_inventory_feedback_timer()
 
 	action_feedback_label.text = message
 
@@ -717,15 +716,18 @@ func _show_inventory_feedback(message: String, is_error: bool = false) -> void:
 
 	action_feedback_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
-	await get_tree().create_timer(ACTION_FEEDBACK_DURATION, true).timeout
+	# Bound to this UI: scene changes or replacement messages cancel the pending hide.
+	action_feedback_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	action_feedback_tween.tween_interval(ACTION_FEEDBACK_DURATION)
+	action_feedback_tween.tween_property(action_feedback_label, "modulate:a", 0.0, 0.0)
 
-	if current_token != action_feedback_token:
-		return
-
-	action_feedback_label.modulate.a = 0.0
+func _cancel_inventory_feedback_timer() -> void:
+	if action_feedback_tween != null and action_feedback_tween.is_valid():
+		action_feedback_tween.kill()
+	action_feedback_tween = null
 
 func _clear_inventory_feedback() -> void:
-	action_feedback_token += 1
+	_cancel_inventory_feedback_timer()
 	action_feedback_label.text = ""
 	action_feedback_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
 
