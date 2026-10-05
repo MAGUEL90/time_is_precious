@@ -7,6 +7,8 @@ var player_reff: Player
 
 @export var item_id: String
 @export var quantity: int = 1
+## Optional world sprite; inventory and popup keep the item data icon.
+@export var world_texture: Texture2D
 @onready var icon: Sprite2D = $Icon
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
@@ -30,10 +32,10 @@ func _ready() -> void:
 		push_error("PickupItem: item_id '%s' not found in ItemDatabase." % item_id)
 		return
 
-	if item_data.icon == null:
+	if world_texture == null and item_data.icon == null:
 		push_error("ItemData does not have icon.")
 
-	icon.texture = item_data.icon
+	icon.texture = world_texture if world_texture != null else item_data.icon
 	icon_default_position = icon.position
 	icon_default_scale = icon.scale
 	icon_default_modulate = icon.modulate
