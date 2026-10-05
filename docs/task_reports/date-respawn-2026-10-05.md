@@ -20,3 +20,9 @@ Godot 4.6.3 editor import and headless fixtures:
 Both fixtures retain the ObjectDB shutdown warning; the pickup fixture already emitted it at baseline. No script errors reported. Godot 4.5.x, graphical Windows/Android, actual home-door traversal and actual sleep UI were not manually tested; map recreation and elapsed-time advancement were exercised directly. No full QA or disk persistence claim.
 
 Files: pickup_item.gd, ContentScene integration, two tree scripts with UIDs, respawn fixture with UID/scene, task reports. No settings, addon, autoload definition, food balance or terrain changes. No merge performed.
+
+## Requested debug controls
+
+The existing Debug panel (backtick / Debug button, debug builds only) now includes DATE PICKUPS. It shows each registered tree's stock/capacity and remaining hours/minutes. Refill dates (all trees) fills only missing ground pickups and cancels their timers without advancing the clock or granting inventory. The button is disabled when all trees are full or the normal debug supply guard disallows changes. Existing clock-step controls remain available for natural timer testing. Release builds reject the refill method.
+
+The extended DateRespawnTest passes read-only panel viewing, stock label, button availability, real button callback, timer clearing, inventory conservation and repeated-refill cap. Visual layout still needs manual review; the section uses the existing scroll container.

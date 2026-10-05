@@ -31,3 +31,11 @@ func _on_minute_changed(_minute: int) -> void:
 	if remaining_minutes == 0:
 		available.fill(true)
 		changed.emit()
+
+func debug_refill() -> bool:
+	if not OS.is_debug_build():
+		return false
+	remaining_minutes = 0
+	available.fill(true)
+	changed.emit()
+	return true

@@ -60,6 +60,23 @@ func run() -> void:
 	await get_tree().process_frame
 	tree = map.get_node("YSortWorld/DatePalmTree")
 	check(tree._pickups.size() == 3, "Refill completes while map absent")
+	var overlay = map.get_node("TimeDebugOverlay")
+	player = map.get_node("YSortWorld/Player")
+	tree._pickups[0].on_player_interact(player)
+	delay = state.remaining_minutes
+	overlay.panel.show()
+	overlay._refresh_date_controls()
+	check(state.remaining_minutes == delay and state.available.count(true) == 2, "Viewing debug does not mutate stock or timer")
+	check(overlay.date_status.text.contains("2/3"), "Debug displays stock")
+	check(not overlay.date_refill_button.disabled, "Debug refill available for missing stock")
+	var inventory_before: int = Inventory.items.get("date_cluster", 0)
+	overlay.date_refill_button.pressed.emit()
+	await get_tree().process_frame
+	check(state.available.count(true) == 3 and state.remaining_minutes == 0, "Debug refill clears timer and fills stock")
+	check(Inventory.items.get("date_cluster", 0) == inventory_before, "Debug spawn does not grant inventory")
+	overlay.refill_dates()
+	await get_tree().process_frame
+	check(tree._pickups.size() == 3 and overlay.date_refill_button.disabled, "Repeated debug refill remains capped")
 	var other = STATE.new()
 	WorkStateRuntime.add_child(other)
 	other.configure(2)
