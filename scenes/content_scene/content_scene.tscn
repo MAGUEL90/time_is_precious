@@ -18,7 +18,7 @@
 [ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/house_level_1.png" id="24_home_icon"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="25_home_theme"]
 
-[ext_resource type="PackedScene" path="res://scenes/pickup_item/pickup_item.tscn" id="26_date_pickup"]
+[ext_resource type="Script" path="res://scenes/pickup_item/date_palm_spawner.gd" id="26_date_spawner"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -113,24 +113,8 @@ position = Vector2(9744, 9792)
 [node name="DatePalmTree" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-440, -496)
 texture = ExtResource("11_a6f02")
-
-[node name="DatesPickup" parent="YSortWorld" instance=ExtResource("26_date_pickup")]
-position = Vector2(-454, -460)
-item_id = "date_cluster"
-quantity = 1
-world_texture = ExtResource("12_fmlq8")
-
-[node name="DatesPickup2" parent="YSortWorld" instance=ExtResource("26_date_pickup")]
-position = Vector2(-415, -475)
-item_id = "date_cluster"
-quantity = 1
-world_texture = ExtResource("12_fmlq8")
-
-[node name="DatesPickup3" parent="YSortWorld" instance=ExtResource("26_date_pickup")]
-position = Vector2(-463, -485)
-item_id = "date_cluster"
-quantity = 1
-world_texture = ExtResource("12_fmlq8")
+script = ExtResource("26_date_spawner")
+pickup_texture = ExtResource("12_fmlq8")
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
 visible = false

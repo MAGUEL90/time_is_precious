@@ -17,3 +17,7 @@ Validation on available Godot 4.6.3:
 Untested: Godot 4.5.x, graphical/manual playtest, Windows and Android. No claim of full QA completion.
 
 This integration uses authored pickups only. They reappear on scene reload under the existing scene lifecycle. Automatic spawning, timed respawn and collected-state persistence are not implemented; rates and persistence behavior still require design decisions. No merge performed.
+
+## Follow-up: random refill
+
+The authored-only limitation above is superseded by `date-respawn-2026-10-05.md`: pickups now use per-tree session stock and a random 1–18 game-hour refill timer.

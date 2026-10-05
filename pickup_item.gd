@@ -3,6 +3,8 @@ class_name PickUpItem extends Node2D
 const ITEM_CHANGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/item_change_popup/item_change_popup.tscn")
 const INVENTORY_FULL_COLOR: Color = Color(1.0, 0.0, 0.18, 1.0)
 
+signal collected
+
 var player_reff: Player
 
 @export var item_id: String
@@ -83,6 +85,7 @@ func on_player_interact(player: Player) -> void:
 		var is_success: bool = Inventory.call("try_add_item", item_id, quantity)
 		if is_success:
 			is_collecting = true
+			collected.emit()
 
 			if idle_tween and idle_tween.is_valid():
 				idle_tween.kill()
