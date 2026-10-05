@@ -17,7 +17,7 @@ func run() -> void:
 	await get_tree().process_frame
 	var tree = map.get_node("YSortWorld/DatePalmTree")
 	var copy = tree.duplicate(Node.DUPLICATE_SCRIPTS)
-	copy.name = "DatePalmTree2"
+	copy.name = "DatePalmTreeTestCopy"
 	copy.position += Vector2(60, 0)
 	tree.get_parent().add_child(copy)
 	await get_tree().process_frame
@@ -38,7 +38,7 @@ func run() -> void:
 	await get_tree().process_frame
 	tree = map.get_node("YSortWorld/DatePalmTree")
 	copy = tree.duplicate(Node.DUPLICATE_SCRIPTS)
-	copy.name = "DatePalmTree2"
+	copy.name = "DatePalmTreeTestCopy"
 	tree.get_parent().add_child(copy)
 	await get_tree().process_frame
 	check(tree.state == original_state and copy.state == copy_state, "Both identities survive map recreation")

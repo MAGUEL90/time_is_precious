@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-09-26
+Last updated: 2026-10-05
 
 ## Purpose of This Document
 
@@ -18,6 +18,22 @@ Other documents have different jobs:
 - `DEMO_DISTRIBUTION.md` = demo rollout strategy after the prototype is ready.
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
+
+## Food MVP — six-palm walking playtest, pending human review (2026-10-05)
+
+The approved main-map layout now has six date palms. Each reuses the pickup scene,
+retains independent session stock, and replenishes missing slots after a random
+1–18 game hours, capped at three pickups by default. Debug stock/countdown/refill
+and the existing inventory consumption flow are integrated on `feature/item/food-mvp`.
+
+A scripted 72-hour walking route passed three seeds with active needs, normal
+movement/clock rates, real home doors/sleep, and 18 hours of wood gathering.
+Each run ate 108 dates, produced 35 logs and retained 6–15 dates without collapse.
+Travel, work and sleep are now covered together; human pacing, Godot 4.5.x/Windows,
+longer sessions and wider seed coverage remain pending. Keep current food values
+for review rather than treating these three samples as final balance approval.
+See `docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 remains draft;
+merge belongs to the Game Director. Cooking, barley and new weather rules are deferred.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 

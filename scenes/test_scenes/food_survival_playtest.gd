@@ -32,6 +32,9 @@ func bind_map() -> void:
 	player = content.get_node("YSortWorld/Player")
 	tree = content.get_node_or_null("YSortWorld/DatePalmTree")
 	if is_instance_valid(tree):
+		# Keep this historical comparison fixture independent of authored tree count.
+		for extra in get_trees().slice(tree_count):
+			extra.free()
 		for index in range(1, tree_count):
 			var copy_name: String = "DatePalmTree%d" % (index + 1)
 			if not tree.get_parent().has_node(copy_name):
@@ -137,9 +140,10 @@ func run() -> void:
 	measure(stop_reason)
 	print("FOOD_RESULT ", JSON.stringify({"seed": seed_value, "trees": tree_count, "stop": stop_reason, "time": stamp(), "first_hunger_cap": first_cap, "harvested": harvested, "eaten": eaten, "delays_hours": delays, "failures": failures}))
 	# Let feedback, faint animation and the existing scene transition finish before shutdown.
-	var teardown_deadline_msec: int = Time.get_ticks_msec() + 6000
-	while Time.get_ticks_msec() < teardown_deadline_msec:
+	var teardown_seconds: float = 0.0
+	while teardown_seconds < 6.0:
 		await get_tree().process_frame
+		teardown_seconds += get_process_delta_time()
 	var final_scene: Node = get_tree().current_scene
 	get_tree().current_scene = null
 	if is_instance_valid(final_scene):
