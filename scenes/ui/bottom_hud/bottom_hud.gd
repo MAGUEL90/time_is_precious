@@ -186,6 +186,7 @@ func _setup_nightmare_visibility() -> void:
 	nightmare_world_ref.nightmare_active_changed.connect(
 		_on_nightmare_active_changed
 	)
+	_on_nightmare_active_changed(nightmare_world_ref.is_active)
 
 func _on_nightmare_active_changed(active: bool) -> void:
 	visible = not active
