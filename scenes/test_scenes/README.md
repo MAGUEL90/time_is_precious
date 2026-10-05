@@ -84,3 +84,24 @@ describe their original runs; Git preserves the old fixtures.
 
 This directory also contains shared worksite and worker UI code used by production.
 Do not treat every file under `test_scenes` as disposable test scaffolding.
+
+## Food MVP walking route
+
+`food_walking_playtest.tscn` validates the authored six-palm layout over 72 game
+hours with movement input, normal player speed and the live world clock. It uses
+real pickup interaction, work execution, home doors and sleep; it does not grant
+food, refill trees, disable needs, teleport, or manually advance travel time.
+
+```sh
+TIP_FOOD_SEED=1 godot --headless --fixed-fps 60 --path . scenes/test_scenes/food_walking_playtest.tscn
+```
+
+Repeat with seeds 2 and 3. `--fixed-fps 60` performs offline fixed-step simulation;
+it preserves gameplay speed ratios but does not measure host wall-clock pacing.
+Look for `FoodWalkingPlaytest: PASS`, exit 0, and the structured `WALK_RESULT`.
+Work and sleep retain their production time skips. Meals use the existing inventory
+use action with automated quantity selection. This is scripted navigation, not a
+human usability test. See `docs/task_reports/food-walking-playtest-2026-10-05.md`.
+
+The older `food_survival_playtest` remains a teleported comparison. Its explicit
+`TIP_FOOD_TREES` count is isolated from the production map's authored tree count.

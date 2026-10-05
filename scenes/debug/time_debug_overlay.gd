@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Development-only controls, separate from the gameplay HUD and menus.
+const DATE_PALM_STATE: Script = preload("res://scenes/pickup_item/date_palm_state.gd")
 const SPEEDS: Array[int] = [1, 10, 60]
 const THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 const PANEL_ATLAS: Texture2D = preload("res://assets/ui/ui_base/base_24.06.2026.png")
@@ -19,6 +20,8 @@ const INVENTORY_BASE_META: StringName = &"debug_inventory_base_capacity"
 var speed_multiplier: int = 1
 var panel: PanelContainer
 var status_label: Label
+var date_status: Label
+var date_refill_button: Button
 var speed_buttons: Array[Button] = []
 var step_buttons: Array[Button] = []
 var materials_button: Button
@@ -348,6 +351,14 @@ func _create_controls() -> void:
 	materials_status = _label("")
 	materials_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(materials_status)
+	column.add_child(_label("DATE PICKUPS"))
+	date_status = _label("")
+	date_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(date_status)
+	date_refill_button = _button("Refill dates (all trees)")
+	date_refill_button.tooltip_text = "Debug only: fill missing ground pickups and clear their timers. Does not advance time or grant inventory items."
+	date_refill_button.pressed.connect(refill_dates)
+	column.add_child(date_refill_button)
 	column.add_child(_label("Close: Debug button / `"))
 
 func _button(caption: String) -> Button:
@@ -395,3 +406,35 @@ func _refresh_controls() -> void:
 		worker_guard_check_button.set_pressed_no_signal(worker_guard_enabled)
 	_refresh_player_guard_button()
 	_refresh_inventory_capacity_button()
+	_refresh_date_controls()
+
+func _get_date_states() -> Array[Node]:
+	var states: Array[Node] = []
+	for child in WorkStateRuntime.get_children():
+		if child.get_script() == DATE_PALM_STATE:
+			states.append(child)
+	return states
+
+func refill_dates() -> void:
+	if not OS.is_debug_build() or not can_supply_materials():
+		return
+	for state in _get_date_states():
+		state.debug_refill()
+	_refresh_date_controls()
+
+func _refresh_date_controls() -> void:
+	if date_status == null:
+		return
+	var lines: PackedStringArray = []
+	var has_missing: bool = false
+	for state in _get_date_states():
+		var count: int = state.available.count(true)
+		var capacity: int = state.available.size()
+		var remaining: int = state.remaining_minutes
+		var timer_text: String = "full"
+		if remaining > 0:
+			timer_text = "%dh %02dm" % [floori(float(remaining) / 60.0), remaining % 60]
+		lines.append("%s: %d/%d | %s" % [str(state.get_meta("display_name", state.name)), count, capacity, timer_text])
+		has_missing = has_missing or count < capacity
+	date_status.text = "No date trees loaded yet." if lines.is_empty() else "\n".join(lines)
+	date_refill_button.disabled = not has_missing or not can_supply_materials()
