@@ -10,7 +10,7 @@ render_mode unshaded;
 void fragment() {
 	vec2 edge_distance = min(UV, vec2(1.0) - UV);
 	float edge = 1.0 - smoothstep(0.0, 0.13, min(edge_distance.x, edge_distance.y));
-	COLOR = vec4(0.85, 0.025, 0.015, edge * 0.55 * COLOR.a);
+	COLOR = vec4(0.85, 0.025, 0.015, edge * 0.22 * COLOR.a);
 }
 "
 

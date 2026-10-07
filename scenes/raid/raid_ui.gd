@@ -21,7 +21,7 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 @onready var repair_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/RepairButton
 @onready var report_label: Label = $Root/Center/DetailsPanel/Margin/Contents/ReportScroll/ReportLabel
 
-const WARNING_PULSE_SECONDS: float = 1.6
+const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
 
 var raid_state: Node
@@ -47,12 +47,12 @@ func _process(delta: float) -> void:
 		return
 	_warning_elapsed = fmod(_warning_elapsed + delta, WARNING_PULSE_SECONDS)
 	# A soft pulse at the edges leaves the center and controls readable.
-	attack_warning.modulate.a = 0.35 + 0.65 * (0.5 - 0.5 * cos(TAU * _warning_elapsed / WARNING_PULSE_SECONDS))
+	attack_warning.modulate.a = 0.65 + 0.35 * (0.5 - 0.5 * cos(TAU * _warning_elapsed / WARNING_PULSE_SECONDS))
 
 func _set_attack_warning(active: bool) -> void:
 	if attack_warning.visible != active:
 		_warning_elapsed = 0.0
-		attack_warning.modulate.a = 0.35
+		attack_warning.modulate.a = 0.65
 	attack_warning.visible = active
 	set_process(active)
 

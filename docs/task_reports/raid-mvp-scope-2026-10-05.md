@@ -111,3 +111,8 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - RaidUI owns the mouse-transparent overlay, behind its controls. It follows the attacking phase, stops on resolution/unbind, and freezes animation with the existing raid pause/transition gates.
 - No gameplay balance or project settings changed.
 - Godot 4.5.2 RaidUITest passed headless and with GL Compatibility at 1200x675; captures inspected for the active red edges and clean post-raid report. Virtual-display VSync warning only.
+
+### 2026-10-08 — softer warning pulse
+- User feedback: reduce distracting pulse intensity. Peak edge opacity reduced from 55% to 22%, with a narrower opacity swing and a slower 3-second cycle (previously 1.6 seconds).
+- RaidUITest passed headless on Godot 4.5.2; diff check passed. The revised subjective intensity awaits local playtest.
+- Wall interaction versus City Layout remains a design discussion; construction flow is unchanged.
