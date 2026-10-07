@@ -105,3 +105,9 @@ Engine: existing Godot 4.5.2, GL Compatibility. No engine/dependency installatio
 The virtual graphics driver cannot enable V-Sync; graphical validation used software rendering and Dummy audio. The initial capture attempt also reported no ALSA device; subsequent captures explicitly used Dummy audio. These are environment limitations, not gameplay failures. Android, restart persistence and live raid balancing are untested.
 
 Human playtest and merge remain pending. No commit, push or merge performed.
+
+### 2026-10-08 — attack screen warning
+- Requested presentation change: a soft red pulse around the screen edges while the castle is under attack.
+- RaidUI owns the mouse-transparent overlay, behind its controls. It follows the attacking phase, stops on resolution/unbind, and freezes animation with the existing raid pause/transition gates.
+- No gameplay balance or project settings changed.
+- Godot 4.5.2 RaidUITest passed headless and with GL Compatibility at 1200x675; captures inspected for the active red edges and clean post-raid report. Virtual-display VSync warning only.

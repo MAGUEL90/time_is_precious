@@ -5,6 +5,7 @@ signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 
+@onready var attack_warning: ColorRect = $Root/AttackWarning
 @onready var status_panel: Control = $Root/RaidStatusPanel
 @onready var status_label: Label = $Root/RaidStatusPanel/Margin/Contents/StatusLabel
 @onready var wall_value_label: Label = $Root/RaidStatusPanel/Margin/Contents/WallRow/WallValueLabel
@@ -19,6 +20,9 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 @onready var build_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/BuildButton
 @onready var repair_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/RepairButton
 @onready var report_label: Label = $Root/Center/DetailsPanel/Margin/Contents/ReportScroll/ReportLabel
+
+const WARNING_PULSE_SECONDS: float = 1.6
+var _warning_elapsed: float = 0.0
 
 var raid_state: Node
 var report_text: String = ""
@@ -37,6 +41,20 @@ func _ready() -> void:
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
 	_apply_theme()
 	refresh()
+
+func _process(delta: float) -> void:
+	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		return
+	_warning_elapsed = fmod(_warning_elapsed + delta, WARNING_PULSE_SECONDS)
+	# A soft pulse at the edges leaves the center and controls readable.
+	attack_warning.modulate.a = 0.35 + 0.65 * (0.5 - 0.5 * cos(TAU * _warning_elapsed / WARNING_PULSE_SECONDS))
+
+func _set_attack_warning(active: bool) -> void:
+	if attack_warning.visible != active:
+		_warning_elapsed = 0.0
+		attack_warning.modulate.a = 0.35
+	attack_warning.visible = active
+	set_process(active)
 
 func _exit_tree() -> void:
 	_unbind_state()
@@ -72,6 +90,7 @@ func close_details() -> void:
 
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
+		_set_attack_warning(false)
 		status_panel.visible = false
 		details_panel.visible = false
 		_status_data.clear()
@@ -85,6 +104,7 @@ func refresh() -> void:
 		if status_value is Dictionary:
 			_status_data = status_value.duplicate(true)
 	var phase: String = str(_status_data.get("phase", ""))
+	_set_attack_warning(phase == "attacking")
 	if phase == "attacking" and _last_phase != phase:
 		close_details()
 	_last_phase = phase

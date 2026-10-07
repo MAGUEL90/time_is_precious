@@ -1,8 +1,21 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_ui.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
+
+[sub_resource type="Shader" id="AttackWarningShader"]
+code = "shader_type canvas_item;
+render_mode unshaded;
+void fragment() {
+	vec2 edge_distance = min(UV, vec2(1.0) - UV);
+	float edge = 1.0 - smoothstep(0.0, 0.13, min(edge_distance.x, edge_distance.y));
+	COLOR = vec4(0.85, 0.025, 0.015, edge * 0.55 * COLOR.a);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="AttackWarningMaterial"]
+shader = SubResource("AttackWarningShader")
 
 [sub_resource type="AtlasTexture" id="RaidPanelTexture"]
 atlas = ExtResource("3_panel")
@@ -38,6 +51,17 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("2_theme")
+
+[node name="AttackWarning" type="ColorRect" parent="Root"]
+visible = false
+material = SubResource("AttackWarningMaterial")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="RaidStatusPanel" type="NinePatchRect" parent="Root"]
 anchors_preset = 0
