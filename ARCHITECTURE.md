@@ -630,3 +630,23 @@ never observe a half trade. UI only requests actions; the scene adapter revalida
 physical access, departure, collapse and transitions. Browsing locks movement but
 keeps world time running; departure closes the menu. Trading consumes/produces only
 personal Inventory goods, never held workshop output or city-owned stock.
+
+
+## Castle wall / raid branch checkpoint (2026-10-05)
+
+The city map's `RaidBootstrap` creates one `CityRaid` state and `RaidUI` below
+existing `WorkStateRuntime`. Neither map instances nor panels own wall HP or
+reroll the schedule. The build-only profile starts in ruins and permits instant,
+free level-1 construction at 50 HP; it leaves random raids disabled.
+
+When configured for isolated tests, world-clock snapshots schedule warnings and
+raids, while active gameplay seconds drive hits. Results are copied for UI, and
+breach effects resolve once. The state calls CityToolStorage's bounded counted-
+stack loot API and updates resident data; the first foundation counts destruction
+of the wall only. Explicit debug actions can start a light/heavy test without changing the balance
+resource, or reset damaged wall HP without rerolling the schedule. Opt-in instant
+repair and free rebuilding preserve report history and level. Nonworker departures
+go through `CitizenManager.leave_city`, whose signal removes matching CitizenActor
+instances. Production balance, general building/worker departure integration and
+repair rules remain pending. There is no new autoload or disk
+save schema. See `docs/task_reports/raid-mvp-scope-2026-10-05.md`.

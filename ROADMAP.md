@@ -19,6 +19,23 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Raid branch — wall and manual combat playtest (2026-10-05)
+
+The wall starts ruined. **Build wall (free)** creates level 1 with 50 HP/durability.
+The city HUD retains the wall, active raid and result across home/map transitions.
+The Debug panel now exposes **Raid light**, **Raid heavy** and **Reset wall HP**
+for repeatable manual tests. With a full wall, the light fixture leaves 14 HP
+at 60 seconds; the heavy fixture breaches on hit 10 at 50 seconds. These controls
+use explicit synthetic damage and do not rewrite the production balance profile.
+
+The report opens once and records actual effects. Rebuild restores a breached
+wall at level 1; a separate instant-repair API is tested but remains opt-in.
+Citizen departure now updates resident state and removes the matching actor.
+Random raids and nonzero theft/satisfaction/flight settings remain **disabled**
+in the main profile while Director balance choices are pending. Upgrade,
+weaponry, destruction of other buildings and restart saving remain future work.
+See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for test results and instructions.
+
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 
 The Game Director selected the common traveling merchant as the next economy step,

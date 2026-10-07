@@ -58,8 +58,13 @@ var _navigation_ready: bool = false
 # Lifecycle
 
 func _ready() -> void:
+	CitizenManager.citizen_left.connect(_on_citizen_left)
 	call_deferred("_initialize_actor")
 
+
+func _on_citizen_left(departed: CitizenData) -> void:
+	if citizen_data == departed:
+		queue_free()
 
 func _initialize_actor() -> void:
 	if _initialized:

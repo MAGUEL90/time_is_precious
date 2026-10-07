@@ -18,6 +18,34 @@ const CLOTHING_ITEM_IDS: Array[String] = [
 var _unit_sequence: int = 0
 var _transfer_in_progress: bool = false
 
+## Raid capacity counts whole stack units, not weight or food points.
+## Keep a reserve of each stack; equipment and opened food portions remain safe.
+func take_raid_loot(capacity: int, reserve_per_stack: int) -> Dictionary:
+	if _transfer_in_progress or capacity <= 0 or reserve_per_stack < 0 or not _has_valid_counted_stacks():
+		return {}
+	var next_items: Dictionary = items.duplicate(true)
+	var stolen: Dictionary = {}
+	var ids: Array = next_items.keys()
+	ids.sort()
+	var remaining: int = capacity
+	for item_id: String in ids:
+		if remaining == 0:
+			break
+		var amount: int = mini(remaining, maxi(0, int(next_items[item_id]) - reserve_per_stack))
+		if amount <= 0:
+			continue
+		next_items[item_id] -= amount
+		if int(next_items[item_id]) == 0:
+			next_items.erase(item_id)
+		stolen[item_id] = amount
+		remaining -= amount
+	if not stolen.is_empty():
+		_transfer_in_progress = true
+		items = next_items
+		changed.emit()
+		_transfer_in_progress = false
+	return stolen
+
 func get_food_supply_points() -> int:
 	var state: Dictionary = _validated_food_state()
 	if not bool(state.ok):

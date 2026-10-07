@@ -24,6 +24,9 @@ var step_buttons: Array[Button] = []
 var materials_button: Button
 var shekel_button: Button
 var production_button: Button
+var raid_light_button: Button
+var raid_heavy_button: Button
+var raid_reset_button: Button
 var worker_guard_check_button: CheckButton
 var player_guard_check_button: CheckButton
 var inventory_capacity_button: CheckButton
@@ -163,6 +166,88 @@ func set_player_guard(enabled: bool) -> void:
 	if enabled and player.has_method("_reset_debug_needs"):
 		player.call("_reset_debug_needs")
 	_refresh_player_guard_button()
+
+func trigger_raid_test(breaching: bool) -> bool:
+	if not OS.is_debug_build():
+		_set_raid_error("Raid tests are debug only.")
+		return false
+	if not can_advance():
+		_set_raid_error("Resume gameplay and wake the player first.")
+		return false
+	var raid_state: Node = _get_raid_state()
+	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var status_value: Variant = raid_state.call("get_status")
+	if not status_value is Dictionary:
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var raid_status: Dictionary = status_value
+	if str(raid_status.get("phase", "")) == "attacking":
+		_set_raid_error("A raid is already underway.")
+		return false
+	if int(raid_status.get("level", 0)) <= 0 or int(raid_status.get("hp", 0)) <= 0:
+		_set_raid_error("Build the wall before testing a raid.")
+		return false
+	if not raid_state.has_method("start_debug_raid"):
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	if not bool(raid_state.call("start_debug_raid", breaching)):
+		_set_raid_error("Could not start the raid test.")
+		_refresh_controls()
+		return false
+
+	panel.hide()
+	var raid_ui: Node = raid_state.get_node_or_null("RaidUI")
+	if is_instance_valid(raid_ui) and raid_ui.has_method("close_details"):
+		raid_ui.call("close_details")
+	_refresh_controls()
+	return true
+
+func reset_wall_test() -> bool:
+	if not OS.is_debug_build():
+		_set_raid_error("Wall reset is debug only.")
+		return false
+	if not can_advance():
+		_set_raid_error("Resume gameplay and wake the player first.")
+		return false
+	var raid_state: Node = _get_raid_state()
+	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var status_value: Variant = raid_state.call("get_status")
+	if not status_value is Dictionary:
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var raid_status: Dictionary = status_value
+	if str(raid_status.get("phase", "")) == "attacking":
+		_set_raid_error("A raid is already underway.")
+		return false
+	if int(raid_status.get("level", 0)) <= 0 or int(raid_status.get("hp", 0)) <= 0:
+		_set_raid_error("Rebuild the wall before resetting HP.")
+		return false
+	if int(raid_status.get("hp", 0)) >= int(raid_status.get("max_hp", 0)):
+		_set_raid_error("Wall HP is already full.")
+		return false
+	if not raid_state.has_method("reset_debug_wall"):
+		_set_raid_error("Wall reset is not available.")
+		return false
+	if not bool(raid_state.call("reset_debug_wall")):
+		_set_raid_error("Could not reset wall HP.")
+		_refresh_controls()
+		return false
+	materials_status.text = "Wall HP restored for testing."
+	_refresh_controls()
+	return true
+
+func _get_raid_state() -> Node:
+	if not is_instance_valid(WorkStateRuntime):
+		return null
+	return WorkStateRuntime.get_node_or_null("CityRaid")
+
+func _set_raid_error(message: String) -> void:
+	if is_instance_valid(materials_status):
+		materials_status.text = message
 
 func _top_up_inventory(target_items: Dictionary, success_message: String, capacity_message: String) -> bool:
 	if not OS.is_debug_build() or not can_supply_materials():
@@ -348,6 +433,28 @@ func _create_controls() -> void:
 	materials_status = _label("")
 	materials_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(materials_status)
+	var raid_buttons := HBoxContainer.new()
+	raid_buttons.add_theme_constant_override("separation", 3)
+	column.add_child(raid_buttons)
+	column.move_child(raid_buttons, 4)
+	raid_light_button = _button("Raid light")
+	raid_light_button.name = "RaidLight"
+	raid_light_button.tooltip_text = "Debug test only. Removes 3 HP from the real castle wall per hit, regardless of defense. A breach can affect real stored supplies and citizens."
+	raid_light_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_light_button.pressed.connect(trigger_raid_test.bind(false))
+	raid_buttons.add_child(raid_light_button)
+	raid_heavy_button = _button("Raid heavy")
+	raid_heavy_button.name = "RaidHeavy"
+	raid_heavy_button.tooltip_text = "Debug test only. Removes 5 HP from the real castle wall per hit, regardless of defense. A breach can affect real stored supplies and citizens."
+	raid_heavy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_heavy_button.pressed.connect(trigger_raid_test.bind(true))
+	raid_buttons.add_child(raid_heavy_button)
+	raid_reset_button = _button("Reset wall HP")
+	raid_reset_button.name = "RaidWallReset"
+	raid_reset_button.tooltip_text = "Debug only: restores a damaged built wall to full HP. Does not upgrade the wall or change the raid schedule. Unavailable during an attack."
+	raid_reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_reset_button.pressed.connect(reset_wall_test)
+	raid_buttons.add_child(raid_reset_button)
 	column.add_child(_label("Close: Debug button / `"))
 
 func _button(caption: String) -> Button:
@@ -375,6 +482,32 @@ func _check_button(caption: String) -> CheckButton:
 	button.focus_mode = Control.FOCUS_NONE
 	return button
 
+func _refresh_raid_buttons(player_available: bool) -> void:
+	if raid_light_button == null or raid_heavy_button == null or raid_reset_button == null:
+		return
+	var can_use: bool = OS.is_debug_build() and player_available
+	var can_trigger: bool = can_use
+	var can_reset: bool = can_use
+	var raid_state: Node = _get_raid_state()
+	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
+		can_trigger = false
+		can_reset = false
+	else:
+		var status_value: Variant = raid_state.call("get_status")
+		if status_value is Dictionary:
+			var raid_status: Dictionary = status_value
+			var wall_built: bool = int(raid_status.get("level", 0)) > 0 and int(raid_status.get("hp", 0)) > 0
+			var can_start: bool = wall_built and str(raid_status.get("phase", "")) != "attacking"
+			can_trigger = can_trigger and can_start and raid_state.has_method("start_debug_raid")
+			var damaged: bool = int(raid_status.get("hp", 0)) < int(raid_status.get("max_hp", 0))
+			can_reset = can_reset and can_start and damaged and raid_state.has_method("reset_debug_wall")
+		else:
+			can_trigger = false
+			can_reset = false
+	raid_light_button.disabled = not can_trigger
+	raid_heavy_button.disabled = not can_trigger
+	raid_reset_button.disabled = not can_reset
+
 func _refresh_controls() -> void:
 	if status_label == null:
 		return
@@ -395,3 +528,4 @@ func _refresh_controls() -> void:
 		worker_guard_check_button.set_pressed_no_signal(worker_guard_enabled)
 	_refresh_player_guard_button()
 	_refresh_inventory_capacity_button()
+	_refresh_raid_buttons(available)

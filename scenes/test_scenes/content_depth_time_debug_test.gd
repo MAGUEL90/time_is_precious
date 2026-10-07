@@ -21,6 +21,9 @@ func _run() -> void:
 	content = CONTENT.instantiate()
 	add_child(content)
 	player = content.get_node("YSortWorld/Player")
+	# This fixture tests multi-day debug/construction and depth, not player collapse.
+	player.debug_disable_player_needs = true
+	player.debug_disable_fatigue = true
 	var debug = content.get_node("TimeDebugOverlay")
 	debug.set_process(false)
 	player.can_move = false

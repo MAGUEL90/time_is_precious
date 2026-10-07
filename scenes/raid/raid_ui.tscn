@@ -1,0 +1,269 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scenes/raid/raid_ui.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
+
+[sub_resource type="AtlasTexture" id="RaidPanelTexture"]
+atlas = ExtResource("3_panel")
+region = Rect2(1, 1, 168, 134)
+
+[sub_resource type="StyleBoxFlat" id="HPBarBackground"]
+bg_color = Color(0.18, 0.11, 0.07, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.43, 0.27, 0.15, 1)
+
+[sub_resource type="StyleBoxFlat" id="HPBarFill"]
+bg_color = Color(0.78, 0.55, 0.2, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.43, 0.27, 0.15, 1)
+
+[node name="RaidUI" type="CanvasLayer"]
+process_mode = 3
+layer = 80
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="RaidStatusPanel" type="NinePatchRect" parent="Root"]
+anchors_preset = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -72.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 0
+texture = SubResource("RaidPanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/RaidStatusPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="Contents" type="VBoxContainer" parent="Root/RaidStatusPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="StatusLabel" type="Label" parent="Root/RaidStatusPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Build a wall before a raid"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="WallRow" type="HBoxContainer" parent="Root/RaidStatusPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="WallNameLabel" type="Label" parent="Root/RaidStatusPanel/Margin/Contents/WallRow"]
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Castle HP"
+vertical_alignment = 1
+
+[node name="WallValueLabel" type="Label" parent="Root/RaidStatusPanel/Margin/Contents/WallRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Ruined"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="HPBar" type="ProgressBar" parent="Root/RaidStatusPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+show_percentage = false
+theme_override_styles/background = SubResource("HPBarBackground")
+theme_override_styles/fill = SubResource("HPBarFill")
+
+[node name="FooterRow" type="HBoxContainer" parent="Root/RaidStatusPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="TimeLeftLabel" type="Label" parent="Root/RaidStatusPanel/Margin/Contents/FooterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Raids inactive"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="DetailsButton" type="Button" parent="Root/RaidStatusPanel/Margin/Contents/FooterRow"]
+custom_minimum_size = Vector2(38, 13)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Details"
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DetailsPanel" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(280, 120)
+layout_mode = 2
+mouse_filter = 0
+texture = SubResource("RaidPanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/DetailsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 9
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 9
+
+[node name="Contents" type="VBoxContainer" parent="Root/Center/DetailsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="TitleLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 9
+text = "CASTLE & RAID DETAILS"
+vertical_alignment = 1
+
+[node name="WallSummaryLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 7
+text = "Castle wall durability: Ruined · Level 0"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="DefendLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Defend: inactive"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="StatusDetailLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 11)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Build a wall before a raid"
+autowrap_mode = 3
+
+[node name="ActionRow" type="HBoxContainer" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="BuildButton" type="Button" parent="Root/Center/DetailsPanel/Margin/Contents/ActionRow"]
+custom_minimum_size = Vector2(76, 14)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Build wall (free)"
+
+[node name="RepairButton" type="Button" parent="Root/Center/DetailsPanel/Margin/Contents/ActionRow"]
+custom_minimum_size = Vector2(76, 14)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Repair wall"
+
+[node name="ReportScroll" type="ScrollContainer" parent="Root/Center/DetailsPanel/Margin/Contents"]
+visible = false
+custom_minimum_size = Vector2(0, 94)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 0
+horizontal_scroll_mode = 0
+
+[node name="ReportLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents/ReportScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 7
+text = "No raid report yet."
+autowrap_mode = 3
+
+[node name="FooterRow" type="HBoxContainer" parent="Root/Center/DetailsPanel/Margin/Contents"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+alignment = 2
+
+[node name="CloseButton" type="Button" parent="Root/Center/DetailsPanel/Margin/Contents/FooterRow"]
+custom_minimum_size = Vector2(40, 14)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Close"
