@@ -152,35 +152,28 @@ func _release_lock() -> void:
 			interactable_label_component.show()
 
 func _fit_dialogue() -> void:
-	# Portrait-free wall conversation: text and choices share one stable panel.
+	# Match the merchant's 176x60 artwork, empty portrait and text/name positions.
+	# Reserve space below it for choices so Enter keeps the conversation visible.
 	greeting_balloon.keep_chat_with_responses = true
 	var root: Control = greeting_balloon.chat_box_root
-	root.custom_minimum_size = Vector2(240, 104)
+	root.custom_minimum_size = Vector2(176, 92)
 	root.size = root.custom_minimum_size
 	var panel: Control = root.get_node("TemplateDialogue")
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	panel.position = Vector2.ZERO
 	panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	panel.size = root.custom_minimum_size
+	panel.size = Vector2(176, 60)
 	panel.scale = Vector2.ONE
-	panel.get_node("TexturePhoto").hide()
-	var chat: Control = panel.get_node("TemplateChat")
-	chat.position = Vector2(16, 12)
-	chat.size = Vector2(208, 44)
-	greeting_balloon.dialogue_label.position = Vector2(5, 4)
-	greeting_balloon.dialogue_label.size = Vector2(198, 36)
 	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
 	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
-	panel.get_node("TemplateName").position = Vector2(16, 87)
-	greeting_balloon.progress.position = Vector2(218, 49)
 	var responses: Control = greeting_balloon.responses_menu
 	responses.reparent(root)
 	responses.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	responses.position = Vector2(16, 58)
-	responses.size = Vector2(208, 28)
+	responses.position = Vector2(23, 62)
+	responses.size = Vector2(130, 28)
 	responses.add_theme_constant_override("separation", 2)
 	var choice: Button = responses.get_node("ResponseExample")
-	choice.custom_minimum_size = Vector2(208, 13)
+	choice.custom_minimum_size = Vector2(130, 13)
 	choice.add_theme_font_size_override("font_size", 6)
 
 func _exit_tree() -> void:

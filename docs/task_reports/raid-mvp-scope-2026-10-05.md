@@ -192,3 +192,8 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - Main-map TravelingMerchant now enables an Inspector-exposed debug_first_day_visit flag. On initial ledger creation in debug builds, a private configuration copy starts visits on day zero; the template resource and release behavior remain unchanged. Existing ledger stock/budget is never recreated on map reload.
 - Godot 4.5.2 TravelingMerchantGreetingTest passed. A real main-map day-zero preview verified presence, physical E access and the native greeting; screenshot inspected at /workspace/scratch/merchant-direct-dialogue.png. Virtual-display VSync warning only.
 - Shared artwork is dialogue/game_dialogue_balloon/game_dialogue_balloon.tscn; wall-specific runtime sizing remains in wall_management_spot.gd::_fit_dialogue(), merchant sizing in traveling_merchant.gd::_fit_greeting_to_viewport().
+
+### 2026-10-09 — match Iddin-Sin balloon to merchant
+- Director requested the merchant's compact dialogue-box layout for Iddin-Sin.
+- Restored the shared 176x60 artwork, empty left portrait frame, right text area and lower-left nameplate. Choices sit immediately below the artwork within the positioned root; Enter still retains the visible conversation.
+- Godot 4.5.2 RaidExpeditionTest passed. GL preview verified cost text and Build/Not now choices at /workspace/scratch/wall-cost-choices.png; no script errors, only the virtual-display VSync warning.
