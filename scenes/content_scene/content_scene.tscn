@@ -62,7 +62,7 @@ tile_map_data = PackedByteArray("AADm/97/AAAAAAAAAADm/+//AAAAAAIAAADn/97/AAABAAA
 tile_set = ExtResource("27_wall_tiles")
 
 [node name="WallManagementSpot" parent="YSortWorld" instance=ExtResource("28_wall_spot")]
-position = Vector2(-264, -240)
+position = Vector2(-264, -296)
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
 position = Vector2(-286, -412)

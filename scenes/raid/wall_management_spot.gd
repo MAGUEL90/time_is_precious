@@ -133,14 +133,6 @@ func _fit_dialogue() -> void:
 	panel.position = Vector2.ZERO
 	panel.size = root.custom_minimum_size
 	panel.scale = Vector2.ONE
-	var portrait: Node2D = preload("res://scenes/worker_visual/base_worker_visual.tscn").instantiate()
-	portrait.skin_tone = $CaretakerVisual.skin_tone
-	portrait.hair_style = $CaretakerVisual.hair_style
-	portrait.clothes_id = $CaretakerVisual.clothes_id
-	portrait.default_direction = "right"
-	portrait.position = Vector2(20, 20)
-	portrait.scale = Vector2(1.25, 1.25)
-	panel.get_node("TexturePhoto").add_child(portrait)
 	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
 	var responses: Control = greeting_balloon.responses_menu
 	responses.set_anchors_and_offsets_preset(Control.PRESET_CENTER)

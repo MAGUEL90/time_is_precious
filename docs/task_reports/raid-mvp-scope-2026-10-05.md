@@ -144,3 +144,7 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - The NPC holds only a wall_npc movement lock and never pauses the world clock. Physical access and authoritative wall state are rechecked at commit; cancel, leaving range, pause, collapse and map exit discard work and release the NPC lock.
 - Godot 4.5.2 dialogue import and RaidUITest passed. Native dialogue response tested in GL Compatibility at 1200x675: work completes at 50 HP and movement resumes. Dialogue/response screenshots inspected; portrait uses the same character appearance. Virtual-display VSync warning only.
 - WallBuildTest and RaidPlaytestTest passed on Godot 4.5.2: native response selection, decline, stale/out-of-range action rejection, movement/time cleanup, full-HP/active-raid/repair-disabled gating, repair and rebuild, and visual state across map changes. Helper initially used 4.6.3; root reran both with the required 4.5.2 binary. Diff check clean.
+
+### 2026-10-08 — caretaker location and English dialogue
+- Moved the NPC inside the south wall, renamed the visible role to Wall Keeper, removed the dialogue portrait and translated all conversation lines/responses into English.
+- Updated the existing dialogue tests for the English wording. Godot 4.5.2 import, WallBuildTest and RaidPlaytestTest passed after updating the old Indonesian text assertions. No repair rules changed.
