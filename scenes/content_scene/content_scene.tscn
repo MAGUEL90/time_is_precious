@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=20 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -17,6 +17,8 @@
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="25_home_theme"]
 [ext_resource type="Script" uid="uid://c768u01r0wopr" path="res://scenes/raid/raid_bootstrap.gd" id="26_raid"]
 [ext_resource type="TileSet" path="res://scenes/raid/wall_stone_tile_set.tres" id="27_wall_tiles"]
+
+[ext_resource type="PackedScene" path="res://scenes/raid/wall_management_spot.tscn" id="28_wall_spot"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -58,6 +60,9 @@ y_sort_enabled = true
 texture_filter = 1
 tile_map_data = PackedByteArray("AADm/97/AAAAAAAAAADm/+//AAAAAAIAAADn/97/AAABAAAAAADn/+//AAABAAIAAADo/97/AAACAAAAAADo/+//AAACAAIAAADp/97/AAADAAAAAADp/+//AAABAAIAAADq/97/AAAEAAAAAADq/+//AAABAAIAAADr/97/AAAFAAAAAADr/+//AAABAAIAAADs/97/AAABAAAAAADs/+//AAABAAIAAADt/97/AAACAAAAAADt/+//AAABAAIAAADu/97/AAADAAAAAADv/97/AAAEAAAAAADw/97/AAAFAAAAAADx/97/AAABAAAAAADx/+//AAAFAAIAAADy/97/AAACAAAAAADy/+//AAAFAAIAAADz/97/AAADAAAAAADz/+//AAAFAAIAAAD0/97/AAAEAAAAAAD0/+//AAAFAAIAAAD1/97/AAAFAAAAAAD1/+//AAAFAAIAAAD2/97/AAABAAAAAAD2/+//AAAFAAIAAAD3/97/AAACAAAAAAD3/+//AAAFAAIAAAD4/97/AAAGAAAAAAD4/+//AAAGAAIAAADm/9//AAAAAAEAAAD4/9//AAAGAAEAAADm/+D/AAAAAAEAAAD4/+D/AAAGAAEAAADm/+H/AAAAAAEAAAD4/+H/AAAGAAEAAADm/+L/AAAAAAEAAAD4/+L/AAAGAAEAAADm/+P/AAAAAAEAAAD4/+P/AAAGAAEAAADm/+T/AAAAAAEAAAD4/+T/AAAGAAEAAADm/+X/AAAAAAEAAAD4/+X/AAAGAAEAAADm/+b/AAAAAAEAAAD4/+b/AAAGAAEAAADm/+f/AAAAAAEAAAD4/+f/AAAGAAEAAADm/+j/AAAAAAEAAAD4/+j/AAAGAAEAAADm/+n/AAAAAAEAAAD4/+n/AAAGAAEAAADm/+r/AAAAAAEAAAD4/+r/AAAGAAEAAADm/+v/AAAAAAEAAAD4/+v/AAAGAAEAAADm/+z/AAAAAAEAAAD4/+z/AAAGAAEAAADm/+3/AAAAAAEAAAD4/+3/AAAGAAEAAADm/+7/AAAAAAEAAAD4/+7/AAAGAAEAAADv/+//AAADAAIAAADu/+//AAACAAIAAADw/+//AAAEAAIAAAA=")
 tile_set = ExtResource("27_wall_tiles")
+
+[node name="WallManagementSpot" parent="YSortWorld" instance=ExtResource("28_wall_spot")]
+position = Vector2(-264, -240)
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
 position = Vector2(-286, -412)

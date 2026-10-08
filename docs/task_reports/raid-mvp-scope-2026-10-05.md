@@ -128,3 +128,11 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - Painted 67 cells on YSortWorld/WallStone using only atlas source 0 (wall_stone_0). The perimeter follows the outer edge of the northern city plot, with a three-tile southern entrance.
 - Wall artwork remains a static editor layout; construction/upgrade visual swapping and collision are not part of this pass.
 - Loaded/rendered the actual main scene in Godot 4.5.2 GL Compatibility and inspected a 1200x900 overview screenshot with HUD hidden and temporary overview camera. Capture-only camera/window changes were outside the repository.
+
+### 2026-10-08 — build from a physical wall spot
+- User requested wall improvement through a nearby spot or NPC instead of the HUD Details panel. Implemented a labeled Wall Management sign by the south wall using the existing nearest-interactable E routing; NPC art/dialogue remains a later extension.
+- Details and automatic raid reports are now read-only. The management view exposes the existing free instant build/rebuild only while the player has live physical access. Leaving range, changing maps, pausing or losing player availability revokes access; closing the panel never changes pause/movement ownership.
+- Authored wall cells now display source 0 when ruined and source 1 when HP is positive. Build/rebuild/breach and map reentry preserve the user's exact tile positions and atlas coordinates.
+- No new balance, repair approval, NPC behavior, collision or save schema. Scope remains the authorized raid UI/main-map integration with a narrow Player input route.
+- Godot 4.5.2 editor import and RaidUITest passed. GL Compatibility preview at 1200x675 verified the E prompt, management panel, successful 50 HP build and intact-wall artwork. Screenshots: /workspace/scratch/wall-management-spot.png, wall-management-menu.png, wall-management-built.png. Virtual-display VSync warning only.
+- WallBuildTest and RaidPlaytestTest passed: real Player E routing, read-only Details, immediate stale click after teleport, management closure on exit/map free, free build invariants, repair fixture, breach/rebuild and atlas/layout continuity. Final diff check passed.

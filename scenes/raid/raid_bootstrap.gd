@@ -22,3 +22,13 @@ func _ready() -> void:
 		ui.build_requested.connect(state.build_wall)
 		ui.repair_requested.connect(state.repair_wall)
 		ui.bind_state(state)
+
+	state.changed.connect(_refresh_wall_tiles)
+	_refresh_wall_tiles()
+
+func _refresh_wall_tiles() -> void:
+	var wall: TileMapLayer = get_parent().get_node("YSortWorld/WallStone")
+	var source_id: int = 1 if state.wall_hp > 0 else 0
+	for cell: Vector2i in wall.get_used_cells():
+		if wall.get_cell_source_id(cell) != source_id:
+			wall.set_cell(cell, source_id, wall.get_cell_atlas_coords(cell), wall.get_cell_alternative_tile(cell))

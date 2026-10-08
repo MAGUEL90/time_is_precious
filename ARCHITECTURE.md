@@ -650,3 +650,12 @@ go through `CitizenManager.leave_city`, whose signal removes matching CitizenAct
 instances. Production balance, general building/worker departure integration and
 repair rules remain pending. There is no new autoload or disk
 save schema. See `docs/task_reports/raid-mvp-scope-2026-10-05.md`.
+
+
+Wall construction access is owned by the map's WallManagementSpot, registered with
+the player's existing nearest-interactable routing. RaidUI presents either read-only
+Details or a management view authorized by a live spot; it revalidates physical
+range and player availability at every action. Walking away or leaving the map
+closes that view without changing pause/movement ownership. The bootstrap projects
+wall HP onto the authored WallStone cells (source 0 ruined / source 1 built), with
+no changes to cell positions, collision, raid balance or the saved map artwork.

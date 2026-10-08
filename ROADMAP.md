@@ -21,7 +21,10 @@ Do not use an old PR list, branch list, or technical root map as the main indica
 
 ## Raid branch — wall and manual combat playtest (2026-10-05)
 
-The wall starts ruined. **Build wall (free)** creates level 1 with 50 HP/durability.
+The wall starts ruined. Approach the **Wall Management** sign at the south wall
+and press **E** to access **Build wall (free)**, creating level 1 with 50 HP/durability.
+HUD Details is read-only. Painted wall tiles switch between ruined and built
+atlases with wall HP, preserving the authored layout.
 The city HUD retains the wall, active raid and result across home/map transitions.
 The Debug panel now exposes **Raid light**, **Raid heavy** and **Reset wall HP**
 for repeatable manual tests. With a full wall, the light fixture leaves 14 HP
