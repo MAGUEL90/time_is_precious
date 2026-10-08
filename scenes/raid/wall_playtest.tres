@@ -5,4 +5,5 @@
 [resource]
 script = ExtResource("1_config")
 instant_build_enabled = true
+instant_repair_enabled = true
 wall_max_hp = 50

@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=15
+type="Resource"
+uid="uid://c3ilppbmddc2p"
+path="res://.godot/imported/wall_caretaker.dialogue-71998c703c53e2e1c7269780d93efb46.tres"
+
+[deps]
+
+source_file="res://dialogue/game_dialogue_conversations/wall_caretaker.dialogue"
+dest_files=["res://.godot/imported/wall_caretaker.dialogue-71998c703c53e2e1c7269780d93efb46.tres"]
+
+[params]
+
+defaults=true

@@ -1,0 +1,13 @@
+~ wall_caretaker
+if wall_is_attacking()
+	Mandor: Serangan belum reda. Kita perbaiki tembok setelah para perampok pergi.
+elif wall_work_available()
+	Mandor: Tembok ini perlu diperbaiki. Aku bisa memulihkannya sekarang tanpa biaya.
+else
+	Mandor: Tembok masih kokoh. Belum ada yang perlu diperbaiki.
+- Perbaiki tembok (gratis) [if wall_work_available()]
+	do wall_select_work()
+	=> END
+- Nanti saja
+	do wall_select_leave()
+	=> END

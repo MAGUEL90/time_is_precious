@@ -34,12 +34,76 @@ func _move_to_wall_spot() -> void:
 	player._refresh_current_interactable()
 	await get_tree().process_frame
 
-func _interact_with_wall_spot() -> void:
+func _get_greeting_balloon() -> BaseGameDialogueBalloon:
+	return wall_spot.get("greeting_balloon") as BaseGameDialogueBalloon
+
+func _open_wall_greeting() -> BaseGameDialogueBalloon:
+	await _move_to_wall_spot()
 	var interact_event := InputEventAction.new()
 	interact_event.action = &"interact"
 	interact_event.pressed = true
 	player._unhandled_input(interact_event)
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while not bool(wall_spot.call("_has_live_greeting_balloon")) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	var balloon: BaseGameDialogueBalloon = _get_greeting_balloon()
+	while is_instance_valid(balloon) and not is_instance_valid(balloon.dialogue_line) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(is_instance_valid(balloon) and is_instance_valid(balloon.dialogue_line), "E opens the native wall caretaker dialogue.")
+	if not is_instance_valid(balloon) or not is_instance_valid(balloon.dialogue_line):
+		return null
+	if balloon.dialogue_label.is_typing:
+		balloon.dialogue_label.skip_typing()
+	while is_instance_valid(balloon) and not balloon.is_waiting_for_input and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(not get_tree().paused and not TimeComponentManager.is_paused and not player.can_move,
+		"Wall dialogue holds Player movement without pausing the world clock.")
+	return balloon
+
+func _show_wall_responses(balloon: BaseGameDialogueBalloon) -> void:
+	if not is_instance_valid(balloon):
+		return
+	if balloon.dialogue_label.is_typing:
+		balloon.dialogue_label.skip_typing()
+	balloon.show_responses()
 	await get_tree().process_frame
+
+func _visible_wall_responses(balloon: BaseGameDialogueBalloon) -> Array[String]:
+	var texts: Array[String] = []
+	if not is_instance_valid(balloon) or not balloon.responses_menu.visible:
+		return texts
+	for item: Control in balloon.responses_menu.get_menu_items():
+		var response: DialogueResponse = item.get_meta("response") as DialogueResponse
+		if is_instance_valid(response):
+			texts.append(response.text.strip_edges())
+	return texts
+
+func _choose_wall_response(balloon: BaseGameDialogueBalloon, response_text: String) -> void:
+	if not is_instance_valid(balloon):
+		_expect(false, "A live wall greeting exists before response selection.")
+		return
+	if not balloon.responses_menu.visible:
+		balloon.show_responses()
+	var response_button: Control
+	for item: Control in balloon.responses_menu.get_menu_items():
+		var response: DialogueResponse = item.get_meta("response") as DialogueResponse
+		if is_instance_valid(response) and response.text.strip_edges() == response_text:
+			response_button = item
+	_expect(is_instance_valid(response_button), "Wall greeting exposes the %s response." % response_text)
+	if not is_instance_valid(response_button):
+		return
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	response_button.gui_input.emit(click)
+
+func _wait_for_wall_greeting_end() -> void:
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while (bool(wall_spot.call("_has_live_greeting_balloon")) or not player.can_move or TimeComponentManager.is_paused) and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(not bool(wall_spot.call("_has_live_greeting_balloon")), "Wall dialogue ends or cancels cleanly.")
+	_expect(player.can_move and not get_tree().paused and not TimeComponentManager.is_paused,
+		"Ending wall dialogue releases its Player movement lock without pausing time.")
 
 func _settle_physics() -> void:
 	for frame: int in range(5):
@@ -70,7 +134,7 @@ func _run() -> void:
 	_expect(debug.raid_light_button.disabled and debug.raid_heavy_button.disabled, "Raid debug controls require a built wall.")
 	_expect(not debug.trigger_raid_test(false), "A direct debug request cannot bypass initial construction.")
 
-	# Details stays read-only. Build through the selected nearby spot and the Player action.
+	# Details stays read-only. Build through the selected caretaker's real dialogue.
 	ui.open_details()
 	await get_tree().process_frame
 	_expect(ui.details_panel.visible and not ui.build_button.visible, "Read-only Details does not offer wall construction.")
@@ -78,24 +142,50 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(state.wall_hp == 0 and state.wall_level == 0, "A forced Details Build signal cannot construct the wall.")
 	ui.close_details()
-	await _move_to_wall_spot()
+	var greeting: BaseGameDialogueBalloon = await _open_wall_greeting()
 	_expect(player.current_interactable == wall_spot, "The wall spot is selected when Player enters its range.")
-	await _interact_with_wall_spot()
-	_expect(ui.build_button.visible and player.can_move, "E opens management and leaves Player movement enabled.")
-	ui.build_button.pressed.emit()
-	await get_tree().process_frame
+	_expect(greeting.dialogue_line.text.to_lower().contains("tembok"), "The caretaker starts with an introductory wall line.")
+	await _show_wall_responses(greeting)
+	var response_texts: Array[String] = _visible_wall_responses(greeting)
+	_expect(response_texts.size() == 2 and response_texts.has("Perbaiki tembok (gratis)") and response_texts.has("Nanti saja"),
+		"A ruined wall offers free construction or declining.")
+	_choose_wall_response(greeting, "Perbaiki tembok (gratis)")
+	await _wait_for_wall_greeting_end()
 	debug._refresh_controls()
-	_expect(state.wall_hp == 50 and state.wall_level == 1, "Initial wall construction uses the real management action.")
+	_expect(state.wall_hp == 50 and state.wall_level == 1, "Initial wall construction follows the real caretaker dialogue response.")
 	_expect_wall_visual(1, wall_atlas, "Building changes every existing wall cell to the intact tile source while preserving coordinates")
 	_expect(not debug.raid_light_button.disabled, "Building enables the explicit raid tests.")
+	_expect(not ui.build_button.visible and not ui.repair_button.visible, "Details stays read-only after initial construction.")
 
-	# This isolated fixture enables the free-repair API even if its live balance is pending.
-	state.config.instant_repair_enabled = true
+	# A full wall has no work response, even though the player can still talk to the caretaker.
+	greeting = await _open_wall_greeting()
+	await _show_wall_responses(greeting)
+	response_texts = _visible_wall_responses(greeting)
+	_expect(response_texts.size() == 1 and response_texts[0] == "Nanti saja", "Full HP does not offer a repair response.")
+	_choose_wall_response(greeting, "Nanti saja")
+	await _wait_for_wall_greeting_end()
+	_expect(state.wall_hp == 50, "Declining at full HP leaves the wall unchanged.")
+
+	_expect(state.config.instant_repair_enabled, "The wall playtest profile enables the requested free repair action.")
 	var config_before: Resource = state.config.duplicate(true)
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
 	debug.raid_light_button.pressed.emit()
 	_expect(state.phase == "attacking" and not debug.panel.visible and not ui.details_panel.visible, "Starting the real debug action focuses the live HP bar.")
 	_expect(not debug.trigger_raid_test(true), "A second debug click cannot replace an active attack.")
+	var attack_was_processing: bool = state.is_processing()
+	state.set_process(false)
+	var hp_before_attack_dialogue: int = state.wall_hp
+	var elapsed_before_attack_dialogue: float = state._elapsed
+	greeting = await _open_wall_greeting()
+	await _show_wall_responses(greeting)
+	response_texts = _visible_wall_responses(greeting)
+	_expect(response_texts.size() == 1 and response_texts[0] == "Nanti saja", "An active raid does not offer wall work.")
+	_choose_wall_response(greeting, "Nanti saja")
+	await _wait_for_wall_greeting_end()
+	_expect(state.phase == "attacking" and not state.can_repair_wall()
+		and state.wall_hp == hp_before_attack_dialogue and state._elapsed == elapsed_before_attack_dialogue,
+		"Declining during an attack leaves raid and wall state unchanged.")
+	state.set_process(attack_was_processing)
 	if OS.get_environment("TIP_RAID_REALTIME_TEST") == "1":
 		TimeComponentManager.is_paused = true
 		var before_pause: float = state._elapsed
@@ -121,11 +211,14 @@ func _run() -> void:
 	await _capture("raid-playtest-survived.png")
 	var report: Dictionary = state.get_last_report()
 	var next_attack: int = state._attack_at
-	await _move_to_wall_spot()
-	await _interact_with_wall_spot()
-	_expect(ui.repair_button.visible, "Wall management exposes the allowed repair after Player reaches the wall.")
-	ui.repair_button.pressed.emit()
+	greeting = await _open_wall_greeting()
+	await _show_wall_responses(greeting)
+	response_texts = _visible_wall_responses(greeting)
+	_expect(response_texts.has("Perbaiki tembok (gratis)"), "The caretaker offers repair for a damaged wall.")
+	_choose_wall_response(greeting, "Perbaiki tembok (gratis)")
+	await _wait_for_wall_greeting_end()
 	_expect(state.wall_hp == 50 and state._attack_at == next_attack and state.get_last_report() == report, "Repair restores HP without rerolling threats or results.")
+	_expect(not ui.repair_button.visible, "The Details panel stays read-only after repair.")
 	_expect(Inventory.items == inventory_before, "Free fixture repair does not spend personal Inventory.")
 	_expect(state.config.attack_min == config_before.attack_min and state.config.attack_max == config_before.attack_max and state.config.raids_enabled == config_before.raids_enabled, "Debug raid overrides do not rewrite live raid balance.")
 	debug.raid_heavy_button.pressed.emit()
@@ -134,7 +227,7 @@ func _run() -> void:
 	var ledger: Node = state
 	content.free()
 	await _settle_physics()
-	_expect(not ui.details_panel.visible, "Leaving the map frees the wall spot and closes management/report details.")
+	_expect(not ui.details_panel.visible, "Leaving the map during an attack keeps Details closed.")
 	var home: Node = preload("res://scenes/player_home_interior/player_home_interior.tscn").instantiate()
 	add_child(home)
 	await get_tree().process_frame
@@ -150,14 +243,15 @@ func _run() -> void:
 	_expect(state == ledger and state.get_last_report().outcome == "breached", "Map return retains the exact breach report and ledger.")
 	_expect(not ui.build_button.visible, "Map return retains no stale wall management authority.")
 	_expect_wall_visual(0, wall_atlas, "A breach changes every existing wall cell to the ruined tile source while preserving coordinates")
-	await _move_to_wall_spot()
-	_expect(player.current_interactable == wall_spot, "Returning to range selects the wall spot for rebuilding.")
-	await _interact_with_wall_spot()
-	_expect(ui.details_panel.visible and ui.build_button.visible, "E at the wall opens management and offers rebuilding after breach.")
-	ui.build_button.pressed.emit()
-	await get_tree().process_frame
+	greeting = await _open_wall_greeting()
+	await _show_wall_responses(greeting)
+	response_texts = _visible_wall_responses(greeting)
+	_expect(player.current_interactable == wall_spot and response_texts.has("Perbaiki tembok (gratis)"), "Returning to range offers dialogue-based rebuilding after breach.")
+	_choose_wall_response(greeting, "Perbaiki tembok (gratis)")
+	await _wait_for_wall_greeting_end()
 	_expect(state.wall_hp == 50 and state.wall_level == 1, "Rebuild returns the ruined wall to level 1 without granting an upgrade.")
 	_expect_wall_visual(1, wall_atlas, "Rebuilding restores intact tile sources and preserves cell coordinates")
+	_expect(not ui.build_button.visible and not ui.repair_button.visible, "The raid report remains read-only after rebuilding.")
 	_expect(ui.repair_requested.get_connections().size() == 1, "Map reload does not duplicate repair callbacks.")
 	# Debug reset remains useful when gameplay repair is not enabled.
 	state.config.instant_repair_enabled = false
@@ -166,7 +260,14 @@ func _run() -> void:
 	state.advance_attack(60.0)
 	var reset_report: Dictionary = state.get_last_report()
 	var reset_schedule: int = state._attack_at
-	_expect(not ui.repair_button.visible, "An unapproved gameplay repair action stays hidden.")
+	var damaged_hp: int = state.wall_hp
+	greeting = await _open_wall_greeting()
+	await _show_wall_responses(greeting)
+	response_texts = _visible_wall_responses(greeting)
+	_expect(response_texts.size() == 1 and response_texts[0] == "Nanti saja", "Disabling instant repair removes the work response from dialogue.")
+	_choose_wall_response(greeting, "Nanti saja")
+	await _wait_for_wall_greeting_end()
+	_expect(state.wall_hp == damaged_hp and not ui.repair_button.visible, "Declining with gameplay repair disabled preserves damage and read-only Details.")
 	get_tree().paused = true
 	_expect(not debug.reset_wall_test(), "Debug reset respects another system's pause.")
 	get_tree().paused = false

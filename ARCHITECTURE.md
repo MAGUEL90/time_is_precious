@@ -652,10 +652,14 @@ repair rules remain pending. There is no new autoload or disk
 save schema. See `docs/task_reports/raid-mvp-scope-2026-10-05.md`.
 
 
-Wall construction access is owned by the map's WallManagementSpot, registered with
-the player's existing nearest-interactable routing. RaidUI presents either read-only
-Details or a management view authorized by a live spot; it revalidates physical
-range and player availability at every action. Walking away or leaving the map
-closes that view without changing pause/movement ownership. The bootstrap projects
-wall HP onto the authored WallStone cells (source 0 ruined / source 1 built), with
-no changes to cell positions, collision, raid balance or the saved map artwork.
+Wall construction access is owned by the map's WallManagementSpot caretaker NPC,
+registered with the player's existing nearest-interactable routing. E starts the
+existing dialogue balloon with a repair or leave response. RaidUI Details stays
+read-only; the NPC revalidates physical range, player availability and wall state
+after dialogue ends before building/rebuilding or repairing. The NPC holds only
+its own movement lock during conversation and keeps world time running, so a raid
+cannot be paused through conversation. Cancellation, map exit and unavailable
+players release the lock without performing work. The bootstrap projects wall HP
+onto authored WallStone cells (source 0 ruined / source 1 built), without changing
+cell positions, collision or the saved map artwork. Free instant repair is enabled
+for the current playtest; final repair costs and progression remain undecided.

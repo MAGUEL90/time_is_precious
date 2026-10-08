@@ -24,7 +24,6 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
 
-var _management_spot: Node
 var raid_state: Node
 var report_text: String = ""
 var _status_data: Dictionary = {}
@@ -36,16 +35,12 @@ func _ready() -> void:
 	visible = true
 	status_panel.visible = false
 	details_panel.visible = false
-	build_button.pressed.connect(_on_build_pressed)
-	repair_button.pressed.connect(_on_repair_pressed)
 	$Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton.pressed.connect(open_details)
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
 	_apply_theme()
 	refresh()
 
 func _process(delta: float) -> void:
-	if _management_spot != null and not _has_management_access():
-		close_details()
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		return
 	_warning_elapsed = fmod(_warning_elapsed + delta, WARNING_PULSE_SECONDS)
@@ -57,7 +52,7 @@ func _set_attack_warning(active: bool) -> void:
 		_warning_elapsed = 0.0
 		attack_warning.modulate.a = 0.65
 	attack_warning.visible = active
-	set_process(active or is_instance_valid(_management_spot))
+	set_process(active)
 
 func _exit_tree() -> void:
 	_unbind_state()
@@ -83,32 +78,13 @@ func bind_state(next_state: Node) -> void:
 	refresh()
 
 func open_details() -> void:
-	_management_spot = null
 	set_process(attack_warning.visible)
 	if not is_instance_valid(raid_state):
 		return
 	_render_details()
 	details_panel.visible = true
 
-func open_management(spot: Node) -> void:
-	if not is_instance_valid(spot) or not spot.has_player_access():
-		return
-	if not is_instance_valid(raid_state):
-		return
-	_management_spot = spot
-	_render_details()
-	details_panel.visible = true
-	set_process(true)
-
-func close_management(spot: Node) -> void:
-	if _management_spot == spot:
-		close_details()
-
-func _has_management_access() -> bool:
-	return is_instance_valid(_management_spot) and _management_spot.has_player_access()
-
 func close_details() -> void:
-	_management_spot = null
 	details_panel.visible = false
 	set_process(attack_warning.visible)
 
@@ -161,14 +137,6 @@ func _unbind_state() -> void:
 func _on_state_changed() -> void:
 	refresh()
 
-func _on_build_pressed() -> void:
-	if _has_management_access() and bool(raid_state.get_status().get("can_build", false)):
-		build_requested.emit()
-
-func _on_repair_pressed() -> void:
-	if _has_management_access() and bool(raid_state.get_status().get("can_repair", false)):
-		repair_requested.emit()
-
 func _render_status() -> void:
 	var status_text: String = str(_status_data.get("status_text", ""))
 	if status_text.is_empty():
@@ -213,17 +181,12 @@ func _render_details() -> void:
 		status_text = _fallback_status(str(_status_data.get("phase", "safe")))
 	status_detail_label.text = status_text
 
-	var management_access: bool = _has_management_access()
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "WALL MANAGEMENT" if management_access else "CASTLE & RAID DETAILS"
-	if not management_access and bool(_status_data.get("can_build", false)):
-		status_detail_label.text += " Visit the Wall Management sign by the south wall to build."
-	var can_build: bool = management_access and bool(_status_data.get("can_build", false))
-	var can_repair: bool = management_access and bool(_status_data.get("can_repair", false))
-	build_button.visible = can_build
-	repair_button.visible = can_repair
-	build_button.text = "Rebuild wall (free)" if level > 0 else "Build wall (free)"
-	repair_button.text = "Repair wall (free)"
-	action_row.visible = can_build or can_repair
+	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CASTLE & RAID DETAILS"
+	if bool(_status_data.get("can_build", false)) or bool(_status_data.get("can_repair", false)):
+		status_detail_label.text += " Talk to the wall caretaker by the south wall for repairs."
+	build_button.visible = false
+	repair_button.visible = false
+	action_row.visible = false
 	var has_report: bool = not _last_report.is_empty()
 	report_scroll.visible = has_report
 	details_panel.custom_minimum_size = Vector2(376, 209) if has_report else Vector2(280, 120)
