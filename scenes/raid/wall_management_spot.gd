@@ -56,6 +56,7 @@ func on_player_interact(interacting_player: Player) -> void:
 	add_child(greeting_balloon)
 	_fit_dialogue()
 	greeting_balloon.speaker_chat_box_vertical_offset = 0.0
+	greeting_balloon.speaker_head_gap = 4.0
 	greeting_balloon.start(DIALOGUE, "wall_caretaker", [$CaretakerVisual, self])
 	set_process(true)
 	get_viewport().set_input_as_handled()
@@ -156,7 +157,7 @@ func _fit_dialogue() -> void:
 	# Reserve space below it for choices so Enter keeps the conversation visible.
 	greeting_balloon.keep_chat_with_responses = true
 	var root: Control = greeting_balloon.chat_box_root
-	root.custom_minimum_size = Vector2(176, 92)
+	root.custom_minimum_size = Vector2(176, 78)
 	root.size = root.custom_minimum_size
 	var panel: Control = root.get_node("TemplateDialogue")
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -166,15 +167,27 @@ func _fit_dialogue() -> void:
 	panel.scale = Vector2.ONE
 	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
 	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
-	var responses: Control = greeting_balloon.responses_menu
-	responses.reparent(root)
-	responses.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	responses.position = Vector2(23, 62)
-	responses.size = Vector2(130, 28)
-	responses.add_theme_constant_override("separation", 2)
-	var choice: Button = responses.get_node("ResponseExample")
-	choice.custom_minimum_size = Vector2(130, 13)
+	var previous: Control = greeting_balloon.responses_menu
+	var choice: Button = previous.get_node("ResponseExample")
+	previous.remove_child(choice)
+	choice.custom_minimum_size = Vector2(40, 13)
 	choice.add_theme_font_size_override("font_size", 6)
+	choice.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var responses: Variant = HBoxContainer.new()
+	responses.set_script(previous.get_script())
+	responses.name = "WallResponses"
+	responses.add_child(choice)
+	responses.set("response_template", choice)
+	responses.set("hide_failed_responses", true)
+	responses.set("next_action", greeting_balloon.next_action)
+	responses.alignment = BoxContainer.ALIGNMENT_CENTER
+	responses.add_theme_constant_override("separation", 4)
+	root.add_child(responses)
+	responses.position = Vector2(0, 62)
+	responses.size = Vector2(176, 14)
+	responses.response_selected.connect(greeting_balloon._on_responses_menu_response_selected)
+	greeting_balloon.responses_menu = responses as DialogueResponsesMenu
+	previous.queue_free()
 
 func _exit_tree() -> void:
 	_cancel_greeting()

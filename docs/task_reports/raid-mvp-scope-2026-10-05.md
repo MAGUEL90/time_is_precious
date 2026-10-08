@@ -197,3 +197,9 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - Director requested the merchant's compact dialogue-box layout for Iddin-Sin.
 - Restored the shared 176x60 artwork, empty left portrait frame, right text area and lower-left nameplate. Choices sit immediately below the artwork within the positioned root; Enter still retains the visible conversation.
 - Godot 4.5.2 RaidExpeditionTest passed. GL preview verified cost text and Build/Not now choices at /workspace/scratch/wall-cost-choices.png; no script errors, only the virtual-display VSync warning.
+
+### 2026-10-09 — compact horizontal wall choices
+- Director requested a lower dialogue and small side-by-side Build / Not now buttons.
+- Wall dialogue now reserves one 14px response row, with centered 40px minimum-width buttons and 4px separation. Reduced total root height from 92 to 78 and head gap from 8 to 4 brings the panel closer to Iddin-Sin.
+- Reuses the existing response-menu script on a wall-local HBoxContainer without changing plugin files or other dialogues. Fixed the dynamic script/container type binding discovered by initial parse checks.
+- Godot 4.5.2 RaidExpeditionTest passed. Visual preview confirmed the lower panel, padded horizontal buttons, and successful Build action; screenshot /workspace/scratch/wall-cost-choices.png. No script errors in final preview, only virtual-display VSync warning.
