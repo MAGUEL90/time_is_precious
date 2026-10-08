@@ -6,6 +6,9 @@ const BALLOON: PackedScene = preload("res://dialogue/game_dialogue_balloon/game_
 const GREETING_DIALOGUE: DialogueResource = preload("res://dialogue/game_dialogue_conversations/traveling_merchant.dialogue")
 const STATE_NAME: String = "CommonTravelingMerchant"
 
+## Main-map playtest: show the first visit on day zero without changing the template.
+@export var debug_first_day_visit: bool = false
+
 @onready var interactable_label_component: Control = $InteractableLabelComponent
 @onready var interaction_area: Area2D = $InteractionArea
 var state: Node
@@ -24,6 +27,9 @@ func _ready() -> void:
 	if state == null:
 		state = STATE.new()
 		state.name = STATE_NAME
+		if OS.is_debug_build() and debug_first_day_visit:
+			state.config = state.config.duplicate(true)
+			state.config.first_day = 0
 		WorkStateRuntime.add_child(state)
 	interaction_area.body_entered.connect(_on_body_entered)
 	interaction_area.body_exited.connect(_on_body_exited)

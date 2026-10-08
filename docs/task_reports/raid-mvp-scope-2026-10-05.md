@@ -186,3 +186,9 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - Merchant visit notice now explicitly selects the HUD pixel-font variation at size 6, replacing the fallback-font appearance.
 - Godot 4.5.2 import, RaidExpeditionTest, RaidPlaytestTest and TravelingMerchantGreetingTest passed. Expedition regression exercises Enter via the balloon input handler and confirms text plus responses stay visible. Graphical review inspected the cost and choice panels and corrected texture-driven minimum-width expansion. Screenshot: /workspace/scratch/wall-cost-choices.png. Virtual display VSync warning only.
 - No breach rules changed: HP zero ends the raid, swaps wall to ruins and records the result. Loot/satisfaction/fleeing remain zero in the main profile; rebuild costs and the three-day recovery plus three-day next journey remain as authorized.
+
+### 2026-10-09 — immediate merchant dialogue preview
+- Director asked which scene controls the wall balloon and requested an immediately visible merchant for dialogue inspection.
+- Main-map TravelingMerchant now enables an Inspector-exposed debug_first_day_visit flag. On initial ledger creation in debug builds, a private configuration copy starts visits on day zero; the template resource and release behavior remain unchanged. Existing ledger stock/budget is never recreated on map reload.
+- Godot 4.5.2 TravelingMerchantGreetingTest passed. A real main-map day-zero preview verified presence, physical E access and the native greeting; screenshot inspected at /workspace/scratch/merchant-direct-dialogue.png. Virtual-display VSync warning only.
+- Shared artwork is dialogue/game_dialogue_balloon/game_dialogue_balloon.tscn; wall-specific runtime sizing remains in wall_management_spot.gd::_fit_dialogue(), merchant sizing in traveling_merchant.gd::_fit_greeting_to_viewport().

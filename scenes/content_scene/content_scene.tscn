@@ -89,6 +89,7 @@ retain_resource_stock = true
 
 [node name="TravelingMerchant" parent="YSortWorld" instance=ExtResource("21_merchant")]
 position = Vector2(-170, -426)
+debug_first_day_visit = true
 
 [node name="HomeDoor" type="Area2D" parent="YSortWorld"]
 position = Vector2(-256, -426)
