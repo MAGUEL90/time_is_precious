@@ -1,10 +1,10 @@
 ~ wall_caretaker
 if wall_is_attacking()
-	Wall Keeper: The raiders are still attacking. We can repair the wall once they leave.
+	Iddin-Sin: The raiders are still attacking. We can repair the wall once they leave.
 elif wall_work_available()
-	Wall Keeper: The wall needs repairs. I can restore it now, free of charge.
+	Iddin-Sin: The wall needs repairs. I can restore it now, free of charge.
 else
-	Wall Keeper: The wall is in good condition. No repairs are needed.
+	Iddin-Sin: The wall is in good condition. No repairs are needed.
 - Repair wall (free) [if wall_work_available()]
 	do wall_select_work()
 	=> END

@@ -21,7 +21,7 @@ Do not use an old PR list, branch list, or technical root map as the main indica
 
 ## Raid branch — wall and manual combat playtest (2026-10-05)
 
-The wall starts ruined. Approach **Wall Keeper** inside the south wall and press
+The wall starts ruined. Approach **Iddin-Sin** inside the south wall and press
 **E**, then choose **Repair wall (free)** in dialogue. This builds/rebuilds
 level 1 at 50 HP or repairs a damaged standing wall to full HP for the playtest.
 HUD Details is read-only. Painted wall tiles switch between ruined and built
