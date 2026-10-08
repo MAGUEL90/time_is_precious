@@ -27,8 +27,7 @@ choose **Start wall work**. Build/rebuild costs 10 Stone + 5 Wood Log and takes
 game minutes. Materials come from City Storage at job start; HP updates on
 completion. Jobs persist across map changes, pause during attacks, and a breached
 repair is cancelled with its materials refunded. City Management remains read-only;
-its shortcut opens wall status and raid reports. Construction progress and attack
-HP appear above the wall, replacing the persistent bottom-right raid panel.
+press C to open wall status and raid reports. A plain construction progress / attack HP bar appears above the wall, replacing the persistent bottom-right raid panel.
 
 The first normal raider party departs when initial construction completes, travels
 for 3 days, and becomes visible through Iddin-Sin/HUD warning 1 day before arrival.

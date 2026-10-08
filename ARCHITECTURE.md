@@ -659,7 +659,7 @@ extending that expedition. Legacy randomized interval mode remains for isolated
 regression fixtures. Real gameplay seconds drive attacks, with pause/transition
 guards; clock-speed controls do not accelerate hit timing.
 
-RaidUI provides a City Management shortcut and read-only wall/raid reports; its
+RaidUI provides a City Management keyboard shortcut (C) and read-only wall/raid reports; its
 legacy bottom-right status panel stays hidden. A map-owned indicator above the
 south wall presents construction progress or attack HP and follows the camera. Raid results
 resolve once. Main-profile population/theft losses remain zero. Existing bounded

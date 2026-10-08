@@ -39,13 +39,13 @@ func _run() -> void:
 	world_indicator.bind_state(state)
 	await get_tree().process_frame
 	_expect(not ui.status_panel.visible, "The persistent bottom-right raid card stays hidden.")
-	_expect(ui.city_management_button.visible, "City Management shortcut is available while the city map is active.")
+	_expect(not ui.has_node("Root/CityManagementButton"), "City Management has no floating button.")
 	_expect(world_indicator.visible and world_indicator.progress_bar.value == 32.0, "An active raid shows current wall HP above the wall.")
 	_expect(ui.hp_bar.value == 32 and ui.hp_bar.max_value == 50, "HP display follows authoritative current/max values.")
 	_expect("60" in ui.time_left_label.text, "Fractional remaining seconds round up so the first second stays visible.")
 	_expect(not ui.details_panel.visible, "An active raid keeps City Management closed until the player opens it.")
 	await _capture("raid-hp.png")
-	ui.city_management_button.pressed.emit()
+	ui.open_details()
 	_expect(str(ui.get_node("Root/Center/DetailsPanel/Margin/Contents/TitleLabel").text) == "CITY MANAGEMENT", "The shortcut opens the City Management panel.")
 	_expect(not ui.action_row.visible, "City Management keeps wall actions read-only.")
 	ui.close_details()
@@ -55,8 +55,8 @@ func _run() -> void:
 		"work_total": 120, "work_message": "Wall construction started."}
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(world_indicator.visible and world_indicator.title_label.text == "Building wall", "Construction progress appears above the wall while work is active.")
-	_expect(world_indicator.progress_bar.value == 60.0 and "50%" in world_indicator.detail_label.text, "World construction progress reflects a halfway job.")
+	_expect(world_indicator.visible, "Construction progress appears above the wall while work is active.")
+	_expect(world_indicator.progress_bar.value == 60.0, "World construction progress reflects a halfway job.")
 	state.status.work_kind = ""
 	state.status.work_remaining = 0
 	state.changed.emit()
@@ -66,7 +66,7 @@ func _run() -> void:
 	state.status.hp = 19
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(world_indicator.visible and world_indicator.progress_bar.value == 19.0 and "19 / 50 HP" in world_indicator.detail_label.text, "An attack shows the live wall HP bar at the wall.")
+	_expect(world_indicator.visible and world_indicator.progress_bar.value == 19.0, "An attack shows the live wall HP bar at the wall.")
 	state.status.phase = "recovery"
 	state.status.hp = 0
 	state.status.status_text = "Raiders have withdrawn. The city has time to recover."
@@ -119,7 +119,7 @@ func _run() -> void:
 	_expect(state.changed.get_connections().is_empty(), "Removing the map-owned marker disconnects its ledger signal.")
 	world_indicator.queue_free()
 	ui.set_city_management_available(false)
-	_expect(not ui.city_management_button.visible, "Leaving the city map removes the shortcut.")
+	_expect(not ui._city_management_available, "Leaving the city map removes the shortcut.")
 	print("RaidUITest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
 

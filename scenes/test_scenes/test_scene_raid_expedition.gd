@@ -52,6 +52,22 @@ func _run() -> void:
 		"The live main-map wall caretaker remains identified as Iddin-Sin.")
 	_expect(wall_spot.is_in_group("wall_management_spots") and wall_map.get_used_cells().size() > 0,
 		"The live main-map caretaker and wall tilemap are present.")
+
+	var shortcut := InputEventKey.new()
+	shortcut.keycode = KEY_C
+	shortcut.pressed = true
+	ui._unhandled_input(shortcut)
+	_expect(ui.details_panel.visible, "C opens City Management during gameplay.")
+	ui._unhandled_input(shortcut)
+	_expect(not ui.details_panel.visible, "C closes City Management.")
+	get_tree().paused = true
+	ui._unhandled_input(shortcut)
+	_expect(not ui.details_panel.visible, "C does not open City Management through another paused menu.")
+	get_tree().paused = false
+	player.can_move = false
+	ui._unhandled_input(shortcut)
+	_expect(not ui.details_panel.visible, "C respects the NPC/player interaction lock.")
+	player.can_move = true
 	_assert_approved_profile()
 	_expect(state.phase == "unbuilt" and state.wall_hp == 0 and state.wall_level == 0
 		and state._work_kind.is_empty() and state._report_sequence == 0,

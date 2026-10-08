@@ -1,8 +1,6 @@
 class_name WallWorldIndicator extends Node2D
 
-@onready var title_label: Label = $Panel/Margin/Contents/TitleLabel
-@onready var detail_label: Label = $Panel/Margin/Contents/DetailLabel
-@onready var progress_bar: ProgressBar = $Panel/Margin/Contents/ProgressBar
+@onready var progress_bar: ProgressBar = $ProgressBar
 
 var raid_state: Node
 
@@ -42,24 +40,19 @@ func refresh() -> void:
 	if work_kind.is_empty():
 		visible = false
 		return
-	_render_work_progress(status, work_kind)
+	_render_work_progress(status)
 	visible = true
 
 func _render_wall_hp(status: Dictionary) -> void:
 	var hp: int = int(status.get("hp", 0))
 	var max_hp: int = maxi(int(status.get("max_hp", 0)), 1)
-	title_label.text = "Castle under attack"
-	detail_label.text = "%d / %d HP" % [clampi(hp, 0, max_hp), max_hp]
 	progress_bar.max_value = float(max_hp)
 	progress_bar.value = float(clampi(hp, 0, max_hp))
 
-func _render_work_progress(status: Dictionary, work_kind: String) -> void:
+func _render_work_progress(status: Dictionary) -> void:
 	var total_minutes: int = maxi(int(status.get("work_total", 0)), 1)
 	var remaining_minutes: int = clampi(int(status.get("work_remaining", 0)), 0, total_minutes)
 	var completed_minutes: int = total_minutes - remaining_minutes
-	var progress_percent: int = roundi(float(completed_minutes) / float(total_minutes) * 100.0)
-	title_label.text = "Building wall" if work_kind == "build" else "Repairing wall"
-	detail_label.text = "%d%% · %d min left" % [progress_percent, remaining_minutes]
 	progress_bar.max_value = float(total_minutes)
 	progress_bar.value = float(completed_minutes)
 
