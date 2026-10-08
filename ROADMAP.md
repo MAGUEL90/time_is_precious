@@ -26,7 +26,9 @@ choose **Start wall work**. Build/rebuild costs 10 Stone + 5 Wood Log and takes
 120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
 game minutes. Materials come from City Storage at job start; HP updates on
 completion. Jobs persist across map changes, pause during attacks, and a breached
-repair is cancelled with its materials refunded. Details remains read-only.
+repair is cancelled with its materials refunded. City Management remains read-only;
+its shortcut opens wall status and raid reports. Construction progress and attack
+HP appear above the wall, replacing the persistent bottom-right raid panel.
 
 The first normal raider party departs when initial construction completes, travels
 for 3 days, and becomes visible through Iddin-Sin/HUD warning 1 day before arrival.
@@ -35,7 +37,11 @@ journey. Detection does not shift arrival. Normal attack strength is 5–7 per
 5-second hit, wall Defend is 2, HP is 50, and raid duration remains at most 60
 active gameplay seconds. Reports and painted-wall visuals follow actual results.
 
-Debug retains light/heavy raid and wall-HP reset actions. **Wall materials** tops
+Debug shows the party arrival countdown. **Send raiders** starts a normal three-day
+journey during recovery; an existing journey cannot be restarted. Immediate
+light/heavy attack buttons are removed. Wall-HP reset remains available. During
+combat the effective clock is x1, with the selected speed restored afterward.
+**Wall materials** tops
 up only the materials missing for the next job in City Storage, for playtesting
 before the map has a Stone source; it does not seed normal gameplay.
 City Storage now accepts Stone and Wood Log deposits.

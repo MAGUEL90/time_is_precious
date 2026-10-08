@@ -21,6 +21,7 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 @onready var build_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/BuildButton
 @onready var repair_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/RepairButton
 @onready var report_label: Label = $Root/Center/DetailsPanel/Margin/Contents/ReportScroll/ReportLabel
+@onready var city_management_button: Button = $Root/CityManagementButton
 
 const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
@@ -31,12 +32,15 @@ var _status_data: Dictionary = {}
 var _last_report: Dictionary = {}
 var _last_shown_report_id: int = -1
 var _last_phase: String = ""
+var _city_management_available: bool = false
 
 func _ready() -> void:
 	visible = true
 	status_panel.visible = false
 	details_panel.visible = false
 	$Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton.pressed.connect(open_details)
+	city_management_button.visible = false
+	city_management_button.pressed.connect(open_details)
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
 	_apply_theme()
 	refresh()
@@ -89,11 +93,18 @@ func close_details() -> void:
 	details_panel.visible = false
 	set_process(attack_warning.visible)
 
+func set_city_management_available(available: bool) -> void:
+	_city_management_available = available
+	city_management_button.visible = available and is_instance_valid(raid_state)
+	if not available:
+		close_details()
+
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
 		raid_notice.hide()
 		_set_attack_warning(false)
 		status_panel.visible = false
+		city_management_button.visible = false
 		details_panel.visible = false
 		_status_data.clear()
 		_last_report.clear()
@@ -111,7 +122,9 @@ func refresh() -> void:
 	if phase == "attacking" and _last_phase != phase:
 		close_details()
 	_last_phase = phase
-	status_panel.visible = true
+	city_management_button.visible = _city_management_available
+	# Keep the former persistent card hidden; its nodes remain for compatibility.
+	status_panel.visible = false
 	_render_status()
 
 	_last_report.clear()
@@ -190,7 +203,7 @@ func _render_details() -> void:
 	elif not str(_status_data.get("work_message", "")).is_empty():
 		status_detail_label.text += " " + str(_status_data.work_message)
 
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CASTLE & RAID DETAILS"
+	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CITY MANAGEMENT"
 	if bool(_status_data.get("can_build", false)) or bool(_status_data.get("can_repair", false)):
 		status_detail_label.text += " Talk to the wall caretaker by the south wall for repairs."
 	build_button.visible = false
@@ -269,6 +282,6 @@ func _fallback_status(phase: String) -> String:
 func _apply_theme() -> void:
 	for label in [status_label, wall_value_label, time_left_label, wall_summary_label, defend_label, status_detail_label, report_label]:
 		label.theme = GAMEPLAY_THEME
-	for button in [build_button, repair_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton]:
+	for button in [build_button, repair_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton, city_management_button]:
 		button.theme = GAMEPLAY_THEME
 		button.theme_type_variation = &"HudShortcutButton"

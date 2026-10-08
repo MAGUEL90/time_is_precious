@@ -659,9 +659,12 @@ extending that expedition. Legacy randomized interval mode remains for isolated
 regression fixtures. Real gameplay seconds drive attacks, with pause/transition
 guards; clock-speed controls do not accelerate hit timing.
 
-RaidUI shows visible warnings, attack HP and wall-job remaining time. Raid results
+RaidUI provides a City Management shortcut and read-only wall/raid reports; its
+legacy bottom-right status panel stays hidden. A map-owned indicator above the
+south wall presents construction progress or attack HP and follows the camera. Raid results
 resolve once. Main-profile population/theft losses remain zero. Existing bounded
-loot/departure APIs remain covered in synthetic tests. Debug raid overrides and
-a material top-up action provide explicit playtest tools; no resources are seeded
+loot/departure APIs remain covered in synthetic tests. Debug dispatch starts a normal travelling party and cannot restart an expedition
+already underway. Arrival countdown and a material top-up action provide explicit
+playtest tools; no resources are seeded
 automatically. Gate/collision, watchtower/scout detection, additional party types,
 final economy/progression and save persistence remain outside this change.

@@ -175,6 +175,13 @@ func _test_main_map_expedition() -> void:
 	_expect(state.wall_hp == 50 and state._attack_at == build_complete_at + 3 * MINUTES_PER_DAY,
 		"Repeating the completion timestamp does not complete or schedule the first build twice.")
 
+	var journey_debug: Node = content.get_node("TimeDebugOverlay")
+	journey_debug._refresh_controls()
+	_expect(journey_debug.raid_journey_button.disabled and journey_debug.raid_journey_label.text.contains("3d 0h"),
+		"Debug shows the full three-day initial journey and cannot restart it.")
+	_expect(not journey_debug.dispatch_raid_journey() and state.phase == "safe" and state.wall_hp == 50,
+		"Pressing the debug dispatch action during travel cannot start instant combat or move arrival.")
+
 	# Stage one damaged wall step to exercise the configured repair quote through Iddin-Sin.
 	state.wall_hp = 45
 	state.changed.emit()
@@ -204,6 +211,7 @@ func _test_main_map_expedition() -> void:
 	_expect(state.phase == "safe" and not ui.raid_notice.visible,
 		"The raid remains hidden and safe one minute before the one-day warning window.")
 	_set_clock_minute(arrival_at - MINUTES_PER_DAY)
+	_expect(state.wall_hp == 50, "Travelling raiders do not damage the wall before arrival.")
 	_expect(state.phase == "warning" and ui.raid_notice.visible
 		and ui.raid_notice.text.to_lower().contains("raid"),
 		"The warning phase and raid notice appear exactly one day before scheduled arrival.")
@@ -249,6 +257,16 @@ func _test_main_map_expedition() -> void:
 		"After the attack, the next party departs after three recovery days and arrives three travel days later.")
 
 	_expect(time_debug.get_effective_speed() == 60, "Scheduled raid completion restores the selected speed.")
+	state.wall_hp = 50
+	get_tree().paused = true
+	_expect(not time_debug.dispatch_raid_journey(), "Paused debug cannot dispatch a party.")
+	get_tree().paused = false
+	_expect(time_debug.dispatch_raid_journey() and state.phase == "safe"
+		and state._attack_at == _clock_minute() + 3 * MINUTES_PER_DAY,
+		"Debug dispatch during recovery starts a full three-day journey without immediate combat.")
+	var dispatched_arrival: int = state._attack_at
+	_expect(not time_debug.dispatch_raid_journey() and state._attack_at == dispatched_arrival,
+		"Repeated debug dispatch preserves the travelling party and its arrival.")
 	# Exercise arrival within the accelerated-minute loop as well as manual jumps.
 	state.wall_hp = 50
 	_set_clock_minute(state._attack_at - 2)

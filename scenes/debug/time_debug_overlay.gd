@@ -24,8 +24,8 @@ var step_buttons: Array[Button] = []
 var materials_button: Button
 var shekel_button: Button
 var production_button: Button
-var raid_light_button: Button
-var raid_heavy_button: Button
+var raid_journey_button: Button
+var raid_journey_label: Label
 var raid_reset_button: Button
 var wall_materials_button: Button
 var worker_guard_check_button: CheckButton
@@ -200,42 +200,15 @@ func give_wall_materials() -> bool:
 	_refresh_controls()
 	return result
 
-func trigger_raid_test(breaching: bool) -> bool:
-	if not OS.is_debug_build():
-		_set_raid_error("Raid tests are debug only.")
+func dispatch_raid_journey() -> bool:
+	if not OS.is_debug_build() or not can_advance():
 		return false
-	if not can_advance():
-		_set_raid_error("Resume gameplay and wake the player first.")
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state):
 		return false
-	var raid_state: Node = _get_raid_state()
-	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
-		_set_raid_error("Raid controls are not ready.")
-		return false
-	var status_value: Variant = raid_state.call("get_status")
-	if not status_value is Dictionary:
-		_set_raid_error("Raid controls are not ready.")
-		return false
-	var raid_status: Dictionary = status_value
-	if str(raid_status.get("phase", "")) == "attacking":
-		_set_raid_error("A raid is already underway.")
-		return false
-	if int(raid_status.get("level", 0)) <= 0 or int(raid_status.get("hp", 0)) <= 0:
-		_set_raid_error("Build the wall before testing a raid.")
-		return false
-	if not raid_state.has_method("start_debug_raid"):
-		_set_raid_error("Raid controls are not ready.")
-		return false
-	if not bool(raid_state.call("start_debug_raid", breaching)):
-		_set_raid_error("Could not start the raid test.")
-		_refresh_controls()
-		return false
-
-	panel.hide()
-	var raid_ui: Node = raid_state.get_node_or_null("RaidUI")
-	if is_instance_valid(raid_ui) and raid_ui.has_method("close_details"):
-		raid_ui.call("close_details")
+	var dispatched: bool = state.dispatch_debug_party()
 	_refresh_controls()
-	return true
+	return dispatched
 
 func reset_wall_test() -> bool:
 	if not OS.is_debug_build():
@@ -470,18 +443,16 @@ func _create_controls() -> void:
 	raid_buttons.add_theme_constant_override("separation", 3)
 	column.add_child(raid_buttons)
 	column.move_child(raid_buttons, 4)
-	raid_light_button = _button("Raid light")
-	raid_light_button.name = "RaidLight"
-	raid_light_button.tooltip_text = "Debug test only. Removes 3 HP from the real castle wall per hit, regardless of defense. A breach can affect real stored supplies and citizens."
-	raid_light_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	raid_light_button.pressed.connect(trigger_raid_test.bind(false))
-	raid_buttons.add_child(raid_light_button)
-	raid_heavy_button = _button("Raid heavy")
-	raid_heavy_button.name = "RaidHeavy"
-	raid_heavy_button.tooltip_text = "Debug test only. Removes 5 HP from the real castle wall per hit, regardless of defense. A breach can affect real stored supplies and citizens."
-	raid_heavy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	raid_heavy_button.pressed.connect(trigger_raid_test.bind(true))
-	raid_buttons.add_child(raid_heavy_button)
+	raid_journey_button = _button("Send raiders")
+	raid_journey_button.tooltip_text = "Start a normal party's journey. Travel and warning occur before combat. An existing journey cannot be restarted."
+	raid_journey_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_journey_button.pressed.connect(dispatch_raid_journey)
+	raid_buttons.add_child(raid_journey_button)
+	raid_journey_label = _label("")
+	raid_journey_label.name = "RaidJourney"
+	raid_journey_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(raid_journey_label)
+	column.move_child(raid_journey_label, 5)
 	raid_reset_button = _button("Reset wall HP")
 	raid_reset_button.name = "RaidWallReset"
 	raid_reset_button.tooltip_text = "Debug only: restores a damaged built wall to full HP. Does not upgrade the wall or change the raid schedule. Unavailable during an attack."
@@ -521,32 +492,27 @@ func _check_button(caption: String) -> CheckButton:
 	return button
 
 func _refresh_raid_buttons(player_available: bool) -> void:
-	if raid_light_button == null or raid_heavy_button == null or raid_reset_button == null:
+	if raid_journey_button == null or raid_reset_button == null:
 		return
+	var state: Node = _get_raid_state()
 	var can_use: bool = OS.is_debug_build() and player_available
-	if wall_materials_button != null:
-		wall_materials_button.disabled = not can_use
-	var can_trigger: bool = can_use
-	var can_reset: bool = can_use
-	var raid_state: Node = _get_raid_state()
-	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
-		can_trigger = false
-		can_reset = false
-	else:
-		var status_value: Variant = raid_state.call("get_status")
-		if status_value is Dictionary:
-			var raid_status: Dictionary = status_value
-			var wall_built: bool = int(raid_status.get("level", 0)) > 0 and int(raid_status.get("hp", 0)) > 0
-			var can_start: bool = wall_built and str(raid_status.get("phase", "")) != "attacking"
-			can_trigger = can_trigger and can_start and raid_state.has_method("start_debug_raid")
-			var damaged: bool = int(raid_status.get("hp", 0)) < int(raid_status.get("max_hp", 0))
-			can_reset = can_reset and can_start and damaged and raid_state.has_method("reset_debug_wall")
-		else:
-			can_trigger = false
-			can_reset = false
-	raid_light_button.disabled = not can_trigger
-	raid_heavy_button.disabled = not can_trigger
-	raid_reset_button.disabled = not can_reset
+	wall_materials_button.disabled = not can_use
+	raid_journey_button.disabled = true
+	raid_reset_button.disabled = true
+	raid_journey_label.text = "Build the wall to start the first journey."
+	if not is_instance_valid(state):
+		return
+	raid_journey_button.disabled = not (can_use and state.can_dispatch_debug_party())
+	var status: Dictionary = state.get_status()
+	raid_reset_button.disabled = not (can_use and status.hp > 0 and status.hp < status.max_hp and status.phase != "attacking" and str(status.get("work_kind", "")).is_empty())
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	if status.phase == "attacking":
+		raid_journey_label.text = "Raid in progress (clock x1)."
+	elif state._attack_at >= 0 and state.config.party_profile != null:
+		var remaining: int = maxi(0, state._attack_at - now)
+		raid_journey_label.text = "Raid arrives in %dd %dh %dm (debug)." % [remaining / 1440, (remaining % 1440) / 60, remaining % 60]
+		if state._departure_at > now:
+			raid_journey_label.text = "Recovery. " + raid_journey_label.text
 
 func _refresh_controls() -> void:
 	if status_label == null:

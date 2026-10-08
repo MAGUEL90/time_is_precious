@@ -5,7 +5,8 @@ class DisplayState extends Node:
 	signal changed
 	var status: Dictionary = {"phase": "attacking", "hp": 32, "max_hp": 50,
 		"level": 1, "defend": 2, "seconds_left": 59.9, "raids_enabled": true,
-		"status_text": "Raiders are attacking the castle wall!", "can_build": false, "can_repair": false}
+		"status_text": "Raiders are attacking the castle wall!", "can_build": false, "can_repair": false,
+		"work_kind": "", "work_remaining": 0, "work_total": 0, "work_message": ""}
 	var report: Dictionary = {}
 	func get_status() -> Dictionary:
 		return status.duplicate(true)
@@ -15,6 +16,7 @@ class DisplayState extends Node:
 var failures: int = 0
 var ui: CanvasLayer
 var state: DisplayState
+var world_indicator: WallWorldIndicator
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -31,11 +33,40 @@ func _run() -> void:
 	ui = preload("res://scenes/raid/raid_ui.tscn").instantiate()
 	add_child(ui)
 	ui.bind_state(state)
+	ui.set_city_management_available(true)
+	world_indicator = preload("res://scenes/raid/wall_world_indicator.tscn").instantiate()
+	add_child(world_indicator)
+	world_indicator.bind_state(state)
 	await get_tree().process_frame
+	_expect(not ui.status_panel.visible, "The persistent bottom-right raid card stays hidden.")
+	_expect(ui.city_management_button.visible, "City Management shortcut is available while the city map is active.")
+	_expect(world_indicator.visible and world_indicator.progress_bar.value == 32.0, "An active raid shows current wall HP above the wall.")
 	_expect(ui.hp_bar.value == 32 and ui.hp_bar.max_value == 50, "HP display follows authoritative current/max values.")
 	_expect("60" in ui.time_left_label.text, "Fractional remaining seconds round up so the first second stays visible.")
-	_expect(not ui.details_panel.visible, "An active raid keeps the nonmodal HP panel visible without forcing details open.")
+	_expect(not ui.details_panel.visible, "An active raid keeps City Management closed until the player opens it.")
 	await _capture("raid-hp.png")
+	ui.city_management_button.pressed.emit()
+	_expect(str(ui.get_node("Root/Center/DetailsPanel/Margin/Contents/TitleLabel").text) == "CITY MANAGEMENT", "The shortcut opens the City Management panel.")
+	_expect(not ui.action_row.visible, "City Management keeps wall actions read-only.")
+	ui.close_details()
+	state.status = {"phase": "safe", "hp": 50, "max_hp": 50, "level": 0, "defend": 2,
+		"seconds_left": 0.0, "raids_enabled": true, "status_text": "Wall construction is underway.",
+		"can_build": false, "can_repair": false, "work_kind": "build", "work_remaining": 60,
+		"work_total": 120, "work_message": "Wall construction started."}
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(world_indicator.visible and world_indicator.title_label.text == "Building wall", "Construction progress appears above the wall while work is active.")
+	_expect(world_indicator.progress_bar.value == 60.0 and "50%" in world_indicator.detail_label.text, "World construction progress reflects a halfway job.")
+	state.status.work_kind = ""
+	state.status.work_remaining = 0
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(not world_indicator.visible, "The world marker hides when wall work finishes.")
+	state.status.phase = "attacking"
+	state.status.hp = 19
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(world_indicator.visible and world_indicator.progress_bar.value == 19.0 and "19 / 50 HP" in world_indicator.detail_label.text, "An attack shows the live wall HP bar at the wall.")
 	state.status.phase = "recovery"
 	state.status.hp = 0
 	state.status.status_text = "Raiders have withdrawn. The city has time to recover."
@@ -55,7 +86,7 @@ func _run() -> void:
 	state.changed.emit()
 	_expect(not ui.details_panel.visible, "Refreshing the same report does not reopen it.")
 	ui.bind_state(state)
-	_expect(state.changed.get_connections().size() == 1, "Rebinding the same ledger avoids duplicate refresh signals.")
+	_expect(state.changed.get_connections().size() == 2, "Rebinding the same ledger avoids duplicate UI refresh signals alongside the world marker.")
 	var long_names: Array[String] = []
 	for index: int in range(35):
 		long_names.append("Citizen with a very long recorded name %d" % index)
@@ -80,10 +111,15 @@ func _run() -> void:
 	var replacement := DisplayState.new()
 	add_child(replacement)
 	ui.bind_state(replacement)
-	_expect(state.changed.get_connections().is_empty(), "Switching ledgers disconnects the previous one.")
+	_expect(state.changed.get_connections().size() == 1, "Switching ledgers disconnects the UI callback and leaves only the map-owned marker.")
 	ui.bind_state(null)
 	_expect(not ui.status_panel.visible and not ui.details_panel.visible, "Unbound UI cannot present stale castle state.")
 	_expect(replacement.changed.get_connections().is_empty(), "Unbinding removes the remaining connection.")
+	world_indicator.bind_state(null)
+	_expect(state.changed.get_connections().is_empty(), "Removing the map-owned marker disconnects its ledger signal.")
+	world_indicator.queue_free()
+	ui.set_city_management_available(false)
+	_expect(not ui.city_management_button.visible, "Leaving the city map removes the shortcut.")
 	print("RaidUITest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
 

@@ -81,7 +81,25 @@ func reset_debug_wall() -> bool:
 	changed.emit()
 	return true
 
-## Explicit developer playtest. No time skips, city seeding or production profile edits.
+## Debug journey uses the same normal-party clock and detection rules as gameplay.
+func can_dispatch_debug_party() -> bool:
+	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or phase == "attacking" or wall_hp <= 0:
+		return false
+	if not config.raids_enabled or config.party_profile == null:
+		return false
+	var now: int = maxi(_latest_minute, _now())
+	return _attack_at < 0 or _departure_at > now
+
+func dispatch_debug_party() -> bool:
+	if not can_dispatch_debug_party() or get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		return false
+	_departure_at = maxi(_latest_minute, _now())
+	_attack_at = _departure_at + config.party_profile.travel_days * 1440
+	phase = "safe"
+	changed.emit()
+	return true
+
+## Instant combat fixture for automated tests only; not exposed in the Debug UI.
 func start_debug_raid(breaching: bool) -> bool:
 	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or phase == "attacking" or wall_level == 0 or wall_hp <= 0:
 		return false

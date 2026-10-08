@@ -137,8 +137,8 @@ func _run() -> void:
 	var wall_atlas: Dictionary = _wall_atlas_snapshot()
 	debug.panel.show()
 	debug._refresh_controls()
-	_expect(debug.raid_light_button.disabled and debug.raid_heavy_button.disabled, "Raid debug controls require a built wall.")
-	_expect(not debug.trigger_raid_test(false), "A direct debug request cannot bypass initial construction.")
+	_expect(debug.raid_journey_button.disabled, "Raid debug controls require a built wall.")
+	_expect(not state.start_debug_raid(false), "A direct debug request cannot bypass initial construction.")
 
 	# Details stays read-only. Build through the selected caretaker's real dialogue.
 	ui.open_details()
@@ -160,7 +160,7 @@ func _run() -> void:
 	debug._refresh_controls()
 	_expect(state.wall_hp == 50 and state.wall_level == 1, "Initial wall construction follows the real caretaker dialogue response.")
 	_expect_wall_visual(1, wall_atlas, "Building changes every existing wall cell to the intact tile source while preserving coordinates")
-	_expect(not debug.raid_light_button.disabled, "Building enables the explicit raid tests.")
+	_expect(debug.raid_journey_button.disabled, "The legacy free fixture does not expose a normal-party debug journey.")
 	_expect(not ui.build_button.visible and not ui.repair_button.visible, "Details stays read-only after initial construction.")
 
 	# A full wall has no work response, even though the player can still talk to the caretaker.
@@ -176,9 +176,10 @@ func _run() -> void:
 	var config_before: Resource = state.config.duplicate(true)
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
 	debug.set_speed(60)
-	debug.raid_light_button.pressed.emit()
+	debug.panel.hide()
+	state.start_debug_raid(false)
 	_expect(state.phase == "attacking" and not debug.panel.visible and not ui.details_panel.visible, "Starting the real debug action focuses the live HP bar.")
-	_expect(not debug.trigger_raid_test(true), "A second debug click cannot replace an active attack.")
+	_expect(not state.start_debug_raid(true), "A second debug click cannot replace an active attack.")
 	var attack_was_processing: bool = state.is_processing()
 	state.set_process(false)
 	var hp_before_attack_dialogue: int = state.wall_hp
@@ -236,7 +237,7 @@ func _run() -> void:
 	_expect(not ui.repair_button.visible, "The Details panel stays read-only after repair.")
 	_expect(Inventory.items == inventory_before, "Free fixture repair does not spend personal Inventory.")
 	_expect(state.config.attack_min == config_before.attack_min and state.config.attack_max == config_before.attack_max and state.config.raids_enabled == config_before.raids_enabled, "Debug raid overrides do not rewrite live raid balance.")
-	debug.raid_heavy_button.pressed.emit()
+	state.start_debug_raid(true)
 	state.set_process(false)
 	state.advance_attack(20.0)
 	var ledger: Node = state
@@ -270,7 +271,7 @@ func _run() -> void:
 	_expect(ui.repair_requested.get_connections().size() == 1, "Map reload does not duplicate repair callbacks.")
 	# Debug reset remains useful when gameplay repair is not enabled.
 	state.config.instant_repair_enabled = false
-	_expect(debug.trigger_raid_test(false), "A subsequent manual raid can be started after rebuilding.")
+	_expect(state.start_debug_raid(false), "A subsequent manual raid can be started after rebuilding.")
 	state.set_process(false)
 	state.advance_attack(60.0)
 	var reset_report: Dictionary = state.get_last_report()
