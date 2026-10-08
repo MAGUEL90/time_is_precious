@@ -224,7 +224,13 @@ func _test_main_map_expedition() -> void:
 		await _wait_for_greeting_end()
 
 	storage.items = {"stone": 4}
-	_set_clock_minute(arrival_at)
+	_set_clock_minute(arrival_at - 2)
+	var time_debug: Node = content.get_node("TimeDebugOverlay")
+	time_debug.set_process(false)
+	time_debug.set_speed(60)
+	time_debug.step_minutes(180)
+	_expect(_clock_minute() == arrival_at and time_debug.get_effective_speed() == 1,
+		"A debug jump stops at raid arrival instead of skipping through combat.")
 	_expect(state.phase == "attacking" and ui.attack_warning.visible
 		and not ui.raid_notice.visible,
 		"The party starts its automatic attack at the original scheduled arrival minute.")
@@ -241,6 +247,23 @@ func _test_main_map_expedition() -> void:
 	_expect(state._departure_at == arrival_at + 3 * MINUTES_PER_DAY
 		and state._attack_at == arrival_at + 6 * MINUTES_PER_DAY,
 		"After the attack, the next party departs after three recovery days and arrives three travel days later.")
+
+	_expect(time_debug.get_effective_speed() == 60, "Scheduled raid completion restores the selected speed.")
+	# Exercise arrival within the accelerated-minute loop as well as manual jumps.
+	state.wall_hp = 50
+	_set_clock_minute(state._attack_at - 2)
+	time_debug._process(1.0)
+	var second_arrival: int = state._attack_at
+	_expect(_clock_minute() == second_arrival and state.phase == "attacking",
+		"Accelerated processing stops adding minutes as soon as the next raid arrives.")
+	state.wall_hp = 1
+	state.advance_attack(5.0)
+	_expect(state.get_last_report().outcome == "breached" and time_debug.get_effective_speed() == 60,
+		"A breached raid also restores the previous speed.")
+	time_debug._process(1.0)
+	_expect(_clock_minute() == second_arrival + 59,
+		"Resumed acceleration adds only the new frame's minutes, without leftover pre-raid time.")
+	time_debug.set_speed(1)
 
 func _test_late_warning_does_not_move_arrival() -> void:
 	var fixture_storage: Node = CITY_STORAGE_SCRIPT.new()

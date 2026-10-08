@@ -56,14 +56,17 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
-	if can_advance() and speed_multiplier > 1:
+	var effective_speed: int = get_effective_speed()
+	if can_advance() and effective_speed > 1:
 		# The normal clock still advances its own minutes. Add the remaining rate
 		# through the same minute/day signals without accelerating movement/physics.
-		_extra_minutes += delta * (speed_multiplier - 1) / maxf(TimeComponentManager.seconds_per_minute, 0.001)
-		while _extra_minutes >= 1.0 and can_advance():
+		_extra_minutes += delta * (effective_speed - 1) / maxf(TimeComponentManager.seconds_per_minute, 0.001)
+		while _extra_minutes >= 1.0 and can_advance() and not _raid_is_attacking():
 			_extra_minutes -= 1.0
 			TimeComponentManager.advance_one_minute()
 			TimeComponentManager.day_cycle()
+		if _raid_is_attacking():
+			_extra_minutes = 0.0
 	else:
 		_extra_minutes = 0.0
 	_refresh_controls()
@@ -74,19 +77,27 @@ func can_advance() -> bool:
 	var player: Player = get_tree().get_first_node_in_group("player") as Player
 	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
 
+func _raid_is_attacking() -> bool:
+	var state: Node = _get_raid_state()
+	return is_instance_valid(state) and state.phase == "attacking"
+
+func get_effective_speed() -> int:
+	# Preserve the chosen debug speed for automatic restoration after combat.
+	return 1 if _raid_is_attacking() else speed_multiplier
+
 func set_speed(multiplier: int) -> void:
-	if not SPEEDS.has(multiplier):
+	if not SPEEDS.has(multiplier) or _raid_is_attacking():
 		return
 	speed_multiplier = multiplier
 	_extra_minutes = 0.0
 	_refresh_controls()
 
 func step_minutes(minutes: int) -> void:
-	if minutes <= 0 or not can_advance():
+	if minutes <= 0 or not can_advance() or _raid_is_attacking():
 		return
 	# Check after each minute so a modal/collapse/transition can stop a jump.
 	for _minute in range(minutes):
-		if not can_advance():
+		if not can_advance() or _raid_is_attacking():
 			break
 		TimeComponentManager.advance_minutes(1)
 	_extra_minutes = 0.0
@@ -541,15 +552,18 @@ func _refresh_controls() -> void:
 	if status_label == null:
 		return
 	var available: bool = can_advance()
+	var attacking: bool = _raid_is_attacking()
+	var effective_speed: int = get_effective_speed()
 	var status := "Day %d  %02d:%02d  x%d%s" % [TimeComponentManager.current_day, TimeComponentManager.current_hour,
-		TimeComponentManager.current_minute, speed_multiplier, "  PAUSED" if not available else ""]
+		TimeComponentManager.current_minute, effective_speed, "  PAUSED" if not available else ("  RAID" if attacking else "")]
 	if status != _last_status:
 		status_label.text = status
 		_last_status = status
 	for index in range(speed_buttons.size()):
-		speed_buttons[index].set_pressed_no_signal(SPEEDS[index] == speed_multiplier)
+		speed_buttons[index].set_pressed_no_signal(SPEEDS[index] == effective_speed)
+		speed_buttons[index].disabled = attacking
 	for button in step_buttons:
-		button.disabled = not available
+		button.disabled = not available or attacking
 	materials_button.disabled = not can_supply_materials()
 	production_button.disabled = not can_supply_materials()
 	shekel_button.disabled = not can_supply_materials()
