@@ -22,7 +22,8 @@ Do not use an old PR list, branch list, or technical root map as the main indica
 ## Raid branch — normal expeditions and paid wall work (2026-10-08)
 
 Approach **Iddin-Sin** inside the south wall, press **E**, review the quote and
-choose **Start wall work**. Build/rebuild costs 10 Stone + 5 Wood Log and takes
+choose **Build** or **Repair**. Enter reveals these choices alongside **Not now**,
+while the discussion panel stays visible. Build/rebuild costs 10 Stone + 5 Wood Log and takes
 120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
 game minutes. Materials come from City Storage at job start; HP updates on
 completion. Jobs persist across map changes, pause during attacks, and a breached

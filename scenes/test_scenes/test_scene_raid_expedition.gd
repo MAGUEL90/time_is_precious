@@ -159,9 +159,9 @@ func _test_main_map_expedition() -> void:
 			"Iddin-Sin's native dialogue quotes the build duration and named materials.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
-		_expect(responses.has("Start wall work") and responses.has("Not now"),
+		_expect(responses.has("Build") and responses.has("Not now"),
 			"The live caretaker offers the paid Start wall work choice when stock is sufficient.")
-		_choose_response(greeting, "Start wall work")
+		_choose_response(greeting, "Build")
 		await _wait_for_greeting_end()
 	_expect(state._work_kind == "build" and state._work_remaining == 120
 		and state.wall_hp == 0 and state.wall_level == 0,
@@ -209,9 +209,9 @@ func _test_main_map_expedition() -> void:
 			"Iddin-Sin's live repair quote uses one stone for a five-HP repair and 60 minutes.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
-		_expect(responses.has("Start wall work"),
+		_expect(responses.has("Repair"),
 			"The live caretaker offers a paid repair while City Storage has the quoted stone.")
-		_choose_response(greeting, "Start wall work")
+		_choose_response(greeting, "Repair")
 		await _wait_for_greeting_end()
 	var repair_started_at: int = _clock_minute()
 	_expect(state._work_kind == "repair" and state._work_remaining == 60
@@ -381,8 +381,15 @@ func _show_responses(balloon: BaseGameDialogueBalloon) -> void:
 		return
 	if balloon.dialogue_label.is_typing:
 		balloon.dialogue_label.skip_typing()
-	balloon.show_responses()
 	await get_tree().process_frame
+	var enter := InputEventAction.new()
+	enter.action = &"ui_accept"
+	enter.pressed = true
+	balloon.balloon.grab_focus()
+	balloon._on_balloon_gui_input(enter)
+	await get_tree().process_frame
+	_expect(balloon.responses_menu.visible and balloon.chat_box_root.visible,
+		"Enter reveals choices while the wall discussion panel remains visible.")
 
 func _visible_responses(balloon: BaseGameDialogueBalloon) -> Array[String]:
 	var texts: Array[String] = []

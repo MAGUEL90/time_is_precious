@@ -10,7 +10,10 @@ if wall_is_attacking()
 	Iddin-Sin: The raiders are still attacking. We can repair the wall once they leave.
 else
 	Iddin-Sin: {{wall_work_summary()}}
-- Start wall work [if wall_work_available() and wall_uses_timed_work()]
+- Build [if wall_work_available() and wall_uses_timed_work() and wall_needs_build()]
+	do wall_select_work()
+	=> END
+- Repair [if wall_work_available() and wall_uses_timed_work() and not wall_needs_build()]
 	do wall_select_work()
 	=> END
 - Repair wall (free) [if wall_work_available() and not wall_uses_timed_work()]

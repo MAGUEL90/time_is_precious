@@ -68,6 +68,9 @@ func wall_has_warning() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	return state != null and state.phase == "warning"
 
+func wall_needs_build() -> bool:
+	return WorkStateRuntime.get_node("CityRaid").wall_hp == 0
+
 func wall_uses_timed_work() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	return state != null and state.config.timed_work_enabled
@@ -149,24 +152,35 @@ func _release_lock() -> void:
 			interactable_label_component.show()
 
 func _fit_dialogue() -> void:
-	# Match the existing merchant balloon's 400x225 layout.
+	# Portrait-free wall conversation: text and choices share one stable panel.
+	greeting_balloon.keep_chat_with_responses = true
 	var root: Control = greeting_balloon.chat_box_root
-	root.custom_minimum_size = Vector2(196, 66)
+	root.custom_minimum_size = Vector2(240, 104)
 	root.size = root.custom_minimum_size
 	var panel: Control = root.get_node("TemplateDialogue")
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	panel.position = Vector2.ZERO
+	panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	panel.size = root.custom_minimum_size
 	panel.scale = Vector2.ONE
+	panel.get_node("TexturePhoto").hide()
+	var chat: Control = panel.get_node("TemplateChat")
+	chat.position = Vector2(16, 12)
+	chat.size = Vector2(208, 44)
+	greeting_balloon.dialogue_label.position = Vector2(5, 4)
+	greeting_balloon.dialogue_label.size = Vector2(198, 36)
+	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
 	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
+	panel.get_node("TemplateName").position = Vector2(16, 87)
+	greeting_balloon.progress.position = Vector2(218, 49)
 	var responses: Control = greeting_balloon.responses_menu
-	responses.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	responses.offset_left = -65.0
-	responses.offset_right = 65.0
-	responses.offset_top = -16.0
-	responses.offset_bottom = 16.0
+	responses.reparent(root)
+	responses.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	responses.position = Vector2(16, 58)
+	responses.size = Vector2(208, 28)
+	responses.add_theme_constant_override("separation", 2)
 	var choice: Button = responses.get_node("ResponseExample")
-	choice.custom_minimum_size = Vector2(130, 14)
+	choice.custom_minimum_size = Vector2(208, 13)
 	choice.add_theme_font_size_override("font_size", 6)
 
 func _exit_tree() -> void:
