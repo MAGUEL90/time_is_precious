@@ -1,9 +1,24 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_config.gd" id="1_config"]
+[ext_resource type="Resource" path="res://scenes/raid/normal_raider_party.tres" id="2_party"]
 
 [resource]
 script = ExtResource("1_config")
-instant_build_enabled = true
-instant_repair_enabled = true
+raids_enabled = true
+timed_work_enabled = true
+build_materials = {
+"stone": 10,
+"wood_log": 5
+}
+repair_materials_per_step = {
+"stone": 1
+}
+repair_hp_per_step = 5
+build_minutes = 120
+repair_minutes = 60
 wall_max_hp = 50
+wall_defend = 2
+warning_days = 1
+party_profile = ExtResource("2_party")
+recovery_days = 3

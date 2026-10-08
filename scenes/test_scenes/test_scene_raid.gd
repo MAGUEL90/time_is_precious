@@ -41,11 +41,11 @@ func _run() -> void:
 
 func _test_wall_build_and_production_defaults() -> void:
 	var playtest_config: Resource = load(WALL_PLAYTEST_CONFIG_PATH).duplicate(true)
-	_expect(playtest_config.instant_build_enabled and playtest_config.wall_max_hp == 50,
-		"The loaded production profile retains free construction and the approved 50 HP.")
-	_expect(playtest_config.get("raids_enabled") == false
+	_expect(playtest_config.timed_work_enabled and playtest_config.wall_max_hp == 50,
+		"The loaded production profile enables timed construction and the approved 50 HP.")
+	_expect(playtest_config.get("raids_enabled") == true
 		and playtest_config.call("is_valid") == true,
-		"The production wall playtest remains valid with raids disabled.")
+		"The production profile is valid with automatic normal-raider expeditions enabled.")
 
 	var state: Node = _new_state(_fixture_config())
 	_expect(str(state.get("phase")) == "unbuilt" and int(state.get("wall_hp")) == 0

@@ -1,11 +1,19 @@
 ~ wall_caretaker
+if wall_has_warning()
+	Iddin-Sin: Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall.
+	=> wall_work
+else
+	=> wall_work
+
+~ wall_work
 if wall_is_attacking()
 	Iddin-Sin: The raiders are still attacking. We can repair the wall once they leave.
-elif wall_work_available()
-	Iddin-Sin: The wall needs repairs. I can restore it now, free of charge.
 else
-	Iddin-Sin: The wall is in good condition. No repairs are needed.
-- Repair wall (free) [if wall_work_available()]
+	Iddin-Sin: {{wall_work_summary()}}
+- Start wall work [if wall_work_available() and wall_uses_timed_work()]
+	do wall_select_work()
+	=> END
+- Repair wall (free) [if wall_work_available() and not wall_uses_timed_work()]
 	do wall_select_work()
 	=> END
 - Not now

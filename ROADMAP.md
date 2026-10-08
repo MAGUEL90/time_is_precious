@@ -19,26 +19,32 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
-## Raid branch — wall and manual combat playtest (2026-10-05)
+## Raid branch — normal expeditions and paid wall work (2026-10-08)
 
-The wall starts ruined. Approach **Iddin-Sin** inside the south wall and press
-**E**, then choose **Repair wall (free)** in dialogue. This builds/rebuilds
-level 1 at 50 HP or repairs a damaged standing wall to full HP for the playtest.
-HUD Details is read-only. Painted wall tiles switch between ruined and built
-atlases with wall HP, preserving the authored layout.
-The city HUD retains the wall, active raid and result across home/map transitions.
-The Debug panel now exposes **Raid light**, **Raid heavy** and **Reset wall HP**
-for repeatable manual tests. With a full wall, the light fixture leaves 14 HP
-at 60 seconds; the heavy fixture breaches on hit 10 at 50 seconds. These controls
-use explicit synthetic damage and do not rewrite the production balance profile.
+Approach **Iddin-Sin** inside the south wall, press **E**, review the quote and
+choose **Start wall work**. Build/rebuild costs 10 Stone + 5 Wood Log and takes
+120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
+game minutes. Materials come from City Storage at job start; HP updates on
+completion. Jobs persist across map changes, pause during attacks, and a breached
+repair is cancelled with its materials refunded. Details remains read-only.
 
-The report opens once and records actual effects. Rebuild restores a breached
-wall at level 1; instant free repair is now available through the caretaker NPC.
-Citizen departure now updates resident state and removes the matching actor.
-Random raids and nonzero theft/satisfaction/flight settings remain **disabled**
-in the main profile while Director balance choices are pending. Upgrade,
-weaponry, destruction of other buildings and restart saving remain future work.
-See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for test results and instructions.
+The first normal raider party departs when initial construction completes, travels
+for 3 days, and becomes visible through Iddin-Sin/HUD warning 1 day before arrival.
+After a raid, 3 safe days precede the next departure, followed by another 3-day
+journey. Detection does not shift arrival. Normal attack strength is 5–7 per
+5-second hit, wall Defend is 2, HP is 50, and raid duration remains at most 60
+active gameplay seconds. Reports and painted-wall visuals follow actual results.
+
+Debug retains light/heavy raid and wall-HP reset actions. **Wall materials** tops
+up only the materials missing for the next job in City Storage, for playtesting
+before the map has a Stone source; it does not seed normal gameplay.
+City Storage now accepts Stone and Wood Log deposits.
+
+Gate/collision work is explicitly deferred. Fast/heavy party types, earlier
+detection through watchtowers/scouts, upgrades/weapons and disk saving remain
+future work. The party resource separates travel duration from attack strength
+for that extension. Theft, satisfaction loss and citizen flight stay disabled.
+See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for validation and scope.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 

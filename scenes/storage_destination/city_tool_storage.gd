@@ -177,6 +177,82 @@ func consume_food_points(amount: int) -> bool:
 	_commit_food_consumption(next_items, next_portions)
 	return true
 
+## Check a counted-material requirement batch without changing City Storage.
+## Empty requirements are a valid no-op.
+func can_consume_materials(requirements: Dictionary) -> bool:
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	if plan.item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+	for item_id: String in plan.item_ids:
+		if int(items.get(item_id, 0)) < int(plan.quantities[item_id]):
+			return false
+	return true
+
+## Consume a counted-material requirement batch atomically from City Storage.
+## Unique equipment, food portions, and player Inventory are not affected.
+func consume_materials(requirements: Dictionary) -> bool:
+	if _transfer_in_progress:
+		return false
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	var item_ids: Array[String] = plan.item_ids
+	if item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+	for item_id: String in item_ids:
+		if int(items.get(item_id, 0)) < int(plan.quantities[item_id]):
+			return false
+
+	var next_items: Dictionary = items.duplicate(true)
+	for item_id: String in item_ids:
+		var remaining: int = int(next_items[item_id]) - int(plan.quantities[item_id])
+		if remaining > 0:
+			next_items[item_id] = remaining
+		else:
+			next_items.erase(item_id)
+
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
+## Return a paid material requirement batch atomically to City Storage.
+## Overflow or invalid stock rejects the full refund without changing state.
+func refund_materials(requirements: Dictionary) -> bool:
+	if _transfer_in_progress:
+		return false
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	var item_ids: Array[String] = plan.item_ids
+	if item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+
+	var next_items: Dictionary = items.duplicate(true)
+	for item_id: String in item_ids:
+		var current_quantity: int = int(next_items.get(item_id, 0))
+		var next_quantity: Dictionary = _safe_nonnegative_add(
+			current_quantity, int(plan.quantities[item_id])
+		)
+		if not bool(next_quantity.ok):
+			return false
+		next_items[item_id] = int(next_quantity.value)
+
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
 ## Shared eligibility for personal deposits and incoming Hauler cargo.
 ## Existing stock is not filtered or removed when this policy changes.
 func accepts_item(item_id: String) -> bool:
@@ -184,6 +260,7 @@ func accepts_item(item_id: String) -> bool:
 	return item_data != null and (
 		_is_ready_food(item_data) or CLOTHING_ITEM_IDS.has(item_id)
 		or item_id == "shekel" or SUPPORTED_ITEM_IDS.has(item_id)
+		or item_id == "stone" or item_id == "wood_log"
 	)
 
 func get_depositable_items() -> Array[Dictionary]:
@@ -356,6 +433,35 @@ func _validate_selection(selected_items: Dictionary) -> Dictionary:
 		item_ids.append(item_id)
 	item_ids.sort()
 	return {"ok": true, "message": "", "quantities": quantities, "item_ids": item_ids}
+
+func _material_requirement_plan(requirements: Dictionary) -> Dictionary:
+	if _transfer_in_progress:
+		return {"ok": false}
+	var quantities: Dictionary = {}
+	var item_ids: Array[String] = []
+	for item_id_value: Variant in requirements.keys():
+		if not item_id_value is String:
+			return {"ok": false}
+		var item_id: String = item_id_value
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if not _is_counted_material(item_id, item_data):
+			return {"ok": false}
+		var quantity_value: Variant = requirements[item_id_value]
+		if not quantity_value is int or int(quantity_value) <= 0:
+			return {"ok": false}
+		quantities[item_id] = int(quantity_value)
+		item_ids.append(item_id)
+	item_ids.sort()
+	return {"ok": true, "quantities": quantities, "item_ids": item_ids}
+
+func _is_counted_material(item_id: String, item_data: ItemData) -> bool:
+	return item_data != null \
+		and item_data.category == ItemEnums.ItemCategory.RESOURCE \
+		and item_data.food_supply_value <= 0 \
+		and item_data.clothing_supply_value <= 0 \
+		and item_id != "shekel" \
+		and not CLOTHING_ITEM_IDS.has(item_id) \
+		and not SUPPORTED_ITEM_IDS.has(item_id)
 
 func _get_registered_item_ids() -> Array[String]:
 	var item_ids: Array[String] = []

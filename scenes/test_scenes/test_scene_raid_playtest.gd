@@ -25,6 +25,12 @@ func _load_map() -> void:
 	wall_spot = content.get_node("YSortWorld/WallManagementSpot")
 	wall_map = content.get_node("YSortWorld/WallStone")
 	state = content.get_node("RaidBootstrap").state
+	# This scene checks the original free caretaker dialogue flow; timed costs and raid scheduling have a separate synthetic test.
+	state.config.timed_work_enabled = false
+	state.config.instant_build_enabled = true
+	state.config.instant_repair_enabled = true
+	state.config.raids_enabled = false
+	state.config.party_profile = null
 	ui = state.get_node("RaidUI")
 	debug = content.get_node("TimeDebugOverlay")
 

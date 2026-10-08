@@ -632,34 +632,36 @@ keeps world time running; departure closes the menu. Trading consumes/produces o
 personal Inventory goods, never held workshop output or city-owned stock.
 
 
-## Castle wall / raid branch checkpoint (2026-10-05)
+## Castle wall / raid branch checkpoint (2026-10-08)
 
-The city map's `RaidBootstrap` creates one `CityRaid` state and `RaidUI` below
-existing `WorkStateRuntime`. Neither map instances nor panels own wall HP or
-reroll the schedule. The build-only profile starts in ruins and permits instant,
-free level-1 construction at 50 HP; it leaves random raids disabled.
+RaidBootstrap owns map projection and finds the persistent CityRaid ledger/RaidUI
+under the existing WorkStateRuntime host. Wall HP, reports, expedition timestamps
+and a single pending wall job survive map changes. There is no new autoload or
+disk-save schema. Authored WallStone cells retain their coordinates and use atlas
+source 0 when ruined or 1 when standing.
 
-When configured for isolated tests, world-clock snapshots schedule warnings and
-raids, while active gameplay seconds drive hits. Results are copied for UI, and
-breach effects resolve once. The state calls CityToolStorage's bounded counted-
-stack loot API and updates resident data; the first foundation counts destruction
-of the wall only. Explicit debug actions can start a light/heavy test without changing the balance
-resource, or reset damaged wall HP without rerolling the schedule. Opt-in instant
-repair and free rebuilding preserve report history and level. Nonworker departures
-go through `CitizenManager.leave_city`, whose signal removes matching CitizenActor
-instances. Production balance, general building/worker departure integration and
-repair rules remain pending. There is no new autoload or disk
-save schema. See `docs/task_reports/raid-mvp-scope-2026-10-05.md`.
+Iddin-Sin (the existing WallManagementSpot node) uses the player's nearest-E
+routing and native dialogue. The NPC holds only its own movement lock; world time
+continues. Dialogue presents a cost/duration quote, and the ledger revalidates it
+after selection. Details is informational. Materials are consumed atomically from
+CityToolStorage, independently of personal Inventory, allocated equipment and food
+portions. The storage accepts Stone/Wood Log deposits. Completion advances on the
+monotonic world-minute high-water mark; repeats/rewinds cannot duplicate progress
+or payments. Attacks suspend work. Breached repairs refund their paid materials,
+with a pending refund retained if storage temporarily rejects the transaction.
 
+The normal party profile separates travel duration and strength from detection.
+Initial construction completion starts a 3-day expedition; detection occurs 1 day
+before arrival. A completed raid schedules a 3-day recovery interval before the
+next departure. Departure/arrival timestamps remain internal while the threat is
+undetected. Skipping time across arrival starts one attack without rerolling or
+extending that expedition. Legacy randomized interval mode remains for isolated
+regression fixtures. Real gameplay seconds drive attacks, with pause/transition
+guards; clock-speed controls do not accelerate hit timing.
 
-Wall construction access is owned by the map's WallManagementSpot caretaker NPC,
-registered with the player's existing nearest-interactable routing. E starts the
-existing dialogue balloon with a repair or leave response. RaidUI Details stays
-read-only; the NPC revalidates physical range, player availability and wall state
-after dialogue ends before building/rebuilding or repairing. The NPC holds only
-its own movement lock during conversation and keeps world time running, so a raid
-cannot be paused through conversation. Cancellation, map exit and unavailable
-players release the lock without performing work. The bootstrap projects wall HP
-onto authored WallStone cells (source 0 ruined / source 1 built), without changing
-cell positions, collision or the saved map artwork. Free instant repair is enabled
-for the current playtest; final repair costs and progression remain undecided.
+RaidUI shows visible warnings, attack HP and wall-job remaining time. Raid results
+resolve once. Main-profile population/theft losses remain zero. Existing bounded
+loot/departure APIs remain covered in synthetic tests. Debug raid overrides and
+a material top-up action provide explicit playtest tools; no resources are seeded
+automatically. Gate/collision, watchtower/scout detection, additional party types,
+final economy/progression and save persistence remain outside this change.

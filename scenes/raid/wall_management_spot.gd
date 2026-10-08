@@ -5,6 +5,7 @@ const BALLOON: PackedScene = preload("res://dialogue/game_dialogue_balloon/game_
 const DIALOGUE: DialogueResource = preload("res://dialogue/game_dialogue_conversations/wall_caretaker.dialogue")
 var greeting_balloon: BaseGameDialogueBalloon
 var _work_selected: bool = false
+var _quoted_work: Dictionary = {}
 var _end_pending: bool = false
 var _dialogue_manager: Node
 @onready var interactable_label_component: Control = $InteractableLabelComponent
@@ -47,6 +48,7 @@ func on_player_interact(interacting_player: Player) -> void:
 	if interacting_player != player or not has_player_access() or not player.can_move or _has_live_greeting_balloon():
 		return
 	_work_selected = false
+	_quoted_work = WorkStateRuntime.get_node("CityRaid").get_work_quote()
 	_end_pending = false
 	player.set_movement_locked(&"wall_npc", true)
 	interactable_label_component.hide()
@@ -62,12 +64,38 @@ func wall_is_attacking() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	return state != null and state.phase == "attacking"
 
+func wall_has_warning() -> bool:
+	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
+	return state != null and state.phase == "warning"
+
+func wall_uses_timed_work() -> bool:
+	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
+	return state != null and state.config.timed_work_enabled
+
 func wall_work_available() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
+	return state != null and bool(state.get_work_quote().can_start)
+
+func wall_work_summary() -> String:
+	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	if state == null:
-		return false
-	var status: Dictionary = state.get_status()
-	return bool(status.get("can_build", false)) or bool(status.get("can_repair", false))
+		return "Wall work is unavailable."
+	var quote: Dictionary = state.get_work_quote()
+	if not state._work_kind.is_empty():
+		return "Wall work is underway: %d minutes left. Work pauses during raids." % state._work_remaining
+	if not quote.can_start and quote.materials.is_empty():
+		return str(quote.reason)
+	if not state.config.timed_work_enabled:
+		return "The wall needs repairs. I can restore it now, free of charge."
+	var parts: PackedStringArray = []
+	for id: String in quote.materials:
+		var item: ItemData = ItemDatabase.get_item_data(id)
+		parts.append("%d %s" % [int(quote.materials[id]), item.display_name if item != null else id])
+	var cost: String = " + ".join(parts) if not parts.is_empty() else "No materials"
+	var availability: String = "Uses City Storage." if quote.can_start else "City Storage is short."
+	return "%s: %d min.
+%s.
+%s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
 
 func wall_select_work() -> void:
 	_work_selected = _has_live_greeting_balloon() and has_player_access() and wall_work_available()
@@ -96,10 +124,7 @@ func _finish_dialogue() -> void:
 	if requested and has_player_access() and player.can_move:
 		var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 		if state != null:
-			if bool(state.get_status().get("can_build", false)):
-				state.build_wall()
-			elif state.can_repair_wall():
-				state.repair_wall()
+			state.request_wall_work(_quoted_work)
 
 func _has_live_greeting_balloon() -> bool:
 	return is_instance_valid(greeting_balloon) and not greeting_balloon.is_queued_for_deletion()

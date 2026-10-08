@@ -27,6 +27,7 @@ var production_button: Button
 var raid_light_button: Button
 var raid_heavy_button: Button
 var raid_reset_button: Button
+var wall_materials_button: Button
 var worker_guard_check_button: CheckButton
 var player_guard_check_button: CheckButton
 var inventory_capacity_button: CheckButton
@@ -166,6 +167,27 @@ func set_player_guard(enabled: bool) -> void:
 	if enabled and player.has_method("_reset_debug_needs"):
 		player.call("_reset_debug_needs")
 	_refresh_player_guard_button()
+
+func give_wall_materials() -> bool:
+	if not OS.is_debug_build() or not can_advance():
+		return false
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state) or not is_instance_valid(state.storage):
+		return false
+	var quote: Dictionary = state.get_work_quote()
+	var available: Dictionary = state.storage.get_available_items()
+	var missing: Dictionary = {}
+	for id: String in quote.materials:
+		var amount: int = maxi(0, int(quote.materials[id]) - int(available.get(id, 0)))
+		if amount > 0:
+			missing[id] = amount
+	if missing.is_empty():
+		return false
+	var result: bool = state.storage.refund_materials(missing)
+	if result:
+		materials_status.text = "Wall materials added to City Storage (debug)."
+	_refresh_controls()
+	return result
 
 func trigger_raid_test(breaching: bool) -> bool:
 	if not OS.is_debug_build():
@@ -455,6 +477,11 @@ func _create_controls() -> void:
 	raid_reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	raid_reset_button.pressed.connect(reset_wall_test)
 	raid_buttons.add_child(raid_reset_button)
+	wall_materials_button = _button("Wall materials")
+	wall_materials_button.tooltip_text = "Debug only: adds missing materials for the next wall job to City Storage."
+	wall_materials_button.pressed.connect(give_wall_materials)
+	column.add_child(wall_materials_button)
+	column.move_child(wall_materials_button, 5)
 	column.add_child(_label("Close: Debug button / `"))
 
 func _button(caption: String) -> Button:
@@ -486,6 +513,8 @@ func _refresh_raid_buttons(player_available: bool) -> void:
 	if raid_light_button == null or raid_heavy_button == null or raid_reset_button == null:
 		return
 	var can_use: bool = OS.is_debug_build() and player_available
+	if wall_materials_button != null:
+		wall_materials_button.disabled = not can_use
 	var can_trigger: bool = can_use
 	var can_reset: bool = can_use
 	var raid_state: Node = _get_raid_state()

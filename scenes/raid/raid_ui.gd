@@ -5,6 +5,7 @@ signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 
+@onready var raid_notice: Label = $Root/RaidNotice
 @onready var attack_warning: ColorRect = $Root/AttackWarning
 @onready var status_panel: Control = $Root/RaidStatusPanel
 @onready var status_label: Label = $Root/RaidStatusPanel/Margin/Contents/StatusLabel
@@ -90,6 +91,7 @@ func close_details() -> void:
 
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
+		raid_notice.hide()
 		_set_attack_warning(false)
 		status_panel.visible = false
 		details_panel.visible = false
@@ -104,6 +106,7 @@ func refresh() -> void:
 		if status_value is Dictionary:
 			_status_data = status_value.duplicate(true)
 	var phase: String = str(_status_data.get("phase", ""))
+	raid_notice.visible = phase == "warning"
 	_set_attack_warning(phase == "attacking")
 	if phase == "attacking" and _last_phase != phase:
 		close_details()
@@ -157,6 +160,8 @@ func _render_status() -> void:
 	if bool(_status_data.get("raids_enabled", true)) and phase == "attacking":
 		var seconds_left: float = maxf(0.0, float(_status_data.get("seconds_left", 0.0)))
 		time_left_label.text = "Raid: %ds" % int(ceil(seconds_left))
+	elif not str(_status_data.get("work_kind", "")).is_empty():
+		time_left_label.text = "Work: %dm" % int(_status_data.get("work_remaining", 0))
 	elif level <= 0:
 		time_left_label.text = "Wall ruins"
 	else:
@@ -180,6 +185,10 @@ func _render_details() -> void:
 	if status_text.is_empty():
 		status_text = _fallback_status(str(_status_data.get("phase", "safe")))
 	status_detail_label.text = status_text
+	if not str(_status_data.get("work_kind", "")).is_empty():
+		status_detail_label.text += " Wall work: %d minutes remaining%s." % [int(_status_data.get("work_remaining", 0)), " (paused during raid)" if str(_status_data.get("phase")) == "attacking" else ""]
+	elif not str(_status_data.get("work_message", "")).is_empty():
+		status_detail_label.text += " " + str(_status_data.work_message)
 
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CASTLE & RAID DETAILS"
 	if bool(_status_data.get("can_build", false)) or bool(_status_data.get("can_repair", false)):
