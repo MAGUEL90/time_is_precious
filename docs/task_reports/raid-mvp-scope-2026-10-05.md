@@ -116,3 +116,9 @@ Human playtest and merge remain pending. No commit, push or merge performed.
 - User feedback: reduce distracting pulse intensity. Peak edge opacity reduced from 55% to 22%, with a narrower opacity swing and a slower 3-second cycle (previously 1.6 seconds).
 - RaidUITest passed headless on Godot 4.5.2; diff check passed. The revised subjective intensity awaits local playtest.
 - Wall interaction versus City Layout remains a design discussion; construction flow is unchanged.
+
+### 2026-10-08 — wall painting setup
+- Imported the user's asset commit 141d32e by fast-forward.
+- Added empty ContentScene/YSortWorld/WallStone TileMapLayer and a separate wall_stone_tile_set.tres, with both 112x48 textures sliced into occupied 16x16 atlas cells.
+- Nearest filtering and existing world Y sorting retained. Layout is left for the user to paint; collision, terrain autotiling and raid-driven visual changes are not configured.
+- Godot 4.5.2 editor import and main-map headless launch completed without script/resource errors. No project settings or addon changes retained.

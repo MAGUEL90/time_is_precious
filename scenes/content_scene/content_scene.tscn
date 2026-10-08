@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=19 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -19,6 +19,8 @@
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="25_home_theme"]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_bootstrap.gd" id="26_raid"]
+
+[ext_resource type="TileSet" path="res://scenes/raid/wall_stone_tile_set.tres" id="27_wall_tiles"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -53,6 +55,11 @@ position = Vector2(256, 208)
 [node name="object" type="TileMapLayer" parent="YSortWorld"]
 y_sort_enabled = true
 tile_set = ExtResource("1_ground")
+
+[node name="WallStone" type="TileMapLayer" parent="YSortWorld"]
+y_sort_enabled = true
+texture_filter = 1
+tile_set = ExtResource("27_wall_tiles")
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
 position = Vector2(-286, -412)
