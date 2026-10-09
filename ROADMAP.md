@@ -45,6 +45,11 @@ combat the effective clock is x1, with the selected speed restored afterward.
 up only the materials missing for the next job in City Storage, for playtesting
 before the map has a Stone source; it does not seed normal gameplay.
 City Storage now accepts Stone and Wood Log deposits.
+The left 16x16 ! button opens merchant and detected-raid notifications, replacing
+the overlapping top notices. City Management colors active threats red and shows
+a castle-to-raider travel bar after detection. The icon approaches the castle
+using the actual remaining journey time. Main-profile protected stock reserve is
+zero; theft and satisfaction losses are still disabled pending loot design.
 
 Gate/collision work is explicitly deferred. Fast/heavy party types, earlier
 detection through watchtowers/scouts, upgrades/weapons and disk saving remain

@@ -659,7 +659,11 @@ extending that expedition. Legacy randomized interval mode remains for isolated
 regression fixtures. Real gameplay seconds drive attacks, with pause/transition
 guards; clock-speed controls do not accelerate hit timing.
 
-RaidUI provides a City Management keyboard shortcut (C) and read-only wall/raid reports; its
+RaidUI provides a City Management keyboard shortcut (C), a map-gated 16x16
+notification button, and read-only wall/raid reports. The notification popup binds
+the persistent merchant ledger and detected raid status. Clock signals update the
+travel row from detection-gated schedule values; the castle stays left and the
+raider approaches it from the right. Hidden expeditions expose no journey values; its
 legacy bottom-right status panel stays hidden. A map-owned indicator above the
 south wall presents construction progress or attack HP and follows the camera. Raid results
 resolve once. Main-profile population/theft losses remain zero. Existing bounded

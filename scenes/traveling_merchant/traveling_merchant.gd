@@ -37,6 +37,7 @@ func _ready() -> void:
 	_dialogue_manager = get_node_or_null("/root/DialogueManager")
 	if is_instance_valid(_dialogue_manager):
 		_dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
+	_bind_notification_ui()
 	_refresh()
 
 func _on_body_entered(body: Node2D) -> void:
@@ -196,6 +197,8 @@ func _refresh() -> void:
 	var present: bool = state.is_present()
 	$MerchantVisual.visible = present
 	$VisitNotice/Label.text = state.get_status_text()
+	$VisitNotice.hide()
+	_bind_notification_ui()
 	$Caption.text = "Traveling Merchant" if present else "Merchant Stop"
 	if not present:
 		close_menu()
@@ -207,6 +210,11 @@ func _refresh() -> void:
 		player._on_interactable_activated(self)
 		if is_instance_valid(menu):
 			interactable_label_component.hide()
+
+func _bind_notification_ui() -> void:
+	var notification_ui: Node = get_tree().get_first_node_in_group("city_notification_ui")
+	if is_instance_valid(notification_ui) and notification_ui.has_method("bind_merchant_state"):
+		notification_ui.call("bind_merchant_state", state)
 
 func _process(_delta: float) -> void:
 	# Catch collapse, fades and teleports even when no physics exit has fired yet.

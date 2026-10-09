@@ -224,12 +224,12 @@ func _test_main_map_expedition() -> void:
 
 	var arrival_at: int = build_complete_at + 3 * MINUTES_PER_DAY
 	_set_clock_minute(arrival_at - MINUTES_PER_DAY - 1)
-	_expect(state.phase == "safe" and not ui.raid_notice.visible,
+	_expect(state.phase == "safe" and state.get_status().travel_total_minutes == 0,
 		"The raid remains hidden and safe one minute before the one-day warning window.")
 	_set_clock_minute(arrival_at - MINUTES_PER_DAY)
 	_expect(state.wall_hp == 50, "Travelling raiders do not damage the wall before arrival.")
-	_expect(state.phase == "warning" and ui.raid_notice.visible
-		and ui.raid_notice.text.to_lower().contains("raid"),
+	_expect(state.phase == "warning" and state.get_status().travel_total_minutes == 3 * MINUTES_PER_DAY
+		and state.get_status().arrival_minutes_remaining == MINUTES_PER_DAY,
 		"The warning phase and raid notice appear exactly one day before scheduled arrival.")
 
 	greeting = await _open_wall_greeting()
@@ -247,6 +247,13 @@ func _test_main_map_expedition() -> void:
 		_choose_response(greeting, "Not now")
 		await _wait_for_greeting_end()
 
+	var detected_progress: float = ui.travel_progress.progress_ratio
+	_set_clock_minute(arrival_at - 720)
+	_expect(ui.travel_progress.visible and ui.travel_progress.progress_ratio > detected_progress
+		and state.get_status().arrival_minutes_remaining == 720,
+		"The detected raider icon moves toward the castle on clock ticks without another phase change.")
+	_expect(not ui.raid_notice.visible and not content.get_node("YSortWorld/TravelingMerchant/VisitNotice").visible,
+		"Long merchant and raid notices no longer overlap the top HUD.")
 	storage.items = {"stone": 4}
 	_set_clock_minute(arrival_at - 2)
 	var time_debug: Node = content.get_node("TimeDebugOverlay")

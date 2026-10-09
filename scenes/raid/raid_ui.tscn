@@ -1,8 +1,10 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_ui.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/exclamation_mark_icon.png" id="4_exclamation"]
+[ext_resource type="Script" path="res://scenes/raid/raid_travel_progress.gd" id="5_travel"]
 
 [sub_resource type="Shader" id="AttackWarningShader"]
 code = "shader_type canvas_item;
@@ -37,6 +39,18 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.43, 0.27, 0.15, 1)
 
+[sub_resource type="StyleBoxFlat" id="NotificationButtonStyle"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+bg_color = Color(0.66, 0.54, 0.35, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.24, 0.12, 1)
+
 [node name="RaidUI" type="CanvasLayer"]
 process_mode = 3
 layer = 80
@@ -62,6 +76,107 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="NotificationsButton" type="Button" parent="Root"]
+visible = false
+offset_left = 22.0
+offset_top = 34.0
+offset_right = 38.0
+offset_bottom = 50.0
+mouse_filter = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+tooltip_text = "Notifications"
+texture_filter = 1
+icon = ExtResource("4_exclamation")
+icon_alignment = 1
+theme_override_styles/normal = SubResource("NotificationButtonStyle")
+theme_override_styles/hover = SubResource("NotificationButtonStyle")
+theme_override_styles/pressed = SubResource("NotificationButtonStyle")
+theme_override_styles/disabled = SubResource("NotificationButtonStyle")
+
+[node name="NotificationsPopup" type="NinePatchRect" parent="Root"]
+visible = false
+offset_left = 22.0
+offset_top = 54.0
+offset_right = 206.0
+offset_bottom = 134.0
+mouse_filter = 0
+texture = SubResource("RaidPanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/NotificationsPopup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 7
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 7
+theme_override_constants/margin_bottom = 4
+
+[node name="Contents" type="VBoxContainer" parent="Root/NotificationsPopup/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="TitleLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 8
+text = "NOTIFICATIONS"
+vertical_alignment = 1
+
+[node name="MerchantNoticeLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Merchant status unavailable."
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="RaidNoticeLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "No raiders detected."
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="ActionsRow" type="HBoxContainer" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+alignment = 2
+
+[node name="CityManagementButton" type="Button" parent="Root/NotificationsPopup/Margin/Contents/ActionsRow"]
+custom_minimum_size = Vector2(80, 14)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "City Management"
+
+[node name="CloseButton" type="Button" parent="Root/NotificationsPopup/Margin/Contents/ActionsRow"]
+custom_minimum_size = Vector2(38, 14)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Close"
 
 [node name="RaidStatusPanel" type="NinePatchRect" parent="Root"]
 anchors_preset = 0
@@ -239,6 +354,24 @@ theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Build a wall before a raid"
 autowrap_mode = 3
+
+[node name="TravelProgressRow" type="Control" parent="Root/Center/DetailsPanel/Margin/Contents"]
+visible = false
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("5_travel")
+
+[node name="TravelEtaLabel" type="Label" parent="Root/Center/DetailsPanel/Margin/Contents"]
+visible = false
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Estimated arrival: 3d 0h"
+vertical_alignment = 1
 
 [node name="ActionRow" type="HBoxContainer" parent="Root/Center/DetailsPanel/Margin/Contents"]
 custom_minimum_size = Vector2(0, 14)

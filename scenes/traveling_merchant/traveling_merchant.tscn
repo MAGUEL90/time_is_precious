@@ -47,6 +47,7 @@ text = "Merchant Stop"
 horizontal_alignment = 1
 
 [node name="VisitNotice" type="CanvasLayer" parent="."]
+visible = false
 layer = 5
 
 [node name="Label" type="Label" parent="VisitNotice"]

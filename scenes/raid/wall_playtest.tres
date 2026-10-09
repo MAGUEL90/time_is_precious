@@ -22,3 +22,4 @@ wall_defend = 2
 warning_days = 1
 party_profile = ExtResource("2_party")
 recovery_days = 3
+reserve_per_stack = 0

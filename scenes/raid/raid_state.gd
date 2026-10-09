@@ -129,7 +129,9 @@ func get_status() -> Dictionary:
 		"seconds_left": maxf(0.0, config.duration_seconds - _elapsed) if phase == "attacking" else 0.0,
 		"status_text": message, "can_build": _valid and (config.instant_build_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and wall_hp == 0 and phase != "attacking" and not _resolving,
 		"can_repair": can_repair_wall(), "work_kind": _work_kind, "work_remaining": _work_remaining,
-		"work_total": _work_total, "work_message": last_work_message}
+		"work_total": _work_total, "work_message": last_work_message,
+		"travel_total_minutes": config.party_profile.travel_days * 1440 if config.party_profile != null and phase in ["warning", "attacking"] else 0,
+		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
 
 func get_work_quote() -> Dictionary:
 	var kind: String = "build" if wall_hp == 0 else "repair"

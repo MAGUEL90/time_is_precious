@@ -4,8 +4,16 @@ signal build_requested
 signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 
 @onready var raid_notice: Label = $Root/RaidNotice
+@onready var notification_button: Button = $Root/NotificationsButton
+@onready var notifications_popup: NinePatchRect = $Root/NotificationsPopup
+@onready var merchant_notice_label: Label = $Root/NotificationsPopup/Margin/Contents/MerchantNoticeLabel
+@onready var notification_raid_label: Label = $Root/NotificationsPopup/Margin/Contents/RaidNoticeLabel
+@onready var notifications_city_button: Button = $Root/NotificationsPopup/Margin/Contents/ActionsRow/CityManagementButton
+@onready var travel_progress: RaidTravelProgress = $Root/Center/DetailsPanel/Margin/Contents/TravelProgressRow
+@onready var travel_eta_label: Label = $Root/Center/DetailsPanel/Margin/Contents/TravelEtaLabel
 @onready var attack_warning: ColorRect = $Root/AttackWarning
 @onready var status_panel: Control = $Root/RaidStatusPanel
 @onready var status_label: Label = $Root/RaidStatusPanel/Margin/Contents/StatusLabel
@@ -26,6 +34,7 @@ const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
 
 var raid_state: Node
+var merchant_state: Node
 var report_text: String = ""
 var _status_data: Dictionary = {}
 var _last_report: Dictionary = {}
@@ -37,9 +46,17 @@ func _ready() -> void:
 	visible = true
 	status_panel.visible = false
 	details_panel.visible = false
+	notifications_popup.visible = false
+	add_to_group("city_notification_ui")
+	notification_button.pressed.connect(_toggle_notifications)
+	$Root/NotificationsPopup/Margin/Contents/ActionsRow/CloseButton.pressed.connect(_close_notifications)
+	notifications_city_button.pressed.connect(_open_city_management_from_notifications)
 	$Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton.pressed.connect(open_details)
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
 	_apply_theme()
+	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
+		TimeComponentManager.time_changed.connect(_on_clock_changed)
+	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"))
 	refresh()
 
 func _process(delta: float) -> void:
@@ -58,19 +75,23 @@ func _set_attack_warning(active: bool) -> void:
 
 func _exit_tree() -> void:
 	_unbind_state()
+	_unbind_merchant_state()
+	if TimeComponentManager.time_changed.is_connected(_on_clock_changed):
+		TimeComponentManager.time_changed.disconnect(_on_clock_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_C and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
 		if details_panel.visible:
 			close_details()
 			get_viewport().set_input_as_handled()
-		elif _city_management_available and not get_tree().paused and not TimeComponentManager.is_paused and not SceneTransition.is_transitioning:
-			var player: Player = get_tree().get_first_node_in_group("player") as Player
-			if is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing:
-				open_details()
+		elif _can_use_city_ui():
+			open_details()
 		if details_panel.visible:
 			get_viewport().set_input_as_handled()
 		return
+	if notifications_popup.visible and event.is_action_pressed("ui_cancel"):
+		_close_notifications()
+		get_viewport().set_input_as_handled()
 	if details_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_details()
 		get_viewport().set_input_as_handled()
@@ -94,6 +115,7 @@ func open_details() -> void:
 	set_process(attack_warning.visible)
 	if not is_instance_valid(raid_state):
 		return
+	_close_notifications()
 	_render_details()
 	details_panel.visible = true
 
@@ -104,7 +126,21 @@ func close_details() -> void:
 func set_city_management_available(available: bool) -> void:
 	_city_management_available = available
 	if not available:
+		_close_notifications()
 		close_details()
+	notification_button.visible = available
+
+func bind_merchant_state(next_state: Node) -> void:
+	if merchant_state == next_state:
+		_refresh_merchant_notice()
+		return
+	_unbind_merchant_state()
+	merchant_state = next_state
+	if is_instance_valid(merchant_state) and merchant_state.has_signal("changed"):
+		var changed_callable: Callable = Callable(self, "_on_merchant_state_changed")
+		if not merchant_state.is_connected("changed", changed_callable):
+			merchant_state.connect("changed", changed_callable)
+	_refresh_merchant_notice()
 
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
@@ -113,6 +149,7 @@ func refresh() -> void:
 		status_panel.visible = false
 		details_panel.visible = false
 		_status_data.clear()
+		_refresh_raid_notice()
 		_last_report.clear()
 		report_text = "No raid report yet."
 		return
@@ -123,7 +160,9 @@ func refresh() -> void:
 		if status_value is Dictionary:
 			_status_data = status_value.duplicate(true)
 	var phase: String = str(_status_data.get("phase", ""))
-	raid_notice.visible = phase == "warning"
+	# Keep the former top-center notice hidden for compatibility; notifications live in one popup.
+	raid_notice.visible = false
+	_refresh_raid_notice()
 	_set_attack_warning(phase == "attacking")
 	if phase == "attacking" and _last_phase != phase:
 		close_details()
@@ -154,9 +193,91 @@ func _unbind_state() -> void:
 		if raid_state.is_connected("changed", changed_callable):
 			raid_state.disconnect("changed", changed_callable)
 	raid_state = null
+	_refresh_raid_notice()
+
+func _unbind_merchant_state() -> void:
+	if not is_instance_valid(merchant_state):
+		merchant_state = null
+		_refresh_merchant_notice()
+		return
+	if merchant_state.has_signal("changed"):
+		var changed_callable: Callable = Callable(self, "_on_merchant_state_changed")
+		if merchant_state.is_connected("changed", changed_callable):
+			merchant_state.disconnect("changed", changed_callable)
+	merchant_state = null
+	_refresh_merchant_notice()
 
 func _on_state_changed() -> void:
 	refresh()
+
+func _on_merchant_state_changed() -> void:
+	_refresh_merchant_notice()
+
+func _on_clock_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
+	var phase: String = str(_status_data.get("phase", ""))
+	if phase in ["warning", "attacking"]:
+		refresh()
+
+func _toggle_notifications() -> void:
+	if notifications_popup.visible:
+		_close_notifications()
+		return
+	if not _can_use_city_ui():
+		return
+	notifications_popup.visible = true
+	_refresh_merchant_notice()
+	_refresh_raid_notice()
+
+func _close_notifications() -> void:
+	notifications_popup.visible = false
+
+func _open_city_management_from_notifications() -> void:
+	if not _can_use_city_ui():
+		return
+	_close_notifications()
+	open_details()
+
+func _can_use_city_ui() -> bool:
+	if not _city_management_available or get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		return false
+	var player: Player = get_tree().get_first_node_in_group("player") as Player
+	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
+
+func _refresh_merchant_notice() -> void:
+	if not is_instance_valid(merchant_state):
+		merchant_notice_label.text = "Merchant status unavailable."
+		return
+	if merchant_state.has_method("get_status_text"):
+		merchant_notice_label.text = str(merchant_state.call("get_status_text"))
+	else:
+		merchant_notice_label.text = "Merchant status unavailable."
+
+func _refresh_raid_notice() -> void:
+	var phase: String = str(_status_data.get("phase", ""))
+	var threat_active: bool = phase in ["warning", "attacking"]
+	notification_button.modulate = THREAT_COLOR if threat_active else Color.WHITE
+	if phase == "warning":
+		var remaining: int = maxi(int(_status_data.get("arrival_minutes_remaining", 0)), 0)
+		notification_raid_label.text = "Raiders detected. Arrival in %s." % _format_travel_time(remaining)
+	elif phase == "attacking":
+		notification_raid_label.text = "Raiders are attacking the castle wall."
+	else:
+		# Do not expose the scheduled journey before its detection phase.
+		notification_raid_label.text = "No raiders detected."
+	if threat_active:
+		notification_raid_label.add_theme_color_override("font_color", THREAT_COLOR)
+	else:
+		notification_raid_label.remove_theme_color_override("font_color")
+
+func _format_travel_time(total_minutes: int) -> String:
+	var days: int = total_minutes / 1440
+	var hours: int = (total_minutes % 1440) / 60
+	var minutes: int = total_minutes % 60
+	if days > 0:
+		return "%dd %dh" % [days, hours]
+	if hours > 0:
+		return "%dh %dm" % [hours, minutes]
+	return "%dm" % minutes
 
 func _render_status() -> void:
 	var status_text: String = str(_status_data.get("status_text", ""))
@@ -202,7 +323,23 @@ func _render_details() -> void:
 	var status_text: String = str(_status_data.get("status_text", ""))
 	if status_text.is_empty():
 		status_text = _fallback_status(str(_status_data.get("phase", "safe")))
+	var phase: String = str(_status_data.get("phase", ""))
+	var detected_threat: bool = phase in ["warning", "attacking"]
+	if detected_threat:
+		status_detail_label.add_theme_color_override("font_color", THREAT_COLOR)
+	else:
+		status_detail_label.remove_theme_color_override("font_color")
 	status_detail_label.text = status_text
+	travel_progress.visible = detected_threat
+	travel_eta_label.visible = detected_threat
+	if detected_threat:
+		var travel_total: int = maxi(int(_status_data.get("travel_total_minutes", 0)), 1)
+		var arrival_remaining: int = clampi(int(_status_data.get("arrival_minutes_remaining", 0)), 0, travel_total)
+		travel_progress.set_travel_progress(travel_total, arrival_remaining)
+		if phase == "warning":
+			travel_eta_label.text = "Estimated arrival: %s" % _format_travel_time(arrival_remaining)
+		else:
+			travel_eta_label.text = "Raiders have reached the wall."
 	if not str(_status_data.get("work_kind", "")).is_empty():
 		status_detail_label.text += " Wall work: %d minutes remaining%s." % [int(_status_data.get("work_remaining", 0)), " (paused during raid)" if str(_status_data.get("phase")) == "attacking" else ""]
 	elif str(_status_data.get("phase")) != "attacking" and not str(_status_data.get("work_message", "")).is_empty() and not str(_status_data.work_message).ends_with("complete."):
@@ -216,7 +353,7 @@ func _render_details() -> void:
 	action_row.visible = false
 	var has_report: bool = not _last_report.is_empty()
 	report_scroll.visible = has_report
-	details_panel.custom_minimum_size = Vector2(320, 190) if has_report else Vector2(300, 112)
+	details_panel.custom_minimum_size = Vector2(320, 190) if has_report else (Vector2(300, 150) if detected_threat else Vector2(300, 112))
 	details_panel.size = details_panel.custom_minimum_size
 	report_text = _format_report(_last_report)
 	report_label.text = report_text
