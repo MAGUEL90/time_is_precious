@@ -144,10 +144,16 @@ func get_status() -> Dictionary:
 		"can_repair": can_repair_wall(), "work_kind": _work_kind, "work_remaining": _work_remaining,
 		"work_total": _work_total, "work_message": last_work_message,
 		"stolen_so_far": _stolen.duplicate(true), "loot_weight": _loot_weight,
+		"storage_item_count": _storage_item_count(),
 		"loot_capacity_weight": config.loot_capacity_weight,
 		"loot_seconds_remaining": maxf(0.0, config.duration_seconds - _elapsed) if phase == "looting" else 0.0,
 		"travel_total_minutes": config.party_profile.travel_days * 1440 if config.party_profile != null and phase in ["warning", "attacking", "looting"] else 0,
 		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
+
+func _storage_item_count() -> int:
+	if not is_instance_valid(storage) or not storage.has_method("get_raid_loot_stock_count"):
+		return 0
+	return storage.get_raid_loot_stock_count(config.loot_capacity_weight)
 
 func get_work_quote() -> Dictionary:
 	var kind: String = "build" if wall_hp == 0 else "repair"
@@ -412,6 +418,7 @@ func _finish_attack(breached: bool) -> void:
 			result.stolen = storage.take_raid_loot(config.theft_capacity, config.reserve_per_stack)
 		var damage: Dictionary = _breach_losses if config.ranked_looting_enabled else _apply_population_losses()
 		result.satisfaction_drop = damage.satisfaction_drop
+		result.residents_affected = damage.residents_affected
 		result.citizens_fled = damage.citizens_fled
 	if breached and _work_kind == "repair":
 		_refund_interrupted_repair()
@@ -445,4 +452,4 @@ func _apply_population_losses() -> Dictionary:
 			continue
 		if CitizenManager.leave_city(citizen.citizen_id):
 			fled.append(citizen.display_name if not citizen.display_name.is_empty() else citizen.citizen_id)
-	return {"satisfaction_drop": total_drop / residents.size() if not residents.is_empty() else 0.0, "citizens_fled": fled}
+	return {"residents_affected": residents.size(), "satisfaction_drop": total_drop / residents.size() if not residents.is_empty() else 0.0, "citizens_fled": fled}

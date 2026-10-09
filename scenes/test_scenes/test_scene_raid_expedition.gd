@@ -76,6 +76,7 @@ func _run() -> void:
 	# Isolate a late warning observation so it cannot move the main-map schedule.
 	await _test_late_warning_does_not_move_arrival()
 	await _test_main_map_expedition()
+	await _test_storage_deposit_and_raid()
 
 	_expect(Inventory.items == inventory_before,
 		"Wall construction, repairs, and the raid leave Player Inventory unchanged.")
@@ -84,6 +85,41 @@ func _run() -> void:
 	_restore_clock()
 	print("RaidExpeditionTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _test_storage_deposit_and_raid() -> void:
+	var area: Node2D = content.get_node("YSortWorld/WorkerRuntime/CityStorageArea")
+	_expect(area.storage == storage and area.delivery_point.get_storage() == storage,
+		"The main-map storage access and delivery point bind the actual raid stock provider.")
+	ui.close_details()
+	player.global_position = area.global_position + Vector2(0, 10)
+	await _settle_physics()
+	player._refresh_current_interactable()
+	Inventory.add_item("stone", 1) # Synthetic acquisition; production grants nothing.
+	var interact := InputEventAction.new()
+	interact.action = &"interact"
+	interact.pressed = true
+	player._unhandled_input(interact)
+	await get_tree().process_frame
+	_expect(is_instance_valid(area.menu), "E opens the actual main-map storage menu.")
+	if not is_instance_valid(area.menu):
+		return
+	area.menu.deposit_button.pressed.emit()
+	area.menu.transfer_ui.transfer_confirmed.emit({"stone": 1})
+	_expect(int(storage.items.get("stone", 0)) == 1 and Inventory.items == inventory_before,
+		"Main-map deposit moves the selected item from the backpack to the raid's City Storage.")
+	area.close_menu()
+	await get_tree().process_frame
+	for resident: CitizenData in CitizenManager.get_all_residents():
+		resident.satisfaction = 0.5 # Isolate the raid penalty from prior daily needs.
+	state.wall_hp = 0
+	state.phase = "warning"
+	state._start_attack(5)
+	state.set_process(false)
+	_expect(state.phase == "looting", "Deposited goods keep an undefended raid in its looting phase.")
+	_expect(is_equal_approx(ui.satisfaction_meter.value, 45.0), "The main-map satisfaction bar reflects the 50 to 45 percent breach loss.")
+	state.advance_attack(60.0)
+	_expect(int(state.get_last_report().stolen.get("stone", 0)) == 1 and not storage.items.has("stone"),
+		"The raid steals the same item deposited through the live main-map menu.")
 
 func _assert_approved_profile() -> void:
 	var config: Resource = state.config

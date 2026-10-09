@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
@@ -11,6 +11,8 @@
 [ext_resource type="Texture2D" path="res://assets/reed_bundle.png" id="icon_Reed"]
 [ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
 [ext_resource type="Texture2D" path="res://assets/items/water_jar.png" id="icon_Water"]
+
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="12_city_storage"]
 
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
@@ -269,6 +271,10 @@ theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
+
+
+[node name="CityStorageArea" parent="." instance=ExtResource("12_city_storage")]
+position = Vector2(-75, 55)
 
 [editable path="WorksiteMarkers/ClaySiteA"]
 [editable path="WorksiteMarkers/WoodSite"]

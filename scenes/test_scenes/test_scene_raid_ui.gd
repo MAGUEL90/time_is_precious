@@ -67,12 +67,11 @@ func _run() -> void:
 	_expect(ui.merchant_notice_label.text.contains("Tomorrow") and ui.notification_raid_label.text.contains("attacking"), "Notifications include live merchant status and the active raid.")
 	_expect(ui.notification_button.modulate.r > ui.notification_button.modulate.g, "The notification icon turns red during an active threat.")
 	_check_notification_bounds()
-	player_pause_guard(true)
-	ui.notifications_city_button.pressed.emit()
-	_expect(not ui.details_panel.visible and ui.notifications_popup.visible, "The City Management action is blocked while the player cannot move.")
-	player_pause_guard(false)
-	ui.notifications_city_button.pressed.emit()
-	_expect(ui.details_panel.visible and not ui.notifications_popup.visible, "The notification action opens City Management and closes the popup.")
+	_expect(not ui.notifications_city_button.visible, "Notifications no longer show a City Management button.")
+	_expect(ui.merchant_notice_label.text.begins_with("- ") and ui.notification_raid_label.text.begins_with("- "), "Separate notices have bullet markers.")
+	_expect(ui.get_node("Root/NotificationsPopup/Margin/Contents/TitleLabel").get_theme_font_size("font_size") == 6, "Notifications title uses pixel font size 6.")
+	ui.open_details()
+	_expect(ui.details_panel.visible and not ui.notifications_popup.visible, "Opening current city closes notifications.")
 	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 2.0 / 3.0), "Detected travel progress uses the scheduled remaining time.")
 	_expect(ui.status_detail_label.has_theme_color_override("font_color"), "The City Management threat status is red while raiders are attacking.")
 	ui.close_details()
@@ -84,7 +83,7 @@ func _run() -> void:
 		"travel_total_minutes": 4320, "arrival_minutes_remaining": 4320}
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(ui.notification_raid_label.text == "No raiders detected.", "The notifications popup does not reveal undetected departures.")
+	_expect(ui.notification_raid_label.text == "- No raiders detected.", "The notifications popup does not reveal undetected departures.")
 	_expect(not ui.travel_progress.visible, "The City Management travel row is hidden before detection.")
 	_expect(world_indicator.visible, "Construction progress appears above the wall while work is active.")
 	_expect(world_indicator.progress_bar.value == 60.0, "World construction progress reflects a halfway job.")
@@ -142,6 +141,22 @@ func _run() -> void:
 	_expect("Breach after: 29s" in ui.report_text and "Looting: 22s" in ui.report_text, "Report shows breach timing and time spent looting.")
 	_expect("Loot weight: 3.50 / 8.00" in ui.report_text and "Valuables" in ui.report_text and "carrying capacity was full" in ui.report_text, "Report explains carried weight, loot preference and withdrawal reason.")
 	_expect("Raiders repelled" not in ui.report_text, "Breach outcome is not reported as victory.")
+	_expect(ui.result_box.visible and not ui.report_scroll.visible, "Raid results use compact UI instead of the long report.")
+	ui.close_details()
+	ui.open_details()
+	_expect(not ui.result_box.visible and ui.report_toggle.visible, "Reopening city management defaults to current state, with optional last raid.")
+	state.status.phase = "warning"
+	state.status.arrival_minutes_remaining = 1440
+	state.changed.emit()
+	_expect(ui.travel_progress.visible and not ui.result_box.visible, "A new detected party displays travel even with a previous raid report.")
+	var before_progress: float = ui.travel_progress.progress_ratio
+	state.status.arrival_minutes_remaining = 720
+	TimeComponentManager.time_changed.emit(6, 0, 0, "clear")
+	_expect(ui.travel_progress.progress_ratio > before_progress, "The next raid progress continues moving after the first report.")
+	state.status.phase = "recovery"
+	state.changed.emit()
+	ui.report_toggle.pressed.emit()
+
 	_check_bounds()
 	await _capture("raid-report.png")
 	ui.close_details()

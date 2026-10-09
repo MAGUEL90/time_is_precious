@@ -41,6 +41,21 @@ var _last_report: Dictionary = {}
 var _last_shown_report_id: int = -1
 var _last_phase: String = ""
 var _city_management_available: bool = false
+var show_last_raid: bool = false
+var metrics: HBoxContainer
+var wall_meter: ProgressBar
+var satisfaction_meter: ProgressBar
+var satisfaction_value: Label
+var wall_value: Label
+var storage_summary: Label
+var result_box: VBoxContainer
+var result_heading: Label
+var result_stats: Label
+var loot_slots: HFlowContainer
+var result_note: Label
+var report_toggle: Button
+var _loot_display_key: String = ""
+
 
 func _ready() -> void:
 	visible = true
@@ -50,12 +65,15 @@ func _ready() -> void:
 	add_to_group("city_notification_ui")
 	notification_button.pressed.connect(_toggle_notifications)
 	$Root/NotificationsPopup/Margin/Contents/ActionsRow/CloseButton.pressed.connect(_close_notifications)
-	notifications_city_button.pressed.connect(_open_city_management_from_notifications)
+	notifications_city_button.hide()
 	$Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton.pressed.connect(open_details)
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
+	_create_dashboard()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
+	CitizenManager.citizen_added.connect(_on_residents_changed)
+	CitizenManager.citizen_left.connect(_on_residents_changed)
 	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"))
 	refresh()
 
@@ -74,6 +92,8 @@ func _set_attack_warning(active: bool) -> void:
 	set_process(active)
 
 func _exit_tree() -> void:
+	CitizenManager.citizen_added.disconnect(_on_residents_changed)
+	CitizenManager.citizen_left.disconnect(_on_residents_changed)
 	_unbind_state()
 	_unbind_merchant_state()
 	if TimeComponentManager.time_changed.is_connected(_on_clock_changed):
@@ -116,6 +136,9 @@ func open_details() -> void:
 	if not is_instance_valid(raid_state):
 		return
 	_close_notifications()
+	show_last_raid = false
+	if raid_state.has_method("get_status"):
+		_status_data = raid_state.get_status().duplicate(true)
 	_render_details()
 	details_panel.visible = true
 
@@ -160,6 +183,8 @@ func refresh() -> void:
 		if status_value is Dictionary:
 			_status_data = status_value.duplicate(true)
 	var phase: String = str(_status_data.get("phase", ""))
+	if phase != _last_phase:
+		show_last_raid = false
 	# Keep the former top-center notice hidden for compatibility; notifications live in one popup.
 	raid_notice.visible = false
 	_refresh_raid_notice()
@@ -184,6 +209,8 @@ func refresh() -> void:
 		if report_id != _last_shown_report_id:
 			_last_shown_report_id = report_id
 			open_details()
+			show_last_raid = true
+			_render_details()
 
 func _unbind_state() -> void:
 	close_details()
@@ -208,6 +235,9 @@ func _unbind_merchant_state() -> void:
 	merchant_state = null
 	_refresh_merchant_notice()
 
+func _on_residents_changed(_citizen: CitizenData) -> void:
+	refresh()
+
 func _on_state_changed() -> void:
 	refresh()
 
@@ -215,8 +245,7 @@ func _on_merchant_state_changed() -> void:
 	_refresh_merchant_notice()
 
 func _on_clock_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
-	var phase: String = str(_status_data.get("phase", ""))
-	if phase in ["warning", "attacking", "looting"]:
+	if is_instance_valid(raid_state):
 		refresh()
 
 func _toggle_notifications() -> void:
@@ -246,12 +275,12 @@ func _can_use_city_ui() -> bool:
 
 func _refresh_merchant_notice() -> void:
 	if not is_instance_valid(merchant_state):
-		merchant_notice_label.text = "Merchant status unavailable."
+		merchant_notice_label.text = "- Merchant unavailable"
 		return
 	if merchant_state.has_method("get_status_text"):
-		merchant_notice_label.text = str(merchant_state.call("get_status_text"))
+		merchant_notice_label.text = "- " + str(merchant_state.call("get_status_text")).replace("Common merchant | Leaves today at ", "Merchant leaves at ")
 	else:
-		merchant_notice_label.text = "Merchant status unavailable."
+		merchant_notice_label.text = "- Merchant unavailable"
 
 func _refresh_raid_notice() -> void:
 	var phase: String = str(_status_data.get("phase", ""))
@@ -268,6 +297,7 @@ func _refresh_raid_notice() -> void:
 	else:
 		# Do not expose the scheduled journey before its detection phase.
 		notification_raid_label.text = "No raiders detected."
+	notification_raid_label.text = "- " + notification_raid_label.text
 	if threat_active:
 		notification_raid_label.add_theme_color_override("font_color", THREAT_COLOR)
 	else:
@@ -351,23 +381,153 @@ func _render_details() -> void:
 			travel_eta_label.text += "\nLooted: %d items · Weight: %.2f / %.2f" % [stolen_units, float(_status_data.get("loot_weight", 0.0)), float(_status_data.get("loot_capacity_weight", 0.0))]
 		else:
 			travel_eta_label.text = "Raiders have reached the wall."
-	if not str(_status_data.get("work_kind", "")).is_empty():
-		status_detail_label.text += " Wall work: %d minutes remaining%s." % [int(_status_data.get("work_remaining", 0)), " (paused during raid)" if phase in ["attacking", "looting"] else ""]
-	elif phase not in ["attacking", "looting"] and not str(_status_data.get("work_message", "")).is_empty() and not str(_status_data.work_message).ends_with("complete."):
-		status_detail_label.text += " " + str(_status_data.work_message)
-
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CITY MANAGEMENT"
-	if bool(_status_data.get("can_build", false)) or bool(_status_data.get("can_repair", false)):
-		status_detail_label.text += " Talk to the wall caretaker by the south wall for repairs."
-	build_button.visible = false
-	repair_button.visible = false
-	action_row.visible = false
-	var has_report: bool = not _last_report.is_empty()
-	report_scroll.visible = has_report
-	details_panel.custom_minimum_size = Vector2(320, 190) if has_report else (Vector2(300, 150) if detected_threat else Vector2(300, 112))
-	details_panel.size = details_panel.custom_minimum_size
+	# Current city state and previous results never compete for the same space.
+	wall_summary_label.hide()
+	defend_label.hide()
+	build_button.hide()
+	repair_button.hide()
+	action_row.hide()
+	report_scroll.hide()
 	report_text = _format_report(_last_report)
 	report_label.text = report_text
+	_render_dashboard(phase, hp, max_hp, level, detected_threat)
+
+func _create_dashboard() -> void:
+	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
+	metrics = HBoxContainer.new()
+	metrics.add_theme_constant_override("separation", 10)
+	contents.add_child(metrics)
+	contents.move_child(metrics, 1)
+	var wall_card := VBoxContainer.new()
+	wall_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	metrics.add_child(wall_card)
+	wall_value = _small_label(wall_card, "Wall")
+	wall_meter = _meter(wall_card, Color(0.8, 0.57, 0.23))
+	var satisfaction_card := VBoxContainer.new()
+	satisfaction_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	metrics.add_child(satisfaction_card)
+	satisfaction_value = _small_label(satisfaction_card, "Satisfaction")
+	satisfaction_meter = _meter(satisfaction_card, Color(0.48, 0.66, 0.38))
+	storage_summary = _small_label(contents, "City Storage")
+	contents.move_child(storage_summary, 2)
+	result_box = VBoxContainer.new()
+	result_box.add_theme_constant_override("separation", 5)
+	contents.add_child(result_box)
+	contents.move_child(result_box, contents.get_child_count() - 2)
+	result_heading = _small_label(result_box, "")
+	result_stats = _small_label(result_box, "")
+	var loot_scroll := ScrollContainer.new()
+	loot_scroll.custom_minimum_size = Vector2(0, 34)
+	loot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	result_box.add_child(loot_scroll)
+	loot_slots = HFlowContainer.new()
+	loot_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	loot_slots.add_theme_constant_override("h_separation", 6)
+	loot_scroll.add_child(loot_slots)
+	result_note = _small_label(result_box, "")
+	result_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var footer: HBoxContainer = contents.get_node("FooterRow")
+	footer.add_theme_constant_override("separation", 6)
+	report_toggle = Button.new()
+	report_toggle.theme_type_variation = &"HudShortcutButton"
+	report_toggle.add_theme_font_size_override("font_size", 6)
+	report_toggle.custom_minimum_size = Vector2(54, 14)
+	footer.add_child(report_toggle)
+	footer.move_child(report_toggle, 0)
+	report_toggle.pressed.connect(func():
+		show_last_raid = not show_last_raid
+		_render_details())
+
+func _small_label(parent: Node, text: String) -> Label:
+	var label := Label.new()
+	label.theme_type_variation = &"HudLabelShortcut"
+	label.add_theme_font_size_override("font_size", 6)
+	label.text = text
+	parent.add_child(label)
+	return label
+
+func _meter(parent: Node, color: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(110, 6)
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.23, 0.17, 0.11)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = color
+	bar.add_theme_stylebox_override("background", background)
+	bar.add_theme_stylebox_override("fill", fill)
+	parent.add_child(bar)
+	return bar
+
+func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected: bool) -> void:
+	var residents: Array[CitizenData] = CitizenManager.get_all_residents()
+	var satisfaction: float = 0.0
+	for citizen: CitizenData in residents:
+		satisfaction += citizen.satisfaction
+	if not residents.is_empty():
+		satisfaction /= residents.size()
+	satisfaction_value.text = "Satisfaction  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Satisfaction  --"
+	satisfaction_value.tooltip_text = "Average of %d residents" % residents.size() if not residents.is_empty() else "No residents yet"
+	satisfaction_meter.value = satisfaction * 100.0
+	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
+	storage_summary.text = "City Storage  %d lootable items" % int(_status_data.get("storage_item_count", 0))
+	storage_summary.tooltip_text = "Whole items that fit a raider bag. Equipment, personal inventory and resource silos are separate."
+	wall_value.text = "Wall  %d/%d  Lv.%d" % [hp, max_hp, level]
+	wall_meter.max_value = maxi(max_hp, 1)
+	wall_meter.value = hp
+	wall_value.tooltip_text = "Defend: %s" % str(_status_data.get("defend", 0))
+	if not str(_status_data.get("work_kind", "")).is_empty():
+		wall_value.text = "Wall work  %dm" % int(_status_data.get("work_remaining", 0))
+		wall_meter.max_value = maxi(int(_status_data.get("work_total", 1)), 1)
+		wall_meter.value = wall_meter.max_value - int(_status_data.get("work_remaining", 0))
+	status_detail_label.text = {"unbuilt": "Ruined wall · Talk to Iddin-Sin", "safe": "No raiders detected", "warning": "Raiders approaching", "attacking": "Wall under attack", "looting": "City Storage under attack", "recovery": "Raid over · Recovering"}.get(phase, "No raiders detected")
+	if hp == 0 and phase == "recovery":
+		status_detail_label.text = "Ruined wall · Talk to Iddin-Sin"
+	var viewing_report: bool = show_last_raid and not _last_report.is_empty()
+	status_detail_label.visible = not viewing_report
+	travel_progress.visible = detected and not viewing_report
+	travel_eta_label.visible = detected and not viewing_report
+	result_box.visible = viewing_report
+	storage_summary.visible = not viewing_report
+	report_toggle.visible = not _last_report.is_empty()
+	report_toggle.text = "Current city" if viewing_report else "Last raid"
+	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY MANAGEMENT"
+	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else (160 if detected else 126))
+	details_panel.size = details_panel.custom_minimum_size
+	if not viewing_report:
+		return
+	result_heading.text = "Day %d  ·  %s" % [int(_last_report.get("day", 0)), "Wall breached" if _last_report.get("outcome") == "breached" else "Raiders repelled"]
+	result_stats.text = "Wall -%d HP    Satisfaction -%.1f pp\nBuildings: %d    Fled: %d" % [int(_last_report.get("wall_damage", 0)), float(_last_report.get("satisfaction_drop", 0.0)) * 100.0, _last_report.get("buildings_destroyed", {}).values().reduce(func(a, b): return a + int(b), 0), _last_report.get("citizens_fled", []).size()]
+	if int(_last_report.get("residents_affected", -1)) == 0:
+		result_stats.text = result_stats.text.replace("Satisfaction -0.0 pp", "No residents")
+	var reason: String = str(_last_report.get("retreat_reason", ""))
+	result_note.text = {"wall_held": "Wall held", "time_up": "Time ran out", "capacity_full": "Raider bags full", "no_carryable_loot": "No carryable goods in City Storage"}.get(reason, "Raid ended")
+	var stolen: Dictionary = _last_report.get("stolen", {})
+	var key: String = str(stolen)
+	if key == _loot_display_key and loot_slots.get_child_count() > 0:
+		return
+	_loot_display_key = key
+	for child: Node in loot_slots.get_children():
+		child.free()
+	if stolen.is_empty():
+		_small_label(loot_slots, "No items stolen")
+	for id: String in stolen:
+		var slot := HBoxContainer.new()
+		slot.custom_minimum_size = Vector2(40, 20)
+		loot_slots.add_child(slot)
+		var data: ItemData = ItemDatabase.get_item_data(id)
+		slot.tooltip_text = data.display_name if data != null else id
+		if data != null and data.icon != null:
+			var icon := TextureRect.new()
+			icon.texture = data.icon
+			icon.custom_minimum_size = Vector2(16, 16)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			slot.add_child(icon)
+		else:
+			_small_label(slot, id)
+		_small_label(slot, "x%d" % int(stolen[id]))
 
 func _format_report(report: Dictionary) -> String:
 	if report.is_empty():

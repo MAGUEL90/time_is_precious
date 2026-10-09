@@ -100,7 +100,7 @@ visible = false
 offset_left = 22.0
 offset_top = 54.0
 offset_right = 206.0
-offset_bottom = 134.0
+offset_bottom = 132.0
 mouse_filter = 0
 texture = SubResource("RaidPanelTexture")
 patch_margin_left = 16
@@ -117,10 +117,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 7
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 7
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
 
 [node name="Contents" type="VBoxContainer" parent="Root/NotificationsPopup/Margin"]
 layout_mode = 2
@@ -131,7 +131,7 @@ custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 theme = ExtResource("2_theme")
 theme_type_variation = &"HudLabelMain"
-theme_override_font_sizes/font_size = 8
+theme_override_font_sizes/font_size = 6
 text = "NOTIFICATIONS"
 vertical_alignment = 1
 
@@ -142,7 +142,7 @@ theme = ExtResource("2_theme")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Merchant status unavailable."
-text_overrun_behavior = 3
+autowrap_mode = 3
 vertical_alignment = 1
 
 [node name="RaidNoticeLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents"]

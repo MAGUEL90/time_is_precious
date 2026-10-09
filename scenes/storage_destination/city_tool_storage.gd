@@ -62,6 +62,15 @@ func peek_raid_loot(remaining_weight: float, preference: String = "balanced") ->
 		"reason": str(selected.reason)
 	}
 
+## Count stock eligible for an empty raid bag; excludes unique allocated equipment.
+func get_raid_loot_stock_count(capacity_weight: float) -> int:
+	if not _is_valid_raid_loot_request(capacity_weight, "balanced"):
+		return 0
+	var total: int = 0
+	for candidate: Dictionary in _get_ranked_raid_loot_candidates(capacity_weight, "balanced"):
+		total += int(items.get(candidate.item_id, 0))
+	return total
+
 ## Remove exactly one whole counted stack item, atomically and without touching Inventory.
 func take_ranked_raid_item(remaining_weight: float, preference: String = "balanced") -> Dictionary:
 	if _transfer_in_progress:
