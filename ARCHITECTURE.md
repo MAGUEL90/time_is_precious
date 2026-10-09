@@ -666,8 +666,14 @@ travel row from detection-gated schedule values; the castle stays left and the
 raider approaches it from the right. Hidden expeditions expose no journey values; its
 legacy bottom-right status panel stays hidden. A map-owned indicator above the
 south wall presents construction progress or attack HP and follows the camera. Raid results
-resolve once. Main-profile population/theft losses remain zero. Existing bounded
-loot/departure APIs remain covered in synthetic tests. Debug dispatch starts a normal travelling party and cannot restart an expedition
+resolve once. Breach enters a looting phase using the remaining active raid seconds;
+satisfaction applies once at breach. CityToolStorage exposes a ranked preview and
+atomic one-count theft API, using existing ItemData metadata without modifying it.
+The raid ledger accumulates loot receipts and carried weight, then records the
+retreat reason at capacity, timeout or no fitting item. Counted stacks have no
+reserve; unique equipment units and fractional food portions remain outside this API.
+Main playtest uses 10 weight, one item/second and 5 pp satisfaction loss; citizen
+flight remains disabled. Legacy bulk loot stays available for regression fixtures. Debug dispatch starts a normal travelling party and cannot restart an expedition
 already underway. Arrival countdown and a material top-up action provide explicit
 playtest tools; no resources are seeded
 automatically. Gate/collision, watchtower/scout detection, additional party types,

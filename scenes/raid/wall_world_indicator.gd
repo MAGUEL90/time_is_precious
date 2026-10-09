@@ -32,7 +32,7 @@ func refresh() -> void:
 		return
 	var status: Dictionary = status_value
 	var phase: String = str(status.get("phase", ""))
-	if phase == "attacking":
+	if phase in ["attacking", "looting"]:
 		_render_wall_hp(status)
 		visible = true
 		return

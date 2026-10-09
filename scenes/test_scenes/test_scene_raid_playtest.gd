@@ -27,6 +27,8 @@ func _load_map() -> void:
 	state = content.get_node("RaidBootstrap").state
 	# This scene checks the original free caretaker dialogue flow; timed costs and raid scheduling have a separate synthetic test.
 	state.config.timed_work_enabled = false
+	state.config.ranked_looting_enabled = false
+	state.config.satisfaction_penalty = 0.0
 	state.config.instant_build_enabled = true
 	state.config.instant_repair_enabled = true
 	state.config.raids_enabled = false

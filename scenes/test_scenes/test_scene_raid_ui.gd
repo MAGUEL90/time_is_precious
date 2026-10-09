@@ -105,18 +105,42 @@ func _run() -> void:
 	TimeComponentManager.time_changed.emit(5, 0, 0, "clear")
 	await get_tree().process_frame
 	_expect(is_equal_approx(ui.travel_progress.progress_ratio, 5.0 / 6.0), "The travel icon advances from scheduled ETA updates during the warning phase.")
+	state.status = {"phase": "looting", "hp": 0, "max_hp": 50, "level": 1, "defend": 2,
+		"seconds_left": 18.0, "loot_seconds_remaining": 18.0, "raids_enabled": true,
+		"status_text": "The wall is breached. Raiders are looting City Storage!", "can_build": false, "can_repair": false,
+		"work_kind": "", "work_remaining": 0, "work_total": 0, "work_message": "",
+		"travel_total_minutes": 4320, "arrival_minutes_remaining": 0,
+		"stolen_so_far": {"apple": 2}, "loot_weight": 3.5, "loot_capacity_weight": 8.0}
+	state.report = {"id": 99, "outcome": "breached", "stolen": {"apple": 1}}
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(not ui.details_panel.visible, "An older raid report does not reopen while a new raid is looting.")
+	_expect(ui.attack_warning.visible and ui.notification_button.modulate.r > ui.notification_button.modulate.g, "The red threat indicator remains active during looting.")
+	_expect(ui.time_left_label.text == "Looting: 18s", "The active loot timer is shown in the raid status data.")
+	_expect(world_indicator.visible and world_indicator.progress_bar.value == 0.0, "The world marker keeps showing wall HP at zero while the city is being looted.")
+	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 1.0), "The detected raider marker stays at the castle during looting.")
+	_expect(ui.travel_eta_label.text.contains("Looted: 2 items") and ui.travel_eta_label.text.contains("3.50 / 8.00"), "Live looting displays the stolen count and weight.")
+	_expect(ui.status_detail_label.has_theme_color_override("font_color"), "City Management keeps threat status red during looting.")
+	ui.notification_button.pressed.emit()
+	_expect(ui.notification_raid_label.text.contains("looting City Storage") and ui.notification_raid_label.text.contains("18s"), "Notifications identify the active loot and its countdown.")
+	ui.notification_button.pressed.emit()
+	state.report = {}
 	state.status.phase = "recovery"
 	state.status.hp = 0
 	state.status.status_text = "Raiders have withdrawn. The city has time to recover."
 	state.report = {"id": 1, "outcome": "breached", "day": 4, "hits": 6,
 		"wall_damage": 50, "stolen": {"apple": 4, "simple_clothes": 2},
 		"buildings_destroyed": {"Castle wall": 1}, "satisfaction_drop": 0.075,
-		"citizens_fled": ["Arad"]}
+		"citizens_fled": ["Arad"], "breach_seconds": 28.5, "looting_seconds": 22.0,
+		"loot_weight": 3.5, "loot_capacity_weight": 8.0,
+		"loot_preference": "valuables", "retreat_reason": "capacity_full"}
 	state.changed.emit()
 	await get_tree().process_frame
 	_expect(ui.details_panel.visible, "A new report opens once.")
 	_expect("7.5 pp" in ui.report_text, "Satisfaction uses actual percentage-point loss rather than relative percent.")
 	_expect("1" in ui.report_text and "Arad" in ui.report_text and "Castle wall" in ui.report_text, "Report identifies the actual destruction and citizens who fled.")
+	_expect("Breach after: 29s" in ui.report_text and "Looting: 22s" in ui.report_text, "Report shows breach timing and time spent looting.")
+	_expect("Loot weight: 3.50 / 8.00" in ui.report_text and "Valuables" in ui.report_text and "carrying capacity was full" in ui.report_text, "Report explains carried weight, loot preference and withdrawal reason.")
 	_expect("Raiders repelled" not in ui.report_text, "Breach outcome is not reported as victory.")
 	_check_bounds()
 	await _capture("raid-report.png")

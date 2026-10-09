@@ -7,7 +7,7 @@ else
 
 ~ wall_work
 if wall_is_attacking()
-	Iddin-Sin: The raiders are still attacking. We can repair the wall once they leave.
+	Iddin-Sin: The raiders are still here. We can repair the wall once they leave.
 else
 	Iddin-Sin: {{wall_work_summary()}}
 - Build [if wall_work_available() and wall_uses_timed_work() and wall_needs_build()]

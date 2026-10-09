@@ -163,8 +163,9 @@ func refresh() -> void:
 	# Keep the former top-center notice hidden for compatibility; notifications live in one popup.
 	raid_notice.visible = false
 	_refresh_raid_notice()
-	_set_attack_warning(phase == "attacking")
-	if phase == "attacking" and _last_phase != phase:
+	var raid_active: bool = phase in ["attacking", "looting"]
+	_set_attack_warning(raid_active)
+	if raid_active and _last_phase not in ["attacking", "looting"]:
 		close_details()
 	_last_phase = phase
 	# Keep the former persistent card hidden; its nodes remain for compatibility.
@@ -178,7 +179,7 @@ func refresh() -> void:
 			_last_report = report_value.duplicate(true)
 	_render_details()
 
-	if phase != "attacking" and _last_report.has("id"):
+	if not raid_active and _last_report.has("id"):
 		var report_id: int = int(_last_report.get("id", -1))
 		if report_id != _last_shown_report_id:
 			_last_shown_report_id = report_id
@@ -215,7 +216,7 @@ func _on_merchant_state_changed() -> void:
 
 func _on_clock_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
 	var phase: String = str(_status_data.get("phase", ""))
-	if phase in ["warning", "attacking"]:
+	if phase in ["warning", "attacking", "looting"]:
 		refresh()
 
 func _toggle_notifications() -> void:
@@ -254,13 +255,16 @@ func _refresh_merchant_notice() -> void:
 
 func _refresh_raid_notice() -> void:
 	var phase: String = str(_status_data.get("phase", ""))
-	var threat_active: bool = phase in ["warning", "attacking"]
+	var threat_active: bool = phase in ["warning", "attacking", "looting"]
 	notification_button.modulate = THREAT_COLOR if threat_active else Color.WHITE
 	if phase == "warning":
 		var remaining: int = maxi(int(_status_data.get("arrival_minutes_remaining", 0)), 0)
 		notification_raid_label.text = "Raiders detected. Arrival in %s." % _format_travel_time(remaining)
 	elif phase == "attacking":
 		notification_raid_label.text = "Raiders are attacking the castle wall."
+	elif phase == "looting":
+		var seconds_left: float = maxf(0.0, float(_status_data.get("loot_seconds_remaining", 0.0)))
+		notification_raid_label.text = "Raiders are looting City Storage. %ds left." % int(ceil(seconds_left))
 	else:
 		# Do not expose the scheduled journey before its detection phase.
 		notification_raid_label.text = "No raiders detected."
@@ -296,9 +300,9 @@ func _render_status() -> void:
 	hp_bar.value = float(clampi(hp, 0, maxi(max_hp, 1)))
 
 	var phase: String = str(_status_data.get("phase", "safe"))
-	if bool(_status_data.get("raids_enabled", true)) and phase == "attacking":
+	if bool(_status_data.get("raids_enabled", true)) and phase in ["attacking", "looting"]:
 		var seconds_left: float = maxf(0.0, float(_status_data.get("seconds_left", 0.0)))
-		time_left_label.text = "Raid: %ds" % int(ceil(seconds_left))
+		time_left_label.text = ("Looting: %ds" if phase == "looting" else "Raid: %ds") % int(ceil(seconds_left))
 	elif not str(_status_data.get("work_kind", "")).is_empty():
 		time_left_label.text = "Work: %dm" % int(_status_data.get("work_remaining", 0))
 	elif level <= 0:
@@ -324,7 +328,7 @@ func _render_details() -> void:
 	if status_text.is_empty():
 		status_text = _fallback_status(str(_status_data.get("phase", "safe")))
 	var phase: String = str(_status_data.get("phase", ""))
-	var detected_threat: bool = phase in ["warning", "attacking"]
+	var detected_threat: bool = phase in ["warning", "attacking", "looting"]
 	if detected_threat:
 		status_detail_label.add_theme_color_override("font_color", THREAT_COLOR)
 	else:
@@ -338,11 +342,18 @@ func _render_details() -> void:
 		travel_progress.set_travel_progress(travel_total, arrival_remaining)
 		if phase == "warning":
 			travel_eta_label.text = "Estimated arrival: %s" % _format_travel_time(arrival_remaining)
+		elif phase == "looting":
+			var seconds_left: float = maxf(0.0, float(_status_data.get("loot_seconds_remaining", 0.0)))
+			travel_eta_label.text = "Raiders inside the city · %ds left" % int(ceil(seconds_left))
+			var stolen_units: int = 0
+			for count: Variant in _status_data.get("stolen_so_far", {}).values():
+				stolen_units += int(count)
+			travel_eta_label.text += "\nLooted: %d items · Weight: %.2f / %.2f" % [stolen_units, float(_status_data.get("loot_weight", 0.0)), float(_status_data.get("loot_capacity_weight", 0.0))]
 		else:
 			travel_eta_label.text = "Raiders have reached the wall."
 	if not str(_status_data.get("work_kind", "")).is_empty():
-		status_detail_label.text += " Wall work: %d minutes remaining%s." % [int(_status_data.get("work_remaining", 0)), " (paused during raid)" if str(_status_data.get("phase")) == "attacking" else ""]
-	elif str(_status_data.get("phase")) != "attacking" and not str(_status_data.get("work_message", "")).is_empty() and not str(_status_data.work_message).ends_with("complete."):
+		status_detail_label.text += " Wall work: %d minutes remaining%s." % [int(_status_data.get("work_remaining", 0)), " (paused during raid)" if phase in ["attacking", "looting"] else ""]
+	elif phase not in ["attacking", "looting"] and not str(_status_data.get("work_message", "")).is_empty() and not str(_status_data.work_message).ends_with("complete."):
 		status_detail_label.text += " " + str(_status_data.work_message)
 
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "CITY MANAGEMENT"
@@ -373,11 +384,45 @@ func _format_report(report: Dictionary) -> String:
 	lines.append("Day: %s    Hits: %s" % [str(report.get("day", "—")), str(report.get("hits", "—"))])
 	lines.append("Wall damage: %s" % str(report.get("wall_damage", "—")))
 	lines.append("Items stolen: %s" % _format_counts(report.get("stolen", {}), true))
+	if report.has("breach_seconds") or report.has("looting_seconds"):
+		var breach_seconds: float = float(report.get("breach_seconds", -1.0))
+		var breach_text: String = "No breach" if breach_seconds < 0.0 else _format_seconds(breach_seconds)
+		lines.append("Breach after: %s · Looting: %s" % [breach_text, _format_seconds(float(report.get("looting_seconds", 0.0)))])
+	if report.has("loot_weight") or report.has("loot_capacity_weight"):
+		lines.append("Loot weight: %.2f / %.2f" % [float(report.get("loot_weight", 0.0)), float(report.get("loot_capacity_weight", 0.0))])
+	if report.has("loot_preference"):
+		lines.append("Loot preference: %s" % str(report.get("loot_preference", "balanced")).capitalize())
+	var retreat_reason: String = str(report.get("retreat_reason", ""))
+	if not retreat_reason.is_empty():
+		lines.append("Raiders withdrew: %s" % _retreat_reason_text(retreat_reason))
 	lines.append("Buildings destroyed: %s" % _format_counts(report.get("buildings_destroyed", {}), false))
 	var satisfaction_drop: float = clampf(float(report.get("satisfaction_drop", 0.0)), 0.0, 1.0)
 	lines.append("Satisfaction drop: %.1f pp" % (satisfaction_drop * 100.0))
 	lines.append("Citizens who fled: %s" % _format_names(report.get("citizens_fled", [])))
 	return "\n".join(lines)
+
+func _format_seconds(seconds: float) -> String:
+	var whole_seconds: int = maxi(0, int(round(seconds)))
+	var minutes: int = whole_seconds / 60
+	var remainder: int = whole_seconds % 60
+	if minutes > 0:
+		return "%dm %02ds" % [minutes, remainder]
+	return "%ds" % whole_seconds
+
+func _retreat_reason_text(reason: String) -> String:
+	match reason:
+		"wall_held":
+			return "the wall held"
+		"time_up":
+			return "time ran out"
+		"capacity_full":
+			return "their carrying capacity was full"
+		"no_carryable_loot":
+			return "no more suitable loot remained"
+		"":
+			return "unknown"
+		_:
+			return reason.replace("_", " ").capitalize()
 
 func _format_counts(value: Variant, item_ids: bool) -> String:
 	if not (value is Dictionary) or value.is_empty():
@@ -415,6 +460,8 @@ func _fallback_status(phase: String) -> String:
 			return "Raid warning"
 		"attacking":
 			return "Raiders are attacking"
+		"looting":
+			return "Raiders are looting City Storage"
 		"recovery":
 			return "After the raid"
 		"unbuilt":

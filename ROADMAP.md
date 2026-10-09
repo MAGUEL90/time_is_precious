@@ -49,12 +49,16 @@ The left 16x16 ! button opens merchant and detected-raid notifications, replacin
 the overlapping top notices. City Management colors active threats red and shows
 a castle-to-raider travel bar after detection. The icon approaches the castle
 using the actual remaining journey time. Main-profile protected stock reserve is
-zero; theft and satisfaction losses are still disabled pending loot design.
+zero. On breach, ranked looting uses the remainder of the same 60-second raid:
+10 weight capacity, one whole counted item per active second, and a once-per-breach
+5 percentage-point satisfaction penalty. Selection uses existing value/food value,
+weight, and rarity as a tie-break. Raiders stop at capacity, the time limit, or when
+nothing fits. Results record actual losses, breach/loot duration and retreat reason.
 
 Gate/collision work is explicitly deferred. Fast/heavy party types, earlier
 detection through watchtowers/scouts, upgrades/weapons and disk saving remain
 future work. The party resource separates travel duration from attack strength
-for that extension. Theft, satisfaction loss and citizen flight stay disabled.
+for that extension. Citizen flight remains disabled. Unique equipment instances and opened food portions are outside the initial counted-stack loot API.
 See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for validation and scope.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)

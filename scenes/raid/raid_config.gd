@@ -22,12 +22,21 @@ extends Resource
 @export var warning_days: int = 1
 @export var party_profile: Resource
 @export var recovery_days: int = 0
+## Ranked looting is separate from the legacy unit-count fixture.
+@export var ranked_looting_enabled: bool = false
+@export var loot_capacity_weight: float = 0.0
+@export var loot_seconds_per_item: float = 1.0
+@export_enum("balanced", "food", "valuables") var loot_preference: String = "balanced"
 @export var theft_capacity: int = 0
 @export var reserve_per_stack: int = 1
 @export_range(0.0, 1.0) var satisfaction_penalty: float = 0.0
 @export var max_fleeing_residents: int = 0
 
 func is_valid() -> bool:
+	if not is_finite(loot_capacity_weight) or loot_capacity_weight < 0.0 or not is_finite(loot_seconds_per_item) or loot_seconds_per_item <= 0.0:
+		return false
+	if loot_preference not in ["balanced", "food", "valuables"] or (ranked_looting_enabled and loot_capacity_weight <= 0.0):
+		return false
 	if repair_hp_per_step <= 0 or build_minutes < 0 or repair_minutes < 0:
 		return false
 	if timed_work_enabled and (build_minutes <= 0 or repair_minutes <= 0):

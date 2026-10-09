@@ -30,6 +30,17 @@ var _starting_work: bool = false
 var _refund_pending: bool = false
 var last_work_message: String = ""
 var _rng := RandomNumberGenerator.new()
+var _advancing: bool = false
+var _breach_at: float = -1.0
+var _next_loot_at: float = 0.0
+var _loot_weight: float = 0.0
+var _stolen: Dictionary = {}
+var _retreat_reason: String = ""
+var _breach_losses: Dictionary = {}
+
+func is_raid_active() -> bool:
+	return phase in ["attacking", "looting"]
+
 
 func _ready() -> void:
 	_valid = config != null and config.get_script() == CONFIG and config.is_valid()
@@ -47,7 +58,7 @@ func _now() -> int:
 func build_wall() -> bool:
 	if config != null and config.timed_work_enabled:
 		return _start_timed_work("build")
-	if not _valid or not config.instant_build_enabled or _resolving or phase == "attacking" or wall_hp > 0:
+	if not _valid or not config.instant_build_enabled or _resolving or is_raid_active() or wall_hp > 0:
 		return false
 	wall_level = 1
 	wall_hp = config.wall_max_hp
@@ -60,7 +71,7 @@ func build_wall() -> bool:
 	return true
 
 func can_repair_wall() -> bool:
-	return _valid and (config.instant_repair_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and not _resolving and phase != "attacking" and wall_level > 0 and wall_hp > 0 and wall_hp < config.wall_max_hp
+	return _valid and (config.instant_repair_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and not _resolving and not is_raid_active() and wall_level > 0 and wall_hp > 0 and wall_hp < config.wall_max_hp
 
 func repair_wall() -> bool:
 	if config != null and config.timed_work_enabled:
@@ -73,7 +84,7 @@ func repair_wall() -> bool:
 	return true
 
 func reset_debug_wall() -> bool:
-	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or phase == "attacking" or wall_level == 0 or wall_hp <= 0 or wall_hp >= config.wall_max_hp:
+	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_level == 0 or wall_hp <= 0 or wall_hp >= config.wall_max_hp:
 		return false
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning or not _work_kind.is_empty():
 		return false
@@ -83,7 +94,7 @@ func reset_debug_wall() -> bool:
 
 ## Debug journey uses the same normal-party clock and detection rules as gameplay.
 func can_dispatch_debug_party() -> bool:
-	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or phase == "attacking" or wall_hp <= 0:
+	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_hp <= 0:
 		return false
 	if not config.raids_enabled or config.party_profile == null:
 		return false
@@ -101,13 +112,13 @@ func dispatch_debug_party() -> bool:
 
 ## Instant combat fixture for automated tests only; not exposed in the Debug UI.
 func start_debug_raid(breaching: bool) -> bool:
-	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or phase == "attacking" or wall_level == 0 or wall_hp <= 0:
+	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_level == 0 or wall_hp <= 0:
 		return false
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		return false
 	phase = "warning"
 	_start_attack(config.wall_defend + (5 if breaching else 3))
-	return phase == "attacking"
+	return is_raid_active()
 
 func get_status() -> Dictionary:
 	if not _valid:
@@ -122,15 +133,20 @@ func get_status() -> Dictionary:
 			message = "Raider tracks nearby. Prepare the city!"
 		"attacking":
 			message = "Raiders are attacking the castle wall!"
+		"looting":
+			message = "The wall is breached. Raiders are looting City Storage!"
 		"recovery":
 			message = "Raiders have withdrawn. The city has time to recover."
 	return {"phase": phase, "hp": wall_hp, "max_hp": config.wall_max_hp,
-		"level": wall_level, "defend": config.wall_defend, "raids_enabled": config.raids_enabled or phase == "attacking",
-		"seconds_left": maxf(0.0, config.duration_seconds - _elapsed) if phase == "attacking" else 0.0,
-		"status_text": message, "can_build": _valid and (config.instant_build_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and wall_hp == 0 and phase != "attacking" and not _resolving,
+		"level": wall_level, "defend": config.wall_defend, "raids_enabled": config.raids_enabled or is_raid_active(),
+		"seconds_left": maxf(0.0, config.duration_seconds - _elapsed) if is_raid_active() else 0.0,
+		"status_text": message, "can_build": _valid and (config.instant_build_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and wall_hp == 0 and not is_raid_active() and not _resolving,
 		"can_repair": can_repair_wall(), "work_kind": _work_kind, "work_remaining": _work_remaining,
 		"work_total": _work_total, "work_message": last_work_message,
-		"travel_total_minutes": config.party_profile.travel_days * 1440 if config.party_profile != null and phase in ["warning", "attacking"] else 0,
+		"stolen_so_far": _stolen.duplicate(true), "loot_weight": _loot_weight,
+		"loot_capacity_weight": config.loot_capacity_weight,
+		"loot_seconds_remaining": maxf(0.0, config.duration_seconds - _elapsed) if phase == "looting" else 0.0,
+		"travel_total_minutes": config.party_profile.travel_days * 1440 if config.party_profile != null and phase in ["warning", "attacking", "looting"] else 0,
 		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
 
 func get_work_quote() -> Dictionary:
@@ -142,7 +158,7 @@ func get_work_quote() -> Dictionary:
 		reason = "Wall work is unavailable."
 	elif not _work_kind.is_empty():
 		reason = "Wall work is already in progress."
-	elif _starting_work or _resolving or phase == "attacking":
+	elif _starting_work or _resolving or is_raid_active():
 		reason = "Repairs must wait until the raiders leave."
 	elif wall_hp >= config.wall_max_hp:
 		reason = "The wall is in good condition. No repairs are needed."
@@ -190,7 +206,7 @@ func _start_timed_work(kind: String) -> bool:
 	return true
 
 func _advance_wall_work(minutes: int, until_minute: int = -1) -> bool:
-	if _work_kind.is_empty() or _starting_work or _resolving or phase == "attacking":
+	if _work_kind.is_empty() or _starting_work or _resolving or is_raid_active():
 		return false
 	if _refund_pending:
 		_refund_interrupted_repair()
@@ -242,14 +258,14 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	if not _valid or now <= _latest_minute:
 		return
 	var work_until: int = now
-	if config.party_profile != null and _attack_at >= 0 and phase != "attacking":
+	if config.party_profile != null and _attack_at >= 0 and not is_raid_active():
 		work_until = mini(now, maxi(_latest_minute, _attack_at))
 	var work_minutes: int = work_until - _latest_minute
 	_latest_minute = now
 	var work_changed: bool = _advance_wall_work(work_minutes, work_until)
 	if work_changed:
 		changed.emit()
-	if _resolving or _starting_work or not config.raids_enabled or phase in ["unbuilt", "attacking"] or _attack_at < 0:
+	if _resolving or _starting_work or not config.raids_enabled or phase in ["unbuilt", "attacking", "looting"] or _attack_at < 0:
 		return
 	if config.party_profile != null:
 		if phase in ["safe", "recovery"] and now >= _attack_at - config.warning_days * 1440:
@@ -272,13 +288,19 @@ func _start_attack(override_strength: int = -1) -> void:
 	phase = "attacking"
 	_elapsed = 0.0
 	_hits = 0
+	_breach_at = -1.0
+	_next_loot_at = 0.0
+	_loot_weight = 0.0
+	_stolen.clear()
+	_breach_losses.clear()
+	_retreat_reason = ""
 	_start_hp = wall_hp
 	var min_strength: int = config.party_profile.attack_min if config.party_profile != null else config.attack_min
 	var max_strength: int = config.party_profile.attack_max if config.party_profile != null else config.attack_max
 	_attack_strength = override_strength if override_strength >= 0 else _rng.randi_range(min_strength, max_strength)
 	set_process(true)
 	if wall_hp == 0:
-		_finish_attack(true)
+		_begin_looting()
 	else:
 		changed.emit()
 
@@ -288,25 +310,88 @@ func _process(delta: float) -> void:
 	advance_attack(delta)
 
 func advance_attack(seconds: float) -> void:
-	if phase != "attacking" or _resolving or not is_finite(seconds) or seconds <= 0.0:
+	if not is_raid_active() or _advancing or _resolving or not is_finite(seconds) or seconds <= 0.0:
 		return
+	_advancing = true
+	_advance_raid_time(seconds)
+	_advancing = false
+
+func _advance_raid_time(seconds: float) -> void:
+	var target: float = minf(config.duration_seconds, _elapsed + seconds)
 	var previous_seconds: int = ceili(config.duration_seconds - _elapsed)
 	var previous_hp: int = wall_hp
-	_elapsed = minf(config.duration_seconds, _elapsed + seconds)
-	# Resolve every elapsed hit, including the final hit at exactly 60 seconds.
-	while phase == "attacking" and float(_hits + 1) * config.hit_interval_seconds <= _elapsed + 0.000001:
+	# Advance to each hit, so an early breach in a large frame retains its true loot window.
+	while phase == "attacking" and float(_hits + 1) * config.hit_interval_seconds <= target + 0.000001:
+		_elapsed = minf(target, float(_hits + 1) * config.hit_interval_seconds)
 		_hits += 1
 		wall_hp = maxi(0, wall_hp - maxi(0, _attack_strength - config.wall_defend))
 		if wall_hp == 0:
+			_begin_looting()
+	if phase == "looting":
+		_advance_looting(target)
+	elif phase == "attacking":
+		_elapsed = target
+		if _elapsed >= config.duration_seconds:
+			_retreat_reason = "wall_held"
+			_finish_attack(false)
+		elif previous_hp != wall_hp or previous_seconds != ceili(config.duration_seconds - _elapsed):
+			changed.emit()
+
+func _begin_looting() -> void:
+	_breach_at = _elapsed
+	if not config.ranked_looting_enabled:
+		_finish_attack(true)
+		return
+	phase = "looting"
+	_resolving = true
+	_breach_losses = _apply_population_losses()
+	_resolving = false
+	if _work_kind == "repair":
+		_refund_interrupted_repair()
+	_next_loot_at = _elapsed + config.loot_seconds_per_item
+	if _elapsed >= config.duration_seconds:
+		_retreat_reason = "time_up"
+		_finish_attack(true)
+	elif not _has_carryable_loot():
+		_retreat_reason = "no_carryable_loot"
+		_finish_attack(true)
+	else:
+		changed.emit()
+
+func _has_carryable_loot() -> bool:
+	return is_instance_valid(storage) and storage.has_method("peek_raid_loot") and not storage.peek_raid_loot(maxf(0.0, config.loot_capacity_weight - _loot_weight), config.loot_preference).is_empty()
+
+func _advance_looting(target: float) -> void:
+	while phase == "looting" and _next_loot_at <= target + 0.000001:
+		_elapsed = minf(target, _next_loot_at)
+		_next_loot_at += config.loot_seconds_per_item
+		var receipt: Dictionary = storage.take_ranked_raid_item(maxf(0.0, config.loot_capacity_weight - _loot_weight), config.loot_preference) if is_instance_valid(storage) else {}
+		if receipt.is_empty():
+			_retreat_reason = "no_carryable_loot"
 			_finish_attack(true)
 			return
+		var id: String = str(receipt.item_id)
+		_stolen[id] = int(_stolen.get(id, 0)) + 1
+		_loot_weight += float(receipt.weight)
+		if _loot_weight >= config.loot_capacity_weight - 0.000001:
+			_retreat_reason = "capacity_full"
+			_finish_attack(true)
+			return
+		if not _has_carryable_loot():
+			_retreat_reason = "no_carryable_loot"
+			_finish_attack(true)
+			return
+	if phase != "looting":
+		return
+	_elapsed = target
 	if _elapsed >= config.duration_seconds:
-		_finish_attack(false)
-	elif previous_hp != wall_hp or previous_seconds != ceili(config.duration_seconds - _elapsed):
+		_retreat_reason = "time_up"
+		_finish_attack(true)
+	else:
 		changed.emit()
 
 func _finish_attack(breached: bool) -> void:
-	if phase != "attacking" or _resolving:
+	if not is_raid_active() or _resolving:
 		return
 	_resolving = true
 	set_process(false)
@@ -315,14 +400,17 @@ func _finish_attack(breached: bool) -> void:
 	_report_sequence += 1
 	var result: Dictionary = {"id": _report_sequence, "outcome": "breached" if breached else "repelled",
 		"day": TimeComponentManager.current_day, "hits": _hits, "wall_damage": _start_hp - wall_hp,
-		"stolen": {}, "buildings_destroyed": {}, "satisfaction_drop": 0.0, "citizens_fled": []}
+		"stolen": _stolen.duplicate(true) if config.ranked_looting_enabled else {}, "buildings_destroyed": {}, "satisfaction_drop": 0.0, "citizens_fled": [],
+		"breach_seconds": _breach_at, "looting_seconds": maxf(0.0, _elapsed - _breach_at) if _breach_at >= 0.0 else 0.0,
+		"loot_weight": _loot_weight, "loot_capacity_weight": config.loot_capacity_weight,
+		"loot_preference": config.loot_preference, "retreat_reason": _retreat_reason}
 	if breached:
 		# Only a standing wall can be destroyed; an existing ruin is not counted twice.
 		if _start_hp > 0:
 			result.buildings_destroyed = {"Castle wall": 1}
-		if is_instance_valid(storage) and storage.has_method("take_raid_loot"):
+		if not config.ranked_looting_enabled and is_instance_valid(storage) and storage.has_method("take_raid_loot"):
 			result.stolen = storage.take_raid_loot(config.theft_capacity, config.reserve_per_stack)
-		var damage: Dictionary = _apply_population_losses()
+		var damage: Dictionary = _breach_losses if config.ranked_looting_enabled else _apply_population_losses()
 		result.satisfaction_drop = damage.satisfaction_drop
 		result.citizens_fled = damage.citizens_fled
 	if breached and _work_kind == "repair":

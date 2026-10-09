@@ -63,7 +63,11 @@ func on_player_interact(interacting_player: Player) -> void:
 
 func wall_is_attacking() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
-	return state != null and state.phase == "attacking"
+	if state == null:
+		return false
+	if state.has_method("is_raid_active"):
+		return bool(state.call("is_raid_active"))
+	return str(state.get("phase")) in ["attacking", "looting"]
 
 func wall_has_warning() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")

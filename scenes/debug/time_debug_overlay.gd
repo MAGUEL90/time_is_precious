@@ -61,11 +61,11 @@ func _process(delta: float) -> void:
 		# The normal clock still advances its own minutes. Add the remaining rate
 		# through the same minute/day signals without accelerating movement/physics.
 		_extra_minutes += delta * (effective_speed - 1) / maxf(TimeComponentManager.seconds_per_minute, 0.001)
-		while _extra_minutes >= 1.0 and can_advance() and not _raid_is_attacking():
+		while _extra_minutes >= 1.0 and can_advance() and not _raid_is_active():
 			_extra_minutes -= 1.0
 			TimeComponentManager.advance_one_minute()
 			TimeComponentManager.day_cycle()
-		if _raid_is_attacking():
+		if _raid_is_active():
 			_extra_minutes = 0.0
 	else:
 		_extra_minutes = 0.0
@@ -77,27 +77,31 @@ func can_advance() -> bool:
 	var player: Player = get_tree().get_first_node_in_group("player") as Player
 	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
 
-func _raid_is_attacking() -> bool:
+func _raid_is_active() -> bool:
 	var state: Node = _get_raid_state()
-	return is_instance_valid(state) and state.phase == "attacking"
+	if not is_instance_valid(state):
+		return false
+	if state.has_method("is_raid_active"):
+		return bool(state.call("is_raid_active"))
+	return str(state.get("phase")) in ["attacking", "looting"]
 
 func get_effective_speed() -> int:
 	# Preserve the chosen debug speed for automatic restoration after combat.
-	return 1 if _raid_is_attacking() else speed_multiplier
+	return 1 if _raid_is_active() else speed_multiplier
 
 func set_speed(multiplier: int) -> void:
-	if not SPEEDS.has(multiplier) or _raid_is_attacking():
+	if not SPEEDS.has(multiplier) or _raid_is_active():
 		return
 	speed_multiplier = multiplier
 	_extra_minutes = 0.0
 	_refresh_controls()
 
 func step_minutes(minutes: int) -> void:
-	if minutes <= 0 or not can_advance() or _raid_is_attacking():
+	if minutes <= 0 or not can_advance() or _raid_is_active():
 		return
 	# Check after each minute so a modal/collapse/transition can stop a jump.
 	for _minute in range(minutes):
-		if not can_advance() or _raid_is_attacking():
+		if not can_advance() or _raid_is_active():
 			break
 		TimeComponentManager.advance_minutes(1)
 	_extra_minutes = 0.0
@@ -226,7 +230,7 @@ func reset_wall_test() -> bool:
 		_set_raid_error("Raid controls are not ready.")
 		return false
 	var raid_status: Dictionary = status_value
-	if str(raid_status.get("phase", "")) == "attacking":
+	if str(raid_status.get("phase", "")) in ["attacking", "looting"]:
 		_set_raid_error("A raid is already underway.")
 		return false
 	if int(raid_status.get("level", 0)) <= 0 or int(raid_status.get("hp", 0)) <= 0:
@@ -455,7 +459,7 @@ func _create_controls() -> void:
 	column.move_child(raid_journey_label, 5)
 	raid_reset_button = _button("Reset wall HP")
 	raid_reset_button.name = "RaidWallReset"
-	raid_reset_button.tooltip_text = "Debug only: restores a damaged built wall to full HP. Does not upgrade the wall or change the raid schedule. Unavailable during an attack."
+	raid_reset_button.tooltip_text = "Debug only: restores a damaged built wall to full HP. Does not upgrade the wall or change the raid schedule. Unavailable during an active raid."
 	raid_reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	raid_reset_button.pressed.connect(reset_wall_test)
 	raid_buttons.add_child(raid_reset_button)
@@ -504,10 +508,15 @@ func _refresh_raid_buttons(player_available: bool) -> void:
 		return
 	raid_journey_button.disabled = not (can_use and state.can_dispatch_debug_party())
 	var status: Dictionary = state.get_status()
-	raid_reset_button.disabled = not (can_use and status.hp > 0 and status.hp < status.max_hp and status.phase != "attacking" and str(status.get("work_kind", "")).is_empty())
+	var phase: String = str(status.get("phase", ""))
+	var raid_active: bool = phase in ["attacking", "looting"]
+	raid_reset_button.disabled = not (can_use and status.hp > 0 and status.hp < status.max_hp and not raid_active and str(status.get("work_kind", "")).is_empty())
 	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
-	if status.phase == "attacking":
+	if phase == "attacking":
 		raid_journey_label.text = "Raid in progress (clock x1)."
+	elif phase == "looting":
+		var seconds_left: float = maxf(0.0, float(status.get("loot_seconds_remaining", status.get("seconds_left", 0.0))))
+		raid_journey_label.text = "Raiders looting (%ds, clock x1)." % int(ceil(seconds_left))
 	elif state._attack_at >= 0 and state.config.party_profile != null:
 		var remaining: int = maxi(0, state._attack_at - now)
 		raid_journey_label.text = "Raid arrives in %dd %dh %dm (debug)." % [remaining / 1440, (remaining % 1440) / 60, remaining % 60]
@@ -518,18 +527,20 @@ func _refresh_controls() -> void:
 	if status_label == null:
 		return
 	var available: bool = can_advance()
-	var attacking: bool = _raid_is_attacking()
+	var raid_active: bool = _raid_is_active()
+	var raid_state: Node = _get_raid_state()
+	var looting: bool = is_instance_valid(raid_state) and str(raid_state.get("phase")) == "looting"
 	var effective_speed: int = get_effective_speed()
 	var status := "Day %d  %02d:%02d  x%d%s" % [TimeComponentManager.current_day, TimeComponentManager.current_hour,
-		TimeComponentManager.current_minute, effective_speed, "  PAUSED" if not available else ("  RAID" if attacking else "")]
+		TimeComponentManager.current_minute, effective_speed, "  PAUSED" if not available else ("  LOOT" if looting else ("  RAID" if raid_active else ""))]
 	if status != _last_status:
 		status_label.text = status
 		_last_status = status
 	for index in range(speed_buttons.size()):
 		speed_buttons[index].set_pressed_no_signal(SPEEDS[index] == effective_speed)
-		speed_buttons[index].disabled = attacking
+		speed_buttons[index].disabled = raid_active
 	for button in step_buttons:
-		button.disabled = not available or attacking
+		button.disabled = not available or raid_active
 	materials_button.disabled = not can_supply_materials()
 	production_button.disabled = not can_supply_materials()
 	shekel_button.disabled = not can_supply_materials()
