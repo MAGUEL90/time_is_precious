@@ -676,5 +676,12 @@ Main playtest uses 10 weight, one item/second and 5 pp satisfaction loss; citize
 flight remains disabled. Legacy bulk loot stays available for regression fixtures. Debug dispatch starts a normal travelling party and cannot restart an expedition
 already underway. Arrival countdown and a material top-up action provide explicit
 playtest tools; no resources are seeded
-automatically. Gate/collision, watchtower/scout detection, additional party types,
-final economy/progression and save persistence remain outside this change.
+automatically. The same session ledger now owns wall tier, completed watchtower
+and timed upgrade/addition jobs. Quotes include source condition and target benefits
+and are revalidated at confirmation. Derived HP/Defend use the retained wall tier.
+Detection uses the completed tower's warning window without changing arrival time;
+inspect_raiders() returns no information unless the tower exists and the party is
+detected/active. City Management is read-only; the NPC owns upgrade confirmation.
+Bootstrap draws a replaceable tower marker on the map without adding collisions.
+Gate/collision, scouts, guard posts, additional party types, city progression and
+save persistence remain outside this change.

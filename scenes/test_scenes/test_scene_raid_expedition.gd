@@ -163,7 +163,7 @@ func _test_main_map_expedition() -> void:
 			"Iddin-Sin explains that City Storage is short on the main-map quote.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
-		_expect(responses.size() == 1 and responses.has("Not now"),
+		_expect(responses.has("Not now") and not responses.has("Repair"),
 			"The live caretaker does not offer unaffordable paid construction.")
 		_choose_response(greeting, "Not now")
 		await _wait_for_greeting_end()
@@ -278,8 +278,8 @@ func _test_main_map_expedition() -> void:
 			"The caretaker follows the warning with the current wall-work summary.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
-		_expect(responses.size() == 1 and responses.has("Not now"),
-			"A full wall does not offer a repair action during the warning.")
+		_expect(responses.has("Not now") and not responses.has("Repair"),
+			"A full wall does not offer Repair during the warning; improvements remain separate.")
 		_choose_response(greeting, "Not now")
 		await _wait_for_greeting_end()
 

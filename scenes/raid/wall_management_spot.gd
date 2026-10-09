@@ -11,6 +11,7 @@ var _dialogue_manager: Node
 @onready var interactable_label_component: Control = $InteractableLabelComponent
 @onready var interaction_area: Area2D = $InteractionArea
 var player: Player
+var _quoted_basic_work: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("wall_management_spots")
@@ -48,7 +49,9 @@ func on_player_interact(interacting_player: Player) -> void:
 	if interacting_player != player or not has_player_access() or not player.can_move or _has_live_greeting_balloon():
 		return
 	_work_selected = false
-	_quoted_work = WorkStateRuntime.get_node("CityRaid").get_work_quote()
+	var state: Node = _get_raid_state()
+	_quoted_basic_work = state.call("get_work_quote") if is_instance_valid(state) else {}
+	_quoted_work = _quoted_basic_work.duplicate(true)
 	_end_pending = false
 	player.set_movement_locked(&"wall_npc", true)
 	interactable_label_component.hide()
@@ -84,6 +87,89 @@ func wall_work_available() -> bool:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	return state != null and bool(state.get_work_quote().can_start)
 
+func wall_improvements_available() -> bool:
+	return wall_upgrade_available() or wall_watchtower_available()
+
+func wall_upgrade_available() -> bool:
+	var state: Node = _get_raid_state()
+	if not _can_offer_improvement(state):
+		return false
+	return int(state.get("wall_level")) == 1 and int(state.get("wall_hp")) >= int(state.call("get_wall_max_hp"))
+
+func wall_watchtower_available() -> bool:
+	var state: Node = _get_raid_state()
+	if not _can_offer_improvement(state):
+		return false
+	return not bool(state.get("watchtower_built"))
+
+func _can_offer_improvement(state: Node) -> bool:
+	if not is_instance_valid(state):
+		return false
+	var config: Resource = state.get("config") as Resource
+	if config == null or not bool(config.get("defense_improvements_enabled")) or not bool(config.get("timed_work_enabled")):
+		return false
+	if int(state.get("wall_hp")) <= 0 or bool(state.call("is_raid_active")):
+		return false
+	return str(state.get("_work_kind")).is_empty() and not bool(state.get("_starting_work")) and not bool(state.get("_resolving"))
+
+func wall_select_upgrade() -> void:
+	_capture_improvement_quote("upgrade")
+
+func wall_select_watchtower() -> void:
+	_capture_improvement_quote("watchtower")
+
+func _capture_improvement_quote(kind: String) -> void:
+	_work_selected = false
+	_quoted_work.clear()
+	if not _has_live_greeting_balloon() or not has_player_access():
+		return
+	var state: Node = _get_raid_state()
+	if is_instance_valid(state):
+		_quoted_work = state.call("get_work_quote", kind)
+
+func wall_improvement_quote_summary() -> String:
+	if _quoted_work.is_empty():
+		return "This project is unavailable."
+	var kind: String = str(_quoted_work.get("kind", ""))
+	var materials: String = _format_quote_materials(_quoted_work.get("materials", {}))
+	var duration: String = _format_quote_duration(int(_quoted_work.get("duration_minutes", 0)))
+	var readiness: String = "Ready" if bool(_quoted_work.get("can_start", false)) else "Need supplies"
+	match kind:
+		"upgrade":
+			return "Lv.%d: %d HP / DEF %d\n%s\n%s / City Storage\n%s" % [int(_quoted_work.get("target_level", 0)), int(_quoted_work.get("target_hp", 0)), int(_quoted_work.get("target_defend", 0)), materials, duration, readiness]
+		"watchtower":
+			return "Detect %d days early\nUnlocks raider Inspect\n%s\n%s / %s" % [int(_quoted_work.get("warning_days", 0)), materials, duration, readiness]
+		_:
+			return "This project is unavailable."
+
+func wall_quote_can_start() -> bool:
+	return _has_live_greeting_balloon() and has_player_access() and bool(_quoted_work.get("can_start", false))
+
+func wall_select_quoted_work() -> void:
+	_work_selected = wall_quote_can_start()
+
+func wall_cancel_improvement_quote() -> void:
+	_work_selected = false
+	_quoted_work = _quoted_basic_work.duplicate(true)
+
+func _format_quote_materials(value: Variant) -> String:
+	if not value is Dictionary or value.is_empty():
+		return "No materials"
+	var entries: PackedStringArray = []
+	for id: Variant in value:
+		var item: ItemData = ItemDatabase.get_item_data(str(id))
+		var display_name: String = item.display_name.replace("Wood Log", "Wood") if item != null else str(id).replace("_", " ").capitalize()
+		entries.append("%d %s" % [int(value[id]), display_name])
+	return " + ".join(entries)
+
+func _format_quote_duration(minutes: int) -> String:
+	if minutes > 0 and minutes % 60 == 0:
+		return "%dh" % (minutes / 60)
+	return "%d min" % minutes
+
+func _get_raid_state() -> Node:
+	return WorkStateRuntime.get_node_or_null("CityRaid")
+
 func wall_work_summary() -> String:
 	var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
 	if state == null:
@@ -106,10 +192,12 @@ func wall_work_summary() -> String:
 %s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
 
 func wall_select_work() -> void:
+	_quoted_work = _quoted_basic_work.duplicate(true)
 	_work_selected = _has_live_greeting_balloon() and has_player_access() and wall_work_available()
 
 func wall_select_leave() -> void:
 	_work_selected = false
+	_quoted_work = _quoted_basic_work.duplicate(true)
 
 func _on_dialogue_ended(resource: DialogueResource) -> void:
 	if resource != DIALOGUE or not _has_live_greeting_balloon() or _end_pending:
@@ -130,9 +218,9 @@ func _finish_dialogue() -> void:
 	set_process(false)
 	# Revalidate after the response, since raids and player availability may change.
 	if requested and has_player_access() and player.can_move:
-		var state: Node = WorkStateRuntime.get_node_or_null("CityRaid")
+		var state: Node = _get_raid_state()
 		if state != null:
-			state.request_wall_work(_quoted_work)
+			state.call("request_wall_work", _quoted_work.duplicate(true))
 
 func _has_live_greeting_balloon() -> bool:
 	return is_instance_valid(greeting_balloon) and not greeting_balloon.is_queued_for_deletion()
@@ -170,7 +258,7 @@ func _fit_dialogue() -> void:
 	panel.size = Vector2(176, 60)
 	panel.scale = Vector2.ONE
 	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
-	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
+	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 1)
 	var previous: Control = greeting_balloon.responses_menu
 	var choice: Button = previous.get_node("ResponseExample")
 	previous.remove_child(choice)

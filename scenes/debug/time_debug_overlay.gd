@@ -190,6 +190,13 @@ func give_wall_materials() -> bool:
 	if not is_instance_valid(state) or not is_instance_valid(state.storage):
 		return false
 	var quote: Dictionary = state.get_work_quote()
+	# Supply the next eligible improvement when the current wall is already sound.
+	if quote.materials.is_empty() and state.config.defense_improvements_enabled:
+		for kind: String in ["upgrade", "watchtower"]:
+			var improvement: Dictionary = state.get_work_quote(kind)
+			if not improvement.materials.is_empty():
+				quote = improvement
+				break
 	var available: Dictionary = state.storage.get_available_items()
 	var missing: Dictionary = {}
 	for id: String in quote.materials:

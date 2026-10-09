@@ -13,6 +13,14 @@ extends Resource
 @export var repair_minutes: int = 0
 @export var wall_max_hp: int = 50
 @export var wall_defend: int = 0
+@export var defense_improvements_enabled: bool = false
+@export var level_2_max_hp: int = 0
+@export var level_2_defend: int = 0
+@export var upgrade_materials: Dictionary = {}
+@export var upgrade_minutes: int = 0
+@export var watchtower_materials: Dictionary = {}
+@export var watchtower_minutes: int = 0
+@export var watchtower_warning_days: int = 0
 @export var duration_seconds: float = 60.0
 @export var hit_interval_seconds: float = 5.0
 @export var attack_min: int = 0
@@ -33,6 +41,13 @@ extends Resource
 @export var max_fleeing_residents: int = 0
 
 func is_valid() -> bool:
+	if defense_improvements_enabled:
+		if not timed_work_enabled or level_2_max_hp <= wall_max_hp or level_2_defend <= wall_defend:
+			return false
+		if upgrade_minutes <= 0 or watchtower_minutes <= 0 or watchtower_warning_days <= warning_days:
+			return false
+		if party_profile != null and watchtower_warning_days > party_profile.travel_days:
+			return false
 	if not is_finite(loot_capacity_weight) or loot_capacity_weight < 0.0 or not is_finite(loot_seconds_per_item) or loot_seconds_per_item <= 0.0:
 		return false
 	if loot_preference not in ["balanced", "food", "valuables"] or (ranked_looting_enabled and loot_capacity_weight <= 0.0):
@@ -41,7 +56,7 @@ func is_valid() -> bool:
 		return false
 	if timed_work_enabled and (build_minutes <= 0 or repair_minutes <= 0):
 		return false
-	for requirements: Dictionary in [build_materials, repair_materials_per_step]:
+	for requirements: Dictionary in [build_materials, repair_materials_per_step, upgrade_materials, watchtower_materials]:
 		for id: Variant in requirements:
 			if not id is String or str(id).is_empty() or not requirements[id] is int or int(requirements[id]) <= 0:
 				return false

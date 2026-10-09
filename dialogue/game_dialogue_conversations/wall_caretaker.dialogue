@@ -19,6 +19,29 @@ else
 - Repair wall (free) [if wall_work_available() and not wall_uses_timed_work()]
 	do wall_select_work()
 	=> END
+- Improve [if wall_improvements_available()]
+	=> wall_improve_options
 - Not now
 	do wall_select_leave()
 	=> END
+
+~ wall_improve_options
+Iddin-Sin: Choose a defence project to review.
+- Wall Lv. 2 [if wall_upgrade_available()]
+	do wall_select_upgrade()
+	=> wall_improvement_quote
+- Watchtower [if wall_watchtower_available()]
+	do wall_select_watchtower()
+	=> wall_improvement_quote
+- Back
+	do wall_select_leave()
+	=> wall_work
+
+~ wall_improvement_quote
+Iddin-Sin: {{wall_improvement_quote_summary()}}
+- Start [if wall_quote_can_start()]
+	do wall_select_quoted_work()
+	=> END
+- Back
+	do wall_cancel_improvement_quote()
+	=> wall_improve_options

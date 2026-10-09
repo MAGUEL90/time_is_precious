@@ -55,9 +55,16 @@ zero. On breach, ranked looting uses the remainder of the same 60-second raid:
 weight, and rarity as a tie-break. Raiders stop at capacity, the time limit, or when
 nothing fits. Results record actual losses, breach/loot duration and retreat reason.
 
-Gate/collision work is explicitly deferred. Fast/heavy party types, earlier
-detection through watchtowers/scouts, upgrades/weapons and disk saving remain
-future work. The party resource separates travel duration from attack strength
+Iddin-Sin now offers Improve -> Wall Lv.2 / Watchtower, with a quote before Start.
+Wall level 2 costs 20 Stone + 10 Wood Log and 240 game minutes, granting 80 HP
+and Defend 3. Repair the current wall first. Watchtower costs 10 Stone + 10 Wood
+Log and 180 minutes; it detects the normal party two days before arrival and
+unlocks Inspect for detected/active raids. One project runs at a time. Breach
+refunds unfinished improvements, while completed wall tier and tower survive;
+rebuild restores the retained tier. A simple tower marker appears at the wall.
+
+Gate/collision work, fast/heavy party types, scout patrols, guard posts/soldiers,
+weapons, city levels and disk saving remain future work. The party resource separates travel duration from attack strength
 for that extension. Citizen flight remains disabled. Unique equipment instances and opened food portions are outside the initial counted-stack loot API.
 See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for validation and scope.
 

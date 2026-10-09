@@ -9,6 +9,7 @@ const STATE_NAME: String = "CityRaid"
 var state: Node
 var raid_ui: RaidUI
 var wall_indicator: WallWorldIndicator
+var watchtower_visual: Node2D
 
 func _ready() -> void:
 	state = WorkStateRuntime.get_node_or_null(STATE_NAME)
@@ -32,6 +33,7 @@ func _ready() -> void:
 	if not state.changed.is_connected(_refresh_wall_tiles):
 		state.changed.connect(_refresh_wall_tiles)
 	_setup_wall_indicator()
+	_setup_watchtower_visual()
 	_refresh_wall_tiles()
 
 func _exit_tree() -> void:
@@ -54,6 +56,19 @@ func _setup_wall_indicator() -> void:
 	add_child(wall_indicator)
 	wall_indicator.global_position = _get_south_wall_anchor(wall)
 	wall_indicator.bind_state(state)
+
+func _setup_watchtower_visual() -> void:
+	var wall: TileMapLayer = get_parent().get_node_or_null("YSortWorld/WallStone") as TileMapLayer
+	if wall == null or wall.get_used_cells().is_empty():
+		return
+	var corner: Vector2i = wall.get_used_cells()[0]
+	for cell: Vector2i in wall.get_used_cells():
+		if cell.y > corner.y or (cell.y == corner.y and cell.x > corner.x):
+			corner = cell
+	watchtower_visual = preload("res://scenes/raid/watchtower_visual.gd").new()
+	watchtower_visual.name = "WatchtowerVisual"
+	add_child(watchtower_visual)
+	watchtower_visual.global_position = wall.to_global(wall.map_to_local(corner)) + Vector2(0, 7)
 
 func _get_south_wall_anchor(wall: TileMapLayer) -> Vector2:
 	var cells: Array[Vector2i] = wall.get_used_cells()
@@ -80,6 +95,8 @@ func _get_south_wall_anchor(wall: TileMapLayer) -> Vector2:
 	return wall.to_global(wall.map_to_local(anchor_cell))
 
 func _refresh_wall_tiles() -> void:
+	if is_instance_valid(watchtower_visual):
+		watchtower_visual.visible = state.watchtower_built
 	var wall: TileMapLayer = get_parent().get_node("YSortWorld/WallStone")
 	var source_id: int = 1 if state.wall_hp > 0 else 0
 	for cell: Vector2i in wall.get_used_cells():

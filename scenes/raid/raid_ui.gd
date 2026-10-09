@@ -48,6 +48,9 @@ var satisfaction_meter: ProgressBar
 var satisfaction_value: Label
 var wall_value: Label
 var storage_summary: Label
+var watchtower_status_label: Label
+var inspect_button: Button
+var _inspected_raiders: Dictionary = {}
 var result_box: VBoxContainer
 var result_heading: Label
 var result_stats: Label
@@ -92,6 +95,7 @@ func _set_attack_warning(active: bool) -> void:
 	set_process(active)
 
 func _exit_tree() -> void:
+	_clear_inspected_raiders()
 	CitizenManager.citizen_added.disconnect(_on_residents_changed)
 	CitizenManager.citizen_left.disconnect(_on_residents_changed)
 	_unbind_state()
@@ -122,6 +126,7 @@ func bind_state(next_state: Node) -> void:
 		return
 
 	_unbind_state()
+	_clear_inspected_raiders()
 	raid_state = next_state
 	_last_shown_report_id = -1
 	_last_phase = ""
@@ -139,6 +144,7 @@ func open_details() -> void:
 	show_last_raid = false
 	if raid_state.has_method("get_status"):
 		_status_data = raid_state.get_status().duplicate(true)
+	_refresh_inspected_raiders()
 	_render_details()
 	details_panel.visible = true
 
@@ -151,7 +157,10 @@ func set_city_management_available(available: bool) -> void:
 	if not available:
 		_close_notifications()
 		close_details()
+		_clear_inspected_raiders()
 	notification_button.visible = available
+	if available:
+		refresh()
 
 func bind_merchant_state(next_state: Node) -> void:
 	if merchant_state == next_state:
@@ -172,6 +181,7 @@ func refresh() -> void:
 		status_panel.visible = false
 		details_panel.visible = false
 		_status_data.clear()
+		_clear_inspected_raiders()
 		_refresh_raid_notice()
 		_last_report.clear()
 		report_text = "No raid report yet."
@@ -193,6 +203,7 @@ func refresh() -> void:
 	if raid_active and _last_phase not in ["attacking", "looting"]:
 		close_details()
 	_last_phase = phase
+	_refresh_inspected_raiders()
 	# Keep the former persistent card hidden; its nodes remain for compatibility.
 	status_panel.visible = false
 	_render_status()
@@ -214,6 +225,7 @@ func refresh() -> void:
 
 func _unbind_state() -> void:
 	close_details()
+	_clear_inspected_raiders()
 	if not is_instance_valid(raid_state):
 		return
 	if raid_state.has_signal("changed"):
@@ -240,6 +252,56 @@ func _on_residents_changed(_citizen: CitizenData) -> void:
 
 func _on_state_changed() -> void:
 	refresh()
+
+func _inspection_is_allowed() -> bool:
+	return _city_management_available and bool(_status_data.get("watchtower_built", false)) \
+		and bool(_status_data.get("can_inspect", false)) \
+		and str(_status_data.get("phase", "")) in ["warning", "attacking", "looting"]
+
+func _refresh_inspected_raiders() -> void:
+	if not _inspection_is_allowed() or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders"):
+		_clear_inspected_raiders()
+		return
+	if _inspected_raiders.is_empty():
+		return
+	var inspection_value: Variant = raid_state.call("inspect_raiders")
+	if not inspection_value is Dictionary or inspection_value.is_empty():
+		_clear_inspected_raiders()
+		return
+	var inspection: Dictionary = inspection_value
+	if str(inspection.get("phase", "")) != str(_status_data.get("phase", "")):
+		_clear_inspected_raiders()
+		return
+	_inspected_raiders = inspection.duplicate(true)
+
+func _clear_inspected_raiders() -> void:
+	_inspected_raiders.clear()
+
+func _inspect_current_raiders() -> void:
+	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status") or not raid_state.has_method("inspect_raiders"):
+		_clear_inspected_raiders()
+		_render_details()
+		return
+	var status_value: Variant = raid_state.call("get_status")
+	if not status_value is Dictionary:
+		_clear_inspected_raiders()
+		_render_details()
+		return
+	_status_data = status_value.duplicate(true)
+	if not _inspection_is_allowed():
+		_clear_inspected_raiders()
+		_render_details()
+		return
+	var inspection_value: Variant = raid_state.call("inspect_raiders")
+	if inspection_value is Dictionary and not inspection_value.is_empty():
+		var inspection: Dictionary = inspection_value
+		if str(inspection.get("phase", "")) == str(_status_data.get("phase", "")):
+			_inspected_raiders = inspection.duplicate(true)
+		else:
+			_clear_inspected_raiders()
+	else:
+		_clear_inspected_raiders()
+	_render_details()
 
 func _on_merchant_state_changed() -> void:
 	_refresh_merchant_notice()
@@ -398,6 +460,22 @@ func _create_dashboard() -> void:
 	metrics.add_theme_constant_override("separation", 10)
 	contents.add_child(metrics)
 	contents.move_child(metrics, 1)
+	var watchtower_row := HBoxContainer.new()
+	watchtower_row.add_theme_constant_override("separation", 4)
+	contents.add_child(watchtower_row)
+	contents.move_child(watchtower_row, 3)
+	watchtower_status_label = _small_label(watchtower_row, "Watchtower: Missing")
+	watchtower_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	watchtower_status_label.text_overrun_behavior = 3
+	inspect_button = Button.new()
+	inspect_button.theme_type_variation = &"HudShortcutButton"
+	inspect_button.add_theme_font_size_override("font_size", 6)
+	inspect_button.custom_minimum_size = Vector2(48, 14)
+	inspect_button.text = "Inspect"
+	inspect_button.tooltip_text = "A completed watchtower is required to inspect raiders."
+	inspect_button.focus_mode = Control.FOCUS_NONE
+	inspect_button.pressed.connect(_inspect_current_raiders)
+	watchtower_row.add_child(inspect_button)
 	var wall_card := VBoxContainer.new()
 	wall_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	metrics.add_child(wall_card)
@@ -438,6 +516,27 @@ func _create_dashboard() -> void:
 		show_last_raid = not show_last_raid
 		_render_details())
 
+func _render_watchtower_status(detected: bool, viewing_report: bool) -> void:
+	watchtower_status_label.visible = not viewing_report
+	inspect_button.visible = detected and not viewing_report
+	if viewing_report:
+		return
+	var watchtower_built: bool = bool(_status_data.get("watchtower_built", false))
+	var warning_days: int = maxi(0, int(_status_data.get("warning_days", 0)))
+	var tower_text: String = "Built" if watchtower_built else "Missing"
+	watchtower_status_label.tooltip_text = "Watchtower warning: %d day%s." % [warning_days, "" if warning_days == 1 else "s"]
+	if not detected:
+		watchtower_status_label.text = "Watchtower: %s · %d-day warning" % [tower_text, warning_days]
+	else:
+		inspect_button.disabled = not watchtower_built or not bool(_status_data.get("can_inspect", false)) or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders")
+		if not _inspected_raiders.is_empty() and str(_inspected_raiders.get("phase", "")) == str(_status_data.get("phase", "")):
+			var raider_type: String = str(_inspected_raiders.get("type", "Unknown"))
+			var eta_minutes: int = maxi(0, int(_inspected_raiders.get("arrival_minutes_remaining", 0)))
+			var eta_text: String = "now" if str(_inspected_raiders.get("phase", "")) != "warning" else _format_travel_time(eta_minutes)
+			watchtower_status_label.text = "Watchtower: Built · %s · ETA %s" % [raider_type, eta_text]
+		else:
+			watchtower_status_label.text = "Watchtower: %s · Raiders: Unknown" % tower_text
+
 func _small_label(parent: Node, text: String) -> Label:
 	var label := Label.new()
 	label.theme_type_variation = &"HudLabelShortcut"
@@ -477,8 +576,10 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	wall_meter.max_value = maxi(max_hp, 1)
 	wall_meter.value = hp
 	wall_value.tooltip_text = "Defend: %s" % str(_status_data.get("defend", 0))
-	if not str(_status_data.get("work_kind", "")).is_empty():
-		wall_value.text = "Wall work  %dm" % int(_status_data.get("work_remaining", 0))
+	var work_kind: String = str(_status_data.get("work_kind", ""))
+	if not work_kind.is_empty():
+		var work_label: String = str({"build": "Wall building", "repair": "Wall repair", "upgrade": "Wall upgrade", "watchtower": "Watchtower"}.get(work_kind, "Wall work"))
+		wall_value.text = "%s  %dm" % [work_label, int(_status_data.get("work_remaining", 0))]
 		wall_meter.max_value = maxi(int(_status_data.get("work_total", 1)), 1)
 		wall_meter.value = wall_meter.max_value - int(_status_data.get("work_remaining", 0))
 	status_detail_label.text = {"unbuilt": "Ruined wall · Talk to Iddin-Sin", "safe": "No raiders detected", "warning": "Raiders approaching", "attacking": "Wall under attack", "looting": "City Storage under attack", "recovery": "Raid over · Recovering"}.get(phase, "No raiders detected")
@@ -490,10 +591,11 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	travel_eta_label.visible = detected and not viewing_report
 	result_box.visible = viewing_report
 	storage_summary.visible = not viewing_report
+	_render_watchtower_status(detected, viewing_report)
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY MANAGEMENT"
-	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else (160 if detected else 126))
+	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else (170 if detected else 136))
 	details_panel.size = details_panel.custom_minimum_size
 	if not viewing_report:
 		return
@@ -630,8 +732,8 @@ func _fallback_status(phase: String) -> String:
 			return "Safe"
 
 func _apply_theme() -> void:
-	for label in [status_label, wall_value_label, time_left_label, wall_summary_label, defend_label, status_detail_label, report_label]:
+	for label in [status_label, wall_value_label, time_left_label, wall_summary_label, defend_label, status_detail_label, report_label, watchtower_status_label]:
 		label.theme = GAMEPLAY_THEME
-	for button in [build_button, repair_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton]:
+	for button in [build_button, repair_button, inspect_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton]:
 		button.theme = GAMEPLAY_THEME
 		button.theme_type_variation = &"HudShortcutButton"

@@ -10,6 +10,8 @@ var storage: Node
 var phase: String = "unbuilt"
 var wall_hp: int = 0
 var wall_level: int = 0
+var watchtower_built: bool = false
+var _work_base_max_hp: int = 0
 var _latest_minute: int = -1
 var _attack_at: int = -1
 var _departure_at: int = -1
@@ -60,8 +62,8 @@ func build_wall() -> bool:
 		return _start_timed_work("build")
 	if not _valid or not config.instant_build_enabled or _resolving or is_raid_active() or wall_hp > 0:
 		return false
-	wall_level = 1
-	wall_hp = config.wall_max_hp
+	wall_level = maxi(1, wall_level)
+	wall_hp = get_wall_max_hp()
 	# Initial construction starts the grace period. Rebuilding cannot reroll a raid.
 	if phase == "unbuilt":
 		phase = "safe"
@@ -71,24 +73,24 @@ func build_wall() -> bool:
 	return true
 
 func can_repair_wall() -> bool:
-	return _valid and (config.instant_repair_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and not _resolving and not is_raid_active() and wall_level > 0 and wall_hp > 0 and wall_hp < config.wall_max_hp
+	return _valid and (config.instant_repair_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and not _resolving and not is_raid_active() and wall_level > 0 and wall_hp > 0 and wall_hp < get_wall_max_hp()
 
 func repair_wall() -> bool:
 	if config != null and config.timed_work_enabled:
 		return _start_timed_work("repair")
 	if not can_repair_wall():
 		return false
-	wall_hp = config.wall_max_hp
+	wall_hp = get_wall_max_hp()
 	# Repair does not reroll the threat, erase the report or upgrade the wall.
 	changed.emit()
 	return true
 
 func reset_debug_wall() -> bool:
-	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_level == 0 or wall_hp <= 0 or wall_hp >= config.wall_max_hp:
+	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_level == 0 or wall_hp <= 0 or wall_hp >= get_wall_max_hp():
 		return false
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning or not _work_kind.is_empty():
 		return false
-	wall_hp = config.wall_max_hp
+	wall_hp = get_wall_max_hp()
 	changed.emit()
 	return true
 
@@ -117,8 +119,26 @@ func start_debug_raid(breaching: bool) -> bool:
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		return false
 	phase = "warning"
-	_start_attack(config.wall_defend + (5 if breaching else 3))
+	_start_attack(get_wall_defend() + (5 if breaching else 3))
 	return is_raid_active()
+
+func get_wall_max_hp() -> int:
+	return config.level_2_max_hp if wall_level >= 2 else config.wall_max_hp
+
+func get_wall_defend() -> int:
+	return config.level_2_defend if wall_level >= 2 else config.wall_defend
+
+func get_warning_days() -> int:
+	return config.watchtower_warning_days if watchtower_built else config.warning_days
+
+func can_inspect_raiders() -> bool:
+	return _valid and watchtower_built and config.party_profile != null and phase in ["warning", "attacking", "looting"]
+
+func inspect_raiders() -> Dictionary:
+	if not can_inspect_raiders():
+		return {}
+	return {"type": config.party_profile.display_name, "phase": phase,
+		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
 
 func get_status() -> Dictionary:
 	if not _valid:
@@ -137,10 +157,12 @@ func get_status() -> Dictionary:
 			message = "The wall is breached. Raiders are looting City Storage!"
 		"recovery":
 			message = "Raiders have withdrawn. The city has time to recover."
-	return {"phase": phase, "hp": wall_hp, "max_hp": config.wall_max_hp,
-		"level": wall_level, "defend": config.wall_defend, "raids_enabled": config.raids_enabled or is_raid_active(),
+	return {"phase": phase, "hp": wall_hp, "max_hp": get_wall_max_hp(),
+		"level": wall_level, "defend": get_wall_defend(), "raids_enabled": config.raids_enabled or is_raid_active(),
 		"seconds_left": maxf(0.0, config.duration_seconds - _elapsed) if is_raid_active() else 0.0,
 		"status_text": message, "can_build": _valid and (config.instant_build_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and wall_hp == 0 and not is_raid_active() and not _resolving,
+		"watchtower_built": watchtower_built, "warning_days": get_warning_days(),
+		"can_inspect": can_inspect_raiders(), "raider_type": config.party_profile.display_name if can_inspect_raiders() else "Unknown",
 		"can_repair": can_repair_wall(), "work_kind": _work_kind, "work_remaining": _work_remaining,
 		"work_total": _work_total, "work_message": last_work_message,
 		"stolen_so_far": _stolen.duplicate(true), "loot_weight": _loot_weight,
@@ -155,44 +177,66 @@ func _storage_item_count() -> int:
 		return 0
 	return storage.get_raid_loot_stock_count(config.loot_capacity_weight)
 
-func get_work_quote() -> Dictionary:
-	var kind: String = "build" if wall_hp == 0 else "repair"
-	var cost: Dictionary = {}
-	var minutes: int = 0
-	var reason: String = ""
-	if not _valid:
-		reason = "Wall work is unavailable."
+func get_work_quote(requested_kind: String = "") -> Dictionary:
+	var kind: String = requested_kind if not requested_kind.is_empty() else ("build" if wall_hp == 0 else "repair")
+	var quote: Dictionary = {"kind": kind, "materials": {}, "duration_minutes": 0,
+		"can_start": false, "reason": "", "source_level": wall_level, "source_hp": wall_hp}
+	if not _valid or kind not in ["build", "repair", "upgrade", "watchtower"]:
+		quote.reason = "Wall work is unavailable."
 	elif not _work_kind.is_empty():
-		reason = "Wall work is already in progress."
+		quote.reason = "Wall work is already in progress."
 	elif _starting_work or _resolving or is_raid_active():
-		reason = "Repairs must wait until the raiders leave."
-	elif wall_hp >= config.wall_max_hp:
-		reason = "The wall is in good condition. No repairs are needed."
-	elif config.timed_work_enabled:
-		minutes = config.build_minutes if kind == "build" else config.repair_minutes
-		if kind == "build":
-			cost = config.build_materials.duplicate(true)
+		quote.reason = "Work must wait until the raiders leave."
+	elif kind in ["upgrade", "watchtower"]:
+		if not config.defense_improvements_enabled:
+			quote.reason = "Improvements are unavailable."
+		elif wall_hp <= 0:
+			quote.reason = "Rebuild the wall first."
+		elif kind == "upgrade" and wall_level >= 2:
+			quote.reason = "The wall is already level 2."
+		elif kind == "upgrade" and wall_hp < get_wall_max_hp():
+			quote.reason = "Repair the wall before upgrading."
+		elif kind == "watchtower" and watchtower_built:
+			quote.reason = "The watchtower is already built."
 		else:
-			var steps: int = ceili(float(config.wall_max_hp - wall_hp) / config.repair_hp_per_step)
+			quote.materials = (config.upgrade_materials if kind == "upgrade" else config.watchtower_materials).duplicate(true)
+			quote.duration_minutes = config.upgrade_minutes if kind == "upgrade" else config.watchtower_minutes
+			if kind == "upgrade":
+				quote.target_level = 2
+				quote.target_hp = config.level_2_max_hp
+				quote.target_defend = config.level_2_defend
+			else:
+				quote.warning_days = config.watchtower_warning_days
+	elif (kind == "build" and wall_hp > 0) or (kind == "repair" and (wall_hp <= 0 or wall_hp >= get_wall_max_hp())):
+		quote.reason = "The wall is in good condition. No repairs are needed." if wall_hp > 0 else "Rebuild the wall first."
+	elif config.timed_work_enabled:
+		quote.duration_minutes = config.build_minutes if kind == "build" else config.repair_minutes
+		if kind == "build":
+			quote.materials = config.build_materials.duplicate(true)
+		else:
+			var steps: int = ceili(float(get_wall_max_hp() - wall_hp) / config.repair_hp_per_step)
 			for id: String in config.repair_materials_per_step:
-				cost[id] = int(config.repair_materials_per_step[id]) * steps
-		if not cost.is_empty() and (not is_instance_valid(storage) or not storage.can_consume_materials(cost)):
-			reason = "Not enough materials in City Storage."
+				quote.materials[id] = int(config.repair_materials_per_step[id]) * steps
 	elif not (config.instant_build_enabled if kind == "build" else config.instant_repair_enabled):
-		reason = "Wall work is unavailable."
-	return {"kind": kind, "materials": cost, "duration_minutes": minutes,
-		"can_start": reason.is_empty(), "reason": reason}
+		quote.reason = "Wall work is unavailable."
+	if str(quote.reason).is_empty() and not quote.materials.is_empty() and (not is_instance_valid(storage) or not storage.can_consume_materials(quote.materials)):
+		quote.reason = "Not enough materials in City Storage."
+	quote.can_start = str(quote.reason).is_empty()
+	return quote
 
 func request_wall_work(quoted: Dictionary) -> bool:
-	var current: Dictionary = get_work_quote()
-	if not current.can_start or quoted.get("kind") != current.kind or quoted.get("materials") != current.materials or quoted.get("duration_minutes") != current.duration_minutes:
+	var kind: String = str(quoted.get("kind", ""))
+	var current: Dictionary = get_work_quote(kind)
+	if kind.is_empty() or not current.can_start or quoted != current:
 		last_work_message = "Wall conditions or supplies changed. Speak to Iddin-Sin again."
 		changed.emit()
 		return false
-	return build_wall() if current.kind == "build" else repair_wall()
+	if kind in ["upgrade", "watchtower"]:
+		return _start_timed_work(kind)
+	return build_wall() if kind == "build" else repair_wall()
 
 func _start_timed_work(kind: String) -> bool:
-	var quote: Dictionary = get_work_quote()
+	var quote: Dictionary = get_work_quote(kind)
 	if not quote.can_start or quote.kind != kind:
 		return false
 	_starting_work = true
@@ -203,11 +247,12 @@ func _start_timed_work(kind: String) -> bool:
 	_work_kind = kind
 	_work_remaining = int(quote.duration_minutes)
 	_work_total = _work_remaining
-	_work_restore_hp = config.wall_max_hp - wall_hp
+	_work_restore_hp = get_wall_max_hp() - wall_hp
+	_work_base_max_hp = get_wall_max_hp()
 	_work_paid = cost
 	_latest_minute = maxi(_latest_minute, _now())
 	_starting_work = false
-	last_work_message = "Wall construction started." if kind == "build" else "Wall repairs started."
+	last_work_message = {"build": "Wall construction started.", "repair": "Wall repairs started.", "upgrade": "Wall upgrade started.", "watchtower": "Watchtower construction started."}[kind]
 	changed.emit()
 	return true
 
@@ -225,27 +270,33 @@ func _advance_wall_work(minutes: int, until_minute: int = -1) -> bool:
 	_work_kind = ""
 	_work_paid.clear()
 	if kind == "build":
-		wall_level = 1
-		wall_hp = config.wall_max_hp
+		wall_level = maxi(1, wall_level)
+		wall_hp = get_wall_max_hp()
 		if phase == "unbuilt":
 			phase = "safe"
 			if config.raids_enabled:
 				_schedule_from(completed_at)
+	elif kind == "upgrade":
+		wall_level = 2
+		# Preserve any damage suffered while this project was paused by a raid.
+		wall_hp = mini(get_wall_max_hp(), wall_hp + get_wall_max_hp() - _work_base_max_hp)
+	elif kind == "watchtower":
+		watchtower_built = true
 	else:
-		wall_hp = mini(config.wall_max_hp, wall_hp + _work_restore_hp)
-	last_work_message = "Wall construction complete." if kind == "build" else "Wall repairs complete."
+		wall_hp = mini(get_wall_max_hp(), wall_hp + _work_restore_hp)
+	last_work_message = {"build": "Wall construction complete.", "repair": "Wall repairs complete.", "upgrade": "Wall upgrade complete.", "watchtower": "Watchtower construction complete."}[kind]
 	return true
 
 func _refund_interrupted_repair() -> void:
 	if not _work_paid.is_empty() and (not is_instance_valid(storage) or not storage.refund_materials(_work_paid)):
 		_refund_pending = true
-		last_work_message = "Repairs stopped. Materials are waiting to return to City Storage."
+		last_work_message = "Work stopped. Materials are waiting to return to City Storage."
 		return
 	_refund_pending = false
 	_work_kind = ""
 	_work_remaining = 0
 	_work_paid.clear()
-	last_work_message = "Wall breached. Repairs cancelled; materials returned to City Storage."
+	last_work_message = "Wall breached. Work cancelled; materials returned to City Storage."
 
 func get_last_report() -> Dictionary:
 	# Callers may format/edit their copy without changing the authoritative result.
@@ -274,16 +325,16 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	if _resolving or _starting_work or not config.raids_enabled or phase in ["unbuilt", "attacking", "looting"] or _attack_at < 0:
 		return
 	if config.party_profile != null:
-		if phase in ["safe", "recovery"] and now >= _attack_at - config.warning_days * 1440:
+		if phase in ["safe", "recovery"] and now >= _attack_at - get_warning_days() * 1440:
 			phase = "warning"
 			changed.emit()
 		if phase == "warning" and now >= _attack_at:
 			_start_attack()
 		return
-	if phase in ["safe", "recovery"] and now >= _attack_at - config.warning_days * 1440:
+	if phase in ["safe", "recovery"] and now >= _attack_at - get_warning_days() * 1440:
 		phase = "warning"
 		# A sleep/debug jump over the warning must still leave time to prepare.
-		_attack_at = maxi(_attack_at, now + config.warning_days * 1440)
+		_attack_at = maxi(_attack_at, now + get_warning_days() * 1440)
 		changed.emit()
 	elif phase == "warning" and now >= _attack_at:
 		_start_attack()
@@ -330,7 +381,7 @@ func _advance_raid_time(seconds: float) -> void:
 	while phase == "attacking" and float(_hits + 1) * config.hit_interval_seconds <= target + 0.000001:
 		_elapsed = minf(target, float(_hits + 1) * config.hit_interval_seconds)
 		_hits += 1
-		wall_hp = maxi(0, wall_hp - maxi(0, _attack_strength - config.wall_defend))
+		wall_hp = maxi(0, wall_hp - maxi(0, _attack_strength - get_wall_defend()))
 		if wall_hp == 0:
 			_begin_looting()
 	if phase == "looting":
@@ -352,7 +403,7 @@ func _begin_looting() -> void:
 	_resolving = true
 	_breach_losses = _apply_population_losses()
 	_resolving = false
-	if _work_kind == "repair":
+	if _work_kind in ["repair", "upgrade", "watchtower"]:
 		_refund_interrupted_repair()
 	_next_loot_at = _elapsed + config.loot_seconds_per_item
 	if _elapsed >= config.duration_seconds:
@@ -420,7 +471,7 @@ func _finish_attack(breached: bool) -> void:
 		result.satisfaction_drop = damage.satisfaction_drop
 		result.residents_affected = damage.residents_affected
 		result.citizens_fled = damage.citizens_fled
-	if breached and _work_kind == "repair":
+	if breached and _work_kind in ["repair", "upgrade", "watchtower"]:
 		_refund_interrupted_repair()
 	_report = result
 	if config.raids_enabled:

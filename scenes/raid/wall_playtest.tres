@@ -27,3 +27,17 @@ ranked_looting_enabled = true
 loot_capacity_weight = 10.0
 loot_seconds_per_item = 1.0
 satisfaction_penalty = 0.05
+defense_improvements_enabled = true
+level_2_max_hp = 80
+level_2_defend = 3
+upgrade_materials = {
+"stone": 20,
+"wood_log": 10
+}
+upgrade_minutes = 240
+watchtower_materials = {
+"stone": 10,
+"wood_log": 10
+}
+watchtower_minutes = 180
+watchtower_warning_days = 2
