@@ -1,6 +1,7 @@
 class_name WallWorldIndicator extends Node2D
 
 @onready var progress_bar: ProgressBar = $ProgressBar
+@onready var work_progress: Control = $WorkProgress
 
 var raid_state: Node
 
@@ -32,7 +33,10 @@ func refresh() -> void:
 		return
 	var status: Dictionary = status_value
 	var phase: String = str(status.get("phase", ""))
+	work_progress.hide()
+	progress_bar.hide()
 	if phase in ["attacking", "looting"]:
+		progress_bar.show()
 		_render_wall_hp(status)
 		visible = true
 		return
@@ -40,7 +44,7 @@ func refresh() -> void:
 	if work_kind.is_empty():
 		visible = false
 		return
-	_render_work_progress(status)
+	work_progress.show_work(status)
 	visible = true
 
 func _render_wall_hp(status: Dictionary) -> void:
@@ -48,13 +52,6 @@ func _render_wall_hp(status: Dictionary) -> void:
 	var max_hp: int = maxi(int(status.get("max_hp", 0)), 1)
 	progress_bar.max_value = float(max_hp)
 	progress_bar.value = float(clampi(hp, 0, max_hp))
-
-func _render_work_progress(status: Dictionary) -> void:
-	var total_minutes: int = maxi(int(status.get("work_total", 0)), 1)
-	var remaining_minutes: int = clampi(int(status.get("work_remaining", 0)), 0, total_minutes)
-	var completed_minutes: int = total_minutes - remaining_minutes
-	progress_bar.max_value = float(total_minutes)
-	progress_bar.value = float(completed_minutes)
 
 func _unbind_state() -> void:
 	if not is_instance_valid(raid_state):

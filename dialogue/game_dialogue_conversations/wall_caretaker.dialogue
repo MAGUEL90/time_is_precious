@@ -2,7 +2,10 @@
 if wall_has_warning()
 	Iddin-Sin: Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall.
 	=> wall_work
+elif wall_is_attacking()
+	=> wall_work
 else
+	Iddin-Sin: Good to see you. Shall we look at the city's defences?
 	=> wall_work
 
 ~ wall_work

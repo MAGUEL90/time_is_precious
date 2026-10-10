@@ -671,12 +671,16 @@ interval modes remain for isolated regression fixtures. Real gameplay seconds
 drive attacks, with pause/transition guards; clock speed does not accelerate hits.
 
 RaidUI provides a City Management keyboard shortcut (C), a map-gated 16x16
-notification button, and read-only wall/raid reports. The notification popup binds
+notification button, and read-only wall/raid reports. Its emergency pulse shares
+the existing animation process with the edge warning, resets on threat end/map exit
+and does not restart on repeated ledger refreshes. The notification popup binds
 the persistent merchant ledger and detected raid status. Clock signals update the
 travel row from detection-gated schedule values; the castle stays left and the
 raider approaches it from the right. Hidden expeditions expose no journey values; its
 legacy bottom-right status panel stays hidden. A map-owned indicator above the
-south wall presents construction progress or attack HP and follows the camera. Raid results
+south wall presents attack HP. During work it reuses the same DefenseWorkProgress
+icon/bar component as City Management, anchored at the wall or tower site. The
+component only reads the ledger; it owns no work clock or gameplay state. Raid results
 resolve once. Breach enters a looting phase using the remaining active raid seconds;
 satisfaction applies once at breach. CityToolStorage exposes a ranked preview and
 atomic one-count theft API, using existing ItemData metadata without modifying it.

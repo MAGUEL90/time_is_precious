@@ -48,8 +48,9 @@ func _run() -> void:
 
 	_expect(is_instance_valid(storage) and state.storage == storage,
 		"The live main-map raid ledger receives the WorkStateRuntime CityToolStorage provider.")
-	_expect(wall_spot.get_node("Caption").text == "Iddin-Sin",
-		"The live main-map wall caretaker remains identified as Iddin-Sin.")
+	var caption: Label = wall_spot.get_node("Caption") as Label
+	_expect(not caption.visible and caption.text == "Iddin-Sin",
+		"The world caption is hidden while retaining Iddin-Sin's name.")
 	_expect(wall_spot.is_in_group("wall_management_spots") and wall_map.get_used_cells().size() > 0,
 		"The live main-map caretaker and wall tilemap are present.")
 
@@ -159,6 +160,7 @@ func _test_main_map_expedition() -> void:
 
 	var greeting: BaseGameDialogueBalloon = await _open_wall_greeting()
 	if is_instance_valid(greeting):
+		await _advance_to_work_summary(greeting)
 		_expect(greeting.dialogue_line.text.contains("City Storage is short"),
 			"Iddin-Sin explains that City Storage is short on the main-map quote.")
 		await _show_responses(greeting)
@@ -189,6 +191,7 @@ func _test_main_map_expedition() -> void:
 
 	greeting = await _open_wall_greeting()
 	if is_instance_valid(greeting):
+		await _advance_to_work_summary(greeting)
 		var quoted_text: String = greeting.dialogue_line.text
 		_expect(quoted_text.contains("120 min") and quoted_text.contains("10 Stone")
 			and quoted_text.contains("5 Wood Log") and quoted_text.contains("City Storage"),
@@ -244,6 +247,7 @@ func _test_main_map_expedition() -> void:
 	storage.items = {"stone": 1}
 	greeting = await _open_wall_greeting()
 	if is_instance_valid(greeting):
+		await _advance_to_work_summary(greeting)
 		var repair_text: String = greeting.dialogue_line.text
 		_expect(repair_text.contains("60 min") and repair_text.contains("1 Stone"),
 			"Iddin-Sin's live repair quote uses one stone for a five-HP repair and 60 minutes.")
@@ -483,7 +487,14 @@ func _choose_response(balloon: BaseGameDialogueBalloon, response_text: String) -
 func _advance_to_work_summary(balloon: BaseGameDialogueBalloon) -> void:
 	if not is_instance_valid(balloon):
 		return
-	var warning_line: DialogueLine = balloon.dialogue_line
+	var expected_opener: String = "Good to see you. Shall we look at the city's defences?"
+	if bool(wall_spot.call("wall_is_attacking")):
+		expected_opener = "The raiders are still here. We can repair the wall once they leave."
+	elif bool(wall_spot.call("wall_has_warning")):
+		expected_opener = "Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall."
+	_expect(balloon.dialogue_line.text == expected_opener,
+		"Iddin-Sin opens with the appropriate safe, warning, or attack line before work details.")
+	var opening_line: DialogueLine = balloon.dialogue_line
 	if balloon.dialogue_label.is_typing:
 		balloon.dialogue_label.skip_typing()
 	var click := InputEventMouseButton.new()
@@ -491,12 +502,12 @@ func _advance_to_work_summary(balloon: BaseGameDialogueBalloon) -> void:
 	click.pressed = true
 	balloon._on_balloon_gui_input(click)
 	var deadline: int = Time.get_ticks_msec() + 5000
-	while is_instance_valid(balloon) and balloon.dialogue_line == warning_line and Time.get_ticks_msec() < deadline:
+	while is_instance_valid(balloon) and balloon.dialogue_line == opening_line and Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
 	while is_instance_valid(balloon) and not balloon.is_waiting_for_input and Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
-	_expect(is_instance_valid(balloon) and balloon.dialogue_line != warning_line,
-		"The native caretaker dialogue advances from its warning line to wall-work details.")
+	_expect(is_instance_valid(balloon) and balloon.dialogue_line != opening_line,
+		"The native caretaker dialogue advances from its opener to wall-work details.")
 
 func _wait_for_greeting_end() -> void:
 	var deadline: int = Time.get_ticks_msec() + 5000

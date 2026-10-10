@@ -4,6 +4,7 @@ signal build_requested
 signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const WORK_PROGRESS: PackedScene = preload("res://scenes/raid/defense_work_progress.tscn")
 const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 
 @onready var raid_notice: Label = $Root/RaidNotice
@@ -33,6 +34,12 @@ const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 
 const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
+const NOTICE_PULSE_SECONDS: float = 1.8
+var _notice_elapsed: float = 0.0
+var _notice_emergency: bool = false
+var construction_row: VBoxContainer
+var construction_label: Label
+var construction_progress: Control
 
 var raid_state: Node
 var merchant_state: Node
@@ -85,16 +92,40 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		return
-	_warning_elapsed = fmod(_warning_elapsed + delta, WARNING_PULSE_SECONDS)
-	# A soft pulse at the edges leaves the center and controls readable.
-	attack_warning.modulate.a = 0.65 + 0.35 * (0.5 - 0.5 * cos(TAU * _warning_elapsed / WARNING_PULSE_SECONDS))
+	if attack_warning.visible:
+		_warning_elapsed = fmod(_warning_elapsed + delta, WARNING_PULSE_SECONDS)
+		# A soft pulse at the edges leaves the center and controls readable.
+		attack_warning.modulate.a = 0.65 + 0.35 * (0.5 - 0.5 * cos(TAU * _warning_elapsed / WARNING_PULSE_SECONDS))
+	if _notice_emergency:
+		_notice_elapsed = fmod(_notice_elapsed + delta, NOTICE_PULSE_SECONDS)
+		_render_notice_pulse()
+
+func _render_notice_pulse() -> void:
+	var beat: float = 0.5 - 0.5 * cos(TAU * _notice_elapsed / NOTICE_PULSE_SECONDS)
+	notification_button.pivot_offset = notification_button.size * 0.5
+	notification_button.scale = Vector2.ONE * (1.0 + 0.08 * beat)
+	notification_button.modulate = Color(THREAT_COLOR, 0.78 + 0.22 * beat)
+
+func _set_notice_emergency(active: bool) -> void:
+	if active != _notice_emergency:
+		_notice_elapsed = 0.0
+	_notice_emergency = active
+	if active:
+		_render_notice_pulse()
+	else:
+		notification_button.scale = Vector2.ONE
+		notification_button.modulate = Color.WHITE
+	_update_animation_processing()
+
+func _update_animation_processing() -> void:
+	set_process(attack_warning.visible or _notice_emergency)
 
 func _set_attack_warning(active: bool) -> void:
 	if attack_warning.visible != active:
 		_warning_elapsed = 0.0
 		attack_warning.modulate.a = 0.65
 	attack_warning.visible = active
-	set_process(active)
+	_update_animation_processing()
 
 func _exit_tree() -> void:
 	_clear_inspected_raiders(false)
@@ -144,7 +175,7 @@ func bind_state(next_state: Node) -> void:
 	refresh()
 
 func open_details() -> void:
-	set_process(attack_warning.visible)
+	_update_animation_processing()
 	if not is_instance_valid(raid_state):
 		return
 	_close_notifications()
@@ -160,11 +191,12 @@ func close_details() -> void:
 	details_panel.visible = false
 	inspection_panel.visible = false
 	_clear_inspected_raiders(false)
-	set_process(attack_warning.visible)
+	_update_animation_processing()
 
 func set_city_management_available(available: bool) -> void:
 	_city_management_available = available
 	if not available:
+		_set_notice_emergency(false)
 		_close_notifications()
 		close_details()
 		_clear_inspected_raiders(false)
@@ -379,7 +411,7 @@ func _refresh_merchant_notice() -> void:
 func _refresh_raid_notice() -> void:
 	var phase: String = str(_status_data.get("phase", ""))
 	var threat_active: bool = phase in ["warning", "attacking", "looting"]
-	notification_button.modulate = THREAT_COLOR if threat_active else Color.WHITE
+	_set_notice_emergency(threat_active and _city_management_available)
 	if phase == "warning":
 		var remaining: int = maxi(int(_status_data.get("arrival_minutes_remaining", 0)), 0)
 		notification_raid_label.text = "Raiders detected. Arrival in %s." % _format_travel_time(remaining)
@@ -519,6 +551,14 @@ func _create_dashboard() -> void:
 	satisfaction_meter = _meter(satisfaction_card, Color(0.48, 0.66, 0.38))
 	storage_summary = _small_label(contents, "City Storage")
 	contents.move_child(storage_summary, 2)
+	construction_row = VBoxContainer.new()
+	construction_row.name = "ConstructionProgress"
+	construction_row.add_theme_constant_override("separation", 1)
+	contents.add_child(construction_row)
+	contents.move_child(construction_row, contents.get_children().find(watchtower_row) + 1)
+	construction_label = _small_label(construction_row, "")
+	construction_progress = WORK_PROGRESS.instantiate()
+	construction_row.add_child(construction_progress)
 	result_box = VBoxContainer.new()
 	result_box.add_theme_constant_override("separation", 5)
 	contents.add_child(result_box)
@@ -614,16 +654,15 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	wall_meter.value = hp
 	wall_value.tooltip_text = "Defend: %s" % str(_status_data.get("defend", 0))
 	var work_kind: String = str(_status_data.get("work_kind", ""))
-	if not work_kind.is_empty():
-		var work_label: String = str({"build": "Wall building", "repair": "Wall repair", "upgrade": "Wall upgrade", "watchtower": "Watchtower"}.get(work_kind, "Wall work"))
-		wall_value.text = "%s  %dm" % [work_label, int(_status_data.get("work_remaining", 0))]
-		wall_meter.max_value = maxi(int(_status_data.get("work_total", 1)), 1)
-		wall_meter.value = wall_meter.max_value - int(_status_data.get("work_remaining", 0))
-	status_detail_label.text = {"unbuilt": "Ruined wall · Talk to Iddin-Sin", "safe": "No raiders detected", "warning": "Raiders approaching", "attacking": "Wall under attack", "looting": "City Storage under attack", "recovery": "Raid over · Recovering"}.get(phase, "No raiders detected")
-	if hp == 0 and phase == "recovery":
-		status_detail_label.text = "Ruined wall · Talk to Iddin-Sin"
 	var viewing_report: bool = show_last_raid and not _last_report.is_empty()
-	status_detail_label.visible = not viewing_report
+	construction_row.visible = not work_kind.is_empty() and not viewing_report
+	construction_progress.show_work(_status_data)
+	if not work_kind.is_empty():
+		var work_title: String = str({"build": "Wall", "repair": "Wall repair", "upgrade": "Wall upgrade", "watchtower": "Watchtower"}.get(work_kind, "Wall"))
+		var remaining: int = maxi(0, int(_status_data.get("work_remaining", 0)))
+		construction_label.text = "%s  %s" % [work_title, "Paused" if construction_progress.paused else _format_travel_time(remaining)]
+	status_detail_label.text = {"attacking": "Wall under attack", "looting": "City Storage under attack"}.get(phase, "")
+	status_detail_label.visible = phase in ["attacking", "looting"] and not viewing_report
 	travel_progress.visible = detected and not viewing_report
 	travel_eta_label.visible = detected and not viewing_report
 	result_box.visible = viewing_report
@@ -632,7 +671,10 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY MANAGEMENT"
-	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else (170 if detected else 136))
+	var panel_height: int = 170 if detected else 120
+	if construction_row.visible:
+		panel_height += 24
+	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else panel_height)
 	details_panel.size = details_panel.custom_minimum_size
 	if not viewing_report:
 		return

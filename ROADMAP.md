@@ -21,14 +21,14 @@ Do not use an old PR list, branch list, or technical root map as the main indica
 
 ## Raid branch — mixed raider parties and Inspect cards (2026-10-10)
 
-Approach **Iddin-Sin** inside the south wall, press **E**, review the quote and
+Approach **Iddin-Sin** inside the south wall, press **E**, advance the opening greeting, review the quote and
 choose **Build** or **Repair**. Enter reveals these choices alongside **Not now**,
-while the discussion panel stays visible. Build/rebuild costs 10 Stone + 5 Wood Log and takes
+while the discussion panel stays visible. His world name caption is hidden; his dialogue name remains. Build/rebuild costs 10 Stone + 5 Wood Log and takes
 120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
 game minutes. Materials come from City Storage at job start; HP updates on
 completion. Jobs persist across map changes, pause during attacks, and a breached
 repair is cancelled with its materials refunded. City Management remains read-only;
-press C to open wall status and raid reports. A plain construction progress / attack HP bar appears above the wall, replacing the persistent bottom-right raid panel.
+press C to open wall status and raid reports. Construction uses a wall/watchtower icon and progress bar in City Management and above the relevant world location. Wall HP remains a separate meter and replaces the world construction indicator during attacks. The persistent bottom-right raid panel stays hidden.
 
 The first party departs when initial construction completes. Its composition is
 rolled once at departure: Light contributes 1 strength and takes 2 travel days,
@@ -57,7 +57,9 @@ City Storage now accepts Stone and Wood Log deposits.
 The left 16x16 ! button opens merchant and detected-raid notifications, replacing
 the overlapping top notices. City Management colors active threats red and shows
 a castle-to-raider travel bar after detection. The icon approaches the castle
-using the actual remaining journey time. Main-profile protected stock reserve is
+using the actual remaining journey time. Routine status sentences are hidden in
+City Management; attack warnings appear only during combat/looting. The red !
+button gently pulses during detection/attack/looting and returns to normal afterward. Main-profile protected stock reserve is
 zero. On breach, ranked looting uses the remainder of the same 60-second raid:
 10 weight capacity, one whole counted item per active second, and a once-per-breach
 5 percentage-point satisfaction penalty. Selection uses existing value/food value,

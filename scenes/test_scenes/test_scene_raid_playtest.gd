@@ -71,10 +71,36 @@ func _open_wall_greeting() -> BaseGameDialogueBalloon:
 func _show_wall_responses(balloon: BaseGameDialogueBalloon) -> void:
 	if not is_instance_valid(balloon):
 		return
+	var expected_opener: String = "Good to see you. Shall we look at the city's defences?"
+	var active_raid: bool = bool(wall_spot.call("wall_is_attacking"))
+	if active_raid:
+		expected_opener = "The raiders are still here. We can repair the wall once they leave."
+	elif bool(wall_spot.call("wall_has_warning")):
+		expected_opener = "Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall."
+	_expect(balloon.dialogue_line.text == expected_opener,
+		"Iddin-Sin opens with the appropriate safe, warning, or attack line.")
+	if not active_raid:
+		await _advance_wall_opener_to_work(balloon)
 	if balloon.dialogue_label.is_typing:
 		balloon.dialogue_label.skip_typing()
 	balloon.show_responses()
 	await get_tree().process_frame
+
+func _advance_wall_opener_to_work(balloon: BaseGameDialogueBalloon) -> void:
+	var opening_line: DialogueLine = balloon.dialogue_line
+	if balloon.dialogue_label.is_typing:
+		balloon.dialogue_label.skip_typing()
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	balloon._on_balloon_gui_input(click)
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while is_instance_valid(balloon) and balloon.dialogue_line == opening_line and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	while is_instance_valid(balloon) and not balloon.is_waiting_for_input and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	_expect(is_instance_valid(balloon) and balloon.dialogue_line != opening_line,
+		"The native wall dialogue advances from its opener to the existing work summary.")
 
 func _visible_wall_responses(balloon: BaseGameDialogueBalloon) -> Array[String]:
 	var texts: Array[String] = []
@@ -152,7 +178,7 @@ func _run() -> void:
 	ui.close_details()
 	var greeting: BaseGameDialogueBalloon = await _open_wall_greeting()
 	_expect(player.current_interactable == wall_spot, "The wall spot is selected when Player enters its range.")
-	_expect(greeting.dialogue_line.text.to_lower().contains("wall"), "The caretaker starts with an introductory wall line.")
+	_expect(greeting.dialogue_line.text == "Good to see you. Shall we look at the city's defences?", "The caretaker starts with the approved English greeting.")
 	await _show_wall_responses(greeting)
 	var response_texts: Array[String] = _visible_wall_responses(greeting)
 	_expect(response_texts.size() == 2 and response_texts.has("Repair wall (free)") and response_texts.has("Not now"),

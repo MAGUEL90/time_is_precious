@@ -104,6 +104,28 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(not ui.inspect_button.disabled, "A completed watchtower enables inspection once raiders are detected.")
 	_expect(not ui.watchtower_status_label.text.contains("Dune raiders"), "Raider type remains hidden until the player uses Inspect.")
+	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty(), "Approaching raiders use the journey UI without a redundant status sentence.")
+	ui.set_process(false)
+	ui._set_notice_emergency(false)
+	ui._set_notice_emergency(true)
+	ui.set_process(false)
+	var rest_scale: Vector2 = ui.notification_button.scale
+	ui._process(ui.NOTICE_PULSE_SECONDS * 0.5)
+	var peak_scale: Vector2 = ui.notification_button.scale
+	_expect(peak_scale.x > rest_scale.x and peak_scale.x < 1.1 and ui.notification_button.modulate.a > 0.99,
+		"A detected emergency gently expands and brightens the icon at its pulse peak.")
+	ui.refresh()
+	ui.set_process(false)
+	_expect(ui.notification_button.scale.is_equal_approx(peak_scale), "Repeated status refreshes do not restart the emergency pulse.")
+	ui._process(ui.NOTICE_PULSE_SECONDS * 0.5)
+	_expect(ui.notification_button.scale.is_equal_approx(rest_scale), "The emergency icon eases back to its original size after a full cycle.")
+	get_tree().paused = true
+	ui._process(ui.NOTICE_PULSE_SECONDS * 0.5)
+	_expect(ui.notification_button.scale.is_equal_approx(rest_scale), "The pulse respects game pause.")
+	get_tree().paused = false
+	ui.close_details()
+	_expect(ui.is_processing() and not ui.attack_warning.visible, "Closing City Management keeps the warning-only notification pulse active.")
+	ui.open_details()
 	ui.inspect_button.pressed.emit()
 	_expect(ui.watchtower_status_label.text.contains("6 raiders") and ui.travel_eta_label.text.contains("1d 0h"), "Inspect adds a concise party count while the travel row keeps the ETA.")
 	_expect(inspection_panel.visible and not ui.details_panel.visible, "Inspect opens a separate panel above City Management.")
@@ -202,17 +224,52 @@ func _run() -> void:
 	ui.close_details()
 	_expect(not ui.travel_progress.visible, "The City Management travel row is hidden before detection.")
 	_expect(world_indicator.visible, "Construction progress appears above the wall while work is active.")
-	_expect(world_indicator.progress_bar.value == 60.0, "World construction progress reflects a halfway job.")
+	_expect(world_indicator.work_progress.progress_bar.value == 60.0 and not world_indicator.progress_bar.visible, "World construction uses its icon bar while leaving the attack HP bar hidden.")
+	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty()
+		and ui.notification_button.scale == Vector2.ONE and ui.notification_button.modulate == Color.WHITE,
+		"Safe construction clears routine feedback and resets the emergency icon.")
+	ui.open_details()
+	_expect(ui.construction_row.visible and ui.construction_progress.work_kind == "build"
+		and ui.construction_progress.progress_bar.value == world_indicator.work_progress.progress_bar.value,
+		"City Management and the world display the same wall construction progress.")
+	state.status.work_kind = "watchtower"
+	state.status.work_total = 180
+	state.status.work_remaining = 90
+	state.status.hp = 50
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(ui.construction_progress.work_kind == "watchtower" and world_indicator.work_progress.work_kind == "watchtower"
+		and ui.construction_progress.progress_bar.value == 90.0 and world_indicator.work_progress.progress_bar.value == 90.0
+		and ui.wall_meter.value == 50.0, "Watchtower uses its own icon/progress in both views without replacing wall HP.")
+	ui.close_details()
 	state.status.work_kind = ""
 	state.status.work_remaining = 0
 	state.changed.emit()
 	await get_tree().process_frame
 	_expect(not world_indicator.visible, "The world marker hides when wall work finishes.")
+	_expect(not ui.construction_row.visible, "The city construction row disappears when the project finishes.")
 	state.status.phase = "attacking"
 	state.status.hp = 19
 	state.changed.emit()
 	await get_tree().process_frame
 	_expect(world_indicator.visible and world_indicator.progress_bar.value == 19.0, "An attack shows the live wall HP bar at the wall.")
+	_expect(ui.status_detail_label.visible and ui.status_detail_label.text == "Wall under attack"
+		and not world_indicator.work_progress.visible, "Attack-only feedback accompanies wall HP without a construction bar.")
+	state.status.work_kind = "watchtower"
+	state.status.work_total = 180
+	state.status.work_remaining = 90
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(ui.construction_progress.paused and ui.construction_label.text.contains("Paused")
+		and ui.construction_progress.progress_bar.value == 90.0, "An interrupted project keeps its exact progress and shows that work is paused during attack.")
+	ui.open_details()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var construction_footer: Control = ui.details_panel.get_node("Margin/Contents/FooterRow")
+	_expect(ui.details_panel.get_global_rect().encloses(construction_footer.get_global_rect()),
+		"Attack, journey and paused construction fit together without pushing the footer outside City Management.")
+	_check_bounds()
+	state.status.work_kind = ""
 	state.status.phase = "warning"
 	state.status.arrival_minutes_remaining = 720
 	state.changed.emit()
@@ -282,6 +339,8 @@ func _run() -> void:
 	state.changed.emit()
 	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty() and cards.get_child_count() == 0,
 		"The inspection panel and its hidden card data clear when the raid ends.")
+	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty() and not ui._notice_emergency
+		and ui.notification_button.scale == Vector2.ONE, "Recovery removes attack feedback and stops the red heartbeat.")
 	ui.report_toggle.pressed.emit()
 
 	_check_bounds()

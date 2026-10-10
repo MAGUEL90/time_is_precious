@@ -1,6 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/wall_world_indicator.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/raid/defense_work_progress.tscn" id="2_work"]
+
 [sub_resource type="StyleBoxFlat" id="ProgressBackground"]
 bg_color = Color(0.18, 0.11, 0.07, 1)
 border_width_left = 1
@@ -30,3 +32,9 @@ mouse_filter = 2
 show_percentage = false
 theme_override_styles/background = SubResource("ProgressBackground")
 theme_override_styles/fill = SubResource("ProgressFill")
+
+[node name="WorkProgress" parent="." instance=ExtResource("2_work")]
+offset_left = -39.0
+offset_top = -26.0
+offset_right = 39.0
+offset_bottom = -10.0

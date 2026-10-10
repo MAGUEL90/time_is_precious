@@ -7,6 +7,8 @@ func _run() -> void:
 	get_tree().paused = false
 	await load_content()
 	storage.items = {"stone": 100, "wood_log": 100}
+	player.global_position = wall_spot.global_position + Vector2(0, 15)
+	await _settle_physics()
 	var debug: Node = content.get_node("TimeDebugOverlay")
 	debug._refresh_controls()
 	for stage_id: String in ["developing", "advanced", "early"]:
@@ -24,7 +26,14 @@ func _run() -> void:
 	_expect(all_types_seed >= 0, "An Early party can rarely contain all three approved raider types.")
 	state._rng.seed = all_types_seed
 	_expect(state.request_wall_work(state.get_work_quote()), "Build starts via the shared work ledger.")
-	_set_clock_minute(_clock_minute() + 120)
+	_set_clock_minute(_clock_minute() + 60)
+	ui.open_details()
+	_expect(ui.construction_progress.progress_bar.value == 60 and not ui.status_detail_label.visible,
+		"The live city panel displays halfway wall construction without routine feedback.")
+	await capture_defense("wall-build-city-polish.png")
+	ui.close_details()
+	await capture_defense("wall-build-world-polish.png")
+	_set_clock_minute(_clock_minute() + 60)
 	var arrival: int = state._attack_at
 	var departing_party: Dictionary = state._party.duplicate(true)
 	debug.raid_stage_button.pressed.emit()
@@ -33,6 +42,8 @@ func _run() -> void:
 	debug.raid_stage_button.pressed.emit()
 	debug.raid_stage_button.pressed.emit()
 	await _open_wall_greeting()
+	await capture_defense("iddin-greeting-polish.png")
+	await _advance_to_work_summary(wall_spot.greeting_balloon)
 	await _show_responses(wall_spot.greeting_balloon)
 	await choose("Improve")
 	_expect(_visible_responses(wall_spot.greeting_balloon).has("Wall Lv. 2") and _visible_responses(wall_spot.greeting_balloon).has("Watchtower"), "Improve offers the two independent defense projects.")
@@ -57,6 +68,7 @@ func _run() -> void:
 	_set_clock_minute(_clock_minute() + 120)
 	_expect(state.wall_level == 2 and state.wall_hp == 80 and state._attack_at == arrival, "Native upgrade completes without changing the party schedule.")
 	await _open_wall_greeting()
+	await _advance_to_work_summary(wall_spot.greeting_balloon)
 	await _show_responses(wall_spot.greeting_balloon)
 	await choose("Improve")
 	_expect(not _visible_responses(wall_spot.greeting_balloon).has("Wall Lv. 2"), "Completed level upgrade is not offered again.")
@@ -68,7 +80,23 @@ func _run() -> void:
 	_choose_response(wall_spot.greeting_balloon, "Start")
 	await _wait_for_greeting_end()
 	_expect(state._work_kind == "watchtower" and not state.watchtower_built, "Watchtower is a timed project selected through the caretaker.")
-	_set_clock_minute(_clock_minute() + 180)
+	_set_clock_minute(_clock_minute() + 90)
+	var indicator: Node2D = content.get_node("RaidBootstrap/WallWorldIndicator")
+	var tower: Node2D = content.get_node("RaidBootstrap/WatchtowerVisual")
+	_expect(indicator.work_progress.work_kind == "watchtower" and indicator.global_position.x == tower.global_position.x,
+		"Watchtower construction has its own icon above the tower location on the map.")
+	ui.open_details()
+	_expect(ui.wall_meter.value == 80 and ui.construction_progress.progress_bar.value == 90,
+		"The actual city panel keeps 80 wall HP while showing a halfway watchtower project.")
+	await capture_defense("watchtower-build-city-polish.png")
+	ui.close_details()
+	var before_position: Vector2 = player.global_position
+	player.global_position = tower.global_position + Vector2(-64, -32)
+	await _settle_physics()
+	await capture_defense("watchtower-build-world-polish.png")
+	player.global_position = before_position
+	await _settle_physics()
+	_set_clock_minute(_clock_minute() + 90)
 	_expect(state.watchtower_built, "The tower completes after its full construction time.")
 	if _clock_minute() < arrival - 2880:
 		_expect(state.inspect_raiders().is_empty(), "A completed tower keeps a distant party hidden.")
@@ -86,6 +114,7 @@ func _run() -> void:
 	ui.close_details()
 	_expect(content.get_node("RaidBootstrap/WatchtowerVisual").visible, "Completed watchtower is visible on the actual wall.")
 	await capture_defense("watchtower-world.png")
+	await capture_emergency_pulse()
 
 	await _open_wall_greeting()
 	await _advance_to_work_summary(wall_spot.greeting_balloon)
@@ -131,3 +160,12 @@ func capture_defense(file_name: String) -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(folder.path_join(file_name))
+
+func capture_emergency_pulse() -> void:
+	var folder: String = OS.get_environment("TIP_RAID_CAPTURE_DIR")
+	if folder.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	for frame: int in range(36):
+		await get_tree().create_timer(0.05).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(folder.path_join("emergency-pulse-%02d.png" % frame))

@@ -30,6 +30,7 @@ visible = false
 position_offset = Vector2(-8, -38)
 
 [node name="Caption" type="Label" parent="."]
+visible = false
 offset_left = -45.0
 offset_top = 8.0
 offset_right = 45.0
