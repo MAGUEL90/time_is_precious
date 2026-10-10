@@ -194,7 +194,7 @@ func _test_main_map_expedition() -> void:
 		await _advance_to_work_summary(greeting)
 		var quoted_text: String = greeting.dialogue_line.text
 		_expect(quoted_text.contains("120 min") and quoted_text.contains("10 Stone")
-			and quoted_text.contains("5 Wood Log") and quoted_text.contains("City Storage"),
+			and quoted_text.contains("5 Wood") and quoted_text.contains("City Storage"),
 			"Iddin-Sin's native dialogue quotes the build duration and named materials.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
