@@ -16,6 +16,8 @@ func _run() -> void:
 	_expect(city.progress == 100 and city.level == 1, "Progress caps at100 and waits for an explicit Level Up.")
 	ui.open_details()
 	await capture_defense("city-progress-ready.png")
+	var management_rect: Rect2 = ui.details_panel.get_global_rect()
+	_expect(not ui.storage_summary.visible and not ui.watchtower_status_label.visible, "Management omits the requested storage/watchtower feedback.")
 	ui.city_level_up_button.pressed.emit()
 	_expect(city.level == 2 and city.progress == 0 and state._composition_stage == &"developing", "The City Hub button advances one level and future raiders.")
 	ui.city_level_up_button.pressed.emit()
@@ -23,6 +25,11 @@ func _run() -> void:
 	city.settle_day(city.last_awarded_day + 1, results, false)
 	ui._select_hub_tab(true)
 	await capture_defense("city-progress-supply.png")
+	_expect(ui.details_panel.get_global_rect() == management_rect, "Switching to Supply preserves the exact panel size and position.")
+	for summary: Label in [ui.supply_food, ui.supply_clothing]:
+		var icon: TextureRect = summary.get_parent().get_child(0)
+		_expect(icon.stretch_mode == TextureRect.STRETCH_KEEP_CENTERED and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+			"Supply icons preserve their native pixel size without fractional resampling.")
 	var old_city_id: int = city.get_instance_id()
 	var old_ui_id: int = ui.get_instance_id()
 	content.queue_free()
@@ -54,6 +61,7 @@ func _run() -> void:
 	state.set_process(false)
 	ui.open_details()
 	await capture_defense("city-progress-under-attack.png")
+	_expect(ui.details_panel.get_global_rect() == management_rect, "Construction and attack status preserve the same City Hub frame.")
 	var footer: Control = ui.details_panel.get_node("Margin/Contents/FooterRow")
 	_expect(footer.get_global_rect().end.y <= ui.details_panel.get_global_rect().end.y - 8,
 		"Progress plus attack plus paused construction keep the footer within the frame.")

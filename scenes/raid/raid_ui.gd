@@ -5,6 +5,7 @@ signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 const WORK_PROGRESS: PackedScene = preload("res://scenes/raid/defense_work_progress.tscn")
+const CITY_HUB_SIZE: Vector2 = Vector2(300, 196)
 const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 
 @onready var raid_notice: Label = $Root/RaidNotice
@@ -698,7 +699,10 @@ func _supply_card(parent: Control, texture: Texture2D) -> Label:
 	icon.texture = texture
 	icon.custom_minimum_size = Vector2(24, 24)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
 	return _small_label(row, "")
 
@@ -735,8 +739,6 @@ func _render_hub() -> void:
 		control.hide()
 	report_toggle.hide()
 	contents.get_node("TitleLabel").text = "CITY HUB"
-	details_panel.custom_minimum_size = Vector2(300, 170)
-	details_panel.size = details_panel.custom_minimum_size
 	var provider := WorkStateRuntime.get_node_or_null("CityToolStorage")
 	var food: Dictionary = CitizenNeedsManager.get_food_supply_summary(provider)
 	var clothing: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
@@ -758,7 +760,8 @@ func _create_dashboard() -> void:
 	watchtower_row.add_theme_constant_override("separation", 4)
 	contents.add_child(watchtower_row)
 	contents.move_child(watchtower_row, 3)
-	watchtower_status_label = _small_label(watchtower_row, "Watchtower: Missing")
+	watchtower_row.alignment = BoxContainer.ALIGNMENT_END
+	watchtower_status_label = _small_label(watchtower_row, "")
 	watchtower_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	watchtower_status_label.text_overrun_behavior = 3
 	inspect_button = Button.new()
@@ -779,7 +782,7 @@ func _create_dashboard() -> void:
 	metrics.add_child(satisfaction_card)
 	satisfaction_value = _small_label(satisfaction_card, "Satisfaction")
 	satisfaction_meter = _meter(satisfaction_card, Color(0.48, 0.66, 0.38))
-	storage_summary = _small_label(contents, "City Storage")
+	storage_summary = _small_label(contents, "")
 	contents.move_child(storage_summary, 2)
 	construction_row = VBoxContainer.new()
 	construction_row.name = "ConstructionProgress"
@@ -818,31 +821,11 @@ func _create_dashboard() -> void:
 		_render_details())
 
 func _render_watchtower_status(detected: bool, viewing_report: bool) -> void:
-	watchtower_status_label.visible = not viewing_report
+	watchtower_status_label.hide()
 	inspect_button.visible = detected and not viewing_report
-	if viewing_report:
-		return
-	var watchtower_built: bool = bool(_status_data.get("watchtower_built", false))
-	var warning_days: int = maxi(0, int(_status_data.get("warning_days", 0)))
-	var tower_text: String = "Built" if watchtower_built else "Missing"
-	watchtower_status_label.tooltip_text = "Watchtower warning: %d day%s." % [warning_days, "" if warning_days == 1 else "s"]
-	if not detected:
-		watchtower_status_label.text = "Watchtower: %s · %d-day warning" % [tower_text, warning_days]
-	else:
-		inspect_button.disabled = not watchtower_built or not bool(_status_data.get("can_inspect", false)) or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders")
-		if not _inspected_raiders.is_empty() and str(_inspected_raiders.get("phase", "")) == str(_status_data.get("phase", "")):
-			if _inspected_raiders.has("total_count"):
-				var total_count: int = maxi(0, int(_inspected_raiders.get("total_count", 0)))
-				var count_suffix: String = "raider" if total_count == 1 else "raiders"
-				watchtower_status_label.text = "Watchtower: Built · %d %s" % [total_count, count_suffix]
-			else:
-				# Older fixture/API data can still show its legacy description.
-				var raider_type: String = str(_inspected_raiders.get("type", "Unknown"))
-				var eta_minutes: int = maxi(0, int(_inspected_raiders.get("arrival_minutes_remaining", 0)))
-				var eta_text: String = "now" if str(_inspected_raiders.get("phase", "")) != "warning" else _format_travel_time(eta_minutes)
-				watchtower_status_label.text = "Watchtower: Built · %s · ETA %s" % [raider_type, eta_text]
-		else:
-			watchtower_status_label.text = "Watchtower: %s · Raiders: Unknown" % tower_text
+	watchtower_status_label.get_parent().visible = inspect_button.visible
+	if inspect_button.visible:
+		inspect_button.disabled = not bool(_status_data.get("watchtower_built", false)) or not bool(_status_data.get("can_inspect", false)) or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders")
 
 func _small_label(parent: Node, text: String) -> Label:
 	var label := Label.new()
@@ -877,8 +860,6 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	satisfaction_value.tooltip_text = "Average of %d residents" % residents.size() if not residents.is_empty() else "No residents yet"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
-	storage_summary.text = "City Storage  %d lootable items" % int(_status_data.get("storage_item_count", 0))
-	storage_summary.tooltip_text = "Whole items that fit a raider bag. Equipment, personal inventory and resource silos are separate."
 	wall_value.text = "Wall  %d/%d  Lv.%d" % [hp, max_hp, level]
 	wall_meter.max_value = maxi(max_hp, 1)
 	wall_meter.value = hp
@@ -896,17 +877,14 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	travel_progress.visible = detected and not viewing_report
 	travel_eta_label.visible = detected and not viewing_report
 	result_box.visible = viewing_report
-	storage_summary.visible = not viewing_report
+	storage_summary.hide()
 	_render_watchtower_status(detected, viewing_report)
 	_refresh_city_progression()
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY HUB"
-	var panel_height: int = 170 if detected else 120
-	if construction_row.visible:
-		panel_height += 24
-	details_panel.custom_minimum_size = Vector2(300, mini(218, (176 if viewing_report else panel_height) + 20))
-	details_panel.size = details_panel.custom_minimum_size
+	details_panel.custom_minimum_size = CITY_HUB_SIZE
+	details_panel.size = CITY_HUB_SIZE
 	if not viewing_report:
 		return
 	result_heading.text = "Day %d  ·  %s" % [int(_last_report.get("day", 0)), "Wall breached" if _last_report.get("outcome") == "breached" else "Raiders repelled"]

@@ -93,7 +93,7 @@ func _run() -> void:
 	_expect(ui.details_panel.visible and not ui.notifications_popup.visible, "Opening current city closes notifications.")
 	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 3.0 / 4.0), "Detected travel progress uses the scheduled remaining time.")
 	_expect(ui.status_detail_label.has_theme_color_override("font_color"), "The City Management threat status is red while raiders are attacking.")
-	_expect(ui.watchtower_status_label.text.contains("Unknown"), "Current city shows raiders as unknown when the watchtower is missing.")
+	_expect(not ui.watchtower_status_label.visible and not ui.storage_summary.visible, "Management omits storage and watchtower status text.")
 	_expect(ui.inspect_button.visible and ui.inspect_button.disabled, "Inspect is visible during a detected threat but locked without a watchtower.")
 	_expect(ui.inspect_button.tooltip_text.is_empty(), "A locked Inspect button has no stale watchtower tooltip.")
 	ui._select_hub_tab(true)
@@ -112,7 +112,7 @@ func _run() -> void:
 	state.changed.emit()
 	await get_tree().process_frame
 	_expect(not ui.inspect_button.disabled, "A completed watchtower enables inspection once raiders are detected.")
-	_expect(not ui.watchtower_status_label.text.contains("Dune raiders"), "Raider type remains hidden until the player uses Inspect.")
+	_expect(ui._inspected_raiders.is_empty(), "Raider type remains hidden until the player uses Inspect.")
 	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty(), "Approaching raiders use the journey UI without a redundant status sentence.")
 	ui.set_process(false)
 	ui._set_notice_emergency(false)
@@ -137,7 +137,7 @@ func _run() -> void:
 	_expect(ui.is_processing() and not ui.attack_warning.visible, "Closing City Management keeps the warning-only notification pulse active.")
 	ui.open_details()
 	ui.inspect_button.pressed.emit()
-	_expect(ui.watchtower_status_label.text.contains("6 raiders") and ui.travel_eta_label.text.contains("1d 0h"), "Inspect adds a concise party count while the travel row keeps the ETA.")
+	_expect(int(ui._inspected_raiders.get("total_count", 0)) == 6 and ui.travel_eta_label.text.contains("1d 0h"), "Inspect retains the party count in the inspection data while the travel row keeps the ETA.")
 	_expect(inspection_panel.visible and not ui.details_panel.visible, "Inspect opens a separate panel above City Management.")
 	var inspection_contents: Control = inspection_panel.get_node("Center/Frame/Margin/Contents")
 	var cards: HBoxContainer = inspection_contents.get_node("CardsRow")
@@ -158,7 +158,7 @@ func _run() -> void:
 	state.status.arrival_minutes_remaining = 720
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(ui.watchtower_status_label.text.contains("6 raiders") and ui.travel_eta_label.text.contains("12h 0m"), "Refreshing updates the existing City Management ETA.")
+	_expect(int(ui._inspected_raiders.get("total_count", 0)) == 6 and ui.travel_eta_label.text.contains("12h 0m"), "Refreshing updates the existing City Management ETA.")
 	_expect(inspection_panel.get_node("Center/Frame/Margin/Contents/EtaLabel").text == "Approaching · ETA: 12h 0m"
 		and cards.get_child(0).get_instance_id() == first_card_id, "The same party refreshes ETA while keeping its card nodes stable.")
 	ui.notification_button.pressed.emit()
@@ -217,7 +217,7 @@ func _run() -> void:
 	state.status.raider_type = "Unknown"
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(ui.inspect_button.disabled and not inspection_panel.visible and ui.watchtower_status_label.text.contains("Unknown") and not ui.watchtower_status_label.text.contains("Changed party"), "Losing inspection permission clears previously shown intelligence.")
+	_expect(ui.inspect_button.disabled and not inspection_panel.visible and ui._inspected_raiders.is_empty(), "Losing inspection permission clears previously shown intelligence.")
 	ui.close_details()
 	await _capture("raid-hp.png")
 	state.status = {"phase": "safe", "hp": 50, "max_hp": 50, "level": 0, "defend": 2,
@@ -230,7 +230,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(ui.notification_raid_label.text == "- No raiders detected.", "The notifications popup does not reveal undetected departures.")
 	ui.open_details()
-	_expect(ui.watchtower_status_label.text.contains("Built") and not ui.inspect_button.visible, "A completed watchtower remains compact and Inspect stays hidden during the undetected journey.")
+	_expect(not ui.watchtower_status_label.visible and not ui.inspect_button.visible, "Routine watchtower feedback and Inspect stay hidden during the undetected journey.")
 	ui.close_details()
 	_expect(not ui.travel_progress.visible, "The City Management travel row is hidden before detection.")
 	_expect(world_indicator.visible, "Construction progress appears above the wall while work is active.")
@@ -336,9 +336,9 @@ func _run() -> void:
 	state.changed.emit()
 	await get_tree().process_frame
 	_expect(ui.travel_progress.visible and not ui.result_box.visible, "A new detected party displays travel even with a previous raid report.")
-	_expect(ui.watchtower_status_label.text.contains("Unknown") and not ui.watchtower_status_label.text.contains("Dune raiders"), "Previous party intelligence is cleared for a new journey until Inspect is used again.")
+	_expect(ui._inspected_raiders.is_empty(), "Previous party intelligence is cleared for a new journey until Inspect is used again.")
 	ui.inspect_button.pressed.emit()
-	_expect(ui.watchtower_status_label.text.contains("6 raiders")
+	_expect(int(ui._inspected_raiders.get("total_count", 0)) == 6
 		and inspection_panel.get_node("Center/Frame/Margin/Contents/PartyTypeLabel").text.contains("Marsh raiders"),
 		"Inspect reveals the current party panel and a concise count after the previous report.")
 	var before_progress: float = ui.travel_progress.progress_ratio

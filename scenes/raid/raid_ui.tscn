@@ -291,7 +291,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="DetailsPanel" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(280, 120)
+custom_minimum_size = Vector2(300, 196)
 layout_mode = 2
 mouse_filter = 0
 texture = SubResource("RaidPanelTexture")
