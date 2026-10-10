@@ -1,16 +1,21 @@
 ~ wall_caretaker
 if wall_has_warning()
-	Iddin-Sin: Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall.
+	Iddin-Sin: Raider tracks nearby.
+		They're nearing the castle.
+		Prepare the wall.
 	=> wall_work
 elif wall_is_attacking()
 	=> wall_work
 else
-	Iddin-Sin: Good to see you. Shall we look at the city's defences?
+	Iddin-Sin: Good to see you.
+		How can I help?
 	=> wall_work
 
 ~ wall_work
 if wall_is_attacking()
-	Iddin-Sin: The raiders are still here. We can repair the wall once they leave.
+	Iddin-Sin: The raiders are still here.
+		I'll repair the wall
+		once they leave.
 else
 	Iddin-Sin: {{wall_work_summary()}}
 - Build [if wall_work_available() and wall_uses_timed_work() and wall_needs_build()]
@@ -29,7 +34,7 @@ else
 	=> END
 
 ~ wall_improve_options
-Iddin-Sin: Choose a defence project to review.
+Iddin-Sin: Choose a defence project.
 - Wall Lv. 2 [if wall_upgrade_available()]
 	do wall_select_upgrade()
 	=> wall_improvement_quote

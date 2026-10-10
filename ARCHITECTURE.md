@@ -670,8 +670,10 @@ or automatic city progression is inferred. Fixed normal-party and randomized
 interval modes remain for isolated regression fixtures. Real gameplay seconds
 drive attacks, with pause/transition guards; clock speed does not accelerate hits.
 
-RaidUI provides a City Management keyboard shortcut (C), a map-gated 16x16
-notification button, and read-only wall/raid reports. Its emergency pulse shares
+RaidUI provides City Hub on shortcut C, with Management and Supply tabs. Supply
+reads live CitizenNeedsManager summaries; physical deposits remain in City Storage.
+The old storage-side Supply panel stays hidden. RaidUI also provides a map-gated 16x16
+notification button, and read-only wall/raid reports. Its fixed-size opacity-only emergency pulse shares
 the existing animation process with the edge warning, resets on threat end/map exit
 and does not restart on repeated ledger refreshes. The notification popup binds
 the persistent merchant ledger and detected raid status. Clock signals update the

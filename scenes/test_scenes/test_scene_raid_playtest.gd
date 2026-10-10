@@ -71,12 +71,12 @@ func _open_wall_greeting() -> BaseGameDialogueBalloon:
 func _show_wall_responses(balloon: BaseGameDialogueBalloon) -> void:
 	if not is_instance_valid(balloon):
 		return
-	var expected_opener: String = "Good to see you. Shall we look at the city's defences?"
+	var expected_opener: String = "Good to see you.\nHow can I help?"
 	var active_raid: bool = bool(wall_spot.call("wall_is_attacking"))
 	if active_raid:
-		expected_opener = "The raiders are still here. We can repair the wall once they leave."
+		expected_opener = "The raiders are still here.\nI'll repair the wall\nonce they leave."
 	elif bool(wall_spot.call("wall_has_warning")):
-		expected_opener = "Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall."
+		expected_opener = "Raider tracks nearby.\nThey're nearing the castle.\nPrepare the wall."
 	_expect(balloon.dialogue_line.text == expected_opener,
 		"Iddin-Sin opens with the appropriate safe, warning, or attack line.")
 	if not active_raid:
@@ -178,7 +178,7 @@ func _run() -> void:
 	ui.close_details()
 	var greeting: BaseGameDialogueBalloon = await _open_wall_greeting()
 	_expect(player.current_interactable == wall_spot, "The wall spot is selected when Player enters its range.")
-	_expect(greeting.dialogue_line.text == "Good to see you. Shall we look at the city's defences?", "The caretaker starts with the approved English greeting.")
+	_expect(greeting.dialogue_line.text == "Good to see you.\nHow can I help?", "The caretaker starts with the approved English greeting.")
 	await _show_wall_responses(greeting)
 	var response_texts: Array[String] = _visible_wall_responses(greeting)
 	_expect(response_texts.size() == 2 and response_texts.has("Repair wall (free)") and response_texts.has("Not now"),

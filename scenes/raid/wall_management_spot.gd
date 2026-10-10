@@ -176,20 +176,19 @@ func wall_work_summary() -> String:
 		return "Wall work is unavailable."
 	var quote: Dictionary = state.get_work_quote()
 	if not state._work_kind.is_empty():
-		return "Wall work is underway: %d minutes left. Work pauses during raids." % state._work_remaining
+		return "Work is underway: %d min left.\nIt pauses during raids." % state._work_remaining
 	if not quote.can_start and quote.materials.is_empty():
 		return str(quote.reason)
 	if not state.config.timed_work_enabled:
-		return "The wall needs repairs. I can restore it now, free of charge."
+		return "The wall needs repairs. I'll restore it free of charge."
 	var parts: PackedStringArray = []
 	for id: String in quote.materials:
 		var item: ItemData = ItemDatabase.get_item_data(id)
-		parts.append("%d %s" % [int(quote.materials[id]), item.display_name if item != null else id])
+		var display_name: String = item.display_name.replace("Wood Log", "Wood") if item != null else id
+		parts.append("%d %s" % [int(quote.materials[id]), display_name])
 	var cost: String = " + ".join(parts) if not parts.is_empty() else "No materials"
 	var availability: String = "Uses City Storage." if quote.can_start else "City Storage is short."
-	return "%s: %d min.
-%s.
-%s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
+	return "%s: %d min\n%s\n%s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
 
 func wall_select_work() -> void:
 	_quoted_work = _quoted_basic_work.duplicate(true)

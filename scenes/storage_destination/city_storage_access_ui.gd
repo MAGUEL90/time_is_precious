@@ -28,6 +28,7 @@ var _needs_manager: Node
 func _ready() -> void:
 	visible = false
 	context.hide()
+	$Root/CitySupplyPanel.hide()
 	stock_summary = RichTextLabel.new()
 	stock_summary.name = "StockSummary"
 	stock_summary.bbcode_enabled = true

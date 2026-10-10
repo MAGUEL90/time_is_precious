@@ -487,11 +487,11 @@ func _choose_response(balloon: BaseGameDialogueBalloon, response_text: String) -
 func _advance_to_work_summary(balloon: BaseGameDialogueBalloon) -> void:
 	if not is_instance_valid(balloon):
 		return
-	var expected_opener: String = "Good to see you. Shall we look at the city's defences?"
+	var expected_opener: String = "Good to see you.\nHow can I help?"
 	if bool(wall_spot.call("wall_is_attacking")):
-		expected_opener = "The raiders are still here. We can repair the wall once they leave."
+		expected_opener = "The raiders are still here.\nI'll repair the wall\nonce they leave."
 	elif bool(wall_spot.call("wall_has_warning")):
-		expected_opener = "Raider tracks have been spotted nearby. They are nearing the castle. Prepare the wall."
+		expected_opener = "Raider tracks nearby.\nThey're nearing the castle.\nPrepare the wall."
 	_expect(balloon.dialogue_line.text == expected_opener,
 		"Iddin-Sin opens with the appropriate safe, warning, or attack line before work details.")
 	var opening_line: DialogueLine = balloon.dialogue_line

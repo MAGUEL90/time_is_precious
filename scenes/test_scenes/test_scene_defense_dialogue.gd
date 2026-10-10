@@ -31,6 +31,9 @@ func _run() -> void:
 	_expect(ui.construction_progress.progress_bar.value == 60 and not ui.status_detail_label.visible,
 		"The live city panel displays halfway wall construction without routine feedback.")
 	await capture_defense("wall-build-city-polish.png")
+	ui._select_hub_tab(true)
+	await capture_defense("city-hub-supply.png")
+	ui._select_hub_tab(false)
 	ui.close_details()
 	await capture_defense("wall-build-world-polish.png")
 	_set_clock_minute(_clock_minute() + 60)

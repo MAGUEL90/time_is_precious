@@ -66,6 +66,13 @@ var loot_slots: HFlowContainer
 var result_note: Label
 var report_toggle: Button
 var _loot_display_key: String = ""
+var hub_tabs: HBoxContainer
+var supply_view: VBoxContainer
+var supply_food: Label
+var supply_clothing: Label
+var _supply_selected := false
+var _management_visibility: Dictionary = {}
+
 
 
 func _ready() -> void:
@@ -81,6 +88,7 @@ func _ready() -> void:
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
 	inspection_panel.connect("back_requested", Callable(self, "_return_from_inspection"))
 	_create_dashboard()
+	_create_hub_tabs()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
@@ -103,7 +111,7 @@ func _process(delta: float) -> void:
 func _render_notice_pulse() -> void:
 	var beat: float = 0.5 - 0.5 * cos(TAU * _notice_elapsed / NOTICE_PULSE_SECONDS)
 	notification_button.pivot_offset = notification_button.size * 0.5
-	notification_button.scale = Vector2.ONE * (1.0 + 0.08 * beat)
+	notification_button.scale = Vector2.ONE
 	notification_button.modulate = Color(THREAT_COLOR, 0.78 + 0.22 * beat)
 
 func _set_notice_emergency(active: bool) -> void:
@@ -467,6 +475,7 @@ func _render_status() -> void:
 		time_left_label.text = "Wall level %d" % level
 
 func _render_details() -> void:
+	_restore_management_visibility()
 	var hp: int = int(_status_data.get("hp", 0))
 	var max_hp: int = int(_status_data.get("max_hp", 0))
 	var level: int = int(_status_data.get("level", 0))
@@ -517,6 +526,96 @@ func _render_details() -> void:
 	report_text = _format_report(_last_report)
 	report_label.text = report_text
 	_render_dashboard(phase, hp, max_hp, level, detected_threat)
+	_render_hub()
+
+func _create_hub_tabs() -> void:
+	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
+	hub_tabs = HBoxContainer.new()
+	hub_tabs.name = "HubTabs"
+	hub_tabs.add_theme_constant_override("separation", 6)
+	contents.add_child(hub_tabs)
+	contents.move_child(hub_tabs, 1)
+	for tab: String in ["Management", "Supply"]:
+		var button := Button.new()
+		button.text = tab
+		button.theme_type_variation = &"HudShortcutButton"
+		button.add_theme_font_size_override("font_size", 6)
+		button.custom_minimum_size = Vector2(70, 14)
+		button.toggle_mode = true
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
+		hub_tabs.add_child(button)
+	supply_view = VBoxContainer.new()
+	supply_view.name = "SupplyView"
+	supply_view.add_theme_constant_override("separation", 12)
+	contents.add_child(supply_view)
+	contents.move_child(supply_view, 2)
+	supply_food = _supply_card(supply_view, preload("res://assets/items/butcher’s_cut.png"))
+	supply_clothing = _supply_card(supply_view, preload("res://assets/items/trimmed_robe.png"))
+	_small_label(supply_view, "Deposit goods at City Storage.")
+	supply_view.hide()
+	CitizenNeedsManager.needs_changed.connect(_on_supply_changed)
+	var provider := WorkStateRuntime.get_node_or_null("CityToolStorage")
+	if is_instance_valid(provider):
+		provider.changed.connect(_on_supply_changed, CONNECT_DEFERRED)
+
+func _supply_card(parent: Control, texture: Texture2D) -> Label:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+	var icon := TextureRect.new()
+	icon.texture = texture
+	icon.custom_minimum_size = Vector2(24, 24)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(icon)
+	return _small_label(row, "")
+
+func _select_hub_tab(supply: bool) -> void:
+	_supply_selected = supply
+	show_last_raid = false
+	_render_details()
+
+func _on_supply_changed() -> void:
+	if details_panel.visible:
+		_render_details()
+
+func _restore_management_visibility() -> void:
+	for control: Control in _management_visibility:
+		control.visible = _management_visibility[control]
+	_management_visibility.clear()
+
+func _render_hub() -> void:
+	if not is_instance_valid(hub_tabs):
+		return
+	# A newly completed raid always opens its report in Management.
+	if show_last_raid:
+		_supply_selected = false
+	hub_tabs.get_child(0).set_pressed_no_signal(not _supply_selected)
+	hub_tabs.get_child(1).set_pressed_no_signal(_supply_selected)
+	supply_view.visible = _supply_selected
+	if not _supply_selected:
+		return
+	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
+	for control: Control in contents.get_children():
+		if control in [hub_tabs, supply_view, contents.get_node("TitleLabel"), contents.get_node("FooterRow")]:
+			continue
+		_management_visibility[control] = control.visible
+		control.hide()
+	report_toggle.hide()
+	contents.get_node("TitleLabel").text = "CITY HUB"
+	details_panel.custom_minimum_size = Vector2(300, 170)
+	details_panel.size = details_panel.custom_minimum_size
+	var provider := WorkStateRuntime.get_node_or_null("CityToolStorage")
+	var food: Dictionary = CitizenNeedsManager.get_food_supply_summary(provider)
+	var clothing: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
+	var daily := int(food.get("daily_need", 0))
+	var days := int(food.get("days_remaining", -1))
+	supply_food.text = "Food  %d pt\nNeed  %d pt / day\n%s" % [int(food.get("points", 0)), daily, "%d days remaining" % days if days >= 0 and daily > 0 else "No daily demand"]
+	if daily > int(food.get("points", 0)):
+		supply_food.text += "  /  Shortage"
+	var shortage := maxi(0, int(clothing.get("replacement_need", 0)) - int(clothing.get("stock_items", 0)))
+	supply_clothing.text = "Clothing  %d / %d\nReserve  %d\n%s" % [int(clothing.get("covered_count", 0)), int(clothing.get("consumer_count", 0)), int(clothing.get("stock_items", 0)), "Short: %d" % shortage if shortage > 0 else "Ready tomorrow" if int(clothing.get("replacement_need", 0)) > 0 else "Needs covered"]
 
 func _create_dashboard() -> void:
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
@@ -670,11 +769,11 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	_render_watchtower_status(detected, viewing_report)
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY MANAGEMENT"
+	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY HUB"
 	var panel_height: int = 170 if detected else 120
 	if construction_row.visible:
 		panel_height += 24
-	details_panel.custom_minimum_size = Vector2(300, 176 if viewing_report else panel_height)
+	details_panel.custom_minimum_size = Vector2(300, mini(218, (176 if viewing_report else panel_height) + 20))
 	details_panel.size = details_panel.custom_minimum_size
 	if not viewing_report:
 		return

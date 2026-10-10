@@ -96,6 +96,15 @@ func _run() -> void:
 	_expect(ui.watchtower_status_label.text.contains("Unknown"), "Current city shows raiders as unknown when the watchtower is missing.")
 	_expect(ui.inspect_button.visible and ui.inspect_button.disabled, "Inspect is visible during a detected threat but locked without a watchtower.")
 	_expect(ui.inspect_button.tooltip_text.is_empty(), "A locked Inspect button has no stale watchtower tooltip.")
+	ui._select_hub_tab(true)
+	await get_tree().process_frame
+	_expect(ui.supply_view.visible and not ui.metrics.visible and not ui.travel_progress.visible, "Supply replaces Management content inside one City Hub.")
+	_expect(ui.supply_food.text.begins_with("Food") and ui.supply_clothing.text.begins_with("Clothing"), "Supply reads food and clothing summaries.")
+	ui.refresh()
+	_expect(ui.supply_view.visible and not ui.metrics.visible, "Raid refresh preserves the selected Supply tab.")
+	ui._select_hub_tab(false)
+	await get_tree().process_frame
+	_expect(not ui.supply_view.visible and ui.metrics.visible and ui.travel_progress.visible, "Returning to Management restores the current raid UI.")
 	state.status.phase = "warning"
 	state.status.watchtower_built = true
 	state.status.can_inspect = true
@@ -110,10 +119,11 @@ func _run() -> void:
 	ui._set_notice_emergency(true)
 	ui.set_process(false)
 	var rest_scale: Vector2 = ui.notification_button.scale
+	var rest_alpha: float = ui.notification_button.modulate.a
 	ui._process(ui.NOTICE_PULSE_SECONDS * 0.5)
 	var peak_scale: Vector2 = ui.notification_button.scale
-	_expect(peak_scale.x > rest_scale.x and peak_scale.x < 1.1 and ui.notification_button.modulate.a > 0.99,
-		"A detected emergency gently expands and brightens the icon at its pulse peak.")
+	_expect(peak_scale == Vector2.ONE and rest_scale == Vector2.ONE and ui.notification_button.modulate.a > 0.99,
+		"A detected emergency keeps its pixel size and brightens the icon at its pulse peak.")
 	ui.refresh()
 	ui.set_process(false)
 	_expect(ui.notification_button.scale.is_equal_approx(peak_scale), "Repeated status refreshes do not restart the emergency pulse.")
@@ -121,7 +131,7 @@ func _run() -> void:
 	_expect(ui.notification_button.scale.is_equal_approx(rest_scale), "The emergency icon eases back to its original size after a full cycle.")
 	get_tree().paused = true
 	ui._process(ui.NOTICE_PULSE_SECONDS * 0.5)
-	_expect(ui.notification_button.scale.is_equal_approx(rest_scale), "The pulse respects game pause.")
+	_expect(ui.notification_button.scale.is_equal_approx(rest_scale) and is_equal_approx(ui.notification_button.modulate.a, rest_alpha), "The pulse respects game pause.")
 	get_tree().paused = false
 	ui.close_details()
 	_expect(ui.is_processing() and not ui.attack_warning.visible, "Closing City Management keeps the warning-only notification pulse active.")
