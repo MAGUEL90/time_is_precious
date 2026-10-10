@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/raid/raid_composition_stage.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"advanced"
+display_name = "Advanced"
+min_count = 6
+max_count = 10
+min_strength = 12
+max_strength = 16
+heavy_chance = 0.45
+max_heavy = 3

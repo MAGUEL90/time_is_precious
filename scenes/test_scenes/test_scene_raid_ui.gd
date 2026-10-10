@@ -7,7 +7,11 @@ class DisplayState extends Node:
 		"level": 1, "defend": 2, "seconds_left": 59.9, "raids_enabled": true,
 		"status_text": "Raiders are attacking the castle wall!", "can_build": false, "can_repair": false,
 		"work_kind": "", "work_remaining": 0, "work_total": 0, "work_message": "",
-		"travel_total_minutes": 4320, "arrival_minutes_remaining": 1440,
+		"travel_total_minutes": 5760, "arrival_minutes_remaining": 1440, "party_id": 1,
+		"units": [
+			{"id": "light", "display_name": "Light", "count": 2, "attack": 1, "travel_days": 2},
+			{"id": "normal", "display_name": "Normal", "count": 1, "attack": 2, "travel_days": 3},
+			{"id": "heavy", "display_name": "Heavy", "count": 3, "attack": 4, "travel_days": 4}],
 		"watchtower_built": false, "warning_days": 2, "can_inspect": false, "raider_type": "Unknown"}
 	var report: Dictionary = {}
 	func get_status() -> Dictionary:
@@ -17,9 +21,15 @@ class DisplayState extends Node:
 	func inspect_raiders() -> Dictionary:
 		if not bool(status.get("watchtower_built", false)) or not bool(status.get("can_inspect", false)):
 			return {}
-		return {"type": str(status.get("raider_type", "Unknown")),
+		var result: Dictionary = {"id": int(status.get("party_id", 1)),
+			"type": str(status.get("raider_type", "Unknown")),
 			"arrival_minutes_remaining": int(status.get("arrival_minutes_remaining", 0)),
+			"travel_total_minutes": int(status.get("travel_total_minutes", 0)),
+			"total_count": 6, "attack_strength": 16,
 			"phase": str(status.get("phase", ""))}
+		if status.has("units"):
+			result["units"] = status["units"]
+		return result
 
 class DisplayMerchant extends Node:
 	signal changed
@@ -29,6 +39,7 @@ class DisplayMerchant extends Node:
 
 var failures: int = 0
 var ui: CanvasLayer
+var inspection_panel: Control
 var state: DisplayState
 var world_indicator: WallWorldIndicator
 var test_player: Player
@@ -54,6 +65,7 @@ func _run() -> void:
 	add_child(merchant)
 	ui = preload("res://scenes/raid/raid_ui.tscn").instantiate()
 	add_child(ui)
+	inspection_panel = ui.get_node("Root/RaiderInspectionPanel")
 	ui.bind_state(state)
 	ui.set_city_management_available(true)
 	ui.bind_merchant_state(merchant)
@@ -79,10 +91,11 @@ func _run() -> void:
 	_expect(ui.get_node("Root/NotificationsPopup/Margin/Contents/TitleLabel").get_theme_font_size("font_size") == 6, "Notifications title uses pixel font size 6.")
 	ui.open_details()
 	_expect(ui.details_panel.visible and not ui.notifications_popup.visible, "Opening current city closes notifications.")
-	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 2.0 / 3.0), "Detected travel progress uses the scheduled remaining time.")
+	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 3.0 / 4.0), "Detected travel progress uses the scheduled remaining time.")
 	_expect(ui.status_detail_label.has_theme_color_override("font_color"), "The City Management threat status is red while raiders are attacking.")
 	_expect(ui.watchtower_status_label.text.contains("Unknown"), "Current city shows raiders as unknown when the watchtower is missing.")
 	_expect(ui.inspect_button.visible and ui.inspect_button.disabled, "Inspect is visible during a detected threat but locked without a watchtower.")
+	_expect(ui.inspect_button.tooltip_text.is_empty(), "A locked Inspect button has no stale watchtower tooltip.")
 	state.status.phase = "warning"
 	state.status.watchtower_built = true
 	state.status.can_inspect = true
@@ -92,18 +105,87 @@ func _run() -> void:
 	_expect(not ui.inspect_button.disabled, "A completed watchtower enables inspection once raiders are detected.")
 	_expect(not ui.watchtower_status_label.text.contains("Dune raiders"), "Raider type remains hidden until the player uses Inspect.")
 	ui.inspect_button.pressed.emit()
-	_expect(ui.watchtower_status_label.text.contains("Dune raiders") and ui.watchtower_status_label.text.contains("1d 0h"), "Inspect displays only the party type and current arrival estimate.")
+	_expect(ui.watchtower_status_label.text.contains("6 raiders") and ui.travel_eta_label.text.contains("1d 0h"), "Inspect adds a concise party count while the travel row keeps the ETA.")
+	_expect(inspection_panel.visible and not ui.details_panel.visible, "Inspect opens a separate panel above City Management.")
+	var inspection_contents: Control = inspection_panel.get_node("Center/Frame/Margin/Contents")
+	var cards: HBoxContainer = inspection_contents.get_node("CardsRow")
+	_expect(cards.visible and cards.get_child_count() == 3, "Inspection shows one horizontal card for each nonzero raider type.")
+	_expect(cards.get_node("UnitCard_Light/CardContents/CountLabel").text == "x 2"
+		and cards.get_node("UnitCard_Normal/CardContents/CountLabel").text == "x 1"
+		and cards.get_node("UnitCard_Heavy/CardContents/CountLabel").text == "x 3", "Each raider card shows its fixture quantity beneath the icon.")
+	_expect(inspection_contents.get_node("TitleLabel").get_theme_font_size("font_size") == 12
+		and cards.get_node("UnitCard_Light/CardContents/CountLabel").get_theme_font_size("font_size") == 6, "Inspection uses the requested 12/6 pixel font sizes.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var frame: Control = inspection_panel.get_node("Center/Frame")
+	_expect(Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size).encloses(frame.get_global_rect()), "The actual inspection frame stays within the logical viewport.")
+	_expect(frame.get_global_rect().encloses(inspection_contents.get_global_rect())
+		and inspection_contents.get_global_rect().encloses(cards.get_global_rect()), "Three cards and the inspection content fit inside the visible frame.")
+	var first_card_id: int = cards.get_child(0).get_instance_id()
 	_expect(ui.travel_progress.visible, "Inspect keeps the existing travel bar visible.")
 	state.status.arrival_minutes_remaining = 720
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(ui.watchtower_status_label.text.contains("12h 0m"), "Refreshing updates inspected arrival time from authoritative state.")
+	_expect(ui.watchtower_status_label.text.contains("6 raiders") and ui.travel_eta_label.text.contains("12h 0m"), "Refreshing updates the existing City Management ETA.")
+	_expect(inspection_panel.get_node("Center/Frame/Margin/Contents/EtaLabel").text == "Approaching · ETA: 12h 0m"
+		and cards.get_child(0).get_instance_id() == first_card_id, "The same party refreshes ETA while keeping its card nodes stable.")
+	ui.notification_button.pressed.emit()
+	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty() and not ui.details_panel.visible
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/CardsRow").get_child_count() == 0
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/PartyTypeLabel").text == "Raider party",
+		"Opening notifications closes Inspect, clears its hidden cards, and closes City Management.")
+	ui.notification_button.pressed.emit()
+	ui.open_details()
+	ui.inspect_button.pressed.emit()
+	_expect(cards.get_child_count() == 3, "Reopening Inspect rebuilds a single set of cards without duplicates.")
+	var back_button: Button = inspection_panel.get_node("Center/Frame/Margin/Contents/FooterRow/BackButton")
+	back_button.pressed.emit()
+	_expect(not inspection_panel.visible and ui.details_panel.visible, "Back returns from Inspect to City Management.")
+	ui.inspect_button.pressed.emit()
+	await _press_key(KEY_ESCAPE)
+	_expect(not inspection_panel.visible and ui.details_panel.visible, "Escape closes Inspect first and returns to City Management.")
+	await _press_key(KEY_ESCAPE)
+	_expect(not ui.details_panel.visible, "A second Escape closes City Management.")
+	ui.open_details()
+	ui.inspect_button.pressed.emit()
+	await _press_key(KEY_C)
+	_expect(not inspection_panel.visible and not ui.details_panel.visible and ui._inspected_raiders.is_empty(), "C closes Inspect and City Management together.")
+	ui.open_details()
+	ui.inspect_button.pressed.emit()
+	state.status.party_id = 2
+	state.status.raider_type = "Changed party"
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty() and ui.details_panel.visible,
+		"A new party ID closes Inspect and clears prior intelligence until the next click.")
+	ui.inspect_button.pressed.emit()
+	_expect(inspection_panel.visible and inspection_panel.get_node("Center/Frame/Margin/Contents/PartyTypeLabel").text == "Changed party",
+		"Inspect reveals the new party only after a fresh click.")
+	state.status.erase("units")
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(inspection_panel.visible and cards.get_child_count() == 0
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/CompositionLabel").text == "Composition unavailable",
+		"Legacy inspection data shows unavailable composition without inventing unit counts.")
+	state.status.phase = "attacking"
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty(), "The warning-to-combat transition closes Inspect and clears its details.")
+	ui.open_details()
+	ui.inspect_button.pressed.emit()
+	_expect(inspection_panel.get_node("Center/Frame/Margin/Contents/EtaLabel").text == "Attacking · ETA: now",
+		"An inspection during combat shows its current phase without adding effects.")
+	state.status.phase = "looting"
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(inspection_panel.visible and inspection_panel.get_node("Center/Frame/Margin/Contents/EtaLabel").text == "Looting · ETA: now",
+		"The same inspected party refreshes to the authoritative looting phase.")
 	state.status.watchtower_built = false
 	state.status.can_inspect = false
 	state.status.raider_type = "Unknown"
 	state.changed.emit()
 	await get_tree().process_frame
-	_expect(ui.inspect_button.disabled and ui.watchtower_status_label.text.contains("Unknown") and not ui.watchtower_status_label.text.contains("Dune raiders"), "Losing inspection permission clears previously shown intelligence.")
+	_expect(ui.inspect_button.disabled and not inspection_panel.visible and ui.watchtower_status_label.text.contains("Unknown") and not ui.watchtower_status_label.text.contains("Changed party"), "Losing inspection permission clears previously shown intelligence.")
 	ui.close_details()
 	await _capture("raid-hp.png")
 	state.status = {"phase": "safe", "hp": 50, "max_hp": 50, "level": 0, "defend": 2,
@@ -189,13 +271,17 @@ func _run() -> void:
 	_expect(ui.travel_progress.visible and not ui.result_box.visible, "A new detected party displays travel even with a previous raid report.")
 	_expect(ui.watchtower_status_label.text.contains("Unknown") and not ui.watchtower_status_label.text.contains("Dune raiders"), "Previous party intelligence is cleared for a new journey until Inspect is used again.")
 	ui.inspect_button.pressed.emit()
-	_expect(ui.watchtower_status_label.text.contains("Marsh raiders"), "Inspect reveals only the currently detected party after the previous report.")
+	_expect(ui.watchtower_status_label.text.contains("6 raiders")
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/PartyTypeLabel").text.contains("Marsh raiders"),
+		"Inspect reveals the current party panel and a concise count after the previous report.")
 	var before_progress: float = ui.travel_progress.progress_ratio
 	state.status.arrival_minutes_remaining = 720
 	TimeComponentManager.time_changed.emit(6, 0, 0, "clear")
 	_expect(ui.travel_progress.progress_ratio > before_progress, "The next raid progress continues moving after the first report.")
 	state.status.phase = "recovery"
 	state.changed.emit()
+	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty() and cards.get_child_count() == 0,
+		"The inspection panel and its hidden card data clear when the raid ends.")
 	ui.report_toggle.pressed.emit()
 
 	_check_bounds()
@@ -226,9 +312,27 @@ func _run() -> void:
 	Input.parse_input_event(escape)
 	await get_tree().process_frame
 	_expect(not ui.details_panel.visible and not get_tree().paused, "Escape closes wall details without pausing gameplay.")
+	state.status.phase = "warning"
+	state.status.watchtower_built = true
+	state.status.can_inspect = true
+	state.status.party_id = 9
+	state.status.raider_type = "Old map raiders"
+	state.changed.emit()
+	await get_tree().process_frame
+	ui.open_details()
+	ui.inspect_button.pressed.emit()
+	_expect(inspection_panel.visible and not ui._inspected_raiders.is_empty(), "A bound city can hold open inspection data before rebinding.")
 	var replacement := DisplayState.new()
+	replacement.status.phase = "warning"
+	replacement.status.watchtower_built = true
+	replacement.status.can_inspect = true
+	replacement.status.party_id = 10
+	replacement.status.raider_type = "Fresh raiders"
 	add_child(replacement)
 	ui.bind_state(replacement)
+	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty()
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/PartyTypeLabel").text == "Raider party",
+		"Rebinding to another map closes Inspect and clears the prior party details.")
 	_expect(state.changed.get_connections().size() == 1, "Switching ledgers disconnects the UI callback and leaves only the map-owned marker.")
 	replacement.status.watchtower_built = true
 	replacement.status.can_inspect = true
@@ -239,7 +343,9 @@ func _run() -> void:
 	ui.inspect_button.pressed.emit()
 	_expect(not ui._inspected_raiders.is_empty(), "The current map has transient inspected party details before exit.")
 	ui.set_city_management_available(false)
-	_expect(ui._inspected_raiders.is_empty() and not ui.details_panel.visible, "Leaving the city map clears inspection details and closes City Management.")
+	_expect(ui._inspected_raiders.is_empty() and not ui.details_panel.visible and not inspection_panel.visible
+		and inspection_panel.get_node("Center/Frame/Margin/Contents/CardsRow").get_child_count() == 0,
+		"Leaving the city map clears inspection details and closes City Management.")
 	ui.bind_state(null)
 	_expect(not ui.status_panel.visible and not ui.details_panel.visible, "Unbound UI cannot present stale castle state.")
 	_expect(replacement.changed.get_connections().is_empty(), "Unbinding removes the remaining connection.")
@@ -256,6 +362,7 @@ func _run() -> void:
 func _check_bounds() -> void:
 	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 	_expect(viewport_rect.encloses(ui.details_panel.get_global_rect()), "Report remains inside the logical viewport.")
+	_expect(viewport_rect.encloses(inspection_panel.get_node("Center/Frame").get_global_rect()), "The inspection frame remains inside the logical viewport.")
 
 func _check_notification_bounds() -> void:
 	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
@@ -270,3 +377,10 @@ func _capture(file_name: String) -> void:
 		return
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(folder.path_join(file_name))
+
+func _press_key(keycode: Key) -> void:
+	var event := InputEventKey.new()
+	event.keycode = keycode
+	event.pressed = true
+	Input.parse_input_event(event)
+	await get_tree().process_frame

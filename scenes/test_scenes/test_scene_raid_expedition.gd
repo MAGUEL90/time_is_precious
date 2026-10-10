@@ -136,14 +136,14 @@ func _assert_approved_profile() -> void:
 		and int(config.get("repair_minutes")) == 60,
 		"The active repair profile costs one stone per five HP for 60 minutes.")
 	_expect(bool(config.get("raids_enabled")) and is_instance_valid(profile)
-		and str(profile.get("display_name")).to_lower().contains("normal")
-		and int(profile.get("travel_days")) == 3
-		and int(profile.get("attack_min")) == 5
-		and int(profile.get("attack_max")) == 7
+		and bool(profile.get("composition_enabled"))
+		and profile.call("get_stage", &"early") != null
+		and profile.call("get_stage", &"developing") != null
+		and profile.call("get_stage", &"advanced") != null
 		and int(config.get("warning_days")) == 1
 		and int(config.get("wall_defend")) == 2
 		and int(config.get("recovery_days")) == 3,
-		"The live profile uses the approved normal three-day party, one-day warning, 5–7 attack, 2 defend, and three-day recovery.")
+		"The live profile uses the approved mixed party stages, one-day warning, 2 defend, and three-day recovery.")
 
 func _test_main_map_expedition() -> void:
 	var base_minute: int = _clock_minute()
@@ -215,22 +215,26 @@ func _test_main_map_expedition() -> void:
 		"Rewinding the world clock and returning below its high-water minute does not repeat work time.")
 	_set_clock_minute(base_minute + 120)
 	var build_complete_at: int = base_minute + 120
+	var initial_travel_minutes: int = int(state._party.get("travel_total_minutes", 0))
 	_expect(state._work_kind.is_empty() and state._work_remaining == 0
 		and state.wall_hp == 50 and state.wall_level == 1,
 		"The paid main-map build completes at 120 minutes and restores the wall to 50 HP.")
 	_expect(state.phase == "safe" and state._departure_at == build_complete_at
-		and state._attack_at == build_complete_at + 3 * MINUTES_PER_DAY,
-		"The first party departure is the build completion time and arrival is three travel days later.")
+		and initial_travel_minutes >= 2 * MINUTES_PER_DAY
+		and initial_travel_minutes <= 4 * MINUTES_PER_DAY
+		and state._attack_at == build_complete_at + initial_travel_minutes,
+		"The first mixed party departs at build completion and arrives after its frozen two-to-four-day composition travel.")
 	_expect(_wall_cells_use_source(1),
 		"The main-map bootstrap paints the built wall tile source after paid construction completes.")
 	_set_clock_minute(build_complete_at)
-	_expect(state.wall_hp == 50 and state._attack_at == build_complete_at + 3 * MINUTES_PER_DAY,
+	_expect(state.wall_hp == 50 and state._attack_at == build_complete_at + initial_travel_minutes,
 		"Repeating the completion timestamp does not complete or schedule the first build twice.")
 
 	var journey_debug: Node = content.get_node("TimeDebugOverlay")
 	journey_debug._refresh_controls()
-	_expect(journey_debug.raid_journey_button.disabled and journey_debug.raid_journey_label.text.contains("3d 0h"),
-		"Debug shows the full three-day initial journey and cannot restart it.")
+	_expect(journey_debug.raid_journey_button.disabled
+		and journey_debug.raid_journey_label.text.contains("%dd 0h 0m" % (initial_travel_minutes / MINUTES_PER_DAY)),
+		"Debug shows the full frozen mixed-party journey and cannot restart it.")
 	_expect(not journey_debug.dispatch_raid_journey() and state.phase == "safe" and state.wall_hp == 50,
 		"Pressing the debug dispatch action during travel cannot start instant combat or move arrival.")
 
@@ -255,18 +259,18 @@ func _test_main_map_expedition() -> void:
 		"Starting the native repair choice consumes its stone and leaves HP unchanged until work finishes.")
 	_set_clock_minute(repair_started_at + 60)
 	_expect(state._work_kind.is_empty() and state.wall_hp == 50
-		and state._attack_at == build_complete_at + 3 * MINUTES_PER_DAY,
+		and state._attack_at == build_complete_at + initial_travel_minutes,
 		"Paid repair restores five HP without moving the party's already-scheduled arrival.")
 
-	var arrival_at: int = build_complete_at + 3 * MINUTES_PER_DAY
+	var arrival_at: int = build_complete_at + initial_travel_minutes
 	_set_clock_minute(arrival_at - MINUTES_PER_DAY - 1)
 	_expect(state.phase == "safe" and state.get_status().travel_total_minutes == 0,
 		"The raid remains hidden and safe one minute before the one-day warning window.")
 	_set_clock_minute(arrival_at - MINUTES_PER_DAY)
 	_expect(state.wall_hp == 50, "Travelling raiders do not damage the wall before arrival.")
-	_expect(state.phase == "warning" and state.get_status().travel_total_minutes == 3 * MINUTES_PER_DAY
+	_expect(state.phase == "warning" and state.get_status().travel_total_minutes == initial_travel_minutes
 		and state.get_status().arrival_minutes_remaining == MINUTES_PER_DAY,
-		"The warning phase and raid notice appear exactly one day before scheduled arrival.")
+		"The warning phase and raid notice appear exactly one day before the frozen mixed-party arrival.")
 
 	greeting = await _open_wall_greeting()
 	if is_instance_valid(greeting):
@@ -302,8 +306,9 @@ func _test_main_map_expedition() -> void:
 		and not ui.raid_notice.visible,
 		"The party starts its automatic attack at the original scheduled arrival minute.")
 	_expect(state._attack_strength >= 5 and state._attack_strength <= 7
+		and state._attack_strength == int(state._party.get("attack_strength", -1))
 		and int(state.config.get("wall_defend")) == 2,
-		"The live main-map attack rolls 5–7 strength against the configured defend value of 2.")
+		"The live main-map attack uses its frozen early-party strength against the configured defend value of 2.")
 	state.advance_attack(float(state.config.get("duration_seconds")))
 	var report: Dictionary = state.get_last_report()
 	_expect(state.phase == "recovery" and report.has("id"),
@@ -314,8 +319,8 @@ func _test_main_map_expedition() -> void:
 	_expect(int(storage.items.get("stone", 0)) + int(report.get("stolen", {}).get("stone", 0)) == 4,
 		"The main-map raid conserves storage plus reported stolen items.")
 	_expect(state._departure_at == arrival_at + 3 * MINUTES_PER_DAY
-		and state._attack_at == arrival_at + 6 * MINUTES_PER_DAY,
-		"After the attack, the next party departs after three recovery days and arrives three travel days later.")
+		and state._attack_at == -1 and state._party.is_empty(),
+		"After the attack, three recovery days are scheduled before a future party departs; its arrival is still unknown.")
 
 	_expect(time_debug.get_effective_speed() == 60, "Scheduled raid completion restores the selected speed.")
 	state.wall_hp = 50
@@ -323,8 +328,9 @@ func _test_main_map_expedition() -> void:
 	_expect(not time_debug.dispatch_raid_journey(), "Paused debug cannot dispatch a party.")
 	get_tree().paused = false
 	_expect(time_debug.dispatch_raid_journey() and state.phase == "safe"
-		and state._attack_at == _clock_minute() + 3 * MINUTES_PER_DAY,
-		"Debug dispatch during recovery starts a full three-day journey without immediate combat.")
+		and state._departure_at == _clock_minute()
+		and state._attack_at == state._departure_at + int(state._party.get("travel_total_minutes", 0)),
+		"Debug dispatch during recovery starts a frozen mixed-party journey without immediate combat.")
 	var dispatched_arrival: int = state._attack_at
 	_expect(not time_debug.dispatch_raid_journey() and state._attack_at == dispatched_arrival,
 		"Repeated debug dispatch preserves the travelling party and its arrival.")
@@ -368,9 +374,9 @@ func _test_late_warning_does_not_move_arrival() -> void:
 	_expect(quote.can_start and fixture.request_wall_work(quote),
 		"An isolated ledger can start construction using the active main-map profile.")
 	_notify_ledger_at(fixture, start_at + 120)
-	var arrival_at: int = start_at + 120 + 3 * MINUTES_PER_DAY
+	var arrival_at: int = int(fixture._departure_at) + int(fixture._party.get("travel_total_minutes", 0))
 	_expect(fixture._attack_at == arrival_at,
-		"The isolated ledger schedules arrival three days after construction completion.")
+		"The isolated ledger schedules arrival from its actual frozen party composition.")
 	_notify_ledger_at(fixture, arrival_at - MINUTES_PER_DAY + 120)
 	_expect(fixture.phase == "warning" and fixture._attack_at == arrival_at,
 		"Detecting the warning two hours after its threshold leaves the party's arrival unchanged.")

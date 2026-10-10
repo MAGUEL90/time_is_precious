@@ -29,6 +29,7 @@ const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 @onready var build_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/BuildButton
 @onready var repair_button: Button = $Root/Center/DetailsPanel/Margin/Contents/ActionRow/RepairButton
 @onready var report_label: Label = $Root/Center/DetailsPanel/Margin/Contents/ReportScroll/ReportLabel
+@onready var inspection_panel: Control = $Root/RaiderInspectionPanel
 
 const WARNING_PULSE_SECONDS: float = 3.0
 var _warning_elapsed: float = 0.0
@@ -71,6 +72,7 @@ func _ready() -> void:
 	notifications_city_button.hide()
 	$Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton.pressed.connect(open_details)
 	$Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton.pressed.connect(close_details)
+	inspection_panel.connect("back_requested", Callable(self, "_return_from_inspection"))
 	_create_dashboard()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
@@ -95,7 +97,7 @@ func _set_attack_warning(active: bool) -> void:
 	set_process(active)
 
 func _exit_tree() -> void:
-	_clear_inspected_raiders()
+	_clear_inspected_raiders(false)
 	CitizenManager.citizen_added.disconnect(_on_residents_changed)
 	CitizenManager.citizen_left.disconnect(_on_residents_changed)
 	_unbind_state()
@@ -105,7 +107,7 @@ func _exit_tree() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_C and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
-		if details_panel.visible:
+		if details_panel.visible or inspection_panel.visible:
 			close_details()
 			get_viewport().set_input_as_handled()
 		elif _can_use_city_ui():
@@ -116,6 +118,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if notifications_popup.visible and event.is_action_pressed("ui_cancel"):
 		_close_notifications()
 		get_viewport().set_input_as_handled()
+		return
+	if inspection_panel.visible and event.is_action_pressed("ui_cancel"):
+		_return_from_inspection()
+		get_viewport().set_input_as_handled()
+		return
 	if details_panel.visible and event.is_action_pressed("ui_cancel"):
 		close_details()
 		get_viewport().set_input_as_handled()
@@ -141,6 +148,7 @@ func open_details() -> void:
 	if not is_instance_valid(raid_state):
 		return
 	_close_notifications()
+	inspection_panel.visible = false
 	show_last_raid = false
 	if raid_state.has_method("get_status"):
 		_status_data = raid_state.get_status().duplicate(true)
@@ -150,6 +158,8 @@ func open_details() -> void:
 
 func close_details() -> void:
 	details_panel.visible = false
+	inspection_panel.visible = false
+	_clear_inspected_raiders(false)
 	set_process(attack_warning.visible)
 
 func set_city_management_available(available: bool) -> void:
@@ -157,7 +167,7 @@ func set_city_management_available(available: bool) -> void:
 	if not available:
 		_close_notifications()
 		close_details()
-		_clear_inspected_raiders()
+		_clear_inspected_raiders(false)
 	notification_button.visible = available
 	if available:
 		refresh()
@@ -181,7 +191,7 @@ func refresh() -> void:
 		status_panel.visible = false
 		details_panel.visible = false
 		_status_data.clear()
-		_clear_inspected_raiders()
+		_clear_inspected_raiders(false)
 		_refresh_raid_notice()
 		_last_report.clear()
 		report_text = "No raid report yet."
@@ -225,7 +235,7 @@ func refresh() -> void:
 
 func _unbind_state() -> void:
 	close_details()
-	_clear_inspected_raiders()
+	_clear_inspected_raiders(false)
 	if not is_instance_valid(raid_state):
 		return
 	if raid_state.has_signal("changed"):
@@ -272,10 +282,27 @@ func _refresh_inspected_raiders() -> void:
 	if str(inspection.get("phase", "")) != str(_status_data.get("phase", "")):
 		_clear_inspected_raiders()
 		return
+	var previous_id: int = int(_inspected_raiders.get("id", -1))
+	var updated_id: int = int(inspection.get("id", -1))
+	if previous_id != updated_id:
+		_clear_inspected_raiders()
+		return
 	_inspected_raiders = inspection.duplicate(true)
+	if inspection_panel.visible:
+		inspection_panel.call("show_inspection", _inspected_raiders)
 
-func _clear_inspected_raiders() -> void:
+func _clear_inspected_raiders(restore_city: bool = true) -> void:
+	var was_inspecting: bool = inspection_panel.visible
+	inspection_panel.visible = false
+	inspection_panel.call("clear_inspection")
 	_inspected_raiders.clear()
+	if restore_city and was_inspecting and _city_management_available and is_instance_valid(raid_state):
+		details_panel.visible = true
+
+func _return_from_inspection() -> void:
+	inspection_panel.visible = false
+	if _city_management_available and is_instance_valid(raid_state):
+		details_panel.visible = true
 
 func _inspect_current_raiders() -> void:
 	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status") or not raid_state.has_method("inspect_raiders"):
@@ -302,6 +329,9 @@ func _inspect_current_raiders() -> void:
 	else:
 		_clear_inspected_raiders()
 	_render_details()
+	if not _inspected_raiders.is_empty():
+		inspection_panel.call("show_inspection", _inspected_raiders)
+		details_panel.visible = false
 
 func _on_merchant_state_changed() -> void:
 	_refresh_merchant_notice()
@@ -316,6 +346,8 @@ func _toggle_notifications() -> void:
 		return
 	if not _can_use_city_ui():
 		return
+	_clear_inspected_raiders(false)
+	details_panel.visible = false
 	notifications_popup.visible = true
 	_refresh_merchant_notice()
 	_refresh_raid_notice()
@@ -472,7 +504,6 @@ func _create_dashboard() -> void:
 	inspect_button.add_theme_font_size_override("font_size", 6)
 	inspect_button.custom_minimum_size = Vector2(48, 14)
 	inspect_button.text = "Inspect"
-	inspect_button.tooltip_text = "A completed watchtower is required to inspect raiders."
 	inspect_button.focus_mode = Control.FOCUS_NONE
 	inspect_button.pressed.connect(_inspect_current_raiders)
 	watchtower_row.add_child(inspect_button)
@@ -530,10 +561,16 @@ func _render_watchtower_status(detected: bool, viewing_report: bool) -> void:
 	else:
 		inspect_button.disabled = not watchtower_built or not bool(_status_data.get("can_inspect", false)) or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders")
 		if not _inspected_raiders.is_empty() and str(_inspected_raiders.get("phase", "")) == str(_status_data.get("phase", "")):
-			var raider_type: String = str(_inspected_raiders.get("type", "Unknown"))
-			var eta_minutes: int = maxi(0, int(_inspected_raiders.get("arrival_minutes_remaining", 0)))
-			var eta_text: String = "now" if str(_inspected_raiders.get("phase", "")) != "warning" else _format_travel_time(eta_minutes)
-			watchtower_status_label.text = "Watchtower: Built · %s · ETA %s" % [raider_type, eta_text]
+			if _inspected_raiders.has("total_count"):
+				var total_count: int = maxi(0, int(_inspected_raiders.get("total_count", 0)))
+				var count_suffix: String = "raider" if total_count == 1 else "raiders"
+				watchtower_status_label.text = "Watchtower: Built · %d %s" % [total_count, count_suffix]
+			else:
+				# Older fixture/API data can still show its legacy description.
+				var raider_type: String = str(_inspected_raiders.get("type", "Unknown"))
+				var eta_minutes: int = maxi(0, int(_inspected_raiders.get("arrival_minutes_remaining", 0)))
+				var eta_text: String = "now" if str(_inspected_raiders.get("phase", "")) != "warning" else _format_travel_time(eta_minutes)
+				watchtower_status_label.text = "Watchtower: Built · %s · ETA %s" % [raider_type, eta_text]
 		else:
 			watchtower_status_label.text = "Watchtower: %s · Raiders: Unknown" % tower_text
 

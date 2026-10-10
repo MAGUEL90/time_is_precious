@@ -18,7 +18,11 @@ func fixture() -> Node:
 	add_child(storage)
 	storage.items = {"stone": 100, "wood_log": 100}
 	var state = STATE.new()
-	state.config = load("res://scenes/raid/wall_playtest.tres").duplicate(true)
+	var config: Resource = load("res://scenes/raid/wall_playtest.tres").duplicate(true)
+	# This suite covers wall improvements and retains the legacy fixed three-day
+	# travel fixture; mixed-party composition has a focused regression scene.
+	config.party_profile = load("res://scenes/raid/normal_raider_party.tres").duplicate(true)
+	state.config = config
 	state.storage = storage
 	add_child(state)
 	state.wall_level = 1

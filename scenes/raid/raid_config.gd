@@ -41,12 +41,14 @@ extends Resource
 @export var max_fleeing_residents: int = 0
 
 func is_valid() -> bool:
+	if party_profile != null and (party_profile.get_script() != load("res://scenes/raid/raid_party_config.gd") or not party_profile.is_valid()):
+		return false
 	if defense_improvements_enabled:
 		if not timed_work_enabled or level_2_max_hp <= wall_max_hp or level_2_defend <= wall_defend:
 			return false
 		if upgrade_minutes <= 0 or watchtower_minutes <= 0 or watchtower_warning_days <= warning_days:
 			return false
-		if party_profile != null and watchtower_warning_days > party_profile.travel_days:
+		if party_profile != null and watchtower_warning_days > party_profile.get_min_travel_days():
 			return false
 	if not is_finite(loot_capacity_weight) or loot_capacity_weight < 0.0 or not is_finite(loot_seconds_per_item) or loot_seconds_per_item <= 0.0:
 		return false
@@ -71,7 +73,7 @@ func is_valid() -> bool:
 	if recovery_days < 0:
 		return false
 	if raids_enabled and party_profile != null:
-		return party_profile.get_script() == load("res://scenes/raid/raid_party_config.gd") and party_profile.is_valid() and warning_days >= 1 and warning_days <= party_profile.travel_days
+		return warning_days >= 1 and warning_days <= party_profile.get_min_travel_days()
 	if raids_enabled and (attack_min <= 0 or interval_min_days <= warning_days or interval_max_days < interval_min_days or warning_days < 1):
 		return false
 	return true

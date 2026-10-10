@@ -25,6 +25,7 @@ var materials_button: Button
 var shekel_button: Button
 var production_button: Button
 var raid_journey_button: Button
+var raid_stage_button: Button
 var raid_journey_label: Label
 var raid_reset_button: Button
 var wall_materials_button: Button
@@ -210,6 +211,20 @@ func give_wall_materials() -> bool:
 		materials_status.text = "Wall materials added to City Storage (debug)."
 	_refresh_controls()
 	return result
+
+func cycle_raid_stage() -> bool:
+	if not OS.is_debug_build() or not can_advance():
+		return false
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state) or state.config.party_profile == null or not state.config.party_profile.composition_enabled:
+		return false
+	var stages: Array = state.config.party_profile.composition_stages
+	for index: int in range(stages.size()):
+		if stages[index].id == state._composition_stage:
+			var changed: bool = state.set_debug_threat_stage(stages[(index + 1) % stages.size()].id)
+			_refresh_controls()
+			return changed
+	return false
 
 func dispatch_raid_journey() -> bool:
 	if not OS.is_debug_build() or not can_advance():
@@ -455,7 +470,7 @@ func _create_controls() -> void:
 	column.add_child(raid_buttons)
 	column.move_child(raid_buttons, 4)
 	raid_journey_button = _button("Send raiders")
-	raid_journey_button.tooltip_text = "Start a normal party's journey. Travel and warning occur before combat. An existing journey cannot be restarted."
+	raid_journey_button.tooltip_text = "Start the next party's journey. Its composition sets travel time. An existing journey cannot be restarted."
 	raid_journey_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	raid_journey_button.pressed.connect(dispatch_raid_journey)
 	raid_buttons.add_child(raid_journey_button)
@@ -475,6 +490,12 @@ func _create_controls() -> void:
 	wall_materials_button.pressed.connect(give_wall_materials)
 	column.add_child(wall_materials_button)
 	column.move_child(wall_materials_button, 5)
+	raid_stage_button = _button("Next party: Early")
+	raid_stage_button.name = "RaidStage"
+	raid_stage_button.tooltip_text = "Debug only: choose the next departure's stage. Travelling raiders keep their current composition."
+	raid_stage_button.pressed.connect(cycle_raid_stage)
+	column.add_child(raid_stage_button)
+	column.move_child(raid_stage_button, 6)
 	column.add_child(_label("Close: Debug button / `"))
 
 func _button(caption: String) -> Button:
@@ -510,10 +531,18 @@ func _refresh_raid_buttons(player_available: bool) -> void:
 	wall_materials_button.disabled = not can_use
 	raid_journey_button.disabled = true
 	raid_reset_button.disabled = true
+	raid_stage_button.disabled = true
 	raid_journey_label.text = "Build the wall to start the first journey."
 	if not is_instance_valid(state):
 		return
 	raid_journey_button.disabled = not (can_use and state.can_dispatch_debug_party())
+	var profile: Resource = state.config.party_profile
+	raid_stage_button.visible = profile != null and profile.composition_enabled
+	if raid_stage_button.visible:
+		var stage: Resource = profile.get_stage(state._composition_stage)
+		raid_stage_button.disabled = not can_use or stage == null
+		if stage != null:
+			raid_stage_button.text = "Next party: " + stage.display_name
 	var status: Dictionary = state.get_status()
 	var phase: String = str(status.get("phase", ""))
 	var raid_active: bool = phase in ["attacking", "looting"]
@@ -524,7 +553,10 @@ func _refresh_raid_buttons(player_available: bool) -> void:
 	elif phase == "looting":
 		var seconds_left: float = maxf(0.0, float(status.get("loot_seconds_remaining", status.get("seconds_left", 0.0))))
 		raid_journey_label.text = "Raiders looting (%ds, clock x1)." % int(ceil(seconds_left))
-	elif state._attack_at >= 0 and state.config.party_profile != null:
+	elif state._attack_at < 0 and state._departure_at >= 0 and profile != null:
+		var until_departure: int = maxi(0, state._departure_at - now)
+		raid_journey_label.text = "Next departure in %dd %dh %dm (debug)." % [until_departure / 1440, (until_departure % 1440) / 60, until_departure % 60]
+	elif state._attack_at >= 0 and profile != null:
 		var remaining: int = maxi(0, state._attack_at - now)
 		raid_journey_label.text = "Raid arrives in %dd %dh %dm (debug)." % [remaining / 1440, (remaining % 1440) / 60, remaining % 60]
 		if state._departure_at > now:

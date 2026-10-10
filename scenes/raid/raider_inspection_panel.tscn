@@ -1,0 +1,110 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/raid/raider_inspection_panel.gd" id="1_panel"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
+
+[sub_resource type="AtlasTexture" id="RaidPanelTexture"]
+atlas = ExtResource("3_panel")
+region = Rect2(1, 1, 168, 134)
+
+[node name="RaiderInspectionPanel" type="Control"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme = ExtResource("2_theme")
+script = ExtResource("1_panel")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Frame" type="NinePatchRect" parent="Center"]
+custom_minimum_size = Vector2(320, 134)
+layout_mode = 2
+mouse_filter = 0
+texture = SubResource("RaidPanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Center/Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Contents" type="VBoxContainer" parent="Center/Frame/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="TitleLabel" type="Label" parent="Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "RAIDER INSPECTION"
+vertical_alignment = 1
+
+[node name="PartyTypeLabel" type="Label" parent="Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Raider party"
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="EtaLabel" type="Label" parent="Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "ETA: 1d 0h"
+vertical_alignment = 1
+
+[node name="CompositionLabel" type="Label" parent="Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Composition unavailable"
+vertical_alignment = 1
+
+[node name="CardsRow" type="HBoxContainer" parent="Center/Frame/Margin/Contents"]
+visible = false
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="FooterRow" type="HBoxContainer" parent="Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+alignment = 2
+
+[node name="BackButton" type="Button" parent="Center/Frame/Margin/Contents/FooterRow"]
+custom_minimum_size = Vector2(42, 14)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+focus_mode = 0

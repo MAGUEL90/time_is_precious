@@ -632,7 +632,7 @@ keeps world time running; departure closes the menu. Trading consumes/produces o
 personal Inventory goods, never held workshop output or city-owned stock.
 
 
-## Castle wall / raid branch checkpoint (2026-10-08)
+## Castle wall / raid branch checkpoint (2026-10-10)
 
 RaidBootstrap owns map projection and finds the persistent CityRaid ledger/RaidUI
 under the existing WorkStateRuntime host. Wall HP, reports, expedition timestamps
@@ -650,14 +650,25 @@ monotonic world-minute high-water mark; repeats/rewinds cannot duplicate progres
 or payments. Attacks suspend work. Breached repairs refund their paid materials,
 with a pending refund retained if storage temporarily rejects the transaction.
 
-The normal party profile separates travel duration and strength from detection.
-Initial construction completion starts a 3-day expedition; detection occurs 1 day
-before arrival. A completed raid schedules a 3-day recovery interval before the
-next departure. Departure/arrival timestamps remain internal while the threat is
-undetected. Skipping time across arrival starts one attack without rerolling or
-extending that expedition. Legacy randomized interval mode remains for isolated
-regression fixtures. Real gameplay seconds drive attacks, with pause/transition
-guards; clock-speed controls do not accelerate hit timing.
+The live mixed party profile references per-unit Resources (Light/Normal/Heavy)
+and stage Resources (Early/Developing/Advanced). At departure, the ledger rolls
+Heavy presence, chooses a feasible composition within the stage's count/strength
+bounds, and snapshots counts, per-member stats, total strength and travel duration.
+Group strength is the sum of count times member strength; group travel follows its
+slowest member (2/3/4 days). Defend is deducted once per five-second group hit.
+The first departure is initial construction completion. A completed raid schedules
+three recovery days before generating the next party; no next ETA exists during
+that cooldown. Inspection, wall changes, repeated clock ticks and map reload do
+not reroll a travelling party. Skipping across departure/arrival creates one party
+at its original departure and clamps construction progress at arrival.
+
+Departure/arrival timestamps remain internal while undetected. Detection is one
+day before arrival or two with the tower, without shifting arrival. The city threat
+stage defaults to Early; only the debug selector currently changes it through the
+ledger's stage API, and changes affect future departures. No wall tier/date-based
+or automatic city progression is inferred. Fixed normal-party and randomized
+interval modes remain for isolated regression fixtures. Real gameplay seconds
+drive attacks, with pause/transition guards; clock speed does not accelerate hits.
 
 RaidUI provides a City Management keyboard shortcut (C), a map-gated 16x16
 notification button, and read-only wall/raid reports. The notification popup binds
@@ -673,7 +684,7 @@ The raid ledger accumulates loot receipts and carried weight, then records the
 retreat reason at capacity, timeout or no fitting item. Counted stacks have no
 reserve; unique equipment units and fractional food portions remain outside this API.
 Main playtest uses 10 weight, one item/second and 5 pp satisfaction loss; citizen
-flight remains disabled. Legacy bulk loot stays available for regression fixtures. Debug dispatch starts a normal travelling party and cannot restart an expedition
+flight remains disabled. Legacy bulk loot stays available for regression fixtures. Debug dispatch starts a composed travelling party and cannot restart an expedition
 already underway. Arrival countdown and a material top-up action provide explicit
 playtest tools; no resources are seeded
 automatically. The same session ledger now owns wall tier, completed watchtower
@@ -681,7 +692,13 @@ and timed upgrade/addition jobs. Quotes include source condition and target bene
 and are revalidated at confirmation. Derived HP/Defend use the retained wall tier.
 Detection uses the completed tower's warning window without changing arrival time;
 inspect_raiders() returns no information unless the tower exists and the party is
-detected/active. City Management is read-only; the NPC owns upgrade confirmation.
-Bootstrap draws a replaceable tower marker on the map without adding collisions.
-Gate/collision, scouts, guard posts, additional party types, city progression and
-save persistence remain outside this change.
+detected/active. It returns a deep copy of the departure snapshot with party ID,
+current phase and ETA. RaidUI owns the separate RaiderInspectionPanel, renders a
+card only for each present type and refreshes the same cards while the party ID
+is unchanged. Loss of access, replacement party, map exit, rebind or raid end
+clears the cached inspection and hidden UI data. Per-unit optional textures replace
+the local pixel placeholders without changing composition logic. City Management
+is read-only; the NPC owns upgrade confirmation. Bootstrap draws a replaceable
+tower marker on the map without adding collisions. Gate/collision, scouts, guard
+posts, raider effects/statuses, city progression and save persistence remain outside
+this change.

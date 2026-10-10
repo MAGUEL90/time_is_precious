@@ -1,7 +1,7 @@
 [gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_config.gd" id="1_config"]
-[ext_resource type="Resource" path="res://scenes/raid/normal_raider_party.tres" id="2_party"]
+[ext_resource type="Resource" path="res://scenes/raid/mixed_raider_party.tres" id="2_party"]
 
 [resource]
 script = ExtResource("1_config")

@@ -15,6 +15,9 @@ var _work_base_max_hp: int = 0
 var _latest_minute: int = -1
 var _attack_at: int = -1
 var _departure_at: int = -1
+var _party: Dictionary = {}
+var _expedition_sequence: int = 0
+var _composition_stage: StringName
 var _elapsed: float = 0.0
 var _hits: int = 0
 var _start_hp: int = 0
@@ -51,6 +54,8 @@ func _ready() -> void:
 		push_error("Raid: invalid configuration; raids and construction are disabled.")
 		return
 	_rng.randomize()
+	if _uses_composition():
+		_composition_stage = config.party_profile.composition_stages[0].id
 	TimeComponentManager.time_changed.connect(_on_time_changed)
 	_latest_minute = _now()
 
@@ -94,7 +99,7 @@ func reset_debug_wall() -> bool:
 	changed.emit()
 	return true
 
-## Debug journey uses the same normal-party clock and detection rules as gameplay.
+## Debug journey uses the same composition, clock and detection rules as gameplay.
 func can_dispatch_debug_party() -> bool:
 	if not OS.is_debug_build() or not _valid or _resolving or _starting_work or is_raid_active() or wall_hp <= 0:
 		return false
@@ -107,8 +112,14 @@ func dispatch_debug_party() -> bool:
 	if not can_dispatch_debug_party() or get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		return false
 	_departure_at = maxi(_latest_minute, _now())
-	_attack_at = _departure_at + config.party_profile.travel_days * 1440
+	if _uses_composition():
+		_party.clear()
+		_attack_at = -1
+		_depart_if_due(_departure_at)
+	else:
+		_attack_at = _departure_at + config.party_profile.travel_days * 1440
 	phase = "safe"
+	_update_detection(_departure_at)
 	changed.emit()
 	return true
 
@@ -132,13 +143,17 @@ func get_warning_days() -> int:
 	return config.watchtower_warning_days if watchtower_built else config.warning_days
 
 func can_inspect_raiders() -> bool:
-	return _valid and watchtower_built and config.party_profile != null and phase in ["warning", "attacking", "looting"]
+	return _valid and watchtower_built and config.party_profile != null and phase in ["warning", "attacking", "looting"] and (not _uses_composition() or not _party.is_empty())
 
 func inspect_raiders() -> Dictionary:
 	if not can_inspect_raiders():
 		return {}
-	return {"type": config.party_profile.display_name, "phase": phase,
-		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
+	var inspection: Dictionary = _party.duplicate(true) if _uses_composition() else {"type": config.party_profile.display_name}
+	inspection.id = _expedition_sequence if _uses_composition() else _report_sequence + 1
+	inspection.phase = phase
+	inspection.arrival_minutes_remaining = maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0
+	inspection.travel_total_minutes = _get_travel_minutes()
+	return inspection
 
 func get_status() -> Dictionary:
 	if not _valid:
@@ -169,7 +184,7 @@ func get_status() -> Dictionary:
 		"storage_item_count": _storage_item_count(),
 		"loot_capacity_weight": config.loot_capacity_weight,
 		"loot_seconds_remaining": maxf(0.0, config.duration_seconds - _elapsed) if phase == "looting" else 0.0,
-		"travel_total_minutes": config.party_profile.travel_days * 1440 if config.party_profile != null and phase in ["warning", "attacking", "looting"] else 0,
+		"travel_total_minutes": _get_travel_minutes() if phase in ["warning", "attacking", "looting"] else 0,
 		"arrival_minutes_remaining": maxi(0, _attack_at - maxi(_latest_minute, _now())) if phase == "warning" else 0}
 
 func _storage_item_count() -> int:
@@ -302,18 +317,62 @@ func get_last_report() -> Dictionary:
 	# Callers may format/edit their copy without changing the authoritative result.
 	return _report.duplicate(true)
 
+func _uses_composition() -> bool:
+	return config != null and config.party_profile != null and config.party_profile.composition_enabled
+
+func _get_travel_minutes() -> int:
+	if _uses_composition():
+		return int(_party.get("travel_total_minutes", 0))
+	return config.party_profile.travel_days * 1440 if config.party_profile != null else 0
+
+## Future city progression calls this only when its own approved stage changes.
+## Changing the stage never changes a party that has already departed.
+func set_city_threat_stage(stage_id: StringName) -> bool:
+	if not _valid or not _uses_composition() or config.party_profile.get_stage(stage_id) == null:
+		return false
+	_composition_stage = stage_id
+	changed.emit()
+	return true
+
+func set_debug_threat_stage(stage_id: StringName) -> bool:
+	if not OS.is_debug_build() or get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		return false
+	return set_city_threat_stage(stage_id)
+
 func _schedule_from(minute: int) -> void:
 	if config.party_profile != null:
 		_departure_at = minute + (config.recovery_days * 1440 if _report_sequence > 0 else 0)
-		_attack_at = _departure_at + config.party_profile.travel_days * 1440
+		if _uses_composition():
+			_party.clear()
+			_attack_at = -1
+			_depart_if_due(maxi(_latest_minute, _now()))
+		else:
+			_attack_at = _departure_at + config.party_profile.travel_days * 1440
 		return
 	var delay_days: int = _rng.randi_range(config.interval_min_days, config.interval_max_days)
 	_attack_at = minute + delay_days * 1440
+
+func _depart_if_due(now: int) -> void:
+	if not _uses_composition() or _departure_at < 0 or now < _departure_at or not _party.is_empty():
+		return
+	_party = config.party_profile.roll_party(_rng, _composition_stage)
+	if _party.is_empty():
+		push_error("Raid: the selected stage cannot generate a valid party.")
+		return
+	_expedition_sequence += 1
+	_party.id = _expedition_sequence
+	_attack_at = _departure_at + int(_party.travel_total_minutes)
+
+func _update_detection(now: int) -> void:
+	if phase in ["safe", "recovery"] and _attack_at >= 0 and now >= _attack_at - get_warning_days() * 1440:
+		phase = "warning"
+		changed.emit()
 
 func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> void:
 	var now: int = day * 1440 + hour * 60 + minute
 	if not _valid or now <= _latest_minute:
 		return
+	_depart_if_due(now)
 	var work_until: int = now
 	if config.party_profile != null and _attack_at >= 0 and not is_raid_active():
 		work_until = mini(now, maxi(_latest_minute, _attack_at))
@@ -325,9 +384,7 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	if _resolving or _starting_work or not config.raids_enabled or phase in ["unbuilt", "attacking", "looting"] or _attack_at < 0:
 		return
 	if config.party_profile != null:
-		if phase in ["safe", "recovery"] and now >= _attack_at - get_warning_days() * 1440:
-			phase = "warning"
-			changed.emit()
+		_update_detection(now)
 		if phase == "warning" and now >= _attack_at:
 			_start_attack()
 		return
@@ -340,7 +397,7 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		_start_attack()
 
 func _start_attack(override_strength: int = -1) -> void:
-	if phase != "warning" or _resolving:
+	if phase != "warning" or _resolving or (_uses_composition() and _party.is_empty() and override_strength < 0):
 		return
 	phase = "attacking"
 	_elapsed = 0.0
@@ -354,7 +411,7 @@ func _start_attack(override_strength: int = -1) -> void:
 	_start_hp = wall_hp
 	var min_strength: int = config.party_profile.attack_min if config.party_profile != null else config.attack_min
 	var max_strength: int = config.party_profile.attack_max if config.party_profile != null else config.attack_max
-	_attack_strength = override_strength if override_strength >= 0 else _rng.randi_range(min_strength, max_strength)
+	_attack_strength = override_strength if override_strength >= 0 else (int(_party.attack_strength) if _uses_composition() else _rng.randi_range(min_strength, max_strength))
 	set_process(true)
 	if wall_hp == 0:
 		_begin_looting()

@@ -1,10 +1,11 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_ui.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_panel"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/exclamation_mark_icon.png" id="4_exclamation"]
 [ext_resource type="Script" path="res://scenes/raid/raid_travel_progress.gd" id="5_travel"]
+[ext_resource type="PackedScene" path="res://scenes/raid/raider_inspection_panel.tscn" id="6_inspection_panel"]
 
 [sub_resource type="Shader" id="AttackWarningShader"]
 code = "shader_type canvas_item;
@@ -444,3 +445,5 @@ theme_override_constants/shadow_offset_y = 1
 text = "Iddin-Sin: Raiders are nearing the castle. Prepare the wall!"
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="RaiderInspectionPanel" parent="Root" instance=ExtResource("6_inspection_panel")]

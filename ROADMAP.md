@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-09-26
+Last updated: 2026-10-10
 
 ## Purpose of This Document
 
@@ -19,7 +19,7 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
-## Raid branch — normal expeditions and paid wall work (2026-10-08)
+## Raid branch — mixed raider parties and Inspect cards (2026-10-10)
 
 Approach **Iddin-Sin** inside the south wall, press **E**, review the quote and
 choose **Build** or **Repair**. Enter reveals these choices alongside **Not now**,
@@ -30,16 +30,25 @@ completion. Jobs persist across map changes, pause during attacks, and a breache
 repair is cancelled with its materials refunded. City Management remains read-only;
 press C to open wall status and raid reports. A plain construction progress / attack HP bar appears above the wall, replacing the persistent bottom-right raid panel.
 
-The first normal raider party departs when initial construction completes, travels
-for 3 days, and becomes visible through Iddin-Sin/HUD warning 1 day before arrival.
-After a raid, 3 safe days precede the next departure, followed by another 3-day
-journey. Detection does not shift arrival. Normal attack strength is 5–7 per
-5-second hit, wall Defend is 2, HP is 50, and raid duration remains at most 60
-active gameplay seconds. Reports and painted-wall visuals follow actual results.
+The first party departs when initial construction completes. Its composition is
+rolled once at departure: Light contributes 1 strength and takes 2 travel days,
+Normal 2 strength / 3 days, Heavy 4 strength / 4 days. The party travels together
+at its slowest member's speed. Early parties contain 3–5 members with 5–7 total
+strength; 10% of parties carry a Heavy, at most one. Detection occurs 1 day before
+arrival and never shifts arrival. Three safe days follow a raid before the next
+party is generated and departs. Composition survives map changes and cannot be
+rerolled through Inspect, repairs or upgrades.
 
-Debug shows the party arrival countdown. **Send raiders** starts a normal three-day
-journey during recovery; an existing journey cannot be restarted. Immediate
-light/heavy attack buttons are removed. Wall-HP reset remains available. During
+Every 5 active seconds the group deals max(0, total strength - wall Defend).
+Wall level 1 keeps 50 HP / Defend 2; the raid still lasts at most 60 active
+seconds. Reports and painted-wall visuals follow actual results.
+
+Debug shows the departure/arrival countdown. **Next party: Early** cycles through
+Early, Developing (4–7 members, 8–11 strength, 25% Heavy presence, max 2), and
+Advanced (6–10 members, 12–16 strength, 45% Heavy presence, max 3). It applies at
+the next departure only. Gameplay stays Early until future city progression is
+connected. **Send raiders** starts that party's full journey during recovery; an
+existing journey cannot be restarted. Wall-HP reset remains available. During
 combat the effective clock is x1, with the selected speed restored afterward.
 **Wall materials** tops
 up only the materials missing for the next job in City Storage, for playtesting
@@ -58,15 +67,21 @@ nothing fits. Results record actual losses, breach/loot duration and retreat rea
 Iddin-Sin now offers Improve -> Wall Lv.2 / Watchtower, with a quote before Start.
 Wall level 2 costs 20 Stone + 10 Wood Log and 240 game minutes, granting 80 HP
 and Defend 3. Repair the current wall first. Watchtower costs 10 Stone + 10 Wood
-Log and 180 minutes; it detects the normal party two days before arrival and
+Log and 180 minutes; it detects a party two days before arrival and
 unlocks Inspect for detected/active raids. One project runs at a time. Breach
 refunds unfinished improvements, while completed wall tier and tower survive;
 rebuild restores the retained tier. A simple tower marker appears at the wall.
 
-Gate/collision work, fast/heavy party types, scout patrols, guard posts/soldiers,
-weapons, city levels and disk saving remain future work. The party resource separates travel duration from attack strength
-for that extension. Citizen flight remains disabled. Unique equipment instances and opened food portions are outside the initial counted-stack loot API.
-See `docs/task_reports/raid-mvp-scope-2026-10-05.md` for validation and scope.
+Inspect opens a separate panel with a card per present raider type, a replaceable
+pixel icon and x quantity, plus the current phase/ETA. Back or Escape returns to
+City Management; C closes both. Lost access, a new party, map exit and raid end
+clear old intelligence. Fonts use 6/12 and the former oversized tooltip is removed.
+
+Gate/collision work, scout patrols, guard posts/soldiers, weapons, city levels,
+raider effects/statuses and disk saving remain future work. Citizen flight remains
+disabled. Unique equipment instances and opened food portions remain outside the
+counted-stack loot API. See `docs/task_reports/raider-composition-inspect-2026-10-10.md`
+for this checkpoint and `docs/task_reports/raid-mvp-scope-2026-10-05.md` for earlier scope.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 
