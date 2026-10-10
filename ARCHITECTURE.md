@@ -703,8 +703,24 @@ current phase and ETA. RaidUI owns the separate RaiderInspectionPanel, renders a
 card only for each present type and refreshes the same cards while the party ID
 is unchanged. Loss of access, replacement party, map exit, rebind or raid end
 clears the cached inspection and hidden UI data. Per-unit optional textures replace
-the local pixel placeholders without changing composition logic. City Management
-is read-only; the NPC owns upgrade confirmation. Bootstrap draws a replaceable
+the local pixel placeholders without changing composition logic. Wall management
+is read-only; the NPC owns wall upgrade confirmation. Bootstrap draws a replaceable
 tower marker on the map without adding collisions. Gate/collision, scouts, guard
-posts, raider effects/statuses, city progression and save persistence remain outside
+posts, raider effects/statuses and save persistence remain outside
 this change.
+
+### City progression session ledger
+
+`scenes/city_progression/city_progression_state.gd` lives under WorkStateRuntime as
+CityProgression. RaidBootstrap creates it once and binds the existing RaidUI; map reloads
+reuse both. It observes completed CitizenNeedsManager daily settlements and guards by
+last-awarded day. Resident settlement records provide food/clothing/satisfaction results,
+so post-consumption stock and UI refreshes cannot accidentally change the daily score.
+Applicants without a settlement record join the next day's cohort.
+
+RaidState emits wall_breached only when an attack destroys a previously standing wall.
+CityProgression deduplicates by raid report sequence and applies the one-time loss separately
+from the missing-wall daily penalty. Level Up calls set_city_threat_stage; existing departed
+party snapshots remain authoritative. The shared City Hub header observes level/progress
+and offers the explicit level-up action; Supply shows the last daily breakdown. No new
+autoload, settings, save format, building unlocks or construction costs are introduced.

@@ -2,6 +2,7 @@ extends Node
 
 ## Main-map entrypoint. State and presentation outlive maps in the existing host.
 const STATE: Script = preload("res://scenes/raid/raid_state.gd")
+const CITY_PROGRESS: Script = preload("res://scenes/city_progression/city_progression_state.gd")
 const UI: PackedScene = preload("res://scenes/raid/raid_ui.tscn")
 const WORLD_INDICATOR: PackedScene = preload("res://scenes/raid/wall_world_indicator.tscn")
 const CONFIG_PATH: String = "res://scenes/raid/wall_playtest.tres"
@@ -28,8 +29,15 @@ func _ready() -> void:
 		ui.repair_requested.connect(state.repair_wall)
 		ui.bind_state(state)
 
+	var city_progress: Node = WorkStateRuntime.get_node_or_null("CityProgression")
+	if city_progress == null:
+		city_progress = CITY_PROGRESS.new()
+		city_progress.name = "CityProgression"
+		WorkStateRuntime.add_child(city_progress)
+	city_progress.bind_raid(state)
 	raid_ui = state.get_node_or_null("RaidUI") as RaidUI
 	if is_instance_valid(raid_ui):
+		raid_ui.bind_city_progression(city_progress)
 		raid_ui.set_city_management_available(true)
 	if not state.changed.is_connected(_refresh_wall_tiles):
 		state.changed.connect(_refresh_wall_tiles)

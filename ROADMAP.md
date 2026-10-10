@@ -19,6 +19,15 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## City progression MVP — implemented, pending human playtest (2026-10-10)
+
+Branch `feature/time-world/city-progression` adds session city level/progress to City Hub (C).
+Settled daily resident needs grant +5 each for all fed, all clothed, and average satisfaction >=70%.
+A missing wall costs 5 daily; an actual standing-wall breach costs 10 once. Progress clamps to
+0–100. At 100, Level Up advances one city level and resets progress; city levels never fall.
+Level 1 uses Early raiders, level 2 Developing, level 3+ Advanced for future departures only.
+Existing departing parties retain their composition and arrival. Disk persistence is still pending.
+
 ## Raid branch — mixed raider parties and Inspect cards (2026-10-10)
 
 Approach **Iddin-Sin** inside the south wall, press **E**, advance the opening greeting, review the quote and
@@ -27,7 +36,7 @@ while the discussion panel stays visible. His world name caption is hidden; his 
 120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
 game minutes. Materials come from City Storage at job start; HP updates on
 completion. Jobs persist across map changes, pause during attacks, and a breached
-repair is cancelled with its materials refunded. City Management remains read-only;
+repair is cancelled with its materials refunded. Wall management remains read-only;
 press C to open wall status and raid reports. Construction uses a wall/watchtower icon and progress bar in City Management and above the relevant world location. Wall HP remains a separate meter and replaces the world construction indicator during attacks. The persistent bottom-right raid panel stays hidden.
 
 The first party departs when initial construction completes. Its composition is
@@ -46,8 +55,8 @@ seconds. Reports and painted-wall visuals follow actual results.
 Debug shows the departure/arrival countdown. **Next party: Early** cycles through
 Early, Developing (4–7 members, 8–11 strength, 25% Heavy presence, max 2), and
 Advanced (6–10 members, 12–16 strength, 45% Heavy presence, max 3). It applies at
-the next departure only. Gameplay stays Early until future city progression is
-connected. **Send raiders** starts that party's full journey during recovery; an
+the next departure only. City progression now selects Early/Developing/Advanced at levels 1/2/3+;
+Debug can still override the next stage until a later level change. **Send raiders** starts that party's full journey during recovery; an
 existing journey cannot be restarted. Wall-HP reset remains available. During
 combat the effective clock is x1, with the selected speed restored afterward.
 **Wall materials** tops
@@ -79,7 +88,7 @@ pixel icon and x quantity, plus the current phase/ETA. Back or Escape returns to
 City Management; C closes both. Lost access, a new party, map exit and raid end
 clear old intelligence. Fonts use 6/12 and the former oversized tooltip is removed.
 
-Gate/collision work, scout patrols, guard posts/soldiers, weapons, city levels,
+Gate/collision work, scout patrols, guard posts/soldiers, weapons,
 raider effects/statuses and disk saving remain future work. Citizen flight remains
 disabled. Unique equipment instances and opened food portions remain outside the
 counted-stack loot API. See `docs/task_reports/raider-composition-inspect-2026-10-10.md`

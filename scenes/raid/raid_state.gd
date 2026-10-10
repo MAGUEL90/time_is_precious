@@ -3,6 +3,7 @@ extends Node
 ## Session ledger. Hosted under WorkStateRuntime, never by a map or report panel.
 ## No disk-save changes. Clock schedules raids; real gameplay seconds resolve hits.
 signal changed
+signal wall_breached(raid_id: int)
 
 const CONFIG: Script = preload("res://scenes/raid/raid_config.gd")
 @export var config: Resource = preload("res://scenes/raid/raid_config.gd").new()
@@ -453,6 +454,8 @@ func _advance_raid_time(seconds: float) -> void:
 
 func _begin_looting() -> void:
 	_breach_at = _elapsed
+	if _start_hp > 0:
+		wall_breached.emit(_report_sequence + 1)
 	if not config.ranked_looting_enabled:
 		_finish_attack(true)
 		return

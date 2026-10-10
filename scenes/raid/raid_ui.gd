@@ -70,6 +70,14 @@ var hub_tabs: HBoxContainer
 var supply_view: VBoxContainer
 var supply_food: Label
 var supply_clothing: Label
+var city_daily_label: Label
+var city_event_label: Label
+var city_progression: Node
+var city_progression_row: HBoxContainer
+var city_level_label: Label
+var city_progress_bar: ProgressBar
+var city_progress_value_label: Label
+var city_level_up_button: Button
 var _supply_selected := false
 var _management_visibility: Dictionary = {}
 
@@ -89,6 +97,7 @@ func _ready() -> void:
 	inspection_panel.connect("back_requested", Callable(self, "_return_from_inspection"))
 	_create_dashboard()
 	_create_hub_tabs()
+	_create_city_progression()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
@@ -141,6 +150,7 @@ func _exit_tree() -> void:
 	CitizenManager.citizen_left.disconnect(_on_residents_changed)
 	_unbind_state()
 	_unbind_merchant_state()
+	_unbind_city_progression()
 	if TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.disconnect(_on_clock_changed)
 
@@ -223,6 +233,85 @@ func bind_merchant_state(next_state: Node) -> void:
 		if not merchant_state.is_connected("changed", changed_callable):
 			merchant_state.connect("changed", changed_callable)
 	_refresh_merchant_notice()
+
+func bind_city_progression(next_state: Node) -> void:
+	if city_progression == next_state:
+		_refresh_city_progression()
+		return
+	_unbind_city_progression()
+	city_progression = next_state
+	if is_instance_valid(city_progression) and city_progression.has_signal("changed"):
+		var changed_callable: Callable = Callable(self, "_on_city_progression_changed")
+		if not city_progression.is_connected("changed", changed_callable):
+			city_progression.connect("changed", changed_callable)
+	_refresh_city_progression()
+
+func _unbind_city_progression() -> void:
+	if not is_instance_valid(city_progression):
+		city_progression = null
+		return
+	if city_progression.has_signal("changed"):
+		var changed_callable: Callable = Callable(self, "_on_city_progression_changed")
+		if city_progression.is_connected("changed", changed_callable):
+			city_progression.disconnect("changed", changed_callable)
+	city_progression = null
+
+func _on_city_progression_changed() -> void:
+	_refresh_city_progression()
+
+func _refresh_city_progression() -> void:
+	if not is_instance_valid(city_progression_row):
+		return
+	var viewing_report: bool = show_last_raid and not _last_report.is_empty()
+	city_progression_row.visible = is_instance_valid(city_progression) and not viewing_report
+	if not is_instance_valid(city_progression):
+		city_level_label.text = "City Lv.—"
+		city_progress_bar.value = 0.0
+		city_progress_value_label.text = "0 / 100"
+		city_level_up_button.hide()
+		if is_instance_valid(city_daily_label):
+			city_daily_label.text = "No daily results yet."
+		if is_instance_valid(city_event_label):
+			city_event_label.text = ""
+			city_event_label.hide()
+		return
+	var level: int = maxi(0, int(city_progression.get("level")))
+	var progress: int = clampi(int(city_progression.get("progress")), 0, 100)
+	city_level_label.text = "City Lv.%d" % level
+	city_progress_bar.value = float(progress)
+	city_progress_value_label.text = "%d / 100" % progress
+	var last_event: String = str(city_progression.get("last_event")).strip_edges()
+	city_event_label.text = last_event
+	city_event_label.visible = not last_event.is_empty()
+	city_level_up_button.visible = progress >= 100 and not viewing_report
+	var last_daily: Dictionary = city_progression.get("last_daily")
+	city_daily_label.text = _format_city_daily(last_daily)
+
+func _format_city_daily(daily: Dictionary) -> String:
+	if daily.is_empty():
+		return "No daily results yet."
+	var food: int = int(daily.get("food", 0))
+	var clothing: int = int(daily.get("clothing", 0))
+	var satisfaction: int = int(daily.get("satisfaction", 0))
+	var wall: int = int(daily.get("wall", 0))
+	return "Day %d  Food %s · Clothes %s · Mood %s · Wall %s" % [
+		int(daily.get("day", 0)),
+		_signed_city_delta(food),
+		_signed_city_delta(clothing),
+		_signed_city_delta(satisfaction),
+		_signed_city_delta(wall),
+	]
+
+func _signed_city_delta(value: int) -> String:
+	return ("+" if value > 0 else "") + str(value)
+
+func _request_city_level_up() -> void:
+	if not is_instance_valid(city_progression) or not city_progression.has_method("request_level_up"):
+		return
+	if int(city_progression.get("progress")) < 100:
+		return
+	city_progression.call("request_level_up")
+	_refresh_city_progression()
 
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
@@ -540,24 +629,66 @@ func _create_hub_tabs() -> void:
 		button.text = tab
 		button.theme_type_variation = &"HudShortcutButton"
 		button.add_theme_font_size_override("font_size", 6)
-		button.custom_minimum_size = Vector2(70, 14)
+		button.custom_minimum_size = Vector2(70, 12)
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
 		hub_tabs.add_child(button)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
-	supply_view.add_theme_constant_override("separation", 12)
+	supply_view.add_theme_constant_override("separation", 8)
 	contents.add_child(supply_view)
 	contents.move_child(supply_view, 2)
 	supply_food = _supply_card(supply_view, preload("res://assets/items/butcher’s_cut.png"))
 	supply_clothing = _supply_card(supply_view, preload("res://assets/items/trimmed_robe.png"))
+	city_daily_label = _small_label(supply_view, "No daily results yet.")
+	city_event_label = _small_label(supply_view, "")
+	city_event_label.hide()
 	_small_label(supply_view, "Deposit goods at City Storage.")
 	supply_view.hide()
 	CitizenNeedsManager.needs_changed.connect(_on_supply_changed)
 	var provider := WorkStateRuntime.get_node_or_null("CityToolStorage")
 	if is_instance_valid(provider):
 		provider.changed.connect(_on_supply_changed, CONNECT_DEFERRED)
+
+func _create_city_progression() -> void:
+	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
+	contents.add_theme_constant_override("separation", 1)
+	city_progression_row = HBoxContainer.new()
+	city_progression_row.name = "CityProgressionRow"
+	city_progression_row.custom_minimum_size = Vector2(0, 12)
+	city_progression_row.add_theme_constant_override("separation", 4)
+	contents.add_child(city_progression_row)
+	contents.move_child(city_progression_row, 2)
+
+	city_level_label = _small_label(city_progression_row, "City Lv.—")
+	city_level_label.custom_minimum_size = Vector2(46, 0)
+	city_progress_bar = ProgressBar.new()
+	city_progress_bar.custom_minimum_size = Vector2(80, 6)
+	city_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	city_progress_bar.show_percentage = false
+	city_progress_bar.max_value = 100.0
+	city_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.23, 0.17, 0.11)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.48, 0.66, 0.38)
+	city_progress_bar.add_theme_stylebox_override("background", background)
+	city_progress_bar.add_theme_stylebox_override("fill", fill)
+	city_progression_row.add_child(city_progress_bar)
+
+	city_progress_value_label = _small_label(city_progression_row, "0 / 100")
+	city_progress_value_label.custom_minimum_size = Vector2(28, 0)
+	city_progress_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	city_level_up_button = Button.new()
+	city_level_up_button.custom_minimum_size = Vector2(48, 12)
+	city_level_up_button.theme_type_variation = &"HudShortcutButton"
+	city_level_up_button.add_theme_font_size_override("font_size", 6)
+	city_level_up_button.text = "Level Up"
+	city_level_up_button.focus_mode = Control.FOCUS_NONE
+	city_level_up_button.pressed.connect(_request_city_level_up)
+	city_level_up_button.hide()
+	city_progression_row.add_child(city_level_up_button)
 
 func _supply_card(parent: Control, texture: Texture2D) -> Label:
 	var row := HBoxContainer.new()
@@ -598,7 +729,7 @@ func _render_hub() -> void:
 		return
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
 	for control: Control in contents.get_children():
-		if control in [hub_tabs, supply_view, contents.get_node("TitleLabel"), contents.get_node("FooterRow")]:
+		if control in [hub_tabs, supply_view, city_progression_row, contents.get_node("TitleLabel"), contents.get_node("FooterRow")]:
 			continue
 		_management_visibility[control] = control.visible
 		control.hide()
@@ -767,6 +898,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	result_box.visible = viewing_report
 	storage_summary.visible = not viewing_report
 	_render_watchtower_status(detected, viewing_report)
+	_refresh_city_progression()
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
 	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY HUB"
