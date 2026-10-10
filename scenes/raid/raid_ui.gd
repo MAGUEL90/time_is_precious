@@ -79,6 +79,12 @@ var city_level_label: Label
 var city_progress_bar: ProgressBar
 var city_progress_value_label: Label
 var city_level_up_button: Button
+var footer_spacer: Control
+var _hub_section_spacers: Array[Control] = []
+var save_store: Node
+var save_button: Button
+var load_button: Button
+var save_status: Label
 var _supply_selected := false
 var _management_visibility: Dictionary = {}
 
@@ -99,6 +105,8 @@ func _ready() -> void:
 	_create_dashboard()
 	_create_hub_tabs()
 	_create_city_progression()
+	_add_hub_section_spacing()
+	_create_save_controls()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
@@ -637,7 +645,7 @@ func _create_hub_tabs() -> void:
 		hub_tabs.add_child(button)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
-	supply_view.add_theme_constant_override("separation", 8)
+	supply_view.add_theme_constant_override("separation", 10)
 	contents.add_child(supply_view)
 	contents.move_child(supply_view, 2)
 	supply_food = _supply_card(supply_view, preload("res://assets/items/butcher’s_cut.png"))
@@ -670,6 +678,7 @@ func _create_city_progression() -> void:
 	city_progress_bar.show_percentage = false
 	city_progress_bar.max_value = 100.0
 	city_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	city_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var background := StyleBoxFlat.new()
 	background.bg_color = Color(0.23, 0.17, 0.11)
 	var fill := StyleBoxFlat.new()
@@ -690,6 +699,24 @@ func _create_city_progression() -> void:
 	city_level_up_button.pressed.connect(_request_city_level_up)
 	city_level_up_button.hide()
 	city_progression_row.add_child(city_level_up_button)
+
+func _add_hub_section_spacing() -> void:
+	_add_hub_section_spacer("TitleTabsGap", hub_tabs, false)
+	_add_hub_section_spacer("TabsProgressGap", hub_tabs, true)
+	_add_hub_section_spacer("ProgressSupplyGap", city_progression_row, true)
+
+func _add_hub_section_spacer(spacer_name: String, target: Control, insert_after: bool) -> void:
+	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
+	var spacer := Control.new()
+	spacer.name = spacer_name
+	spacer.custom_minimum_size = Vector2(0, 1)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	contents.add_child(spacer)
+	var insert_index: int = contents.get_children().find(target)
+	if insert_after:
+		insert_index += 1
+	contents.move_child(spacer, insert_index)
+	_hub_section_spacers.append(spacer)
 
 func _supply_card(parent: Control, texture: Texture2D) -> Label:
 	var row := HBoxContainer.new()
@@ -733,7 +760,7 @@ func _render_hub() -> void:
 		return
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
 	for control: Control in contents.get_children():
-		if control in [hub_tabs, supply_view, city_progression_row, contents.get_node("TitleLabel"), contents.get_node("FooterRow")]:
+		if control in [hub_tabs, supply_view, city_progression_row, footer_spacer, contents.get_node("TitleLabel"), contents.get_node("FooterRow")] or control in _hub_section_spacers:
 			continue
 		_management_visibility[control] = control.visible
 		control.hide()
@@ -808,6 +835,12 @@ func _create_dashboard() -> void:
 	loot_scroll.add_child(loot_slots)
 	result_note = _small_label(result_box, "")
 	result_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	footer_spacer = Control.new()
+	footer_spacer.name = "FooterSpacer"
+	footer_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	footer_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	contents.add_child(footer_spacer)
+	contents.move_child(footer_spacer, contents.get_children().find(contents.get_node("FooterRow")))
 	var footer: HBoxContainer = contents.get_node("FooterRow")
 	footer.add_theme_constant_override("separation", 6)
 	report_toggle = Button.new()
@@ -1025,3 +1058,53 @@ func _apply_theme() -> void:
 	for button in [build_button, repair_button, inspect_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton]:
 		button.theme = GAMEPLAY_THEME
 		button.theme_type_variation = &"HudShortcutButton"
+
+func _create_save_controls() -> void:
+	var footer: HBoxContainer = $Root/Center/DetailsPanel/Margin/Contents/FooterRow
+	footer.add_theme_constant_override("separation", 3)
+	for action: String in ["Save", "Load"]:
+		var button := Button.new()
+		button.name = action + "Button"
+		button.text = action
+		button.custom_minimum_size = Vector2(32, 14)
+		button.theme_type_variation = &"HudShortcutButton"
+		button.add_theme_font_size_override("font_size", 6)
+		button.focus_mode = Control.FOCUS_NONE
+		footer.add_child(button)
+		footer.move_child(button, 0 if action == "Save" else 1)
+		if action == "Save":
+			save_button = button
+			button.pressed.connect(_save_checkpoint)
+		else:
+			load_button = button
+			button.pressed.connect(_load_checkpoint)
+	save_status = _small_label(footer, "")
+	save_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	save_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	footer.move_child(save_status, 2)
+	_refresh_save_controls()
+
+func bind_save_store(store: Node) -> void:
+	if is_instance_valid(save_store) and save_store.changed.is_connected(_refresh_save_controls):
+		save_store.changed.disconnect(_refresh_save_controls)
+	save_store = store
+	if is_instance_valid(save_store):
+		save_store.changed.connect(_refresh_save_controls)
+	_refresh_save_controls()
+
+func _refresh_save_controls() -> void:
+	if not is_instance_valid(save_button):
+		return
+	var available: bool = is_instance_valid(save_store)
+	save_button.disabled = not available
+	load_button.disabled = not available or not save_store.has_checkpoint()
+	save_status.text = save_store.status if available else ""
+
+func _save_checkpoint() -> void:
+	if is_instance_valid(save_store):
+		save_store.save_checkpoint()
+
+func _load_checkpoint() -> void:
+	if is_instance_valid(save_store):
+		save_store.load_checkpoint()

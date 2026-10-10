@@ -591,9 +591,13 @@ Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype l
 
 ## Phase 5 - Save / Load
 
-**Status: Queued after loop stabilization.**
+**Status: Main-city manual checkpoint implemented on `feature/time-world/city-save-load`; awaiting playtest.**
 
-Real persistence should begin after the runtime daily loop is stable enough that the saved state model is unlikely to change every session.
+City Hub now has one manual Save/Load slot covering the current city loop, including
+stocks, residents, jobs, construction, progression and raid state. Loading restores
+checkpoint time without offline production. The existing isolated worksite save slot
+remains separate. Menu-level load, autosave, multiple slots and future-version migrations
+remain follow-up work. See `docs/task_reports/2026-10-11-city-save-load.md`.
 
 ## Phase 6 - Internal Playtest
 

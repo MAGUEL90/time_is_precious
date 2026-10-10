@@ -2,6 +2,7 @@ extends Node
 
 ## Main-map entrypoint. State and presentation outlive maps in the existing host.
 const STATE: Script = preload("res://scenes/raid/raid_state.gd")
+const CITY_SAVE: Script = preload("res://scenes/new_scenes/save_game/city_save_store.gd")
 const CITY_PROGRESS: Script = preload("res://scenes/city_progression/city_progression_state.gd")
 const UI: PackedScene = preload("res://scenes/raid/raid_ui.tscn")
 const WORLD_INDICATOR: PackedScene = preload("res://scenes/raid/wall_world_indicator.tscn")
@@ -44,6 +45,15 @@ func _ready() -> void:
 	_setup_wall_indicator()
 	_setup_watchtower_visual()
 	_refresh_wall_tiles()
+	_bind_city_save.call_deferred()
+
+func _bind_city_save() -> void:
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	if store == null:
+		store = CITY_SAVE.new()
+		store.name = "CitySave"
+		WorkStateRuntime.add_child(store)
+	store.bind_map(get_parent())
 
 func _exit_tree() -> void:
 	if is_instance_valid(state) and state.has_signal("changed") and state.changed.is_connected(_refresh_wall_tiles):

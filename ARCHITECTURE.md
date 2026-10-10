@@ -724,3 +724,32 @@ from the missing-wall daily penalty. Level Up calls set_city_threat_stage; exist
 party snapshots remain authoritative. The shared City Hub header observes level/progress
 and offers the explicit level-up action; Supply shows the last daily breakdown. No new
 autoload, settings, save format, building unlocks or construction costs are introduced.
+
+
+### Main-city manual checkpoint (2026-10-11)
+
+`scenes/new_scenes/save_game/` owns the first main-map disk checkpoint. RaidBootstrap
+binds `CitySave` under the existing WorkStateRuntime host; City Hub exposes Save/Load
+in its shared footer. Save is manual, single-slot and only available in the main city
+outside transient interactions. Load restores the stored clock; closed-game time does
+not produce goods, apply needs, or advance raids. Active timed construction, production,
+travel, combat and looting are included. Debug speed controls and transient UI selections
+are not saved.
+
+`city_save_state.gd` explicitly lists owners/fields and validates the entire staged
+snapshot before synchronous application. `city_save_worksites.gd` reconstructs scene-local
+worksite callbacks, jobs, cargo and visual projection using known map endpoints.
+`city_save_values.gd` uses bounded tagged JSON and six explicit object factories;
+64-bit counts/RNG states use decimal strings, preserving their precision. Saved files
+cannot name a script to instantiate or a resource path to load. Authored raid/job icons
+are rebound from current game data. Daily settlement cursors, paid construction inputs,
+raid penalties, owned output lots and fee records are restored together with inventory.
+Presentation refresh uses `time_changed`, never elapsed-minute or new-day signals.
+
+`city_save_file.gd` manages `user://city_save/checkpoint_v1.json` separately from the
+legacy isolated Clay fixture slot. It checks observations for external edits, verifies
+staged JSON before replacement and keeps the previous primary as `.bak`. Valid staging
+or backup files are recovery candidates only when the primary is absent. A corrupt or
+unsupported primary blocks both loading and replacement; it is not silently discarded.
+Schema version 1 has no implicit migration to/from the isolated worksite prototype or
+future schema versions. See the city save/load task report for coverage and limits.
