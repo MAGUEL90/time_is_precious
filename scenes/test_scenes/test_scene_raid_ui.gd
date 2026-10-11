@@ -178,9 +178,10 @@ func _run() -> void:
 		and inspection_contents.get_global_rect().encloses(cards.get_global_rect()), "Three cards and the inspection content fit inside the visible frame.")
 	_expect(frame.get_global_rect().grow(-16).encloses(inspection_contents.get_global_rect()), "Inspection content clears the ornamental frame on every side.")
 	for card: Node in cards.get_children():
-		var portrait_frame: PanelContainer = card.get_node("CardContents/IconPanel")
-		var icon: RaiderTypeIcon = portrait_frame.get_child(0)
+		var portrait_frame: PanelContainer = card as PanelContainer
+		var icon: RaiderTypeIcon = card.get_node("CardContents").get_child(0)
 		_expect(portrait_frame.size == Vector2(32, 32), "Each raider portrait panel remains exactly 32x32.")
+		_expect(portrait_frame.get_global_rect().grow(-3).encloses(card.get_node("CardContents/CountLabel").get_global_rect()), "The quantity fits inside the portrait panel padding.")
 		_expect(icon.source_texture != null and icon.source_texture.get_size() == Vector2(16, 16), "Each raider type has its supplied native pixel icon.")
 	await _capture("raider-inspection-three-types.png")
 	var first_card_id: int = cards.get_child(0).get_instance_id()

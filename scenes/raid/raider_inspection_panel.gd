@@ -69,30 +69,29 @@ func _rebuild_cards(entries: Array[Dictionary], type_ids: Array[String]) -> void
 	for index: int in range(entries.size()):
 		var entry: Dictionary = entries[index]
 		var unit_id: String = type_ids[index]
-		var card := VBoxContainer.new()
+		var card := PanelContainer.new()
 		card.name = "UnitCard_%s" % unit_id.capitalize()
-		card.custom_minimum_size = Vector2(32, 0)
+		card.custom_minimum_size = Vector2(32, 32)
 		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		cards_container.add_child(card)
-		var card_contents := VBoxContainer.new()
-		card_contents.name = "CardContents"
-		card_contents.add_theme_constant_override("separation", 2)
-		card.add_child(card_contents)
-		var icon_panel := PanelContainer.new()
-		icon_panel.name = "IconPanel"
-		icon_panel.custom_minimum_size = Vector2(32, 32)
+		card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var card_style := StyleBoxFlat.new()
 		card_style.bg_color = Color(0.65, 0.51, 0.30, 1)
 		card_style.border_color = Color("735638")
 		card_style.set_border_width_all(1)
-		card_style.set_content_margin_all(1)
+		card_style.set_content_margin_all(3)
 		card_style.anti_aliasing = false
-		icon_panel.add_theme_stylebox_override("panel", card_style)
-		card_contents.add_child(icon_panel)
+		card.add_theme_stylebox_override("panel", card_style)
+		cards_container.add_child(card)
+		var card_contents := VBoxContainer.new()
+		card_contents.name = "CardContents"
+		card_contents.alignment = BoxContainer.ALIGNMENT_CENTER
+		card_contents.add_theme_constant_override("separation", 1)
+		card.add_child(card_contents)
 		var icon := RaiderTypeIcon.new()
 		icon.name = "TypeIcon_%s" % unit_id.capitalize()
 		icon.custom_minimum_size = Vector2(16, 16)
-		icon_panel.add_child(icon)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		card_contents.add_child(icon)
 		var count_label := _small_label("x%d" % int(entry.get("count", 0)))
 		count_label.name = "CountLabel"
 		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

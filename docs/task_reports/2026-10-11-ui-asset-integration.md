@@ -64,3 +64,14 @@ Evidence: `/workspace/scratch/asset-icons/`. Final logs: `test_scene_raid_ui-rev
 `test_scene_raid_expedition.log`, `test_scene_city_save.log`,
 `test_scene_raid_composition.log`. Native dummy-display VSync warning only in final
 runs; no script errors. `git diff --check` passed. Windows/Android unverified.
+
+## Follow-up: quantity inside the card
+
+User clarified that the 32x32 panel should contain both the portrait and `xN`.
+From clean baseline `43e0387`, the card now encloses a native 16px portrait and
+6px quantity text with 3px padding and a 1px gap. CardsRow minimum height is 32px.
+Only the Inspect script/scene, existing Raid UI fixture and this report changed.
+Native Raid UI regression passed at 1200x675, including exact 32x32 sizing and
+quantity containment inside the padding. Screenshot reviewed. Evidence:
+`/workspace/scratch/raider-count-inside/`. No gameplay changes; Windows/Android
+remain unverified. `git diff --check` passed.
