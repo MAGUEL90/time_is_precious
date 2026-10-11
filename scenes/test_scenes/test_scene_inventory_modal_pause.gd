@@ -128,6 +128,18 @@ func _run() -> void:
 		inventory.open_inventory()
 		await get_tree().process_frame
 		_expect(inventory.layer > city_ui.layer, "An active Inventory renders above City Hub and its notification icon.")
+		var original_items: Dictionary = Inventory.items.duplicate(true)
+		Inventory.items["shekel"] = 12345
+		Inventory.items_changed.emit()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_expect(inventory.shekel_amount.text == "12345", "Inventory wallet updates from the authoritative item balance.")
+		var wallet_icon: Control = inventory.shekel_amount.get_parent().get_node("ShekelIcon")
+		_expect(is_equal_approx(wallet_icon.global_position.x, inventory.grid.global_position.x), "Wallet aligns with the left item column.")
+		_expect(wallet_icon.get_global_rect().end.y <= inventory.grid.global_position.y, "Wallet sits above the item grid.")
+		await _capture("inventory-wallet")
+		Inventory.items = original_items
+		Inventory.items_changed.emit()
 		await _capture("inventory-over-city-hub")
 		await _press(&"ui_cancel")
 		_expect(not inventory.visible and city_ui.details_panel.visible, "Escape closes only the foreground Inventory and preserves City Hub below it.")

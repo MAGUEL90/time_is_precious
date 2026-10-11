@@ -75,3 +75,25 @@ Native Raid UI regression passed at 1200x675, including exact 32x32 sizing and
 quantity containment inside the padding. Screenshot reviewed. Evidence:
 `/workspace/scratch/raider-count-inside/`. No gameplay changes; Windows/Android
 remain unverified. `git diff --check` passed.
+
+## Follow-up: Inventory wallet and City Hub footer
+
+User requested removing City Hub Save/Load and showing a small shekel balance
+between Inventory's category selector and item grid, aligned to its first column.
+Continued from clean `0d9ef00` on the UI branch, Level 1 presentation scope.
+Removed City Hub checkpoint controls and their three-line store-to-UI binding.
+Checkpoint persistence, sleep saving, data format and disk contents are unchanged.
+Added the existing 8x8 shekel texture with a 6px high-contrast numeric balance.
+It refreshes on the existing Inventory items-changed path and when opening the bag.
+
+Modified: Raid UI script, City Save Store's obsolete UI binding, Inventory script
+and scene, existing City Save and Inventory Modal Pause fixtures, and this report.
+No assets, settings or gameplay values changed. No files deleted/renamed.
+
+Native Linux/Xorg tests at 1200x675 passed: Inventory Modal Pause, Raid UI and City
+Save. Headless City Sleep Save passed. Inventory checks cover live balance refresh,
+left alignment, position above the grid and existing modal/action behavior. The
+City Save fixture now calls the store directly and verifies manual buttons are
+absent. Screenshot reviewed after improving wallet contrast; final Inventory test
+passed. Evidence: `/workspace/scratch/inventory-wallet/`. Dummy-display VSync
+warning only; no script errors. `git diff --check` passed. Windows/Android unverified.

@@ -28,6 +28,7 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var category_selector: InventoryCategorySelector = $Root/Center/Window/Margin/MainVBox/HeaderRow/InventoryCategorySelector
 @onready var page_selector: InventoryPageSelector = $Root/Center/Window/Margin/MainVBox/InventoryPageSelector
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
+@onready var shekel_amount: Label = $Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow/ShekelAmount
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
 
 var player_ref: Player
@@ -148,6 +149,7 @@ func _restore_tree_pause_state() -> void:
 # Inventory grid
 
 func _refresh_inventory_grid() -> void:
+	shekel_amount.text = str(int(Inventory.items.get("shekel", 0)))
 	var filtered_items: Array[String] = []
 
 	if grid == null:

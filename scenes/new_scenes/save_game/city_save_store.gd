@@ -27,9 +27,6 @@ func bind_map(next_map: Node) -> void:
 	if not snapshot.is_home(map):
 		_restore_parked_worksite(map)
 		city_plots = snapshot.plots(map)
-	var ui := WorkStateRuntime.get_node_or_null("CityRaid/RaidUI") as RaidUI
-	if ui != null:
-		ui.bind_save_store(self)
 
 func has_checkpoint() -> bool:
 	return disk.exists()

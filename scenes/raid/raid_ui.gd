@@ -84,10 +84,6 @@ var city_progress_value_label: Label
 var city_level_up_button: Button
 var footer_spacer: Control
 var _hub_section_spacers: Array[Control] = []
-var save_store: Node
-var save_button: Button
-var load_button: Button
-var save_status: Label
 var _supply_selected := false
 var _management_visibility: Dictionary = {}
 
@@ -109,7 +105,6 @@ func _ready() -> void:
 	_create_hub_tabs()
 	_create_city_progression()
 	_add_hub_section_spacing()
-	_create_save_controls()
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
@@ -1104,53 +1099,3 @@ func _apply_theme() -> void:
 	for button in [build_button, repair_button, inspect_button, $Root/RaidStatusPanel/Margin/Contents/FooterRow/DetailsButton, $Root/Center/DetailsPanel/Margin/Contents/FooterRow/CloseButton]:
 		button.theme = GAMEPLAY_THEME
 		button.theme_type_variation = &"HudShortcutButton"
-
-func _create_save_controls() -> void:
-	var footer: HBoxContainer = $Root/Center/DetailsPanel/Margin/Contents/FooterRow
-	footer.add_theme_constant_override("separation", 3)
-	for action: String in ["Save", "Load"]:
-		var button := Button.new()
-		button.name = action + "Button"
-		button.text = action
-		button.custom_minimum_size = Vector2(32, 14)
-		button.theme_type_variation = &"HudShortcutButton"
-		button.add_theme_font_size_override("font_size", 6)
-		button.focus_mode = Control.FOCUS_NONE
-		footer.add_child(button)
-		footer.move_child(button, 0 if action == "Save" else 1)
-		if action == "Save":
-			save_button = button
-			button.pressed.connect(_save_checkpoint)
-		else:
-			load_button = button
-			button.pressed.connect(_load_checkpoint)
-	save_status = _small_label(footer, "")
-	save_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	save_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	save_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	footer.move_child(save_status, 2)
-	_refresh_save_controls()
-
-func bind_save_store(store: Node) -> void:
-	if is_instance_valid(save_store) and save_store.changed.is_connected(_refresh_save_controls):
-		save_store.changed.disconnect(_refresh_save_controls)
-	save_store = store
-	if is_instance_valid(save_store):
-		save_store.changed.connect(_refresh_save_controls)
-	_refresh_save_controls()
-
-func _refresh_save_controls() -> void:
-	if not is_instance_valid(save_button):
-		return
-	var available: bool = is_instance_valid(save_store)
-	save_button.disabled = not available
-	load_button.disabled = not available or not save_store.has_checkpoint()
-	save_status.text = save_store.status if available else ""
-
-func _save_checkpoint() -> void:
-	if is_instance_valid(save_store):
-		save_store.save_checkpoint()
-
-func _load_checkpoint() -> void:
-	if is_instance_valid(save_store):
-		save_store.load_checkpoint()

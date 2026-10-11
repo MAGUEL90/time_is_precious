@@ -26,9 +26,8 @@ func _run() -> void:
 		return
 	_clean_files()
 	_seed()
-	_expect(not ui.save_button.disabled, "City Hub Save is connected to the current map.")
-	ui.save_button.pressed.emit()
-	var saved: bool = store.status == "Saved"
+	_expect(ui.find_child("SaveButton", true, false) == null and ui.find_child("LoadButton", true, false) == null, "City Hub does not expose manual checkpoint buttons.")
+	var saved: bool = store.save_checkpoint()
 	_expect(saved, "A checkpoint can be saved: " + store.last_error)
 	if not saved:
 		_finish()
