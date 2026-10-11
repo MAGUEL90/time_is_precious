@@ -96,6 +96,7 @@ func _run() -> void:
 	_expect(ui.merchant_notice_label.text.contains("Tomorrow") and ui.notification_raid_label.text.contains("attacking"), "Notifications include live merchant status and the active raid.")
 	_expect(ui.notification_button.modulate.r > ui.notification_button.modulate.g, "The notification icon turns red during an active threat.")
 	_check_notification_bounds()
+	await _capture("notifications-active.png")
 	_expect(not ui.notifications_city_button.visible, "Notifications no longer show a City Management button.")
 	_expect(ui.merchant_notice_label.text.begins_with("- ") and ui.notification_raid_label.text.begins_with("- "), "Separate notices have bullet markers.")
 	_expect(ui.get_node("Root/NotificationsPopup/Margin/Contents/TitleLabel").get_theme_font_size("font_size") == 6, "Notifications title uses pixel font size 6.")
@@ -175,6 +176,8 @@ func _run() -> void:
 	_expect(Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size).encloses(frame.get_global_rect()), "The actual inspection frame stays within the logical viewport.")
 	_expect(frame.get_global_rect().encloses(inspection_contents.get_global_rect())
 		and inspection_contents.get_global_rect().encloses(cards.get_global_rect()), "Three cards and the inspection content fit inside the visible frame.")
+	_expect(frame.get_global_rect().grow(-16).encloses(inspection_contents.get_global_rect()), "Inspection content clears the ornamental frame on every side.")
+	await _capture("raider-inspection-three-types.png")
 	var first_card_id: int = cards.get_child(0).get_instance_id()
 	_expect(ui.travel_progress.visible, "Inspect keeps the existing travel bar visible.")
 	state.status.arrival_minutes_remaining = 720

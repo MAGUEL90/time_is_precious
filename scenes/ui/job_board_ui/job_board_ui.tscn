@@ -87,6 +87,25 @@ theme_override_styles/panel = SubResource("List_background")
 theme_override_styles/selected = SubResource("List_selected")
 theme_override_styles/selected_focus = SubResource("List_selected")
 
+[node name="EmptyStateLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/ApplicantList"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "No applicants available."
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2

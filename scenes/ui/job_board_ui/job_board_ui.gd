@@ -3,6 +3,7 @@ class_name JobBoardUI extends CanvasLayer
 signal closed
 
 @onready var applicant_list: ItemList = $Root/Center/Window/Margin/MainVBox/ApplicantList
+@onready var empty_state_label: Label = $Root/Center/Window/Margin/MainVBox/ApplicantList/EmptyStateLabel
 @onready var feedback_label: Label = $Root/Center/Window/Margin/MainVBox/FeedbackLabel
 @onready var hire_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/HireButton
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/CloseButton
@@ -52,10 +53,12 @@ func _refresh_applicants() -> void:
 			daily_wage
 		])
 
-	hire_button.disabled = applicants.is_empty()
+	var no_applicants: bool = applicants.is_empty()
+	empty_state_label.visible = no_applicants
+	hire_button.disabled = no_applicants
 
-	if applicants.is_empty():
-		feedback_label.text = "No applicants available."
+	if no_applicants:
+		feedback_label.text = ""
 		return
 
 	applicant_list.select(0)

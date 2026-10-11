@@ -29,7 +29,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Frame" type="NinePatchRect" parent="Center"]
-custom_minimum_size = Vector2(320, 134)
+custom_minimum_size = Vector2(320, 152)
 layout_mode = 2
 mouse_filter = 0
 texture = SubResource("RaidPanelTexture")
@@ -47,14 +47,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="Contents" type="VBoxContainer" parent="Center/Frame/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 4
 
 [node name="TitleLabel" type="Label" parent="Center/Frame/Margin/Contents"]
 custom_minimum_size = Vector2(0, 12)

@@ -73,9 +73,9 @@ func _rebuild_cards(entries: Array[Dictionary], type_ids: Array[String]) -> void
 		var card := PanelContainer.new()
 		card.name = "UnitCard_%s" % unit_id.capitalize()
 		card.custom_minimum_size = Vector2(88, 54)
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var card_style := StyleBoxFlat.new()
-		card_style.bg_color = Color("#33271d")
+		card_style.bg_color = Color(0.39, 0.29, 0.15, 1)
 		card_style.border_color = Color("#735638")
 		card_style.set_border_width_all(1)
 		card_style.set_content_margin_all(2)

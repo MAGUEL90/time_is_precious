@@ -587,7 +587,15 @@ Use enough consistent art to make the prototype readable. Do not wait for final 
 
 **Status: Partially implemented.**
 
-Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level. Continue UI work when it directly improves the current playable loop.
+Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level.
+The current-playable-loop UI consistency pass is implemented on
+`fix/gameplay-hud/ui-consistency`: shared small pixel fonts and disabled states,
+City Hub Supply alignment, padded Inspect cards, centered physical City Storage,
+bounded inventory confirmations and Job Board empty-state placement. The existing
+Mesopotamian pixel style and player actions are preserved. Native visual review and
+focused regressions are recorded in `docs/task_reports/2026-10-11-ui-consistency.md`;
+human visual acceptance remains pending. Continue UI work when it directly improves
+the current playable loop.
 
 ## Phase 5 - Save / Load
 

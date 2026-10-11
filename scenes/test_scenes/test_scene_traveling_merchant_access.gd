@@ -26,6 +26,8 @@ func _settle() -> void:
 
 func _load_map() -> void:
 	content = load("res://scenes/content_scene/content_scene.tscn").instantiate()
+	# This scheduled-visit fixture opts out of the map's day-zero playtest visit.
+	content.get_node("YSortWorld/TravelingMerchant").debug_first_day_visit = false
 	add_child(content)
 	merchant = content.get_node("YSortWorld/TravelingMerchant")
 	player = content.get_node("YSortWorld/Player")

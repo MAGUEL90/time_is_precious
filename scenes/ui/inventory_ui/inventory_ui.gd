@@ -315,11 +315,11 @@ func _notification(what: int) -> void:
 	var dropped_inside_inventory: bool = inventory_window.get_global_rect().has_point(mouse_position)
 
 	if not dropped_inside_inventory:
-		_open_drag_drop_confirm_panel(active_drag_data)
+		_open_drag_drop_confirm_panel(active_drag_data, mouse_position)
 
 	active_drag_data.clear()
 
-func _open_drag_drop_confirm_panel(data: Dictionary) -> void:
+func _open_drag_drop_confirm_panel(data: Dictionary, drop_position: Vector2) -> void:
 	var item_id: String = str(data.get("item_id", ""))
 	if item_id.is_empty():
 		return
@@ -342,9 +342,7 @@ func _open_drag_drop_confirm_panel(data: Dictionary) -> void:
 	add_child(active_action_confirm_panel)
 
 	active_action_confirm_panel.setup("drop", item_id, item_data, item_quantity)
-
-	var mouse_position: Vector2 = get_viewport().get_mouse_position()
-	active_action_confirm_panel.global_position = mouse_position.round()
+	_position_action_confirm_panel(drop_position)
 	_set_slots_interaction_locked(true)
 
 # Player and worker summary
@@ -509,6 +507,7 @@ func _open_item_action_confirm_panel(action: String) -> void:
 	var item_quantity: int = int(Inventory.items.get(active_option_item_id, 0))
 	if item_quantity <= 0:
 		return
+	var panel_position: Vector2 = active_option_panel.global_position
 
 	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):
 		active_action_confirm_panel.queue_free()
@@ -519,8 +518,25 @@ func _open_item_action_confirm_panel(action: String) -> void:
 	add_child(active_action_confirm_panel)
 
 	active_action_confirm_panel.setup(action, active_option_item_id, item_data, item_quantity)
-	active_action_confirm_panel.global_position = active_option_panel.global_position
+	_position_action_confirm_panel(panel_position)
 	_set_slots_interaction_locked(true)
+
+func _position_action_confirm_panel(requested_position: Vector2) -> void:
+	if not is_instance_valid(active_action_confirm_panel):
+		return
+
+	var viewport_bounds: Rect2 = get_viewport().get_visible_rect()
+	var margin: float = INVENTORY_SCREEN_MARGIN
+	var panel_size: Vector2 = active_action_confirm_panel.size
+	var min_position: Vector2 = viewport_bounds.position + Vector2.ONE * margin
+	var max_position: Vector2 = viewport_bounds.end - panel_size - Vector2.ONE * margin
+	max_position.x = maxf(min_position.x, max_position.x)
+	max_position.y = maxf(min_position.y, max_position.y)
+
+	active_action_confirm_panel.global_position = Vector2(
+		clampf(requested_position.x, min_position.x, max_position.x),
+		clampf(requested_position.y, min_position.y, max_position.y)
+	).round()
 
 func _close_item_action_confirm_panel() -> void:
 	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):

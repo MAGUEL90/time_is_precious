@@ -651,7 +651,7 @@ func _create_hub_tabs() -> void:
 	contents.move_child(supply_view, 2)
 	supply_food = _supply_card(supply_view, preload("res://assets/items/butcher’s_cut.png"))
 	supply_clothing = _supply_card(supply_view, preload("res://assets/items/trimmed_robe.png"))
-	supply_shelter = _supply_card(supply_view, preload("res://assets/ui/ui_icon/house_icon.png"), Vector2(24, 16))
+	supply_shelter = _supply_card(supply_view, preload("res://assets/ui/ui_icon/house_icon.png"))
 	city_daily_label = _small_label(supply_view, "No daily results yet.")
 	city_daily_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	city_event_label = _small_label(supply_view, "")
@@ -784,7 +784,7 @@ func _render_hub() -> void:
 	var shelter_need: int = CitizenNeedsManager.get_daily_shelter_capacity_need()
 	var shelter_difference: int = shelter_capacity - shelter_need
 	var shelter_status: String = "Short %d" % -shelter_difference if shelter_difference < 0 else "Spare %d" % shelter_difference if shelter_difference > 0 else "Covered"
-	supply_shelter.text = "Shelter  Capacity %d / Resident Need %d  · %s" % [shelter_capacity, shelter_need, shelter_status]
+	supply_shelter.text = "Shelter  %d / %d\nCapacity / Resident Need\n%s" % [shelter_capacity, shelter_need, shelter_status]
 
 func _create_dashboard() -> void:
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
