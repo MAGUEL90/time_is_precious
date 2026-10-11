@@ -44,7 +44,6 @@ func open_for(id: String, worker_name: String, destinations: Array[Dictionary]) 
 		destination_button.set_item_disabled(index, not bool(entry.available))
 		var reason: String = str(entry.get("reason", ""))
 		destination_reasons.append(reason)
-		destination_button.set_item_tooltip(index, reason)
 		if first_available < 0 and bool(entry.available):
 			first_available = index
 	destination_button.select(first_available)

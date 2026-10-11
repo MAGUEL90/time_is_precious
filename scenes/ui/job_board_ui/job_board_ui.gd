@@ -46,12 +46,13 @@ func _refresh_applicants() -> void:
 	applicants = CitizenManager.get_all_applicants()
 
 	for applicant_data in applicants:
-		applicant_list.add_item("%s, %s, SAT %d%%, %d/day" % [
+		var item_index: int = applicant_list.add_item("%s, %s, SAT %d%%, %d/day" % [
 			applicant_data.display_name,
 			_get_profession_name(applicant_data.profession),
 			roundi(applicant_data.satisfaction * 100.0),
 			daily_wage
 		])
+		applicant_list.set_item_tooltip_enabled(item_index, false)
 
 	var no_applicants: bool = applicants.is_empty()
 	empty_state_label.visible = no_applicants

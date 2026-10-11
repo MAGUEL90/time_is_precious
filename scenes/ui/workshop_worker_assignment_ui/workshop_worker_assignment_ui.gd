@@ -396,7 +396,6 @@ func _refresh_worker_list() -> void:
 			worker_button.disabled = true
 		elif not _is_worker_available_for_selection(worker_data):
 			worker_button.disabled = true
-			worker_button.tooltip_text = _get_worker_unavailable_reason(worker_data)
 		else:
 			worker_button.pressed.connect(
 				_on_worker_selected.bind(worker_data.worker_id)
@@ -465,15 +464,6 @@ func _is_worker_available_for_selection(worker_data: WorkerData) -> bool:
 	if option is Dictionary:
 		return bool(option.get("available", false))
 	return true
-
-
-func _get_worker_unavailable_reason(worker_data: WorkerData) -> String:
-	if worker_data == null:
-		return "Worker unavailable."
-	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
-	if option is Dictionary:
-		return str(option.get("reason", "Worker unavailable."))
-	return "Worker is busy."
 
 
 # Navigation callbacks

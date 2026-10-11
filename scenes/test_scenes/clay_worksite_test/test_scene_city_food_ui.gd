@@ -60,19 +60,15 @@ func _run() -> void:
 		and Inventory.items == {"barley_grain_sack": 1},
 		"Raw ingredients stay personal while eligible food becomes visible city stock.")
 	await _capture("city-food-available.png")
-	for item_id: String in ["simple_clothes", "barley_bread"]:
-		menu._show_item_info(item_id)
+	for slot: ItemSlot in menu.grid.get_children():
+		if slot._item_id.is_empty():
+			continue
+		slot.mouse_entered.emit()
 		await _frames(2)
-		var info_rect: Rect2 = menu.item_info.get_global_rect()
-		var footer: Control = menu.view.get_node("Margin/Content/Footer")
-		_expect(absf(info_rect.get_center().x - get_viewport().get_visible_rect().get_center().x) <= 1,
-			"Item info is horizontally centered.")
-		_expect(info_rect.position.y > menu.view.get_global_rect().get_center().y
-			and info_rect.end.y < footer.global_position.y
-			and get_viewport().get_visible_rect().encloses(info_rect),
-			"Item info stays in the lower center above the action buttons and inside the viewport.")
-		await _capture("city-info-%s.png" % item_id)
-	menu.item_info.clear_item()
+		for control: Control in menu.find_children("*", "Control", true, false):
+			_expect(not (control is ItemInfoPanel and control.is_visible_in_tree()), "Hovering city stock no longer opens item descriptions.")
+			_expect(control.get_tooltip().is_empty(), "City stock controls have no native tooltip.")
+		slot.mouse_exited.emit()
 	_expect(storage.items == {"barley_bread": 4, "roasted_drumstick": 1} and storage.food_portions.is_empty()
 		and Inventory.items == {"barley_grain_sack": 1},
 		"Opening and rendering the food summary does not consume, reserve or convert stock.")

@@ -362,7 +362,7 @@ func _create_controls() -> void:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Local theme copy also covers tooltip text without changing the shared theme.
+	# Keep dynamically created controls on the same local pixel font.
 	var debug_theme: Theme = THEME.duplicate()
 	debug_theme.default_font = THEME.get_font("font", "HudShortcutButton")
 	debug_theme.default_font_size = 6
@@ -431,34 +431,28 @@ func _create_controls() -> void:
 	supply_buttons.add_theme_constant_override("separation", 3)
 	column.add_child(supply_buttons)
 	materials_button = _button("Build kit")
-	materials_button.tooltip_text = "Top up Inventory for one workshop: 6 Wood Logs, 12 Clay Lumps, 8 Reed Bundles."
 	materials_button.pressed.connect(give_build_materials)
 	materials_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supply_buttons.add_child(materials_button)
 	production_button = _button("Production")
-	production_button.tooltip_text = "Top up two mudbrick recipes and non-output materials for Drying Yard levels 1 and 2."
 	production_button.pressed.connect(give_production_materials)
 	production_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supply_buttons.add_child(production_button)
 	shekel_button = _button("100 Shekel")
-	shekel_button.tooltip_text = "Top up personal Inventory to 100 Shekel."
 	shekel_button.pressed.connect(give_shekel)
 	shekel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(shekel_button)
 	inventory_capacity_button = _check_button("Inventory 500")
-	inventory_capacity_button.tooltip_text = "Increase personal capacity for testing. Unload to the original limit before switching off."
 	inventory_capacity_button.toggled.connect(set_large_inventory)
 	column.add_child(inventory_capacity_button)
 	var guard_buttons := HBoxContainer.new()
 	guard_buttons.add_theme_constant_override("separation", 3)
 	column.add_child(guard_buttons)
 	worker_guard_check_button = _check_button("Worker guard")
-	worker_guard_check_button.tooltip_text = "Hold hired workers and linked citizens at 0.5 satisfaction / 0.9 reliability while enabled."
 	worker_guard_check_button.toggled.connect(set_worker_guard)
 	worker_guard_check_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	guard_buttons.add_child(worker_guard_check_button)
 	player_guard_check_button = _check_button("Player guard")
-	player_guard_check_button.tooltip_text = "Toggle the player's authored needs and fatigue debug protection."
 	player_guard_check_button.toggled.connect(set_player_guard)
 	player_guard_check_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	guard_buttons.add_child(player_guard_check_button)
@@ -470,7 +464,6 @@ func _create_controls() -> void:
 	column.add_child(raid_buttons)
 	column.move_child(raid_buttons, 4)
 	raid_journey_button = _button("Send raiders")
-	raid_journey_button.tooltip_text = "Start the next party's journey. Its composition sets travel time. An existing journey cannot be restarted."
 	raid_journey_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	raid_journey_button.pressed.connect(dispatch_raid_journey)
 	raid_buttons.add_child(raid_journey_button)
@@ -481,18 +474,15 @@ func _create_controls() -> void:
 	column.move_child(raid_journey_label, 5)
 	raid_reset_button = _button("Reset wall HP")
 	raid_reset_button.name = "RaidWallReset"
-	raid_reset_button.tooltip_text = "Debug only: restores a damaged built wall to full HP. Does not upgrade the wall or change the raid schedule. Unavailable during an active raid."
 	raid_reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	raid_reset_button.pressed.connect(reset_wall_test)
 	raid_buttons.add_child(raid_reset_button)
 	wall_materials_button = _button("Wall materials")
-	wall_materials_button.tooltip_text = "Debug only: adds missing materials for the next wall job to City Storage."
 	wall_materials_button.pressed.connect(give_wall_materials)
 	column.add_child(wall_materials_button)
 	column.move_child(wall_materials_button, 5)
 	raid_stage_button = _button("Next party: Early")
 	raid_stage_button.name = "RaidStage"
-	raid_stage_button.tooltip_text = "Debug only: choose the next departure's stage. Travelling raiders keep their current composition."
 	raid_stage_button.pressed.connect(cycle_raid_stage)
 	column.add_child(raid_stage_button)
 	column.move_child(raid_stage_button, 6)

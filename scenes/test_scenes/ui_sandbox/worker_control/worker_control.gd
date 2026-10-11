@@ -73,7 +73,6 @@ var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
 var _tools_preview_visual: Node2D
-var city_item_info: ItemInfoPanel
 var city_action_panel: OptionPanel
 @onready var tools_extra_accessory_button: Button = $Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots/AccessorySlot1
 @onready var tools_tool_button: Button = $Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots/ToolSlot
@@ -90,8 +89,6 @@ var _needs_manager: Node
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	city_item_info = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate()
-	$Root.add_child(city_item_info)
 	visible = false
 	close_button.pressed.connect(close)
 	city_storage_view.get_node("Margin/Content/Footer/Back").pressed.connect(_close_tools_picker)
@@ -378,7 +375,6 @@ func _render_tools_workers(rows: Array) -> void:
 
 func _render_tools_units(rows: Array) -> void:
 	_close_city_action()
-	city_item_info.clear_item()
 	_clear_children(tools_unit_list)
 	_clear_children(city_storage_list)
 	var units: Array = _get_tool_rows(_selected_worker_id)
@@ -440,8 +436,6 @@ func _add_city_tool_cell(unit: Dictionary, worker_locked: bool, occupied: bool) 
 	slot.selected_qty.visible = equipped or not bool(unit.get("available", false))
 	slot.set_meta("unit_id", unit_id)
 	slot.disabled = str(unit.get("slot", "")) != _active_tool_slot or worker_locked or (equipped and not bool(unit.get("can_unequip", true))) or (not equipped and (occupied or not bool(unit.get("available", false))))
-	slot.mouse_entered.connect(_show_city_item_info.bind(unit))
-	slot.mouse_exited.connect(city_item_info.clear_item)
 	slot.pressed.connect(_open_city_action.bind(unit, slot))
 
 
@@ -456,7 +450,6 @@ func _open_city_action(unit: Dictionary, slot: Button) -> void:
 	if slot.disabled or not city_storage_view.visible:
 		return
 	_close_city_action()
-	city_item_info.clear_item()
 	city_action_panel = preload("res://scenes/ui/option_panel/option_panel.tscn").instantiate()
 	$Root.add_child(city_action_panel)
 	city_action_panel.use_button.text = "Unequip" if bool(unit.get("equipped", false)) else "Equip"
@@ -482,30 +475,6 @@ func _position_city_action(rect: Rect2) -> void:
 		clampf(rect.end.x + 2, 4, maxf(4, bounds.x - city_action_panel.size.x - 4)),
 		clampf(rect.position.y, 4, maxf(4, bounds.y - city_action_panel.size.y - 4))
 	).round()
-
-
-func _show_city_item_info(unit: Dictionary) -> void:
-	if not city_storage_view.visible or is_instance_valid(city_action_panel):
-		return
-	if not city_item_info.display_item(str(unit.get("tool_id", ""))):
-		# Scene-local tool units do not all have ItemDatabase entries yet.
-		city_item_info.name_label.text = "name: %s" % unit.get("name", "Tool")
-		city_item_info.category_label.text = "category: EQUIP"
-		city_item_info.weight_label.text = "weight: -"
-		city_item_info.description_label.text = "Worker hauling cart." if unit.get("tool_id") == "cart" else "-"
-		city_item_info.effect_label.text = "effect: 3 items / trip" if unit.get("tool_id") == "cart" else "effect: -"
-		city_item_info._refresh_size()
-		city_item_info.show()
-	city_item_info.category_label.text = "category: EQUIP (%s)" % str(unit.get("slot", "tool")).capitalize()
-	var item_data: ItemData = ItemDatabase.get_item_data(str(unit.get("tool_id", "")))
-	if unit.get("tool_id") == "cart":
-		city_item_info.effect_label.text = "effect: 3 items / trip"
-	if item_data != null and bool(item_data.get_meta("weight_pending", false)):
-		city_item_info.weight_label.text = "weight: -"
-	city_item_info.description_label.text += "\nOwner: %s" % str(unit.get("owner_name", "City Storage"))
-	city_item_info._refresh_size()
-	var footer: Control = city_storage_view.get_node("Margin/Content/Footer")
-	city_item_info.position_lower_center(footer.global_position.y)
 
 
 func _make_tool_row(unit: Dictionary, worker_locked: bool, slot_occupied: bool = false) -> Control:
@@ -911,7 +880,6 @@ func _show_tool_picker(slot: String) -> void:
 
 func _close_tools_picker() -> void:
 	_close_city_action()
-	city_item_info.clear_item()
 	_active_tool_slot = ""
 	city_storage_view.hide()
 	window.show()

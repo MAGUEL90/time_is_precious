@@ -14,12 +14,9 @@ signal transfer_cancelled()
 var selected_items: Dictionary[String, int] = {}
 var source_items: Dictionary = {}
 var allowed_category: int = ItemEnums.ItemCategory.RESOURCE
-var item_info: ItemInfoPanel
 
 func _ready() -> void:
 	visible = false
-	item_info = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate()
-	$Root.add_child(item_info)
 	back_button.pressed.connect(_on_back_pressed)
 	close_button.pressed.connect(_on_close_pressed)
 	confirm_button.pressed.connect(_on_confirm_button)
@@ -53,7 +50,6 @@ func _on_confirm_button() -> void:
 	queue_free()
 
 func _refresh_grid() -> void:
-	item_info.clear_item()
 	for child in grid_container.get_children():
 		grid_container.remove_child(child)
 		child.queue_free()
@@ -71,7 +67,6 @@ func _refresh_grid() -> void:
 		var item_slot: ItemSlot = slot_scene.instantiate()
 		grid_container.add_child(item_slot)
 		item_slot.set_item(item_id, qty, item_data.icon)
-		item_info.bind_slot(item_slot, back_button.get_parent())
 		item_slot.set_right_click_action_enabled(true)
 		item_slot.slot_clicked.connect(_on_item_slot_clicked)
 		item_slot.slot_deposit_requested.connect(_on_item_slot_decrease_requested)

@@ -29,7 +29,6 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var page_selector: InventoryPageSelector = $Root/Center/Window/Margin/MainVBox/InventoryPageSelector
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
-@onready var item_info_panel: ItemInfoPanel = $Root/ItemInfoPanelRoot
 
 var player_ref: Player
 var current_category: int = CATEGORY_ALL
@@ -50,7 +49,6 @@ func _ready() -> void:
 	player_ref = get_tree().get_first_node_in_group("player")
 
 	visible = false
-	item_info_panel.clear_item()
 	action_feedback_label.modulate.a = 0.0
 
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -114,7 +112,6 @@ func open_inventory() -> void:
 	_refresh_player_status()
 	_refresh_inventory_grid()
 	_refresh_worker_list()
-	call_deferred("_position_item_info_panel")
 
 func _position_inventory_near_player() -> void:
 	if inventory_container == null:
@@ -137,7 +134,6 @@ func _position_inventory_near_player() -> void:
 func close_inventory() -> void:
 	_close_inventory_floating_panels()
 
-	item_info_panel.clear_item()
 	visible = false
 	_restore_tree_pause_state()
 
@@ -157,7 +153,6 @@ func _refresh_inventory_grid() -> void:
 		return
 
 	_close_inventory_floating_panels()
-	item_info_panel.clear_item()
 
 	for child in grid.get_children():
 		child.queue_free()
@@ -198,12 +193,6 @@ func _refresh_inventory_grid() -> void:
 
 		if slot.has_signal("slot_clicked"):
 			slot.slot_clicked.connect(_on_item_slot_clicked)
-
-		if slot.has_signal("slot_hovered"):
-			slot.slot_hovered.connect(_on_item_slot_hovered)
-
-		if slot.has_signal("slot_unhovered"):
-			slot.slot_unhovered.connect(_on_item_slot_unhovered)
 
 		if slot.has_signal("slot_drag_started"):
 			slot.slot_drag_started.connect(_on_slot_drag_started)
@@ -264,7 +253,6 @@ func _on_item_slot_clicked(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 	active_option_item_id = item_id
 	active_option_slot.set_selected(true)
 
-	_show_item_info(item_id, slot_ref)
 	_position_option_panel_near_slot(slot_ref)
 
 # Option menu callbacks
@@ -274,26 +262,6 @@ func _on_option_use_requested() -> void:
 
 func _on_option_drop_requested() -> void:
 	_open_item_action_confirm_panel("drop")
-
-# Slot hover
-
-func _on_item_slot_hovered(item_id: String, _quantity: int, slot_ref: ItemSlot) -> void:
-	if is_inventory_action_busy:
-		return
-
-	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):
-		return
-
-	if active_option_panel != null and is_instance_valid(active_option_panel):
-		return
-
-	_show_item_info(item_id, slot_ref)
-
-func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
-	if active_option_panel != null and is_instance_valid(active_option_panel):
-		return
-
-	item_info_panel.clear_item()
 
 # Drag and drop
 
@@ -414,7 +382,6 @@ func _close_option_panel() -> void:
 	_clear_active_option_slot()
 	_set_slots_hover_locked(false)
 	_set_slots_interaction_locked(false)
-	item_info_panel.clear_item()
 
 func _position_option_panel_near_slot(slot_ref: ItemSlot) -> void:
 	if active_option_panel == null or not is_instance_valid(active_option_panel):
@@ -452,20 +419,6 @@ func _clear_active_option_slot() -> void:
 
 	active_option_slot = null
 	active_option_item_id = ""
-
-# Item information panel
-
-func _show_item_info(item_id: String, _slot_ref: ItemSlot = null) -> void:
-	if not item_info_panel.display_item(item_id):
-		return
-
-	_position_item_info_panel()
-
-func _position_item_info_panel() -> void:
-	if inventory_window == null or item_info_panel == null:
-		return
-
-	item_info_panel.position_lower_center(page_selector.global_position.y)
 
 # Slot locking
 

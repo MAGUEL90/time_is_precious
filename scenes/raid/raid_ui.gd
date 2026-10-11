@@ -899,13 +899,11 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	if not residents.is_empty():
 		satisfaction /= residents.size()
 	satisfaction_value.text = "Satisfaction  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Satisfaction  --"
-	satisfaction_value.tooltip_text = "Average of %d residents" % residents.size() if not residents.is_empty() else "No residents yet"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
 	wall_value.text = "Wall  %d/%d  Lv.%d" % [hp, max_hp, level]
 	wall_meter.max_value = maxi(max_hp, 1)
 	wall_meter.value = hp
-	wall_value.tooltip_text = "Defend: %s" % str(_status_data.get("defend", 0))
 	var work_kind: String = str(_status_data.get("work_kind", ""))
 	var viewing_report: bool = show_last_raid and not _last_report.is_empty()
 	construction_row.visible = not work_kind.is_empty() and not viewing_report
@@ -949,7 +947,6 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 		slot.custom_minimum_size = Vector2(40, 20)
 		loot_slots.add_child(slot)
 		var data: ItemData = ItemDatabase.get_item_data(id)
-		slot.tooltip_text = data.display_name if data != null else id
 		if data != null and data.icon != null:
 			var icon := TextureRect.new()
 			icon.texture = data.icon

@@ -87,7 +87,6 @@ offset_bottom = 50.0
 mouse_filter = 0
 focus_mode = 0
 mouse_default_cursor_shape = 2
-tooltip_text = "Notifications"
 texture_filter = 1
 icon = ExtResource("4_exclamation")
 icon_alignment = 1

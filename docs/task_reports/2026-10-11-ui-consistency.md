@@ -128,3 +128,77 @@ Windows/Android execution and every unused prototype screen are unverified.
 
 The similarly named `scenes/ui/worker_hub_ui/` is an older unreferenced prototype,
 not the Worker Hub opened from the main map. Its placement is recorded, not renamed.
+
+
+## Follow-up: remove all game tooltips (2026-10-11)
+
+The Game Director explicitly requested removal of all tooltips, including the
+item descriptions that appeared on hover. This continues the same UI-polish
+branch, `fix/gameplay-hud/ui-consistency`, from clean baseline
+`ba8cff90946b1aed09ea8021b1d02e1c3b1b1a03`. Risk: Level 1, UI presentation only.
+Acceptance: no game tooltip appears on hover; item actions, selection, equipment,
+transfers, notifications and explicit Details/Inspect panels still work.
+Gameplay, saves, balance, dialogue, project settings and editor plugins are outside scope.
+
+Removed native tooltip text from notifications, city satisfaction/wall metrics,
+raid loot icons, Debug controls, unavailable workshop workers and hauler
+storage destinations. Job Board explicitly disables ItemList's automatic item
+text tooltips whenever it rebuilds its applicant list.
+
+Removed item-info panel instances and hover bindings from Inventory, City Storage,
+Worker Hub equipment, item transfer and workshop storage. Inventory no longer
+reopens that same description panel when selecting an item. Its page selector no
+longer depends on the removed panel node. The unused shared ItemInfoPanel resource
+files remain in the repository; no game UI instantiates them. Hover selection
+frames and clickable action/Details/Inspect panels retain their existing behavior.
+
+Changed source files in this follow-up:
+
+- `scenes/debug/time_debug_overlay.gd`
+- `scenes/raid/raid_ui.gd` and `raid_ui.tscn`
+- `scenes/storage_destination/city_storage_access_ui.gd`
+- `scenes/test_scenes/ui_sandbox/clay_worksite_inspector/hauler_delivery_setup.gd`
+- `scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd`
+- `scenes/ui/inventory_page_selector/inventory_page_selector.gd`
+- `scenes/ui/inventory_ui/inventory_ui.gd` and `inventory_ui.tscn`
+- `scenes/ui/item_transfer_ui/item_transfer_ui.gd`
+- `scenes/ui/job_board_ui/job_board_ui.gd`
+- `scenes/ui/workshop_storage_menu_ui/workshop_storage_menu_ui.gd`
+- `scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.gd`
+- The existing Worker Control and City Food UI fixtures now check the requested
+  absence of hover descriptions instead of expecting the removed panels.
+- This report.
+
+No files were created, deleted or renamed. Four editor-generated metadata changes
+were inspected, backed up and restored under the user's prior authorization;
+`project.godot` and addons are unchanged in the final diff.
+
+Validation: Godot 4.5.2, GL Compatibility, Linux/Xorg, 1200x675 window,
+unchanged 400x225 logical viewport. Editor parse/import passed without script
+errors. Nine existing fixtures passed:
+
+- Inventory Modal Pause (including item action popup navigation)
+- Worker Control (including equipment hover and equip/unequip)
+- City Storage Supply Flow (including deposits and item transfer)
+- Raid UI (including City Hub, notifications, Inspect and reports)
+- Hauler Delivery Setup (`TIP_TEST_HAULER_TARGET=1`)
+- Workshop UI Regression (including worker availability and explicit Details)
+- Workshop Construction UI
+- Main Map Hauler Start (including populated Job Board)
+- UI Layout Review
+
+The first hauler launch opened the fixture's manual mode and was stopped; the
+correct automatic-mode rerun passed. The legacy City Food UI fixture still fails
+its old separate-Supply-layout and consumer-count expectations. Comparing its
+error messages with the pre-change baseline found no new errors; its updated
+no-tooltip checks produced no failures. This legacy test is not counted as passed.
+
+A final source audit finds only empty tooltip assignments, explicit tooltip
+suppression and test assertions in game code. No game UI still references the
+ItemInfoPanel scene. Reviewed captures show Inventory's item action confirmation,
+Worker Hub equipment storage and raid results without hover descriptions.
+Evidence: `/workspace/scratch/no-tooltips/` (logs and `captures/`).
+The native dummy-display VSync warning and unavailable host audio device were
+observed; the hauler rerun used the Dummy audio driver. No script errors or
+leaked-object warnings were found in current-flow tests. `git diff --check` passed.
+Windows and Android execution remain unverified. Status: PASSED — NEEDS HUMAN REVIEW.
