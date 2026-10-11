@@ -732,7 +732,7 @@ autoload, settings, save format, building unlocks or construction costs are intr
 binds `CitySave` under the existing WorkStateRuntime host. A successful SleepSpot
 interaction writes the single slot after sleep recovery and the fade complete; refused
 sleep and Collapse do not trigger it. A small six-pixel message above the bed confirms
-success or failure. City Hub retains manual Save/Load for playtesting. Load restores the
+success or failure. City Hub has no manual Save/Load controls. Load restores the
 stored clock; closed-game time does not produce goods, apply needs, or advance raids. Active timed construction, production,
 travel, combat and looting are included. Debug speed controls and transient UI selections
 are not saved.
@@ -773,3 +773,25 @@ City Hub Supply presents Shelter from `CityStockManager.shelter_capacity` agains
 `CitizenNeedsManager.get_daily_shelter_capacity_need()`. It shows capacity, resident need
 and short/spare/covered status alongside food and clothing. Displaying it neither consumes
 housing nor changes needs settlement, satisfaction values or city-progress balance.
+
+
+### Startup and content-editing entrypoints (2026-10-11)
+
+`scenes/ui/start_menu/start_menu.tscn` is the F5 main scene. It pauses simulation
+while presenting Continue/New Game/Quit. It retains its CanvasLayer over the
+normal city scene transition, waits for RaidBootstrap to bind CitySave, then uses
+the existing checkpoint loader. A home checkpoint follows the existing fade/home
+handoff. Failed validation preserves files and keeps the menu usable; no new
+autoload, save schema, clock or inventory authority is introduced.
+
+New Game asks for confirmation when checkpoint files exist. The scene-local
+`checkpoint_archive.gd` observes the four known slot files and moves them into a
+unique sibling `archive/` directory only if those observations still match.
+It attempts rollback on a partial move failure without overwriting newly appeared
+files. A fresh slot is observed by CitySave at the next sleep. No automatic save
+is written just for opening or starting a session.
+
+F6 on ContentScene bypasses this menu and starts the authored map for content
+iteration. The main-map merchant uses its normal schedule instead of the former
+debug day-zero override. Explicit debug tools remain available in debug builds,
+with normal clock speed and player/worker needs as their startup defaults.

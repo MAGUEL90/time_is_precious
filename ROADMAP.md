@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 ## Purpose of This Document
 
@@ -601,14 +601,19 @@ the current playable loop.
 
 **Status: City/home checkpoint and sleep autosave implemented on `feature/time-world/city-save-load`; awaiting playtest.**
 
-Successful sleep now saves one checkpoint after recovery. City Hub retains manual
-Save/Load for playtesting. The slot covers stocks, residents, jobs, construction,
+Successful sleep now saves one checkpoint after recovery. Manual Save/Load buttons
+have been removed from City Hub. The startup menu on `fix/gameplay-hud/ui-consistency`
+provides Continue, New Game and Quit. Continue restores city/home checkpoints; New Game
+requires confirmation when a checkpoint exists and archives the previous files.
+The slot covers stocks, residents, jobs, construction,
 progression and raids; home visits preserve the live worksite/hauling session. Loading
 a sleep checkpoint returns to the saved home position and time without offline production.
 Version-1 city saves remain readable. Supply also displays existing Shelter capacity.
-The isolated worksite prototype slot stays separate. Menu-level Continue, multiple slots
-and other-map saves remain follow-up work. See
-`docs/task_reports/2026-10-11-city-sleep-save.md`.
+The isolated worksite prototype slot stays separate. Multiple selectable slots and
+other-map saves remain follow-up work. F5 opens the startup menu; F6 runs the authored
+scene directly for content editing. The main map no longer forces a day-zero merchant
+in debug builds. See `docs/task_reports/2026-10-11-city-sleep-save.md` and
+`docs/task_reports/2026-10-11-content-ready.md`.
 
 ## Phase 6 - Internal Playtest
 
