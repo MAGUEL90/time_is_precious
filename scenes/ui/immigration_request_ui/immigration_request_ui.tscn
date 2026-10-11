@@ -8,6 +8,7 @@
 font = ExtResource("2_d816d")
 
 [node name="ImmigrationRequestUI" type="CanvasLayer"]
+layer = 10
 script = ExtResource("1_t537r")
 metadata/_edit_horizontal_guides_ = [317.0]
 

@@ -12,6 +12,7 @@ atlas = ExtResource("3_gmxkd")
 region = Rect2(1, 1, 168, 134)
 
 [node name="WorkshopJobUI" type="CanvasLayer"]
+layer = 10
 process_mode = 3
 script = ExtResource("1_fmy6q")
 

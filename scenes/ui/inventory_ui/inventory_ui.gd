@@ -89,6 +89,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif visible and event.is_action_pressed("ui_cancel"):
 		close_inventory()
+		get_viewport().set_input_as_handled()
 
 func _on_inventory_items_changed() -> void:
 	_refresh_inventory_grid()

@@ -114,7 +114,7 @@ func _run() -> void:
 	_expect(ui.supply_shelter.text.begins_with("Shelter") and ui.supply_shelter.text.contains("Capacity") and ui.supply_shelter.text.contains("Need")
 		and (ui.supply_shelter.text.contains("Short") or ui.supply_shelter.text.contains("Spare") or ui.supply_shelter.text.contains("Covered")),
 		"Supply presents shelter capacity against resident need with a shortage or spare status.")
-	var shelter_icon: TextureRect = ui.supply_shelter.get_parent().get_child(0) as TextureRect
+	var shelter_icon: TextureRect = ui.supply_shelter.get_parent().get_node("IconFrame/Icon") as TextureRect
 	_expect(shelter_icon.texture.resource_path.ends_with("house_icon.png") and shelter_icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
 		"The Shelter row uses the house icon with nearest filtering.")
 	_expect(ui.city_daily_label.text.contains("Food +1") and ui.city_event_label.visible and ui.city_event_label.text == "City level increased",
@@ -461,6 +461,10 @@ func _check_bounds() -> void:
 func _check_notification_bounds() -> void:
 	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 	_expect(viewport_rect.encloses(ui.notifications_popup.get_global_rect()), "Notifications popup remains inside the logical viewport.")
+	var inner_rect: Rect2 = ui.notifications_popup.get_global_rect().grow(-16)
+	for path: String in ["TitleLabel", "MerchantNoticeLabel", "RaidNoticeLabel", "ActionsRow/CloseButton"]:
+		var control: Control = ui.notifications_popup.get_node("Margin/Contents/" + path)
+		_expect(inner_rect.encloses(control.get_global_rect()), "Notification content clears the ornamental frame: " + path)
 
 func player_pause_guard(paused: bool) -> void:
 	test_player.can_move = not paused

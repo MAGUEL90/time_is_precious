@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://un6ofmrrc2td" path="res://scenes/ui/worker_hub_ui/worker_hub_ui.gd" id="1_b1dp4"]
 
 [node name="WorkerHubUI" type="CanvasLayer"]
+layer = 10
 script = ExtResource("1_b1dp4")
 
 [node name="Root" type="Control" parent="."]

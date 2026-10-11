@@ -121,6 +121,17 @@ func _run() -> void:
 		_finish(original_tree_paused, original_clock_paused)
 		return
 
+	var city_ui: RaidUI = get_tree().get_first_node_in_group("city_notification_ui") as RaidUI
+	_expect(is_instance_valid(city_ui), "The normal map provides the city HUD for the stacking check.")
+	if is_instance_valid(city_ui):
+		city_ui.open_details()
+		inventory.open_inventory()
+		await get_tree().process_frame
+		_expect(inventory.layer > city_ui.layer, "An active Inventory renders above City Hub and its notification icon.")
+		await _capture("inventory-over-city-hub")
+		await _press(&"ui_cancel")
+		_expect(not inventory.visible and city_ui.details_panel.visible, "Escape closes only the foreground Inventory and preserves City Hub below it.")
+		city_ui.close_details()
 	await _test_action_popup_edge_layout()
 
 	for cycle: int in range(2):

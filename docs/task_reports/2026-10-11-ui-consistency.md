@@ -202,3 +202,36 @@ The native dummy-display VSync warning and unavailable host audio device were
 observed; the hauler rerun used the Dummy audio driver. No script errors or
 leaked-object warnings were found in current-flow tests. `git diff --check` passed.
 Windows and Android execution remain unverified. Status: PASSED — NEEDS HUMAN REVIEW.
+
+## Screenshot follow-up: panel stacking and pixel layout
+
+Continued on `fix/gameplay-hud/ui-consistency` from clean `0ab0c49`, within the
+requested Level 1 UI scope. Notifications now use 16px content margins and a
+bottom-aligned Close button. City Hub and its passive notification icon render
+below Inventory, Job Board, Worker Hub, immigration and workshop job modals.
+Escape closes the foreground Inventory without also dismissing City Hub below.
+Supply uses native 16x16 nearest-filtered icons within integer-padded 24px columns;
+tab panel dimensions remain unchanged. Job Board uses a square pixel focus border.
+Its already-disabled automatic tooltips were verified with a real populated list,
+mouse hover and a wait beyond the native tooltip delay.
+
+Changed production files: `scenes/raid/raid_ui.gd`, `raid_ui.tscn`, Inventory's
+script and scene, Job Board's scene, immigration request and workshop job scenes,
+and both the active sandbox Worker Control and legacy Worker Hub scenes. Four
+existing fixtures were extended: Raid UI, City Progression Hub, Inventory Modal
+Pause and Main Map Hauler Start. No gameplay, balance, saves, settings or assets
+were changed. The user's separate asset commit is pending remote availability.
+
+Godot 4.5.2 editor import passed. Eight native Linux/Xorg fixtures passed:
+Raid UI, City Progression Hub, Inventory Modal Pause, Main Map Hauler Start,
+City Storage Supply Flow, Worker Control, Workshop UI Regression and UI Layout
+Review. Inventory Modal Pause was rerun after the Escape propagation fix and
+passed. Runtime captures were inspected for notification margins, native Supply
+icons, foreground Inventory and Job Board hover without a tooltip.
+
+Evidence: `/workspace/scratch/ui-followup/` (logs and `captures/`). Window 1200x675;
+logical viewport remains 400x225. Only the dummy-display VSync warning was observed
+in native runs using Dummy audio. No script errors appeared. Four editor-generated
+metadata files were backed up, inspected and restored under the user's existing
+authorization. Windows and Android remain unverified.
+Status: PASSED — NEEDS HUMAN REVIEW.

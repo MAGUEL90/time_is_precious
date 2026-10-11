@@ -722,19 +722,28 @@ func _add_hub_section_spacer(spacer_name: String, target: Control, insert_after:
 	contents.move_child(spacer, insert_index)
 	_hub_section_spacers.append(spacer)
 
-func _supply_card(parent: Control, texture: Texture2D, icon_size: Vector2 = Vector2(24, 24), row_separation: int = 8) -> Label:
+func _supply_card(parent: Control, texture: Texture2D) -> Label:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", row_separation)
+	row.add_theme_constant_override("separation", 8)
 	parent.add_child(row)
+	# Keep a native 16px icon inside an integer-padded 24px column.
+	var frame := MarginContainer.new()
+	frame.name = "IconFrame"
+	frame.custom_minimum_size = Vector2(24, 24)
+	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side: String in ["left", "top", "right", "bottom"]:
+		frame.add_theme_constant_override("margin_" + side, 4)
+	row.add_child(frame)
 	var icon := TextureRect.new()
+	icon.name = "Icon"
 	icon.texture = texture
-	icon.custom_minimum_size = icon_size
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.expand_mode = TextureRect.EXPAND_KEEP_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(icon)
+	frame.add_child(icon)
 	return _small_label(row, "")
 
 func _select_hub_tab(supply: bool) -> void:

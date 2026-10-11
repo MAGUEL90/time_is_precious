@@ -26,9 +26,9 @@ func _run() -> void:
 	ui._select_hub_tab(true)
 	await capture_defense("city-progress-supply.png")
 	_expect(ui.details_panel.get_global_rect() == management_rect, "Switching to Supply preserves the exact panel size and position.")
-	for summary: Label in [ui.supply_food, ui.supply_clothing]:
-		var icon: TextureRect = summary.get_parent().get_child(0)
-		_expect(icon.stretch_mode == TextureRect.STRETCH_KEEP_CENTERED and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+	for summary: Label in [ui.supply_food, ui.supply_clothing, ui.supply_shelter]:
+		var icon: TextureRect = summary.get_parent().get_node("IconFrame/Icon")
+		_expect(icon.size == Vector2(16, 16) and icon.stretch_mode == TextureRect.STRETCH_KEEP and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
 			"Supply icons preserve their native pixel size without fractional resampling.")
 	var old_city_id: int = city.get_instance_id()
 	var old_ui_id: int = ui.get_instance_id()
