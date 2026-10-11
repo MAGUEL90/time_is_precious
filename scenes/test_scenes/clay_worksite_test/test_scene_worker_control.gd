@@ -202,6 +202,8 @@ func _run() -> void:
 	unequip.pressed.emit()
 	fixture.worker_control.city_action_panel.use_button.pressed.emit()
 	await get_tree().process_frame
+	# Equipment callbacks defer their refresh; wait before clicking the rebuilt slot.
+	await get_tree().process_frame
 	_expect(not fixture.city_tools.has_equipped(ids[0], "stone_hammer"), "Tools UI returns optional tool to City Storage.")
 	_expect(not _tool_action("hammer_a").disabled, "Picker enables Equip after the slot is freed.")
 	_tool_action("hammer_a").pressed.emit()

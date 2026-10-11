@@ -59,6 +59,7 @@ const SEPARATOR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/separator_
 const TOOL_CARD_SCENE: PackedScene = preload("res://scenes/test_scenes/ui_sandbox/worker_control/worker_tool_card.tscn")
 const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visual/base_worker_visual.tscn")
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
+const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
@@ -325,6 +326,7 @@ func _make_status_row(row: Dictionary) -> Control:
 	activity_label.clip_text = false
 	activity_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row_control.add_child(activity_label)
+	row_control.add_child(_make_star_rating(int(row.get("star", 0))))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row_control.add_child(spacer)
@@ -598,20 +600,35 @@ func _render_level(rows: Array) -> void:
 	for row: Dictionary in rows:
 		var card := PanelContainer.new()
 		card.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-		var label := _make_label(
-			"%s\n%s\nStar: %d | XP: %d | Contributions: %d"
-			% [
-				str(row.get("name", "Unnamed worker")),
-				str(row.get("profession", "")),
-				int(row.get("star", 0)),
-				int(row.get("xp", 0)),
-				int(row.get("contributions", 0))
-			],
-			6
-		)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		card.add_child(label)
+		var contents := VBoxContainer.new()
+		contents.add_theme_constant_override("separation", 2)
+		card.add_child(contents)
+		var heading := _make_label("%s\n%s" % [str(row.get("name", "Unnamed worker")), str(row.get("profession", ""))], 6)
+		heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		contents.add_child(heading)
+		var stats := HBoxContainer.new()
+		stats.add_theme_constant_override("separation", 4)
+		contents.add_child(stats)
+		stats.add_child(_make_star_rating(int(row.get("star", 0))))
+		stats.add_child(_make_label("XP: %d | Contributions: %d" % [int(row.get("xp", 0)), int(row.get("contributions", 0))], 6))
 		level_list.add_child(card)
+
+
+func _make_star_rating(stars: int) -> HBoxContainer:
+	var rating := HBoxContainer.new()
+	rating.name = "StarRating"
+	rating.add_theme_constant_override("separation", 2)
+	var icon := TextureRect.new()
+	icon.texture = STAR_ICON
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.stretch_mode = TextureRect.STRETCH_KEEP
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rating.add_child(icon)
+	var count := _make_label(str(stars), 6)
+	count.name = "Count"
+	rating.add_child(count)
+	return rating
 
 
 func _set_active_tab(tab: String) -> void:
@@ -718,7 +735,13 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 	details_header_label.text = str(row.get("name", "Unnamed worker"))
 	details_label.text = _format_details_text(row)
 	var visuals: VBoxContainer = details_scroll.get_node("Visuals")
-	visuals.get_node("Overview/Level").text = "Level %d" % int(row.get("star", 0))
+	visuals.get_node("Overview/Level").hide()
+	var rating: HBoxContainer = visuals.get_node_or_null("Overview/StarRating")
+	if rating == null:
+		rating = _make_star_rating(0)
+		visuals.get_node("Overview").add_child(rating)
+		visuals.get_node("Overview").move_child(rating, 0)
+	rating.get_node("Count").text = str(int(row.get("star", 0)))
 	visuals.get_node("Overview/WageRow/Wage").text = str(row.get("wage", "")).replace(" Shekel", "")
 	visuals.get_node("Location").text = "Location: %s" % str(row.get("location", ""))
 	visuals.get_node("ProductiveDays").text = "Productive days: %d" % int(row.get("productive_days", 0))

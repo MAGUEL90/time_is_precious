@@ -1,10 +1,13 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/raid_unit_config.gd" id="1"]
+
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/heavt_raider_icon.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1")
 id = &"heavy"
 display_name = "Heavy"
+icon = ExtResource("2_icon")
 attack = 4
 travel_days = 4

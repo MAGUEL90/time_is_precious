@@ -165,9 +165,9 @@ func _run() -> void:
 	var inspection_contents: Control = inspection_panel.get_node("Center/Frame/Margin/Contents")
 	var cards: HBoxContainer = inspection_contents.get_node("CardsRow")
 	_expect(cards.visible and cards.get_child_count() == 3, "Inspection shows one horizontal card for each nonzero raider type.")
-	_expect(cards.get_node("UnitCard_Light/CardContents/CountLabel").text == "x 2"
-		and cards.get_node("UnitCard_Normal/CardContents/CountLabel").text == "x 1"
-		and cards.get_node("UnitCard_Heavy/CardContents/CountLabel").text == "x 3", "Each raider card shows its fixture quantity beneath the icon.")
+	_expect(cards.get_node("UnitCard_Light/CardContents/CountLabel").text == "x2"
+		and cards.get_node("UnitCard_Normal/CardContents/CountLabel").text == "x1"
+		and cards.get_node("UnitCard_Heavy/CardContents/CountLabel").text == "x3", "Each raider card shows its fixture quantity beneath the icon.")
 	_expect(inspection_contents.get_node("TitleLabel").get_theme_font_size("font_size") == 12
 		and cards.get_node("UnitCard_Light/CardContents/CountLabel").get_theme_font_size("font_size") == 6, "Inspection uses the requested 12/6 pixel font sizes.")
 	await get_tree().process_frame
@@ -177,6 +177,11 @@ func _run() -> void:
 	_expect(frame.get_global_rect().encloses(inspection_contents.get_global_rect())
 		and inspection_contents.get_global_rect().encloses(cards.get_global_rect()), "Three cards and the inspection content fit inside the visible frame.")
 	_expect(frame.get_global_rect().grow(-16).encloses(inspection_contents.get_global_rect()), "Inspection content clears the ornamental frame on every side.")
+	for card: Node in cards.get_children():
+		var portrait_frame: PanelContainer = card.get_node("CardContents/IconPanel")
+		var icon: RaiderTypeIcon = portrait_frame.get_child(0)
+		_expect(portrait_frame.size == Vector2(32, 32), "Each raider portrait panel remains exactly 32x32.")
+		_expect(icon.source_texture != null and icon.source_texture.get_size() == Vector2(16, 16), "Each raider type has its supplied native pixel icon.")
 	await _capture("raider-inspection-three-types.png")
 	var first_card_id: int = cards.get_child(0).get_instance_id()
 	_expect(ui.travel_progress.visible, "Inspect keeps the existing travel bar visible.")
@@ -267,6 +272,7 @@ func _run() -> void:
 	_expect(ui.construction_row.visible and ui.construction_progress.work_kind == "build"
 		and ui.construction_progress.progress_bar.value == world_indicator.work_progress.progress_bar.value,
 		"City Management and the world display the same wall construction progress.")
+	await _capture("wall-construction-icons.png")
 	state.status.work_kind = "watchtower"
 	state.status.work_total = 180
 	state.status.work_remaining = 90
@@ -276,6 +282,7 @@ func _run() -> void:
 	_expect(ui.construction_progress.work_kind == "watchtower" and world_indicator.work_progress.work_kind == "watchtower"
 		and ui.construction_progress.progress_bar.value == 90.0 and world_indicator.work_progress.progress_bar.value == 90.0
 		and ui.wall_meter.value == 50.0, "Watchtower uses its own icon/progress in both views without replacing wall HP.")
+	await _capture("watchtower-construction-icons.png")
 	ui.close_details()
 	state.status.work_kind = ""
 	state.status.work_remaining = 0
@@ -290,6 +297,7 @@ func _run() -> void:
 	_expect(world_indicator.visible and world_indicator.progress_bar.value == 19.0, "An attack shows the live wall HP bar at the wall.")
 	_expect(ui.status_detail_label.visible and ui.status_detail_label.text == "Wall under attack"
 		and not world_indicator.work_progress.visible, "Attack-only feedback accompanies wall HP without a construction bar.")
+	await _capture("wall-construction-icons.png")
 	state.status.work_kind = "watchtower"
 	state.status.work_total = 180
 	state.status.work_remaining = 90
@@ -326,8 +334,11 @@ func _run() -> void:
 	_expect(ui.time_left_label.text == "Looting: 18s", "The active loot timer is shown in the raid status data.")
 	_expect(world_indicator.visible and world_indicator.progress_bar.value == 0.0, "The world marker keeps showing wall HP at zero while the city is being looted.")
 	_expect(ui.travel_progress.visible and is_equal_approx(ui.travel_progress.progress_ratio, 1.0), "The detected raider marker stays at the castle during looting.")
-	_expect(ui.travel_eta_label.text.contains("Looted: 2 items") and ui.travel_eta_label.text.contains("3.50 / 8.00"), "Live looting displays the stolen count and weight.")
+	_expect(ui.live_loot_row.visible and ui.live_loot_value.text.contains("x2") and ui.live_loot_value.text.contains("3.50 / 8.00"), "Live looting displays the stolen count and weight.")
 	_expect(ui.status_detail_label.has_theme_color_override("font_color"), "City Management keeps threat status red during looting.")
+	ui.open_details()
+	await _capture("live-loot-icons.png")
+	ui.close_details()
 	ui.notification_button.pressed.emit()
 	_expect(ui.notification_raid_label.text.contains("looting City Storage") and ui.notification_raid_label.text.contains("18s"), "Notifications identify the active loot and its countdown.")
 	ui.notification_button.pressed.emit()

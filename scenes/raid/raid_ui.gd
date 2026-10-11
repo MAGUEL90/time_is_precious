@@ -63,6 +63,8 @@ var _inspected_raiders: Dictionary = {}
 var result_box: VBoxContainer
 var result_heading: Label
 var result_stats: Label
+var live_loot_row: HBoxContainer
+var live_loot_value: Label
 var loot_slots: HFlowContainer
 var result_note: Label
 var report_toggle: Button
@@ -612,7 +614,7 @@ func _render_details() -> void:
 			var stolen_units: int = 0
 			for count: Variant in _status_data.get("stolen_so_far", {}).values():
 				stolen_units += int(count)
-			travel_eta_label.text += "\nLooted: %d items · Weight: %.2f / %.2f" % [stolen_units, float(_status_data.get("loot_weight", 0.0)), float(_status_data.get("loot_capacity_weight", 0.0))]
+			live_loot_value.text = "x%d   %.2f / %.2f" % [stolen_units, float(_status_data.get("loot_weight", 0.0)), float(_status_data.get("loot_capacity_weight", 0.0))]
 		else:
 			travel_eta_label.text = "Raiders have reached the wall."
 	# Current city state and previous results never compete for the same space.
@@ -817,15 +819,28 @@ func _create_dashboard() -> void:
 	inspect_button.focus_mode = Control.FOCUS_NONE
 	inspect_button.pressed.connect(_inspect_current_raiders)
 	watchtower_row.add_child(inspect_button)
+	live_loot_row = HBoxContainer.new()
+	live_loot_row.name = "LiveLoot"
+	live_loot_row.add_theme_constant_override("separation", 4)
+	contents.add_child(live_loot_row)
+	contents.move_child(live_loot_row, contents.get_children().find(travel_eta_label) + 1)
+	_native_icon(live_loot_row, preload("res://assets/ui/ui_icon/loot_icon.png"))
+	live_loot_value = _small_label(live_loot_row, "")
 	var wall_card := VBoxContainer.new()
 	wall_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	metrics.add_child(wall_card)
-	wall_value = _small_label(wall_card, "Wall")
+	var wall_heading := HBoxContainer.new()
+	wall_heading.add_theme_constant_override("separation", 4)
+	wall_card.add_child(wall_heading)
+	_native_icon(wall_heading, preload("res://assets/ui/ui_icon/wall_icon.png"))
+	wall_value = _small_label(wall_heading, "")
 	wall_meter = _meter(wall_card, Color(0.8, 0.57, 0.23))
 	var satisfaction_card := VBoxContainer.new()
 	satisfaction_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	metrics.add_child(satisfaction_card)
 	satisfaction_value = _small_label(satisfaction_card, "Satisfaction")
+	satisfaction_value.custom_minimum_size.y = 16
+	satisfaction_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	satisfaction_meter = _meter(satisfaction_card, Color(0.48, 0.66, 0.38))
 	storage_summary = _small_label(contents, "")
 	contents.move_child(storage_summary, 2)
@@ -878,6 +893,16 @@ func _render_watchtower_status(detected: bool, viewing_report: bool) -> void:
 	if inspect_button.visible:
 		inspect_button.disabled = not bool(_status_data.get("watchtower_built", false)) or not bool(_status_data.get("can_inspect", false)) or not is_instance_valid(raid_state) or not raid_state.has_method("inspect_raiders")
 
+func _native_icon(parent: Node, texture: Texture2D) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.texture = texture
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.stretch_mode = TextureRect.STRETCH_KEEP
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(icon)
+	return icon
+
 func _small_label(parent: Node, text: String) -> Label:
 	var label := Label.new()
 	label.theme_type_variation = &"HudLabelShortcut"
@@ -910,7 +935,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	satisfaction_value.text = "Satisfaction  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Satisfaction  --"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
-	wall_value.text = "Wall  %d/%d  Lv.%d" % [hp, max_hp, level]
+	wall_value.text = "%d/%d  Lv.%d" % [hp, max_hp, level]
 	wall_meter.max_value = maxi(max_hp, 1)
 	wall_meter.value = hp
 	var work_kind: String = str(_status_data.get("work_kind", ""))
@@ -918,13 +943,13 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	construction_row.visible = not work_kind.is_empty() and not viewing_report
 	construction_progress.show_work(_status_data)
 	if not work_kind.is_empty():
-		var work_title: String = str({"build": "Wall", "repair": "Wall repair", "upgrade": "Wall upgrade", "watchtower": "Watchtower"}.get(work_kind, "Wall"))
 		var remaining: int = maxi(0, int(_status_data.get("work_remaining", 0)))
-		construction_label.text = "%s  %s" % [work_title, "Paused" if construction_progress.paused else _format_travel_time(remaining)]
+		construction_label.text = "Paused" if construction_progress.paused else _format_travel_time(remaining)
 	status_detail_label.text = {"attacking": "Wall under attack", "looting": "City Storage under attack"}.get(phase, "")
 	status_detail_label.visible = phase in ["attacking", "looting"] and not viewing_report
 	travel_progress.visible = detected and not viewing_report
 	travel_eta_label.visible = detected and not viewing_report
+	live_loot_row.visible = phase == "looting" and not viewing_report
 	result_box.visible = viewing_report
 	storage_summary.hide()
 	_render_watchtower_status(detected, viewing_report)
@@ -949,8 +974,14 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	_loot_display_key = key
 	for child: Node in loot_slots.get_children():
 		child.free()
-	if stolen.is_empty():
-		_small_label(loot_slots, "No items stolen")
+	var summary := HBoxContainer.new()
+	summary.custom_minimum_size = Vector2(36, 20)
+	loot_slots.add_child(summary)
+	_native_icon(summary, preload("res://assets/ui/ui_icon/loot_icon.png"))
+	var total_stolen: int = 0
+	for count: Variant in stolen.values():
+		total_stolen += int(count)
+	_small_label(summary, "x%d" % total_stolen)
 	for id: String in stolen:
 		var slot := HBoxContainer.new()
 		slot.custom_minimum_size = Vector2(40, 20)

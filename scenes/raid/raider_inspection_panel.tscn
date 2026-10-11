@@ -91,9 +91,9 @@ vertical_alignment = 1
 
 [node name="CardsRow" type="HBoxContainer" parent="Center/Frame/Margin/Contents"]
 visible = false
-custom_minimum_size = Vector2(0, 54)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="FooterRow" type="HBoxContainer" parent="Center/Frame/Margin/Contents"]
