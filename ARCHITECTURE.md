@@ -726,13 +726,14 @@ and offers the explicit level-up action; Supply shows the last daily breakdown. 
 autoload, settings, save format, building unlocks or construction costs are introduced.
 
 
-### Main-city manual checkpoint (2026-10-11)
+### City/home checkpoint and sleep autosave (2026-10-11)
 
 `scenes/new_scenes/save_game/` owns the first main-map disk checkpoint. RaidBootstrap
-binds `CitySave` under the existing WorkStateRuntime host; City Hub exposes Save/Load
-in its shared footer. Save is manual, single-slot and only available in the main city
-outside transient interactions. Load restores the stored clock; closed-game time does
-not produce goods, apply needs, or advance raids. Active timed construction, production,
+binds `CitySave` under the existing WorkStateRuntime host. A successful SleepSpot
+interaction writes the single slot after sleep recovery and the fade complete; refused
+sleep and Collapse do not trigger it. A small six-pixel message above the bed confirms
+success or failure. City Hub retains manual Save/Load for playtesting. Load restores the
+stored clock; closed-game time does not produce goods, apply needs, or advance raids. Active timed construction, production,
 travel, combat and looting are included. Debug speed controls and transient UI selections
 are not saved.
 
@@ -751,5 +752,24 @@ legacy isolated Clay fixture slot. It checks observations for external edits, ve
 staged JSON before replacement and keeps the previous primary as `.bak`. Valid staging
 or backup files are recovery candidates only when the primary is absent. A corrupt or
 unsupported primary blocks both loading and replacement; it is not silently discarded.
-Schema version 1 has no implicit migration to/from the isolated worksite prototype or
-future schema versions. See the city save/load task report for coverage and limits.
+Schema version 2 adds an explicit `city`/`home` location header; all state keys remain
+unchanged. The existing slot filename stays stable. Version-1 city-only files are read
+explicitly as city checkpoints and upgraded by the next successful save. Unsupported
+future versions and the isolated worksite prototype are not silently migrated.
+
+For the authored city/home pair, SceneDoor asks CitySave to retain the existing worksite
+subtree under the runtime host before freeing the city. Its frame/input/physics processing
+and visible layers stop, while the existing minute-driven daily/hauling scheduler continues.
+No second production simulator is introduced. On return, the current state is adopted by
+the new map projection, then the old projection is cleaned up without releasing adopted
+workers. Detached city drops and persistent workshop-plot references retain city ownership.
+Failed scene switches restore the original worksite parent and layer visibility. Other
+map routes keep their previous lifecycle. Home saves include the live offscreen worksite
+state plus the home Player. Home Load validates from the city and uses the existing fade
+to place the player at the saved home position; clock/raid processing is suspended only
+for that load transition. See the sleep-save task report for coverage and limitations.
+
+City Hub Supply presents Shelter from `CityStockManager.shelter_capacity` against
+`CitizenNeedsManager.get_daily_shelter_capacity_need()`. It shows capacity, resident need
+and short/spare/covered status alongside food and clothing. Displaying it neither consumes
+housing nor changes needs settlement, satisfaction values or city-progress balance.

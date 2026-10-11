@@ -71,6 +71,7 @@ var hub_tabs: HBoxContainer
 var supply_view: VBoxContainer
 var supply_food: Label
 var supply_clothing: Label
+var supply_shelter: Label
 var city_daily_label: Label
 var city_event_label: Label
 var city_progression: Node
@@ -645,13 +646,16 @@ func _create_hub_tabs() -> void:
 		hub_tabs.add_child(button)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
-	supply_view.add_theme_constant_override("separation", 10)
+	supply_view.add_theme_constant_override("separation", 2)
 	contents.add_child(supply_view)
 	contents.move_child(supply_view, 2)
 	supply_food = _supply_card(supply_view, preload("res://assets/items/butcher’s_cut.png"))
 	supply_clothing = _supply_card(supply_view, preload("res://assets/items/trimmed_robe.png"))
+	supply_shelter = _supply_card(supply_view, preload("res://assets/ui/ui_icon/house_icon.png"), Vector2(24, 16))
 	city_daily_label = _small_label(supply_view, "No daily results yet.")
+	city_daily_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	city_event_label = _small_label(supply_view, "")
+	city_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	city_event_label.hide()
 	_small_label(supply_view, "Deposit goods at City Storage.")
 	supply_view.hide()
@@ -718,13 +722,13 @@ func _add_hub_section_spacer(spacer_name: String, target: Control, insert_after:
 	contents.move_child(spacer, insert_index)
 	_hub_section_spacers.append(spacer)
 
-func _supply_card(parent: Control, texture: Texture2D) -> Label:
+func _supply_card(parent: Control, texture: Texture2D, icon_size: Vector2 = Vector2(24, 24), row_separation: int = 8) -> Label:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", row_separation)
 	parent.add_child(row)
 	var icon := TextureRect.new()
 	icon.texture = texture
-	icon.custom_minimum_size = Vector2(24, 24)
+	icon.custom_minimum_size = icon_size
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -776,6 +780,11 @@ func _render_hub() -> void:
 		supply_food.text += "  /  Shortage"
 	var shortage := maxi(0, int(clothing.get("replacement_need", 0)) - int(clothing.get("stock_items", 0)))
 	supply_clothing.text = "Clothing  %d / %d\nReserve  %d\n%s" % [int(clothing.get("covered_count", 0)), int(clothing.get("consumer_count", 0)), int(clothing.get("stock_items", 0)), "Short: %d" % shortage if shortage > 0 else "Ready tomorrow" if int(clothing.get("replacement_need", 0)) > 0 else "Needs covered"]
+	var shelter_capacity: int = int(CityStockManager.shelter_capacity)
+	var shelter_need: int = CitizenNeedsManager.get_daily_shelter_capacity_need()
+	var shelter_difference: int = shelter_capacity - shelter_need
+	var shelter_status: String = "Short %d" % -shelter_difference if shelter_difference < 0 else "Spare %d" % shelter_difference if shelter_difference > 0 else "Covered"
+	supply_shelter.text = "Shelter  Capacity %d / Resident Need %d  · %s" % [shelter_capacity, shelter_need, shelter_status]
 
 func _create_dashboard() -> void:
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents

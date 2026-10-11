@@ -37,6 +37,13 @@ class DisplayMerchant extends Node:
 	func get_status_text() -> String:
 		return status_text
 
+class DisplayCityProgression extends Node:
+	signal changed
+	var level: int = 1
+	var progress: int = 50
+	var last_event: String = "City level increased"
+	var last_daily: Dictionary = {"day": 3, "food": 1, "clothing": -1, "satisfaction": 2, "wall": 0}
+
 var failures: int = 0
 var ui: CanvasLayer
 var inspection_panel: Control
@@ -63,12 +70,15 @@ func _run() -> void:
 	add_child(state)
 	merchant = DisplayMerchant.new()
 	add_child(merchant)
+	var city_progression := DisplayCityProgression.new()
+	add_child(city_progression)
 	ui = preload("res://scenes/raid/raid_ui.tscn").instantiate()
 	add_child(ui)
 	inspection_panel = ui.get_node("Root/RaiderInspectionPanel")
 	ui.bind_state(state)
 	ui.set_city_management_available(true)
 	ui.bind_merchant_state(merchant)
+	ui.bind_city_progression(city_progression)
 	world_indicator = preload("res://scenes/raid/wall_world_indicator.tscn").instantiate()
 	add_child(world_indicator)
 	world_indicator.bind_state(state)
@@ -100,6 +110,18 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(ui.supply_view.visible and not ui.metrics.visible and not ui.travel_progress.visible, "Supply replaces Management content inside one City Hub.")
 	_expect(ui.supply_food.text.begins_with("Food") and ui.supply_clothing.text.begins_with("Clothing"), "Supply reads food and clothing summaries.")
+	_expect(ui.supply_shelter.text.begins_with("Shelter") and ui.supply_shelter.text.contains("Capacity") and ui.supply_shelter.text.contains("Need")
+		and (ui.supply_shelter.text.contains("Short") or ui.supply_shelter.text.contains("Spare") or ui.supply_shelter.text.contains("Covered")),
+		"Supply presents shelter capacity against resident need with a shortage or spare status.")
+	var shelter_icon: TextureRect = ui.supply_shelter.get_parent().get_child(0) as TextureRect
+	_expect(shelter_icon.texture.resource_path.ends_with("house_icon.png") and shelter_icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+		"The Shelter row uses the house icon with nearest filtering.")
+	_expect(ui.city_daily_label.text.contains("Food +1") and ui.city_event_label.visible and ui.city_event_label.text == "City level increased",
+		"Daily results and the city event remain visible on the Supply tab.")
+	await get_tree().process_frame
+	var footer_row: Control = ui.get_node("Root/Center/DetailsPanel/Margin/Contents/FooterRow")
+	_expect(ui.supply_view.get_global_rect().end.y <= footer_row.get_global_rect().position.y,
+		"Shelter, daily results and event fit above the fixed City Hub footer.")
 	ui.refresh()
 	_expect(ui.supply_view.visible and not ui.metrics.visible, "Raid refresh preserves the selected Supply tab.")
 	ui._select_hub_tab(false)

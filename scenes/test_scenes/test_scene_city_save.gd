@@ -49,6 +49,17 @@ func _run() -> void:
 	_assert_seed()
 	var after: Dictionary = store.snapshot.capture(content)
 	_expect(before == after, "Every captured owner round-trips exactly, without offline time or duplicated rewards.")
+	# Existing version-1 files remain readable after adding home checkpoints.
+	var legacy: Dictionary = before.duplicate(true)
+	legacy.schema_version = 1
+	legacy.erase("location")
+	var legacy_file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
+	legacy_file.close()
+	_expect(store.load_checkpoint(), "A version-1 manual city checkpoint still loads.")
+	_assert_seed()
+	_expect(store.save_checkpoint(), "The next explicit save writes the current location-aware version.")
+	_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 2, "A successful save explicitly upgrades the legacy header.")
 	# A malformed document must fail before any live mutation, and block Save.
 	var valid_bytes: String = FileAccess.get_file_as_string(CHECKPOINT_PATH)
 	var file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)

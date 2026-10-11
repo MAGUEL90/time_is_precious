@@ -591,13 +591,16 @@ Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype l
 
 ## Phase 5 - Save / Load
 
-**Status: Main-city manual checkpoint implemented on `feature/time-world/city-save-load`; awaiting playtest.**
+**Status: City/home checkpoint and sleep autosave implemented on `feature/time-world/city-save-load`; awaiting playtest.**
 
-City Hub now has one manual Save/Load slot covering the current city loop, including
-stocks, residents, jobs, construction, progression and raid state. Loading restores
-checkpoint time without offline production. The existing isolated worksite save slot
-remains separate. Menu-level load, autosave, multiple slots and future-version migrations
-remain follow-up work. See `docs/task_reports/2026-10-11-city-save-load.md`.
+Successful sleep now saves one checkpoint after recovery. City Hub retains manual
+Save/Load for playtesting. The slot covers stocks, residents, jobs, construction,
+progression and raids; home visits preserve the live worksite/hauling session. Loading
+a sleep checkpoint returns to the saved home position and time without offline production.
+Version-1 city saves remain readable. Supply also displays existing Shelter capacity.
+The isolated worksite prototype slot stays separate. Menu-level Continue, multiple slots
+and other-map saves remain follow-up work. See
+`docs/task_reports/2026-10-11-city-sleep-save.md`.
 
 ## Phase 6 - Internal Playtest
 

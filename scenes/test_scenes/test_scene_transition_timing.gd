@@ -2,7 +2,6 @@ extends Node
 
 const HOME_SCENE: PackedScene = preload("res://scenes/player_home_interior/player_home_interior.tscn")
 const CONTENT_SCENE_PATH: String = "res://scenes/content_scene/content_scene.tscn"
-const NIGHTMARE_SCENE: PackedScene = preload("res://scenes/nightmare_world/nightmare_world.tscn")
 
 var failures: int = 0
 
@@ -117,9 +116,9 @@ func _run() -> void:
 	player.can_move = true
 	_expect(player.can_move, "The owner can still release the independent can_move restriction.")
 
-	var nightmare: NightmareWorld = NIGHTMARE_SCENE.instantiate() as NightmareWorld
-	nightmare.position = Vector2(3000, 3000)
-	get_tree().current_scene.add_child(nightmare)
+	# Content now authors its own Nightmare. Observe the same instance selected
+	# by Player, rather than adding a second inactive world to the group.
+	var nightmare: NightmareWorld = get_tree().current_scene.get_node("YSortWorld/NightmareWorld") as NightmareWorld
 	player.total_collapse_count = 0
 	player.collapse()
 	if not await _wait_until(

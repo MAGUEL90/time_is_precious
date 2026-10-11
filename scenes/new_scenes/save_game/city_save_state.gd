@@ -4,7 +4,8 @@ extends RefCounted
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites.gd")
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
-const VERSION: int = 1
+const VERSION: int = 2
+const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
 	"player": ["global_position", "fatigue", "hunger", "focus", "current_experience", "last_sleep_day", "last_collapse_day", "total_collapse_count"],
@@ -28,6 +29,7 @@ const GROUPS: Dictionary = {
 const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time"]
 var error: String = ""
 var prepared: Dictionary = {}
+var prepared_location: String = "city"
 var _sites = WORKSITES.new()
 
 func owners(map: Node) -> Dictionary:
@@ -40,7 +42,19 @@ func owners(map: Node) -> Dictionary:
 		"city": WorkStateRuntime.get_node("CityProgression"), "raid": WorkStateRuntime.get_node("CityRaid"),
 		"merchant": WorkStateRuntime.get_node("CommonTravelingMerchant")}
 
+func worksite(map: Node) -> Node:
+	var local: Node = map.get_node_or_null("YSortWorld/WorkerRuntime")
+	if local != null:
+		return local
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	return store.parked_worksite if store != null else null
+
+func is_home(map: Node) -> bool:
+	return is_instance_valid(map) and map.scene_file_path == HOME_PATH
+
 func plots(map: Node) -> Dictionary:
+	if is_home(map):
+		return WorkStateRuntime.get_node("CitySave").city_plots
 	var result: Dictionary = {}
 	for plot: Node in map.get_tree().get_nodes_in_group("workshop_plots"):
 		if map.is_ancestor_of(plot):
@@ -50,16 +64,19 @@ func plots(map: Node) -> Dictionary:
 func busy_reason(map: Node) -> String:
 	if not is_instance_valid(map) or not map.is_inside_tree():
 		return "Return to the city first."
+	if not is_instance_valid(worksite(map)):
+		return "Return to the city first."
 	var nodes: Dictionary = owners(map)
 	var p: Player = nodes.player
 	if SceneTransition.is_transitioning or map.get_tree().paused or TimeComponentManager.is_paused or not p.can_move or p.is_sleeping or p.is_collapsing or p.current_npc_dialogue != null or p.inventory_is_open or p.claim_menu_is_open:
 		return "Finish the current interaction first."
-	if map.get_node("InventoryUI").is_inventory_action_busy:
+	var inventory_ui: Node = map.get_node_or_null("InventoryUI")
+	if inventory_ui != null and inventory_ui.is_inventory_action_busy:
 		return "Finish the inventory action first."
 	var nightmare: Node = map.get_node_or_null("YSortWorld/NightmareWorld")
 	if nightmare != null and nightmare.get("is_active") == true:
 		return "Finish the nightmare first."
-	if map.get_node("YSortWorld/WorkerRuntime")._working:
+	if worksite(map)._working:
 		return "Finish gathering first."
 	if nodes.city_storage._transfer_in_progress or nodes.merchant._trading or nodes.raid._advancing or nodes.raid._resolving or nodes.raid._starting_work or nodes.raid._refund_pending:
 		return "Wait for the current transaction."
@@ -89,7 +106,7 @@ func capture(map: Node) -> Dictionary:
 		raw.order_plots[id] = str(WorkManager.active_orders[id].get_meta("visual_plot_id", ""))
 	raw["initial_cart_supplied"] = bool(nodes.city_storage.get_meta("initial_worksite_cart_supplied", false))
 	raw["city_drops"] = _capture_city_drops(map)
-	raw["worksites"] = _sites.capture(map.get_node("YSortWorld/WorkerRuntime"))
+	raw["worksites"] = _sites.capture(worksite(map))
 	if not _sites.error.is_empty():
 		error = _sites.error
 	if not error.is_empty():
@@ -99,13 +116,23 @@ func capture(map: Node) -> Dictionary:
 	if not values.error.is_empty():
 		error = values.error
 		return {}
-	return {"schema_version": VERSION, "scenario": "city_mvp", "state": payload}
+	return {"schema_version": VERSION, "scenario": "city_mvp", "location": "home" if is_home(map) else "city", "state": payload}
 
 func prepare(document: Dictionary, map: Node) -> bool:
 	error = ""
 	prepared = {}
-	if document.size() != 3 or document.get("schema_version") != VERSION or document.get("scenario") != "city_mvp" or not document.has("state"):
+	prepared_location = "city"
+	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
+	var version: Variant = document.get("schema_version")
+	if (version != 1 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
+	if version == 1:
+		if document.size() != 3:
+			return fail("Invalid legacy checkpoint header.")
+	else:
+		if document.size() != 4 or document.get("location") not in ["city", "home"]:
+			return fail("Invalid checkpoint location.")
+		prepared_location = document.location
 	var values = VALUES.new()
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
@@ -130,12 +157,12 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return fail("Invalid initial supplies.")
 	if not _validate_core(raw, map) or not _validate_people(raw) or not _validate_work(raw, map) or not _validate_records(raw):
 		return false
-	if not _sites.validate(raw.worksites, map.get_node("YSortWorld/WorkerRuntime"), raw.workers.workers_by_id, raw.workers.dismissed_workers):
+	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
 	prepared = raw
 	return true
 
-func apply_prepared(map: Node) -> void:
+func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	# No yields, gameplay commands, or signals until every owner is restored.
 	var nodes: Dictionary = owners(map)
 	for key: String in GROUPS:
@@ -155,7 +182,7 @@ func apply_prepared(map: Node) -> void:
 		if not prepared.order_plots[id].is_empty():
 			order.set_meta("visual_plot_id", prepared.order_plots[id])
 	nodes.city_storage.set_meta("initial_worksite_cart_supplied", prepared.initial_cart_supplied)
-	_sites.restore(prepared.worksites, map.get_node("YSortWorld/WorkerRuntime"))
+	_sites.restore(prepared.worksites, worksite(map))
 	_restore_city_drops(prepared.city_drops, map)
 	_restore_party_icons(nodes.raid._party, nodes.raid.config.party_profile)
 	_restore_party_icons(nodes.raid._report, nodes.raid.config.party_profile)
@@ -183,7 +210,8 @@ func apply_prepared(map: Node) -> void:
 		plot.changed.emit()
 	nodes.player.condition_changed.emit()
 	nodes.player.experience_changed.emit()
-	ui.open_details()
+	if reopen_hub:
+		ui.open_details()
 
 func fields(owner: Object, names: Array) -> Dictionary:
 	var result: Dictionary = {}
@@ -490,6 +518,8 @@ func _validate_records(raw: Dictionary) -> bool:
 	return true
 
 func _capture_city_drops(map: Node) -> Array:
+	if is_home(map):
+		return WorkStateRuntime.get_node("CitySave").city_drops.duplicate(true)
 	var drops: Array = []
 	# Inventory drops are direct children of the player's YSortWorld. Worksite
 	# GroundOutput is owned separately by the worksite adapter.
@@ -499,6 +529,9 @@ func _capture_city_drops(map: Node) -> Array:
 	return drops
 
 func _restore_city_drops(drops: Array, map: Node) -> void:
+	if is_home(map):
+		WorkStateRuntime.get_node("CitySave").city_drops = drops.duplicate(true)
+		return
 	var parent: Node = map.get_node("YSortWorld")
 	for node: Node in parent.get_children():
 		if node is PickUpItem:
