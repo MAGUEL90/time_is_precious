@@ -39,7 +39,9 @@ func _run() -> void:
 				_expect(worksites.daily.toggle(site_id, worker.worker_id), "Laborer can join the resource worksite.")
 		_expect(worksites.daily.start(site_id, worksites._drop_daily_output.bind(worksites.get_node("WorksiteMarkers/" + str(site_id)))), "Daily team starts for " + str(site_id))
 		_expect(worksites.hauling.routes[str(site_id) + "_hauler"].cargo.item_id == session.item_id, "Hauler route captures this site's item identity.")
-		_expect(not worksites._hauler_storage_reason(worksites.get_node("CityStorageArea/DeliveryPoint"), site_id).is_empty(), "City Storage remains unavailable for raw resources.")
+		var city_reason: String = worksites._hauler_storage_reason(worksites.get_node("CityStorageArea/DeliveryPoint"), site_id)
+		_expect(city_reason.is_empty() == (session.item_id == "wood_log"),
+			"City Storage permits the Wood wall-material exception but rejects Reed, Straw, and Water: " + str(site_id))
 	var deadline: int = 1440 + 420 + 180
 	TimeComponentManager.advance_minutes(deadline - worksites.daily.now())
 	for site_id: StringName in destinations:
