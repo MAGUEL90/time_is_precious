@@ -7,18 +7,20 @@ const LABORER: String = "city_storage_filter_test_laborer"
 const HAULER: String = "city_storage_filter_test_hauler"
 const BARLEY_BREAD: String = "barley_bread"
 const CLAY: String = "clay_lump"
-const RAW_ITEMS: Array[String] = [
-	CLAY, "wood_log", "barley_grain_sack", "butchers_cut", "egg", "gold_nugget"
+const FORBIDDEN_ITEMS: Array[String] = [
+	CLAY, "barley_grain_sack", "butchers_cut", "egg", "gold_nugget"
 ]
 const ACCEPTED_ITEMS: Array[String] = [
 	BARLEY_BREAD, "simple_clothes", "clay_worn_wrap", "plain_linen_wrap",
 	"plain_head_wrap", "simple_robe", "trimmed_robe", "reed_sandal", "shekel",
-	"cart", "basic_glove", "stone_hammer"
+	"cart", "basic_glove", "stone_hammer", "wood_log", "stone"
 ]
 const EXPECTED_STORAGE_DESTINATIONS: Array[String] = [
 	"City Storage", "Reed", "Storage A", "Storage B", "Straw", "Water", "Wood"
 ]
-const BREAD_SOURCE_CAPACITY: int = 5
+const HAUL_SOURCE_CAPACITY: int = 5
+# Wall construction exceptions do not permit other raw materials.
+const WALL_MATERIALS: Array[String] = ["wood_log", "stone"]
 
 var failures: int = 0
 var content: Node
@@ -63,7 +65,10 @@ func _run() -> void:
 	_check_storage_a_b()
 	_check_raw_pre_pickup()
 	_check_stale_raw_cargo_return()
-	_check_positive_food_hauling()
+	_check_positive_hauling(BARLEY_BREAD)
+	_check_wall_deposit_and_direct_delivery()
+	for item_id: String in WALL_MATERIALS:
+		_check_positive_hauling(item_id)
 	await _check_stock_ui()
 	await _check_reload()
 	_finish()
@@ -94,10 +99,10 @@ func _prepare_fixture() -> void:
 		previous_storage._unit_sequence = 0
 	# This process-local fixture never opens or overwrites a disk save slot.
 	Inventory.items.clear()
-	for item_id: String in RAW_ITEMS:
+	for item_id: String in FORBIDDEN_ITEMS:
 		if ItemDatabase.get_item_data(item_id) != null:
 			Inventory.add_item(item_id, 1)
-	for item_id: String in [BARLEY_BREAD, "simple_clothes", "cart", "basic_glove", "stone_hammer", "shekel"]:
+	for item_id: String in [BARLEY_BREAD, "simple_clothes", "cart", "basic_glove", "stone_hammer", "shekel", "wood_log", "stone"]:
 		if ItemDatabase.get_item_data(item_id) != null:
 			Inventory.add_item(item_id, 1)
 	for id: String in [LABORER, HAULER]:
@@ -144,7 +149,7 @@ func _check_connections() -> void:
 func _check_provider_policy() -> void:
 	for item_id: String in ACCEPTED_ITEMS:
 		_expect(storage.accepts_item(item_id), "City Storage accepts approved item: " + item_id)
-	for item_id: String in RAW_ITEMS:
+	for item_id: String in FORBIDDEN_ITEMS:
 		_expect(not storage.accepts_item(item_id), "City Storage rejects raw item: " + item_id)
 	var listed_ids: Array[String] = []
 	for row: Dictionary in storage.get_depositable_items():
@@ -152,7 +157,7 @@ func _check_provider_policy() -> void:
 	for item_id: String in ACCEPTED_ITEMS:
 		if Inventory.items.get(item_id, 0) > 0:
 			_expect(listed_ids.has(item_id), "Deposit list exposes approved inventory item: " + item_id)
-	for item_id: String in RAW_ITEMS:
+	for item_id: String in FORBIDDEN_ITEMS:
 		_expect(not listed_ids.has(item_id), "Deposit list hides raw inventory item: " + item_id)
 
 
@@ -166,7 +171,7 @@ func _check_raw_deposit_and_direct_rejection() -> void:
 	if bool(cart_deposit.ok) and not cart_deposit.unit_ids.is_empty():
 		_expect(worksite.worker_management.equip(HAULER, str(cart_deposit.unit_ids[0])) == "Tool equipped.",
 			"The Hauler equips the cart from the same shared City provider.")
-	for item_id: String in RAW_ITEMS:
+	for item_id: String in FORBIDDEN_ITEMS:
 		var inventory_before: Dictionary = Inventory.items.duplicate(true)
 		var items_before: Dictionary = storage.items.duplicate(true)
 		var units_before: Dictionary = storage.units.duplicate(true)
@@ -188,6 +193,50 @@ func _check_raw_deposit_and_direct_rejection() -> void:
 			and city_changes == direct_city_changes_before
 			and deliveries.size() == direct_delivery_count_before,
 			"Direct City endpoint rejection preserves complete " + item_id + " cargo and provider state.")
+
+
+func _check_wall_deposit_and_direct_delivery() -> void:
+	for item_id: String in WALL_MATERIALS:
+		var inventory_before: Dictionary = Inventory.items.duplicate(true)
+		var items_before: Dictionary = storage.items.duplicate(true)
+		var units_before: Dictionary = storage.units.duplicate(true)
+		var portions_before: Dictionary = storage.food_portions.duplicate(true)
+		var sequence_before: int = storage._unit_sequence
+		var city_before: int = city_changes
+		var inventory_signals_before: int = inventory_changes
+		var mixed: Dictionary = storage.deposit_items_from_inventory({item_id: 1, CLAY: 1})
+		_expect(not bool(mixed.ok) and Inventory.items == inventory_before
+			and storage.items == items_before and storage.units == units_before
+			and storage.food_portions == portions_before and storage._unit_sequence == sequence_before
+			and city_changes == city_before and inventory_changes == inventory_signals_before,
+			"Mixed wall material/Clay deposit rejects the entire batch atomically: " + item_id)
+		var initial_stock: int = int(storage.items.get(item_id, 0))
+		var initial_inventory: int = int(Inventory.items.get(item_id, 0))
+		var deposit: Dictionary = storage.deposit_items_from_inventory({item_id: 1})
+		_expect(bool(deposit.ok) and int(Inventory.items.get(item_id, 0)) == initial_inventory - 1
+			and int(storage.items.get(item_id, 0)) == initial_stock + 1
+			and city_changes == city_before + 1 and inventory_changes == inventory_signals_before + 1,
+			"Wall deposit moves exactly one item from personal Inventory to city stock: " + item_id)
+		var deposited_inventory: Dictionary = Inventory.items.duplicate(true)
+		var cargo: Dictionary = {"item_id": item_id, "quantity": 2}
+		var receipts_before: int = deliveries.size()
+		_expect(destination.accepts_cargo(item_id, 2)
+			and destination.try_deliver_at_position(destination.get_arrival_position(), cargo)
+			and int(cargo.quantity) == 0 and int(storage.items.get(item_id, 0)) == initial_stock + 3
+			and deliveries.size() == receipts_before + 1
+			and deliveries.back() == {"item_id": item_id, "quantity": 2},
+			"Direct wall-material delivery conserves cargo and credits exactly one receipt: " + item_id)
+		_expect(not destination.try_deliver_at_position(destination.get_arrival_position(), cargo)
+			and int(storage.items.get(item_id, 0)) == initial_stock + 3
+			and deliveries.size() == receipts_before + 1 and city_changes == city_before + 2,
+			"Replaying emptied wall cargo cannot duplicate stock or notifications: " + item_id)
+		var withdraw: Dictionary = storage.withdraw_items_to_inventory({item_id: 1})
+		_expect(not bool(withdraw.ok) and Inventory.items == deposited_inventory
+			and int(storage.items.get(item_id, 0)) == initial_stock + 3
+			and storage.units == units_before and storage.food_portions == portions_before
+			and storage._unit_sequence == sequence_before and city_changes == city_before + 2
+			and inventory_changes == inventory_signals_before + 1,
+			"Wall materials stay city-owned; receipts and refused withdrawal leave Inventory and equipment alone: " + item_id)
 
 
 func _check_clay_destination_gate() -> void:
@@ -310,7 +359,7 @@ func _check_storage_a_b() -> void:
 
 
 func _check_raw_pre_pickup() -> void:
-	for item_id: String in RAW_ITEMS:
+	for item_id: String in FORBIDDEN_ITEMS:
 		var source: Dictionary = {"quantity": 3, "takes": 0}
 		var raw_hauling = HAULING_SCRIPT.new()
 		raw_hauling.item_id = item_id
@@ -378,102 +427,104 @@ func _check_stale_raw_cargo_return() -> void:
 	raw_hauling.routes.clear()
 
 
-func _check_positive_food_hauling() -> void:
-	var source: Dictionary = {"quantity": BREAD_SOURCE_CAPACITY, "takes": 0}
-	var food_hauling = HAULING_SCRIPT.new()
-	food_hauling.item_id = BARLEY_BREAD
-	food_hauling.destination_provider = func(_site_id: StringName): return destination
-	food_hauling.origin_provider = func(_site_id: StringName, _id: String):
+func _check_positive_hauling(cargo_item: String) -> void:
+	deliveries.clear()
+	var initial_contribution: int = int(worksite.worker_management.contributions.get(HAULER, 0))
+	var source: Dictionary = {"quantity": HAUL_SOURCE_CAPACITY, "takes": 0}
+	var hauling = HAULING_SCRIPT.new()
+	hauling.item_id = cargo_item
+	hauling.destination_provider = func(_site_id: StringName): return destination
+	hauling.origin_provider = func(_site_id: StringName, _id: String):
 		return destination.get_arrival_position() + Vector2(-100, 0)
-	food_hauling.output_count = func(_site_id: StringName): return source.quantity
-	food_hauling.take_output = func(_site_id: StringName, maximum: int):
+	hauling.output_count = func(_site_id: StringName): return source.quantity
+	hauling.take_output = func(_site_id: StringName, maximum: int):
 		if maximum <= 0 or source.quantity <= 0:
 			return 0
 		source.takes += 1
 		# The callback is deliberately bounded by the test-owned source capacity.
-		var bounded: int = mini(mini(maximum, source.quantity), BREAD_SOURCE_CAPACITY)
+		var bounded: int = mini(mini(maximum, source.quantity), HAUL_SOURCE_CAPACITY)
 		source.quantity -= bounded
 		return bounded
-	food_hauling.return_output = func(_site_id: StringName, quantity: int):
-		if quantity <= 0 or source.quantity + quantity > BREAD_SOURCE_CAPACITY:
+	hauling.return_output = func(_site_id: StringName, quantity: int):
+		if quantity <= 0 or source.quantity + quantity > HAUL_SOURCE_CAPACITY:
 			return false
 		source.quantity += quantity
 		return true
-	food_hauling.speed = 100.0
+	hauling.speed = 100.0
 	var route_id: String = HAULER
 	var target: int = 5
-	var initial_stock: int = int(storage.items.get(BARLEY_BREAD, 0))
+	var initial_stock: int = int(storage.items.get(cargo_item, 0))
 	var initial_xp: int = WorkerDatabase.get_worker_data(HAULER).profession_xp
 	var initial_city_changes: int = city_changes
 	var initial_inventory_changes: int = inventory_changes
-	food_hauling.delivered.connect(func(id: String, quantity: int):
+	hauling.delivered.connect(func(id: String, quantity: int):
 		worksite.worker_management.record_contribution(id, quantity))
-	food_hauling.begin(route_id, &"BreadSource", 300, {"daily_target": target})
-	food_hauling.tick(300, func(_id: String): return true, func(_site_id: StringName): return false)
-	var route: Dictionary = food_hauling.routes[route_id]
+	hauling.begin(route_id, &"AcceptedSource", 300, {"daily_target": target})
+	hauling.tick(300, func(_id: String): return true, func(_site_id: StringName): return false)
+	var route: Dictionary = hauling.routes[route_id]
 	_expect(str(route.phase) == "outbound" and int(route.cargo.quantity) == 3
-		and source.quantity == 2 and source.takes == 1 and storage.items.get(BARLEY_BREAD, 0) == initial_stock,
-		"The independent bread Hauler takes one full three-item load without early City credit.")
+		and source.quantity == 2 and source.takes == 1 and storage.items.get(cargo_item, 0) == initial_stock,
+		"The Hauler takes one full three-item load without early City credit. " + cargo_item)
 	var committed_receipt := func(item_id: String, quantity: int):
-		_expect(item_id == BARLEY_BREAD and quantity > 0 and int(route.cargo.quantity) == 0
-			and int(storage.items.get(BARLEY_BREAD, 0)) + int(source.quantity) == initial_stock + BREAD_SOURCE_CAPACITY,
-			"Receipt observers see committed stock and empty cargo with the complete bread supply conserved.")
+		_expect(item_id == cargo_item and quantity > 0 and int(route.cargo.quantity) == 0
+			and int(storage.items.get(cargo_item, 0)) + int(source.quantity) == initial_stock + HAUL_SOURCE_CAPACITY,
+			"Receipt observers see committed stock and empty cargo with the complete supply conserved. " + cargo_item)
 	destination.delivery_received.connect(committed_receipt)
 	var first_arrival: int = int(route.arrival)
-	food_hauling.tick(first_arrival, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(first_arrival, func(_id: String): return true, func(_site_id: StringName): return false)
 	_expect(str(route.phase) == "returning" and int(route.cargo.quantity) == 0
-		and deliveries == [{"item_id": BARLEY_BREAD, "quantity": 3}]
-		and int(storage.items.get(BARLEY_BREAD, 0)) == initial_stock + 3
-		and food_hauling.delivered_on_day(route_id, 0) == 3
-		and not food_hauling.target_reached(route_id, 0),
-		"Only the accepted full bread load counts toward City stock and the daily target.")
+		and deliveries == [{"item_id": cargo_item, "quantity": 3}]
+		and int(storage.items.get(cargo_item, 0)) == initial_stock + 3
+		and hauling.delivered_on_day(route_id, 0) == 3
+		and not hauling.target_reached(route_id, 0),
+		"Only the accepted full load counts toward City stock and the daily target. " + cargo_item)
 	var first_return: int = int(route.arrival)
-	food_hauling.tick(first_return, func(_id: String): return true, func(_site_id: StringName): return false)
-	food_hauling.tick(first_return + 1, func(_id: String): return true, func(_site_id: StringName): return false)
-	route = food_hauling.routes[route_id]
+	hauling.tick(first_return, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(first_return + 1, func(_id: String): return true, func(_site_id: StringName): return false)
+	route = hauling.routes[route_id]
 	_expect(str(route.phase) == "outbound" and int(route.cargo.quantity) == 2 and source.quantity == 0,
-		"The independent bread Hauler takes the bounded final partial load.")
+		"The Hauler takes the bounded final partial load. " + cargo_item)
 	var second_arrival: int = int(route.arrival)
 	destination.accepting_deliveries = false
-	food_hauling.tick(second_arrival, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(second_arrival, func(_id: String): return true, func(_site_id: StringName): return false)
 	_expect(str(route.phase) == "returning" and int(route.cargo.quantity) == 2
-		and int(storage.items.get(BARLEY_BREAD, 0)) == initial_stock + 3
-		and food_hauling.delivered_on_day(route_id, 0) == 3
+		and int(storage.items.get(cargo_item, 0)) == initial_stock + 3
+		and hauling.delivered_on_day(route_id, 0) == 3
 		and WorkerDatabase.get_worker_data(HAULER).profession_xp == initial_xp + 3
 		and city_changes == initial_city_changes + 1 and deliveries.size() == 1,
-		"A closed endpoint preserves the partial load without stock, target, signal or XP credit.")
+		"A closed endpoint preserves the partial load without stock, target, signal or XP credit. " + cargo_item)
 	var rejected_return: int = int(route.arrival)
-	food_hauling.tick(rejected_return, func(_id: String): return true, func(_site_id: StringName): return false)
-	food_hauling.tick(rejected_return + 1, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(rejected_return, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(rejected_return + 1, func(_id: String): return true, func(_site_id: StringName): return false)
 	_expect(str(route.phase) == "idle" and int(route.cargo.quantity) == 0 and source.quantity == 2
-		and source.takes == 2, "The rejected load returns intact and cannot be picked up while City Storage is unavailable.")
+		and source.takes == 2, "The rejected load returns intact and cannot be picked up while City Storage is unavailable. " + cargo_item)
 	destination.accepting_deliveries = true
-	food_hauling.tick(rejected_return + 2, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(rejected_return + 2, func(_id: String): return true, func(_site_id: StringName): return false)
 	_expect(str(route.phase) == "outbound" and int(route.cargo.quantity) == 2 and source.quantity == 0
-		and source.takes == 3, "The restored partial load is retried once when City Storage reopens.")
-	food_hauling.tick(int(route.arrival), func(_id: String): return true, func(_site_id: StringName): return false)
+		and source.takes == 3, "The restored partial load is retried once when City Storage reopens. " + cargo_item)
+	hauling.tick(int(route.arrival), func(_id: String): return true, func(_site_id: StringName): return false)
 	_expect(str(route.phase) == "returning" and int(route.cargo.quantity) == 0
-		and deliveries == [{"item_id": BARLEY_BREAD, "quantity": 3}, {"item_id": BARLEY_BREAD, "quantity": 2}]
-		and int(storage.items.get(BARLEY_BREAD, 0)) == initial_stock + target
-		and food_hauling.delivered_on_day(route_id, 0) == target
-		and food_hauling.target_reached(route_id, 0)
+		and deliveries == [{"item_id": cargo_item, "quantity": 3}, {"item_id": cargo_item, "quantity": 2}]
+		and int(storage.items.get(cargo_item, 0)) == initial_stock + target
+		and hauling.delivered_on_day(route_id, 0) == target
+		and hauling.target_reached(route_id, 0)
 		and WorkerDatabase.get_worker_data(HAULER).profession_xp == initial_xp + target
-		and int(worksite.worker_management.contributions.get(HAULER, 0)) == target,
-		"Accepted full and partial bread deliveries alone record the target and XP through WorkerManagement.")
+		and int(worksite.worker_management.contributions.get(HAULER, 0)) == initial_contribution + target,
+		"Accepted full and partial deliveries alone record the target and XP through WorkerManagement. " + cargo_item)
 	var second_return: int = int(route.arrival)
-	food_hauling.tick(second_return, func(_id: String): return true, func(_site_id: StringName): return false)
-	food_hauling.tick(second_return + 60, func(_id: String): return true, func(_site_id: StringName): return false)
-	_expect(int(storage.items.get(BARLEY_BREAD, 0)) == initial_stock + target
+	hauling.tick(second_return, func(_id: String): return true, func(_site_id: StringName): return false)
+	hauling.tick(second_return + 60, func(_id: String): return true, func(_site_id: StringName): return false)
+	_expect(int(storage.items.get(cargo_item, 0)) == initial_stock + target
 		and deliveries.size() == 2 and city_changes == initial_city_changes + 2
 		and inventory_changes == initial_inventory_changes,
-		"Target completion prevents duplicate receipts, repeated ticks, and personal inventory signals.")
+		"Target completion prevents duplicate receipts, repeated ticks, and personal inventory signals. " + cargo_item)
 	var inventory_before_withdraw: Dictionary = Inventory.items.duplicate(true)
-	var withdraw: Dictionary = storage.withdraw_items_to_inventory({BARLEY_BREAD: 1})
+	var withdraw: Dictionary = storage.withdraw_items_to_inventory({cargo_item: 1})
 	_expect(not bool(withdraw.ok) and Inventory.items == inventory_before_withdraw
-		and int(storage.items.get(BARLEY_BREAD, 0)) == initial_stock + target,
-		"Accepted City food remains city-owned with no withdrawal or return path.")
+		and int(storage.items.get(cargo_item, 0)) == initial_stock + target,
+		"Accepted City cargo remains city-owned with no withdrawal or return path. " + cargo_item)
 	destination.delivery_received.disconnect(committed_receipt)
-	food_hauling.routes.clear()
+	hauling.routes.clear()
 
 
 func _check_stock_ui() -> void:
@@ -492,7 +543,7 @@ func _check_stock_ui() -> void:
 	for slot: ItemSlot in area.menu.grid.get_children():
 		if slot._item_id == BARLEY_BREAD:
 			displayed_bread = slot._quantity
-	_expect(displayed_bread == 1 + BREAD_SOURCE_CAPACITY,
+	_expect(displayed_bread == 1 + HAUL_SOURCE_CAPACITY,
 		"The City grid combines the player's bread deposit and accepted Hauler loads in one stack.")
 	await _capture("city-hauler-food-stock.png")
 	area.close_menu()

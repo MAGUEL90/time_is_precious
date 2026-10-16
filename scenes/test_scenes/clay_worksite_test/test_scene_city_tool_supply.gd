@@ -14,12 +14,13 @@ const ACCEPTED_IDS: Array[String] = [
 	"barley_bread", "date_cluster", "fresh_curd_cheese", "fresh_loaf", "orchard_apple",
 	"pan_fried_egg", "roasted_drumstick", "village_cheese", "simple_clothes",
 	"clay_worn_wrap", "plain_linen_wrap", "plain_head_wrap", "simple_robe",
-	"trimmed_robe", "reed_sandal", "shekel", "cart", "basic_glove", "stone_hammer"
+	"trimmed_robe", "reed_sandal", "shekel", "cart", "basic_glove", "stone_hammer",
+	"wood_log", "stone"
 ]
 const FORBIDDEN_IDS: Array[String] = [
-	"gold_nugget", "egg", "butchers_cut", "barley_grain_sack", "clay_lump", "wood_log",
+	"gold_nugget", "egg", "butchers_cut", "barley_grain_sack", "clay_lump",
 	"reed_bundle", "straw_bundle", "water_jar", "copper_ore", "copper_chunk",
-	"limestone_piece", "large_stone", "stone", "bronze_ingot", "wet_mudbrick",
+	"limestone_piece", "large_stone", "bronze_ingot", "wet_mudbrick",
 	"sun_dried_mudbrick", "raw_wool"
 ]
 
@@ -94,7 +95,7 @@ func _test_acceptance_catalog() -> void:
 		if READY_FOOD_IDS.has(item_data.id):
 			expected = item_data.category == ItemEnums.ItemCategory.CONSUMABLE and item_data.food_supply_value > 0
 		_expect(bool(storage.call("accepts_item", item_data.id)) == expected,
-			"Acceptance catalog matches the ready-food, clothing, Shekel, and tool contract: " + item_data.id)
+			"Acceptance catalog matches the ready-food, clothing, Shekel, tool, and wall-material contract: " + item_data.id)
 	_expect(not bool(storage.call("accepts_item", "unknown_item")), "Unregistered item is rejected by accepts_item.")
 	_expect(not bool(storage.call("accepts_item", "")), "Empty item id is rejected by accepts_item.")
 	for item_id: String in CLOTHING_IDS:
