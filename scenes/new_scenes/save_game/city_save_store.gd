@@ -28,6 +28,12 @@ func bind_map(next_map: Node) -> void:
 		_restore_parked_worksite(map)
 		city_plots = snapshot.plots(map)
 
+func refresh_checkpoint_slot() -> void:
+	# New Game has archived the old slot. Observe the new slot on the next sleep.
+	_observed_path = ""
+	status = ""
+	last_error = ""
+
 func has_checkpoint() -> bool:
 	return disk.exists()
 
