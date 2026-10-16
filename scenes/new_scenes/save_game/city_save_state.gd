@@ -4,7 +4,8 @@ extends RefCounted
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites.gd")
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
-const VERSION: int = 2
+const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
+const VERSION: int = 3
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -31,6 +32,7 @@ var error: String = ""
 var prepared: Dictionary = {}
 var prepared_location: String = "city"
 var _sites = WORKSITES.new()
+var _palms = PALMS.new()
 
 func owners(map: Node) -> Dictionary:
 	return {"clock": TimeComponentManager, "player": map.get_node("YSortWorld/Player"),
@@ -106,6 +108,9 @@ func capture(map: Node) -> Dictionary:
 		raw.order_plots[id] = str(WorkManager.active_orders[id].get_meta("visual_plot_id", ""))
 	raw["initial_cart_supplied"] = bool(nodes.city_storage.get_meta("initial_worksite_cart_supplied", false))
 	raw["city_drops"] = _capture_city_drops(map)
+	raw["date_palms"] = _palms.capture()
+	if not _palms.validate(raw.date_palms):
+		error = "Invalid date palm state."
 	raw["worksites"] = _sites.capture(worksite(map))
 	if not _sites.error.is_empty():
 		error = _sites.error
@@ -124,7 +129,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -138,7 +143,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
 	var nodes: Dictionary = owners(map)
-	if raw.size() != GROUPS.size() + 8:
+	if raw.size() != GROUPS.size() + (9 if version == VERSION else 8):
 		return fail("Incomplete checkpoint.")
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
@@ -159,6 +164,14 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
+	if version == VERSION:
+		if not _palms.validate(raw.get("date_palms")):
+			return fail("Invalid date palm state.")
+	else:
+		# Legacy files never recorded palm depletion; use an explicit fresh stock fallback.
+		if raw.has("date_palms") or not _palms.validate(_palms.capture()):
+			return fail("Invalid legacy date palm state.")
+		raw["date_palms"] = {}
 	prepared = raw
 	return true
 
@@ -167,6 +180,7 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	var nodes: Dictionary = owners(map)
 	for key: String in GROUPS:
 		assign_fields(nodes[key], prepared[key])
+	_palms.restore(prepared.date_palms)
 	_restore_rng(nodes.raid._rng, prepared.rng.raid)
 	_restore_rng(nodes.merchant._request_rng, prepared.rng.merchant)
 	_restore_rng(ImmigrationManager.rng, prepared.rng.immigration)
@@ -200,6 +214,7 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	nodes.raid.set_process(nodes.raid.is_raid_active())
 	# Ledger cursors were restored with the clock; this refresh emits no elapsed minute/day.
 	TimeComponentManager.emit_time_signal()
+	_palms.refresh()
 	Inventory.items_changed.emit()
 	nodes.city_storage.changed.emit()
 	CitizenNeedsManager.needs_changed.emit()
@@ -522,7 +537,7 @@ func _capture_city_drops(map: Node) -> Array:
 		return WorkStateRuntime.get_node("CitySave").city_drops.duplicate(true)
 	var drops: Array = []
 	# Inventory drops are direct children of the player's YSortWorld. Worksite
-	# GroundOutput is owned by the worksite adapter; palm views by their session ledger.
+	# GroundOutput is owned by the worksite adapter; palm views by their palm ledger.
 	for node: Node in map.get_node("YSortWorld").get_children():
 		if node is PickUpItem and not node.is_in_group("date_palm_pickups") and not node.is_queued_for_deletion() and not node.is_collecting:
 			drops.append({"item_id": node.item_id, "quantity": node.quantity, "position": node.position})

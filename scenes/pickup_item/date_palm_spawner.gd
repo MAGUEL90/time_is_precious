@@ -1,6 +1,6 @@
 extends Sprite2D
 ## Identity derives from the authored scene and node path, so duplicates are independent.
-## Keep node names/paths stable during a session; each position is one pickup slot.
+## Keep node names/paths stable across saves; each position is one pickup slot.
 const STATE: Script = preload("res://scenes/pickup_item/date_palm_state.gd")
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 
@@ -19,7 +19,7 @@ func _ready() -> void:
 	while scene_root.scene_file_path.is_empty() and scene_root.get_parent() != null:
 		scene_root = scene_root.get_parent()
 	if scene_root.scene_file_path.is_empty():
-		push_error("Date palm must belong to an authored scene for stable session identity.")
+		push_error("Date palm must belong to an authored scene for stable identity.")
 		return
 	var relative_path: String = str(scene_root.get_path_to(self))
 	tree_id = (scene_root.scene_file_path + ":" + relative_path).sha256_text()

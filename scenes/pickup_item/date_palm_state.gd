@@ -1,5 +1,5 @@
 extends Node
-## Session-only tree stock; remains under WorkStateRuntime while maps unload.
+## Tree stock remains under WorkStateRuntime while maps unload; CitySave persists it.
 signal changed
 
 var available: Array[bool] = []

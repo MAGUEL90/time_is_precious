@@ -58,6 +58,18 @@ func _run() -> void:
 		if not evidence.is_empty():
 			_write(evidence.path_join("actual-" + mode + ".json"), JSON.stringify(actual, "", true, true))
 			_write(evidence.path_join("expected-" + mode + ".json"), JSON.stringify(expected, "", true, true))
+		var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
+		var saved_palms: Dictionary = codec.decode(expected.state).date_palms
+		_expect(store.snapshot._palms.capture() == saved_palms, "Continue restores all six independent palm ledgers exactly.")
+		if mode == "city":
+			var view_count: int = 0
+			for index: int in range(6):
+				var palm: Node = get_tree().current_scene.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))
+				var slots: Array = saved_palms[str(palm.state.name)].available
+				view_count += slots.count(true)
+				for slot: int in range(slots.size()):
+					_expect(palm._pickups.has(slot) == slots[slot], "Continue projects the saved slot for " + str(palm.name))
+			_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == view_count, "Continue creates no duplicate palm views.")
 		_expect(_same_snapshot(actual, expected), "Continue restores the full checkpoint without elapsed time or extra sleep.")
 		_expect(FileAccess.get_file_as_bytes(path) == bytes_before, "Continue never rewrites the checkpoint.")
 		await _capture("continued-" + mode)

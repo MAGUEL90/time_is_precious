@@ -796,12 +796,38 @@ iteration. The main-map merchant uses its normal schedule instead of the former
 debug day-zero override. Explicit debug tools remain available in debug builds,
 with normal clock speed and player/worker needs as their startup defaults.
 
-### Palm pickup ownership at the gameplay/main boundary
+### Palm pickup checkpoint ownership (2026-10-17)
 
-Date palms retain their existing per-tree session ledger under WorkStateRuntime.
-Their PickUpItem views use the `date_palm_pickups` group and are excluded from
-CitySave's personal city-drop capture/restore. Home/city handoff and checkpoint
-restore must not recreate those views as detached inventory drops. Collected dates
-remain ordinary Inventory items. Palm depletion, refill timers and RNG are not
-part of the disk checkpoint; full persistence requires a separate compatibility
-extension. This integration does not change schema version 2 or legacy readers.
+Date palms retain their per-tree ledger under WorkStateRuntime. Their PickUpItem
+views use the `date_palm_pickups` group and remain excluded from CitySave's
+personal city-drop capture/restore. Collected dates remain ordinary Inventory
+items; restoring palm views never grants Inventory goods.
+
+Schema version 3 adds `date_palms`: the six authored city ledger identities, each
+with its available-slot boolean array, remaining game minutes, and RNG seed/state.
+`city_save_palms.gd` explicitly resolves the six existing SHA-256 identities from
+city scene path plus `YSortWorld/DatePalmTree` through `DatePalmTree6`. These names
+are now a disk compatibility contract; renaming them requires a migration. Extra
+fixture/duplicate trees are outside the city checkpoint. Slot capacity is checked
+against each configured ledger. No node or resource is instantiated from save data.
+
+The adapter participates in complete staged validation before any owner changes.
+Missing/unknown identities, wrong slot types/counts, inconsistent full/depleted
+stock and timer, out-of-range timers, or malformed RNG reject the checkpoint.
+All six ledgers restore synchronously before presentation signals. Existing
+spawners reconcile views through their normal deferred refresh. Home saves read
+these same persistent ledgers; Continue restores in the city before the existing
+home transition. The clock, including fractional minute progress, is restored
+with the palms. No wall-clock timestamps or offline refill gains are introduced.
+
+Each tree already has a separate RandomNumberGenerator. Both seed and state use
+the existing lossless tagged-int codec; restore assigns seed before state. Loading
+neither rolls a new interval nor consumes random draws. The next harvest therefore
+continues that tree's saved RNG sequence with the unchanged 1–18 game-hour rule.
+
+Version 1/2 readers remain supported. Since these formats never stored trees,
+applying them explicitly initializes all six palms full with zero timer and newly
+randomized per-tree RNG. Validation and merely observing an old slot do not apply
+this fallback or mutate live trees. No historical depletion is inferred from
+Inventory. The next successful save writes v3 to the unchanged checkpoint filename;
+older game builds do not read v3. See the date-palm persistence task report for tests.

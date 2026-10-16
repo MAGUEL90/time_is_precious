@@ -19,6 +19,16 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Date palm disk persistence — branch checkpoint (2026-10-17)
+
+`fix/save-load/date-palm-persistence` extends the checkpoint to schema v3 with the
+six palms' available slots, remaining refill minutes, and independent RNG state.
+Continue and home sleep checkpoints use the existing city/home load path with no
+offline progress. Legacy v1/v2 files explicitly start trees full with zero timer
+and fresh RNG; they contain no historical tree data. Gameplay and balance stay
+unchanged. Validation evidence and limitations are recorded in
+`docs/task_reports/date-palm-persistence-2026-10-17.md`. Human review remains pending.
+
 ## Gameplay/main integration — review checkpoint (2026-10-17)
 
 The gameplay branch now combines the current wall/warehouse city layout with the
