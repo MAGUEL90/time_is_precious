@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/content_scene/capture/capture_preset.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+site_name = &"ClaySiteA"
+focus_site_only = true
+start_hour = 14
+initial_fatigue = 0.1
+personal_shekel = 20
+personal_food = 4
+food_item = "roasted_drumstick"
+camera_offset = Vector2(24, -4)
+camera_zoom = 2.0
+preview_scale = 1
+recording_speed = 10
+visual_seed = 117
