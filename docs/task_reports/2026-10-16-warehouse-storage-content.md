@@ -3,8 +3,9 @@
 Status: implementation validated; human visual review pending. One pre-existing
 hauling regression remains (see below).
 
-- Branch: `feature/inventory/warehouse-storage-content`
-- Baseline: `50e5c821249fafd4596579766d469647b2d5f59c`; clean starting tree.
+- Branch: `feature/inventory/warehouse-storage`
+- Baseline: `d901018f0fca495d4ca70e671cfde0e4defb01e2` on
+  `fix/gameplay-hud/ui-consistency`; clean starting tree.
 - Risk: Level 2, limited scene integration explicitly requested by the Game Director.
 - Scope: warehouse presentation, physical collision, access and map placement only.
 
@@ -32,7 +33,8 @@ Godot 4.5.1 official, cloud Linux, GL Compatibility/llvmpipe, isolated Xorg disp
 Development window 1200x675; attached PNGs are the real 400x225 viewport captures.
 No laptop access or computer-use tool was used. XDG QA data was isolated under /tmp.
 
-- Final editor import/parser: PASS, exit 0, no errors or warnings.
+- Editor import/parser on original branch: PASS, exit 0. Gameplay-base runtime
+  suites below also load and parse successfully.
 - WarehouseTest: PASS, headless and rendered. Exactly one area, existing provider,
   accessible entrance/delivery point, solid north approach, real E routing,
   repeated open/close and movement restoration, unchanged stock, no rear access.
@@ -40,9 +42,10 @@ No laptop access or computer-use tool was used. XDG QA data was isolated under /
   access lifecycle and scene retention.
 - CitySaveTest: PASS, including checkpoint roundtrip and rejection cases.
 - StartMenuTest empty: PASS.
-- PortraitCaptureTest: PASS, including its real map/capture flow.
+- PortraitCaptureTest: passed on the former content-based branch only. Portrait
+  files/tests are deliberately absent from this gameplay branch; not a dependency.
 - CityStorageHaulingTest: FAIL on five obsolete wood_log rejection expectations.
-  An isolated checkout at the exact baseline produces the same five errors:
+  The original isolated checkout at `50e5c82` produces the same five errors:
   raw-item acceptance, deposit listing, atomic rejection, direct delivery rejection,
   and pre-pickup rejection. Current raid gameplay intentionally accepts wood_log.
   No hauling/economy code or test expectation was changed in this task.
@@ -54,8 +57,23 @@ An initial sandbox-only run could not bind the existing MCP localhost port;
 subsequent cloud runs with network access started it successfully.
 
 Human Windows/Android playtesting and visual acceptance remain unverified.
-No merge or force-push is authorized/performed. Keep review based on
-`content/portrait-capture`, not main, while the baseline is not merged.
+No merge or force-push is authorized/performed. Review is based on the existing
+`fix/gameplay-hud/ui-consistency` gameplay branch while that baseline is not merged
+into main. No content branch needs to be merged or completed first.
+
+## Gameplay/content separation
+
+The initial warehouse PR used the portrait branch as its baseline. The Game
+Director clarified that gameplay must not depend on content work. The warehouse
+commit was therefore cherry-picked onto a new branch from `d901018`, retaining
+raid/progression/save/startup while excluding all 11 portrait-only files. The
+old branch/history and the content branch remain intact. The replacement PR
+supersedes #112; it does not merge or remove the independent content work.
+Warehouse, deposit, save and startup passed again on this gameplay base. Hauling
+reproduced the same five wood_log failures. Evidence PNGs were refreshed from this
+independent gameplay run.
+The initial rerun could not start because the virtual display had expired; the
+display was restarted before collecting test results.
 
 ## Evidence
 
