@@ -795,3 +795,13 @@ F6 on ContentScene bypasses this menu and starts the authored map for content
 iteration. The main-map merchant uses its normal schedule instead of the former
 debug day-zero override. Explicit debug tools remain available in debug builds,
 with normal clock speed and player/worker needs as their startup defaults.
+
+### Palm pickup ownership at the gameplay/main boundary
+
+Date palms retain their existing per-tree session ledger under WorkStateRuntime.
+Their PickUpItem views use the `date_palm_pickups` group and are excluded from
+CitySave's personal city-drop capture/restore. Home/city handoff and checkpoint
+restore must not recreate those views as detached inventory drops. Collected dates
+remain ordinary Inventory items. Palm depletion, refill timers and RNG are not
+part of the disk checkpoint; full persistence requires a separate compatibility
+extension. This integration does not change schema version 2 or legacy readers.
