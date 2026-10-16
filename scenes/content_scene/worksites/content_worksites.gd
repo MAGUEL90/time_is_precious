@@ -8,6 +8,8 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var seed_playtest_hauler: bool = false
 @export var enable_time_shortcuts: bool = true
 @export var retain_resource_stock: bool = false
+var checkpoint_handoff: bool = false
+
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
 const PLAYTEST_HAULER_ID: String = "content_hauler_belum"
@@ -86,6 +88,10 @@ func _draw() -> void:
 
 # Session-only stocks survive a trip home; this does not introduce a disk save.
 func _exit_tree() -> void:
+	# A home visit retains this live scheduler under CitySave. Reparenting must
+	# not cancel jobs or discard in-flight cargo; normal teardown still cleans up.
+	if checkpoint_handoff:
+		return
 	if retain_resource_stock and is_instance_valid(WorkStateRuntime):
 		for session in sites.values():
 			session.cancel()

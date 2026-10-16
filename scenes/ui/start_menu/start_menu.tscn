@@ -1,0 +1,143 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/start_menu/start_menu.gd" id="1"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3"]
+
+[sub_resource type="AtlasTexture" id="FrameTexture"]
+atlas = ExtResource("3")
+region = Rect2(1, 1, 168, 134)
+
+[node name="StartMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 100
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+
+[node name="Background" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 0
+color = Color(0.16, 0.14, 0.12, 1)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Frame" type="NinePatchRect" parent="Root/Center"]
+custom_minimum_size = Vector2(240, 176)
+layout_mode = 2
+texture = SubResource("FrameTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="Contents" type="VBoxContainer" parent="Root/Center/Frame/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Root/Center/Frame/Margin/Contents"]
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "TIME IS PRECIOUS"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Root/Center/Frame/Margin/Contents"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Your game saves when you sleep."
+horizontal_alignment = 1
+
+[node name="Actions" type="VBoxContainer" parent="Root/Center/Frame/Margin/Contents"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Continue" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
+custom_minimum_size = Vector2(104, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Continue"
+
+[node name="NewGame" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
+custom_minimum_size = Vector2(104, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "New Game"
+
+[node name="Quit" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
+custom_minimum_size = Vector2(104, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Quit"
+
+[node name="Confirmation" type="VBoxContainer" parent="Root/Center/Frame/Margin/Contents"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Text" type="Label" parent="Root/Center/Frame/Margin/Contents/Confirmation"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Start a new game?\nYour current save will be kept in a backup folder."
+autowrap_mode = 3
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Root/Center/Frame/Margin/Contents/Confirmation"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Start" type="Button" parent="Root/Center/Frame/Margin/Contents/Confirmation/Buttons"]
+custom_minimum_size = Vector2(62, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Start"
+
+[node name="Cancel" type="Button" parent="Root/Center/Frame/Margin/Contents/Confirmation/Buttons"]
+custom_minimum_size = Vector2(62, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Not now"
+
+[node name="Message" type="Label" parent="Root/Center/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+autowrap_mode = 3
+horizontal_alignment = 1

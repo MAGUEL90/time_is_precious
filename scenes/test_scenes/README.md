@@ -105,3 +105,10 @@ human usability test. See `docs/task_reports/food-walking-playtest-2026-10-05.md
 
 The older `food_survival_playtest` remains a teleported comparison. Its explicit
 `TIP_FOOD_TREES` count is isolated from the production map's authored tree count.
+
+The 2026-10-17 gameplay/main integration retains six palms on the newer wall city
+layout. `date_pickup_access_test.tscn` checks all eighteen pickup positions for
+authored land, clear approach, real E interaction and restored movement. The older
+72-hour walking report/route is historical and does not certify this new layout.
+Palm pickup views are session-owned, separate from saved personal inventory drops;
+palm stock and refill timers are not yet part of the disk checkpoint.

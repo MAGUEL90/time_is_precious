@@ -137,16 +137,14 @@ func _run() -> void:
 	categories.prev_button.pressed.emit()
 	_expect(fixture.worker_control.city_storage_list.get_child_count() > 0, "City Storage displays physical tool units.")
 	await _capture("worker-hub-city-storage.png")
-	_tool_action("test_cart_0").mouse_entered.emit()
-	_expect(fixture.worker_control.city_item_info.visible and fixture.worker_control.city_item_info.effect_label.text.contains("3 items"), "Cart uses Inventory detail panel with known capacity.")
-	_expect(fixture.worker_control.city_item_info.category_label.text == "category: EQUIP (Tool)", "Primary equipment is identified in details.")
-	await _capture("worker-hub-city-storage-details.png")
-	_tool_action("test_cart_0").mouse_exited.emit()
-	_expect(not fixture.worker_control.city_item_info.visible, "Leaving item hides details.")
-	_tool_action("hammer_a").mouse_entered.emit()
-	_expect(fixture.worker_control.city_item_info.name_label.text == "name: Stone Hammer", "Registered tool details use player Inventory data.")
-	_expect(fixture.worker_control.city_item_info.category_label.text == "category: EQUIP (Tool)", "Other equipment omits Primary suffix.")
-	_tool_action("hammer_a").mouse_exited.emit()
+	for unit_id: String in ["test_cart_0", "hammer_a"]:
+		_tool_action(unit_id).mouse_entered.emit()
+		await get_tree().process_frame
+		for control: Control in fixture.worker_control.find_children("*", "Control", true, false):
+			_expect(not (control is ItemInfoPanel and control.is_visible_in_tree()), "Hovering equipment no longer opens item descriptions.")
+			_expect(control.get_tooltip().is_empty(), "Equipment controls have no native tooltip.")
+		_tool_action(unit_id).mouse_exited.emit()
+	await _capture("worker-hub-city-storage-no-tooltip.png")
 	fixture.worker_control.refresh()
 	_expect(fixture.worker_control.city_storage_view.visible and not fixture.worker_control.window.visible, "Storage refresh preserves navigation.")
 	fixture.worker_control.city_storage_view.get_node("Close").pressed.emit()
@@ -203,6 +201,8 @@ func _run() -> void:
 	_expect(fixture.city_tools.has_equipped(ids[0], "stone_hammer"), "Cancel preserves equipment.")
 	unequip.pressed.emit()
 	fixture.worker_control.city_action_panel.use_button.pressed.emit()
+	await get_tree().process_frame
+	# Equipment callbacks defer their refresh; wait before clicking the rebuilt slot.
 	await get_tree().process_frame
 	_expect(not fixture.city_tools.has_equipped(ids[0], "stone_hammer"), "Tools UI returns optional tool to City Storage.")
 	_expect(not _tool_action("hammer_a").disabled, "Picker enables Equip after the slot is freed.")

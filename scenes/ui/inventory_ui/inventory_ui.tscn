@@ -7,7 +7,8 @@
 [ext_resource type="PackedScene" uid="uid://dso2ctjch7gxw" path="res://scenes/ui/inventory_category_selector/inventory_category_selector.tscn" id="4_w86wv"]
 [ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="5_pww13"]
 [ext_resource type="PackedScene" uid="uid://e3wgu2sh4adx" path="res://scenes/ui/inventory_page_selector/inventory_page_selector.tscn" id="6_8o40v"]
-[ext_resource type="PackedScene" uid="uid://cyh2espirvxvn" path="res://scenes/ui/item_info_panel_root/item_info_panel.tscn" id="8_pww13"]
+
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="7_shekel"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w86wv"]
 atlas = ExtResource("3_5kg0u")
@@ -19,7 +20,7 @@ region = Rect2(100, 68, 8, 8)
 
 [node name="InventoryUI" type="CanvasLayer"]
 process_mode = 3
-layer = 2
+layer = 10
 script = ExtResource("1_tpijo")
 
 [node name="Root" type="Control" parent="."]
@@ -92,6 +93,36 @@ size_flags_vertical = 4
 theme_type_variation = &"InventoryIconButton"
 icon = SubResource("AtlasTexture_iyqht")
 
+[node name="WalletMargin" type="MarginContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="WalletRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/WalletMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="ShekelIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow"]
+texture_filter = 1
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("7_shekel")
+stretch_mode = 0
+
+[node name="ShekelAmount" type="Label" parent="Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"InventoryTextSmall"
+theme_override_colors/font_color = Color(1, 0.95, 0.82, 1)
+theme_override_font_sizes/font_size = 6
+text = "0"
+vertical_alignment = 1
+
 [node name="Body" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -135,8 +166,5 @@ autowrap_mode = 3
 
 [node name="InventoryPageSelector" parent="Root/Center/Window/Margin/MainVBox" instance=ExtResource("6_8o40v")]
 layout_mode = 2
-
-[node name="ItemInfoPanelRoot" parent="Root" instance=ExtResource("8_pww13")]
-layout_mode = 1
 
 [editable path="Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid"]

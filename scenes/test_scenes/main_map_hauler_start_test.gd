@@ -67,6 +67,18 @@ func _run() -> void:
 		_finish()
 		return
 	await _capture("main-map-hauler-applicants.png")
+	var applicant_list: ItemList = board.job_board_ui.applicant_list
+	for index: int in range(applicant_list.item_count):
+		_expect(not applicant_list.is_item_tooltip_enabled(index), "Applicant tooltips remain disabled after population refresh.")
+	var hover_point: Vector2 = applicant_list.get_item_rect(0).get_center()
+	get_viewport().warp_mouse(applicant_list.global_position + hover_point)
+	var motion := InputEventMouseMotion.new()
+	motion.position = applicant_list.global_position + hover_point
+	get_viewport().push_input(motion, true)
+	await get_tree().create_timer(float(ProjectSettings.get_setting("gui/timers/tooltip_delay_sec", 0.5)) + 0.2, true).timeout
+	_expect(applicant_list.get_tooltip(hover_point).is_empty(), "Hovering a Job Board applicant returns no tooltip after the native delay.")
+	await _capture("job-board-hover-no-tooltip.png")
+	get_viewport().warp_mouse(Vector2.ZERO)
 	_hire(board.job_board_ui, STARTUP.HAULER_APPLICANT_ID)
 	var hauler: WorkerData = WorkerDatabase.get_worker_data(STARTUP.HAULER_APPLICANT_ID)
 	_expect(hauler != null and hauler.profession == WorkerData.Profession.HAULER and hauler.get_linked_citizen() == hauler_citizen, "Job Board hires the real Hauler with its existing citizen identity.")

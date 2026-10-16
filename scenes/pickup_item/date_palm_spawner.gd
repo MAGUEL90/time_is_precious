@@ -52,6 +52,8 @@ func _refresh() -> void:
 		elif not is_instance_valid(existing) or existing.is_collecting:
 			var pickup = PICKUP.instantiate()
 			pickup.name = "DatesPickup" + ("" if slot == 0 else str(slot + 1))
+			# This view belongs to the palm ledger, not the city inventory-drop checkpoint.
+			pickup.add_to_group("date_palm_pickups")
 			pickup.item_id = "date_cluster"
 			pickup.quantity = 1
 			pickup.world_texture = pickup_texture

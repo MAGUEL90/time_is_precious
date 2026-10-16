@@ -18,6 +18,87 @@ const CLOTHING_ITEM_IDS: Array[String] = [
 var _unit_sequence: int = 0
 var _transfer_in_progress: bool = false
 
+## Legacy bulk raid fixture API. Production raid loot uses the ranked one-item API below.
+## This compatibility entrypoint retains its original reserve semantics.
+func take_raid_loot(capacity: int, reserve_per_stack: int) -> Dictionary:
+	if _transfer_in_progress or capacity <= 0 or reserve_per_stack < 0 or not _has_valid_counted_stacks():
+		return {}
+	var next_items: Dictionary = items.duplicate(true)
+	var stolen: Dictionary = {}
+	var ids: Array = next_items.keys()
+	ids.sort()
+	var remaining: int = capacity
+	for item_id: String in ids:
+		if remaining == 0:
+			break
+		var amount: int = mini(remaining, maxi(0, int(next_items[item_id]) - reserve_per_stack))
+		if amount <= 0:
+			continue
+		next_items[item_id] -= amount
+		if int(next_items[item_id]) == 0:
+			next_items.erase(item_id)
+		stolen[item_id] = amount
+		remaining -= amount
+	if not stolen.is_empty():
+		_transfer_in_progress = true
+		items = next_items
+		changed.emit()
+		_transfer_in_progress = false
+	return stolen
+
+## Preview the highest-ranked eligible counted stack item that fits the remaining weight.
+## Unique equipment units and fractional food portions are intentionally outside this API.
+func peek_raid_loot(remaining_weight: float, preference: String = "balanced") -> Dictionary:
+	if _transfer_in_progress or not _is_valid_raid_loot_request(remaining_weight, preference):
+		return {}
+	var candidates: Array[Dictionary] = _get_ranked_raid_loot_candidates(remaining_weight, preference)
+	if candidates.is_empty():
+		return {}
+	var selected: Dictionary = candidates[0]
+	return {
+		"item_id": str(selected.item_id),
+		"weight": float(selected.weight),
+		"rarity": int(selected.rarity),
+		"reason": str(selected.reason)
+	}
+
+## Count stock eligible for an empty raid bag; excludes unique allocated equipment.
+func get_raid_loot_stock_count(capacity_weight: float) -> int:
+	if not _is_valid_raid_loot_request(capacity_weight, "balanced"):
+		return 0
+	var total: int = 0
+	for candidate: Dictionary in _get_ranked_raid_loot_candidates(capacity_weight, "balanced"):
+		total += int(items.get(candidate.item_id, 0))
+	return total
+
+## Remove exactly one whole counted stack item, atomically and without touching Inventory.
+func take_ranked_raid_item(remaining_weight: float, preference: String = "balanced") -> Dictionary:
+	if _transfer_in_progress:
+		return {}
+	var selected: Dictionary = peek_raid_loot(remaining_weight, preference)
+	if selected.is_empty():
+		return {}
+	var item_id: String = str(selected.item_id)
+	var quantity_value: Variant = items.get(item_id, 0)
+	if not quantity_value is int or int(quantity_value) <= 0:
+		return {}
+
+	var next_items: Dictionary = items.duplicate(true)
+	var remaining_quantity: int = int(next_items[item_id]) - 1
+	if remaining_quantity > 0:
+		next_items[item_id] = remaining_quantity
+	else:
+		next_items.erase(item_id)
+
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+
+	var receipt: Dictionary = selected.duplicate(true)
+	receipt["quantity"] = 1
+	return receipt
+
 func get_food_supply_points() -> int:
 	var state: Dictionary = _validated_food_state()
 	if not bool(state.ok):
@@ -149,6 +230,82 @@ func consume_food_points(amount: int) -> bool:
 	_commit_food_consumption(next_items, next_portions)
 	return true
 
+## Check a counted-material requirement batch without changing City Storage.
+## Empty requirements are a valid no-op.
+func can_consume_materials(requirements: Dictionary) -> bool:
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	if plan.item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+	for item_id: String in plan.item_ids:
+		if int(items.get(item_id, 0)) < int(plan.quantities[item_id]):
+			return false
+	return true
+
+## Consume a counted-material requirement batch atomically from City Storage.
+## Unique equipment, food portions, and player Inventory are not affected.
+func consume_materials(requirements: Dictionary) -> bool:
+	if _transfer_in_progress:
+		return false
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	var item_ids: Array[String] = plan.item_ids
+	if item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+	for item_id: String in item_ids:
+		if int(items.get(item_id, 0)) < int(plan.quantities[item_id]):
+			return false
+
+	var next_items: Dictionary = items.duplicate(true)
+	for item_id: String in item_ids:
+		var remaining: int = int(next_items[item_id]) - int(plan.quantities[item_id])
+		if remaining > 0:
+			next_items[item_id] = remaining
+		else:
+			next_items.erase(item_id)
+
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
+## Return a paid material requirement batch atomically to City Storage.
+## Overflow or invalid stock rejects the full refund without changing state.
+func refund_materials(requirements: Dictionary) -> bool:
+	if _transfer_in_progress:
+		return false
+	var plan: Dictionary = _material_requirement_plan(requirements)
+	if not bool(plan.ok):
+		return false
+	var item_ids: Array[String] = plan.item_ids
+	if item_ids.is_empty():
+		return true
+	if not _has_valid_counted_stacks():
+		return false
+
+	var next_items: Dictionary = items.duplicate(true)
+	for item_id: String in item_ids:
+		var current_quantity: int = int(next_items.get(item_id, 0))
+		var next_quantity: Dictionary = _safe_nonnegative_add(
+			current_quantity, int(plan.quantities[item_id])
+		)
+		if not bool(next_quantity.ok):
+			return false
+		next_items[item_id] = int(next_quantity.value)
+
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
 ## Shared eligibility for personal deposits and incoming Hauler cargo.
 ## Existing stock is not filtered or removed when this policy changes.
 func accepts_item(item_id: String) -> bool:
@@ -156,6 +313,7 @@ func accepts_item(item_id: String) -> bool:
 	return item_data != null and (
 		_is_ready_food(item_data) or CLOTHING_ITEM_IDS.has(item_id)
 		or item_id == "shekel" or SUPPORTED_ITEM_IDS.has(item_id)
+		or item_id == "stone" or item_id == "wood_log"
 	)
 
 func get_depositable_items() -> Array[Dictionary]:
@@ -328,6 +486,105 @@ func _validate_selection(selected_items: Dictionary) -> Dictionary:
 		item_ids.append(item_id)
 	item_ids.sort()
 	return {"ok": true, "message": "", "quantities": quantities, "item_ids": item_ids}
+
+func _material_requirement_plan(requirements: Dictionary) -> Dictionary:
+	if _transfer_in_progress:
+		return {"ok": false}
+	var quantities: Dictionary = {}
+	var item_ids: Array[String] = []
+	for item_id_value: Variant in requirements.keys():
+		if not item_id_value is String:
+			return {"ok": false}
+		var item_id: String = item_id_value
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if not _is_counted_material(item_id, item_data):
+			return {"ok": false}
+		var quantity_value: Variant = requirements[item_id_value]
+		if not quantity_value is int or int(quantity_value) <= 0:
+			return {"ok": false}
+		quantities[item_id] = int(quantity_value)
+		item_ids.append(item_id)
+	item_ids.sort()
+	return {"ok": true, "quantities": quantities, "item_ids": item_ids}
+
+func _is_counted_material(item_id: String, item_data: ItemData) -> bool:
+	return item_data != null \
+		and item_data.category == ItemEnums.ItemCategory.RESOURCE \
+		and item_data.food_supply_value <= 0 \
+		and item_data.clothing_supply_value <= 0 \
+		and item_id != "shekel" \
+		and not CLOTHING_ITEM_IDS.has(item_id) \
+		and not SUPPORTED_ITEM_IDS.has(item_id)
+
+func _is_valid_raid_loot_request(remaining_weight: float, preference: String) -> bool:
+	return is_finite(remaining_weight) and remaining_weight >= 0.0 \
+		and ["balanced", "food", "valuables"].has(preference)
+
+func _get_ranked_raid_loot_candidates(remaining_weight: float, preference: String) -> Array[Dictionary]:
+	var candidates: Array[Dictionary] = []
+	if not _has_valid_counted_stacks():
+		return candidates
+
+	for item_id_value: Variant in items.keys():
+		var item_id: String = item_id_value
+		var quantity: int = int(items[item_id_value])
+		if quantity <= 0 or SUPPORTED_ITEM_IDS.has(item_id):
+			continue
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if not _is_valid_raid_loot_metadata(item_id, item_data):
+			continue
+		var item_weight: float = item_data.weight
+		if item_weight > 0.0 and item_weight > remaining_weight + 0.000001:
+			continue
+		var divisor: float = item_weight if item_weight > 0.0 else 1.0
+		var value_score: float = _raid_loot_value_score(item_data, divisor, preference)
+		if not is_finite(value_score):
+			continue
+		candidates.append({
+			"item_id": item_id,
+			"weight": item_weight,
+			"rarity": int(item_data.rarity),
+			"food_priority": item_data.food_supply_value > 0,
+			"score": value_score,
+			"reason": _raid_loot_reason(item_data, preference)
+		})
+
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if preference == "food" and bool(a.food_priority) != bool(b.food_priority):
+			return bool(a.food_priority)
+		if float(a.score) != float(b.score):
+			return float(a.score) > float(b.score)
+		if int(a.rarity) != int(b.rarity):
+			return int(a.rarity) > int(b.rarity)
+		return str(a.item_id) < str(b.item_id)
+	)
+	return candidates
+
+func _is_valid_raid_loot_metadata(item_id: String, item_data: ItemData) -> bool:
+	return item_data != null \
+		and item_data.id == item_id \
+		and is_finite(item_data.weight) \
+		and item_data.weight >= 0.0 \
+		and item_data.base_value_shekel >= 0 \
+		and item_data.food_supply_value >= 0 \
+		and item_data.rarity >= ItemEnums.Rarity.COMMON \
+		and item_data.rarity <= ItemEnums.Rarity.MYTHIC \
+		and item_data.category >= ItemEnums.ItemCategory.RESOURCE \
+		and item_data.category <= ItemEnums.ItemCategory.KEY_ITEM
+
+func _raid_loot_value_score(item_data: ItemData, divisor: float, preference: String) -> float:
+	if preference == "valuables":
+		return float(item_data.base_value_shekel)
+	if preference == "food":
+		return float(item_data.base_value_shekel) / divisor
+	return float(maxi(item_data.base_value_shekel, item_data.food_supply_value)) / divisor
+
+func _raid_loot_reason(item_data: ItemData, preference: String) -> String:
+	if preference == "food" and item_data.food_supply_value > 0:
+		return "food supply"
+	if preference == "valuables":
+		return "base value"
+	return "value per weight"
 
 func _get_registered_item_ids() -> Array[String]:
 	var item_ids: Array[String] = []

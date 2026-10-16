@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-10-05
+Last updated: 2026-10-17
 
 ## Purpose of This Document
 
@@ -19,6 +19,92 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Gameplay/main integration — review checkpoint (2026-10-17)
+
+The gameplay branch now combines the current wall/warehouse city layout with the
+six Food MVP palms, relocated with Game Director approval. Both raid and date
+debug controls remain available, while the later no-tooltip inventory policy is
+preserved. Food values, refill timing and save format are unchanged. Palm pickup
+views remain owned by their session ledger and are excluded from personal dropped
+items during city/home handoff and checkpoint restore. Palm stock/refill timers
+remain session-only; persisting them to disk is a separate outstanding boundary.
+The previous 72-hour walking results describe the old map, not these new positions.
+See `docs/task_reports/gameplay-main-integration-2026-10-17.md` for current checks.
+
+## City progression MVP — implemented, pending human playtest (2026-10-10)
+
+Branch `feature/time-world/city-progression` adds session city level/progress to City Hub (C).
+Settled daily resident needs grant +5 each for all fed, all clothed, and average satisfaction >=70%.
+A missing wall costs 5 daily; an actual standing-wall breach costs 10 once. Progress clamps to
+0–100. At 100, Level Up advances one city level and resets progress; city levels never fall.
+Level 1 uses Early raiders, level 2 Developing, level 3+ Advanced for future departures only.
+Existing departing parties retain their composition and arrival. Disk persistence is still pending.
+
+## Raid branch — mixed raider parties and Inspect cards (2026-10-10)
+
+Approach **Iddin-Sin** inside the south wall, press **E**, advance the opening greeting, review the quote and
+choose **Build** or **Repair**. Enter reveals these choices alongside **Not now**,
+while the discussion panel stays visible. His world name caption is hidden; his dialogue name remains. Build/rebuild costs 10 Stone + 5 Wood Log and takes
+120 game minutes. Repair costs 1 Stone per started 5 missing HP and takes 60
+game minutes. Materials come from City Storage at job start; HP updates on
+completion. Jobs persist across map changes, pause during attacks, and a breached
+repair is cancelled with its materials refunded. Wall management remains read-only;
+press C to open wall status and raid reports. Construction uses a wall/watchtower icon and progress bar in City Management and above the relevant world location. Wall HP remains a separate meter and replaces the world construction indicator during attacks. The persistent bottom-right raid panel stays hidden.
+
+The first party departs when initial construction completes. Its composition is
+rolled once at departure: Light contributes 1 strength and takes 2 travel days,
+Normal 2 strength / 3 days, Heavy 4 strength / 4 days. The party travels together
+at its slowest member's speed. Early parties contain 3–5 members with 5–7 total
+strength; 10% of parties carry a Heavy, at most one. Detection occurs 1 day before
+arrival and never shifts arrival. Three safe days follow a raid before the next
+party is generated and departs. Composition survives map changes and cannot be
+rerolled through Inspect, repairs or upgrades.
+
+Every 5 active seconds the group deals max(0, total strength - wall Defend).
+Wall level 1 keeps 50 HP / Defend 2; the raid still lasts at most 60 active
+seconds. Reports and painted-wall visuals follow actual results.
+
+Debug shows the departure/arrival countdown. **Next party: Early** cycles through
+Early, Developing (4–7 members, 8–11 strength, 25% Heavy presence, max 2), and
+Advanced (6–10 members, 12–16 strength, 45% Heavy presence, max 3). It applies at
+the next departure only. City progression now selects Early/Developing/Advanced at levels 1/2/3+;
+Debug can still override the next stage until a later level change. **Send raiders** starts that party's full journey during recovery; an
+existing journey cannot be restarted. Wall-HP reset remains available. During
+combat the effective clock is x1, with the selected speed restored afterward.
+**Wall materials** tops
+up only the materials missing for the next job in City Storage, for playtesting
+before the map has a Stone source; it does not seed normal gameplay.
+City Storage now accepts Stone and Wood Log deposits.
+The left 16x16 ! button opens merchant and detected-raid notifications, replacing
+the overlapping top notices. City Management colors active threats red and shows
+a castle-to-raider travel bar after detection. The icon approaches the castle
+using the actual remaining journey time. Routine status sentences are hidden in
+City Management; attack warnings appear only during combat/looting. The red !
+button gently pulses during detection/attack/looting and returns to normal afterward. Main-profile protected stock reserve is
+zero. On breach, ranked looting uses the remainder of the same 60-second raid:
+10 weight capacity, one whole counted item per active second, and a once-per-breach
+5 percentage-point satisfaction penalty. Selection uses existing value/food value,
+weight, and rarity as a tie-break. Raiders stop at capacity, the time limit, or when
+nothing fits. Results record actual losses, breach/loot duration and retreat reason.
+
+Iddin-Sin now offers Improve -> Wall Lv.2 / Watchtower, with a quote before Start.
+Wall level 2 costs 20 Stone + 10 Wood Log and 240 game minutes, granting 80 HP
+and Defend 3. Repair the current wall first. Watchtower costs 10 Stone + 10 Wood
+Log and 180 minutes; it detects a party two days before arrival and
+unlocks Inspect for detected/active raids. One project runs at a time. Breach
+refunds unfinished improvements, while completed wall tier and tower survive;
+rebuild restores the retained tier. A simple tower marker appears at the wall.
+
+Inspect opens a separate panel with a card per present raider type, a replaceable
+pixel icon and x quantity, plus the current phase/ETA. Back or Escape returns to
+City Management; C closes both. Lost access, a new party, map exit and raid end
+clear old intelligence. Fonts use 6/12 and the former oversized tooltip is removed.
+
+Gate/collision work, scout patrols, guard posts/soldiers, weapons,
+raider effects/statuses and disk saving remain future work. Citizen flight remains
+disabled. Unique equipment instances and opened food portions remain outside the
+counted-stack loot API. See `docs/task_reports/raider-composition-inspect-2026-10-10.md`
+for this checkpoint and `docs/task_reports/raid-mvp-scope-2026-10-05.md` for earlier scope.
 ## Food MVP — six-palm walking playtest, pending human review (2026-10-05)
 
 The approved main-map layout now has six date palms. Each reuses the pickup scene,
@@ -32,8 +118,7 @@ Each run ate 108 dates, produced 35 logs and retained 6–15 dates without colla
 Travel, work and sleep are now covered together; human pacing, Godot 4.5.x/Windows,
 longer sessions and wider seed coverage remain pending. Keep current food values
 for review rather than treating these three samples as final balance approval.
-See `docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 remains draft;
-merge belongs to the Game Director. Cooking, barley and new weather rules are deferred.
+See `docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 was merged into main; Cooking, barley and new weather rules are deferred.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 
@@ -528,13 +613,33 @@ Use enough consistent art to make the prototype readable. Do not wait for final 
 
 **Status: Partially implemented.**
 
-Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level. Continue UI work when it directly improves the current playable loop.
+Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level.
+The current-playable-loop UI consistency pass is implemented on
+`fix/gameplay-hud/ui-consistency`: shared small pixel fonts and disabled states,
+City Hub Supply alignment, padded Inspect cards, centered physical City Storage,
+bounded inventory confirmations and Job Board empty-state placement. The existing
+Mesopotamian pixel style and player actions are preserved. Native visual review and
+focused regressions are recorded in `docs/task_reports/2026-10-11-ui-consistency.md`;
+human visual acceptance remains pending. Continue UI work when it directly improves
+the current playable loop.
 
 ## Phase 5 - Save / Load
 
-**Status: Queued after loop stabilization.**
+**Status: City/home checkpoint and sleep autosave implemented on `feature/time-world/city-save-load`; awaiting playtest.**
 
-Real persistence should begin after the runtime daily loop is stable enough that the saved state model is unlikely to change every session.
+Successful sleep now saves one checkpoint after recovery. Manual Save/Load buttons
+have been removed from City Hub. The startup menu on `fix/gameplay-hud/ui-consistency`
+provides Continue, New Game and Quit. Continue restores city/home checkpoints; New Game
+requires confirmation when a checkpoint exists and archives the previous files.
+The slot covers stocks, residents, jobs, construction,
+progression and raids; home visits preserve the live worksite/hauling session. Loading
+a sleep checkpoint returns to the saved home position and time without offline production.
+Version-1 city saves remain readable. Supply also displays existing Shelter capacity.
+The isolated worksite prototype slot stays separate. Multiple selectable slots and
+other-map saves remain follow-up work. F5 opens the startup menu; F6 runs the authored
+scene directly for content editing. The main map no longer forces a day-zero merchant
+in debug builds. See `docs/task_reports/2026-10-11-city-sleep-save.md` and
+`docs/task_reports/2026-10-11-content-ready.md`.
 
 ## Phase 6 - Internal Playtest
 

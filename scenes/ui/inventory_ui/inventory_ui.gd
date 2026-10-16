@@ -28,8 +28,8 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var category_selector: InventoryCategorySelector = $Root/Center/Window/Margin/MainVBox/HeaderRow/InventoryCategorySelector
 @onready var page_selector: InventoryPageSelector = $Root/Center/Window/Margin/MainVBox/InventoryPageSelector
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
+@onready var shekel_amount: Label = $Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow/ShekelAmount
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
-@onready var item_info_panel: ItemInfoPanel = $Root/ItemInfoPanelRoot
 
 var player_ref: Player
 var current_category: int = CATEGORY_ALL
@@ -50,7 +50,6 @@ func _ready() -> void:
 	player_ref = get_tree().get_first_node_in_group("player")
 
 	visible = false
-	item_info_panel.clear_item()
 	action_feedback_label.modulate.a = 0.0
 
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -91,6 +90,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif visible and event.is_action_pressed("ui_cancel"):
 		close_inventory()
+		get_viewport().set_input_as_handled()
 
 func _on_inventory_items_changed() -> void:
 	_refresh_inventory_grid()
@@ -114,7 +114,6 @@ func open_inventory() -> void:
 	_refresh_player_status()
 	_refresh_inventory_grid()
 	_refresh_worker_list()
-	call_deferred("_position_item_info_panel")
 
 func _position_inventory_near_player() -> void:
 	if inventory_container == null:
@@ -137,7 +136,6 @@ func _position_inventory_near_player() -> void:
 func close_inventory() -> void:
 	_close_inventory_floating_panels()
 
-	item_info_panel.clear_item()
 	visible = false
 	_restore_tree_pause_state()
 
@@ -151,13 +149,13 @@ func _restore_tree_pause_state() -> void:
 # Inventory grid
 
 func _refresh_inventory_grid() -> void:
+	shekel_amount.text = str(int(Inventory.items.get("shekel", 0)))
 	var filtered_items: Array[String] = []
 
 	if grid == null:
 		return
 
 	_close_inventory_floating_panels()
-	item_info_panel.clear_item()
 
 	for child in grid.get_children():
 		child.queue_free()
@@ -198,12 +196,6 @@ func _refresh_inventory_grid() -> void:
 
 		if slot.has_signal("slot_clicked"):
 			slot.slot_clicked.connect(_on_item_slot_clicked)
-
-		if slot.has_signal("slot_hovered"):
-			slot.slot_hovered.connect(_on_item_slot_hovered)
-
-		if slot.has_signal("slot_unhovered"):
-			slot.slot_unhovered.connect(_on_item_slot_unhovered)
 
 		if slot.has_signal("slot_drag_started"):
 			slot.slot_drag_started.connect(_on_slot_drag_started)
@@ -274,23 +266,6 @@ func _on_option_use_requested() -> void:
 func _on_option_drop_requested() -> void:
 	_open_item_action_confirm_panel("drop")
 
-# Slot hover
-
-func _on_item_slot_hovered(item_id: String, _quantity: int, slot_ref: ItemSlot) -> void:
-	if is_inventory_action_busy:
-		return
-
-	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):
-		return
-
-	if active_option_panel != null and is_instance_valid(active_option_panel):
-		return
-
-	_show_item_info(item_id, slot_ref)
-
-func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
-	item_info_panel.clear_item()
-
 # Drag and drop
 
 func _on_slot_drag_started(data: Dictionary) -> void:
@@ -311,11 +286,11 @@ func _notification(what: int) -> void:
 	var dropped_inside_inventory: bool = inventory_window.get_global_rect().has_point(mouse_position)
 
 	if not dropped_inside_inventory:
-		_open_drag_drop_confirm_panel(active_drag_data)
+		_open_drag_drop_confirm_panel(active_drag_data, mouse_position)
 
 	active_drag_data.clear()
 
-func _open_drag_drop_confirm_panel(data: Dictionary) -> void:
+func _open_drag_drop_confirm_panel(data: Dictionary, drop_position: Vector2) -> void:
 	var item_id: String = str(data.get("item_id", ""))
 	if item_id.is_empty():
 		return
@@ -338,9 +313,7 @@ func _open_drag_drop_confirm_panel(data: Dictionary) -> void:
 	add_child(active_action_confirm_panel)
 
 	active_action_confirm_panel.setup("drop", item_id, item_data, item_quantity)
-
-	var mouse_position: Vector2 = get_viewport().get_mouse_position()
-	active_action_confirm_panel.global_position = mouse_position.round()
+	_position_action_confirm_panel(drop_position)
 	_set_slots_interaction_locked(true)
 
 # Player and worker summary
@@ -412,7 +385,6 @@ func _close_option_panel() -> void:
 	_clear_active_option_slot()
 	_set_slots_hover_locked(false)
 	_set_slots_interaction_locked(false)
-	item_info_panel.clear_item()
 
 func _position_option_panel_near_slot(slot_ref: ItemSlot) -> void:
 	if active_option_panel == null or not is_instance_valid(active_option_panel):
@@ -450,20 +422,6 @@ func _clear_active_option_slot() -> void:
 
 	active_option_slot = null
 	active_option_item_id = ""
-
-# Item information panel
-
-func _show_item_info(item_id: String, _slot_ref: ItemSlot = null) -> void:
-	if not item_info_panel.display_item(item_id):
-		return
-
-	_position_item_info_panel()
-
-func _position_item_info_panel() -> void:
-	if inventory_window == null or item_info_panel == null:
-		return
-
-	item_info_panel.position_lower_center(page_selector.global_position.y)
 
 # Slot locking
 
@@ -505,6 +463,7 @@ func _open_item_action_confirm_panel(action: String) -> void:
 	var item_quantity: int = int(Inventory.items.get(active_option_item_id, 0))
 	if item_quantity <= 0:
 		return
+	var panel_position: Vector2 = active_option_panel.global_position
 
 	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):
 		active_action_confirm_panel.queue_free()
@@ -515,8 +474,25 @@ func _open_item_action_confirm_panel(action: String) -> void:
 	add_child(active_action_confirm_panel)
 
 	active_action_confirm_panel.setup(action, active_option_item_id, item_data, item_quantity)
-	active_action_confirm_panel.global_position = active_option_panel.global_position
+	_position_action_confirm_panel(panel_position)
 	_set_slots_interaction_locked(true)
+
+func _position_action_confirm_panel(requested_position: Vector2) -> void:
+	if not is_instance_valid(active_action_confirm_panel):
+		return
+
+	var viewport_bounds: Rect2 = get_viewport().get_visible_rect()
+	var margin: float = INVENTORY_SCREEN_MARGIN
+	var panel_size: Vector2 = active_action_confirm_panel.size
+	var min_position: Vector2 = viewport_bounds.position + Vector2.ONE * margin
+	var max_position: Vector2 = viewport_bounds.end - panel_size - Vector2.ONE * margin
+	max_position.x = maxf(min_position.x, max_position.x)
+	max_position.y = maxf(min_position.y, max_position.y)
+
+	active_action_confirm_panel.global_position = Vector2(
+		clampf(requested_position.x, min_position.x, max_position.x),
+		clampf(requested_position.y, min_position.y, max_position.y)
+	).round()
 
 func _close_item_action_confirm_panel() -> void:
 	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):

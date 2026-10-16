@@ -47,6 +47,7 @@ text = "Merchant Stop"
 horizontal_alignment = 1
 
 [node name="VisitNotice" type="CanvasLayer" parent="."]
+visible = false
 layer = 5
 
 [node name="Label" type="Label" parent="VisitNotice"]
@@ -57,6 +58,7 @@ offset_bottom = 43.0
 grow_horizontal = 2
 mouse_filter = 2
 theme = ExtResource("5")
+theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(1, 0.9, 0.7, 1)
 theme_override_colors/font_shadow_color = Color(0.12, 0.07, 0.04, 1)

@@ -59,6 +59,7 @@ const SEPARATOR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/separator_
 const TOOL_CARD_SCENE: PackedScene = preload("res://scenes/test_scenes/ui_sandbox/worker_control/worker_tool_card.tscn")
 const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visual/base_worker_visual.tscn")
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
+const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
@@ -73,7 +74,6 @@ var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
 var _tools_preview_visual: Node2D
-var city_item_info: ItemInfoPanel
 var city_action_panel: OptionPanel
 @onready var tools_extra_accessory_button: Button = $Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots/AccessorySlot1
 @onready var tools_tool_button: Button = $Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/PreviewRow/LeftSlots/ToolSlot
@@ -90,8 +90,6 @@ var _needs_manager: Node
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	city_item_info = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate()
-	$Root.add_child(city_item_info)
 	visible = false
 	close_button.pressed.connect(close)
 	city_storage_view.get_node("Margin/Content/Footer/Back").pressed.connect(_close_tools_picker)
@@ -328,6 +326,7 @@ func _make_status_row(row: Dictionary) -> Control:
 	activity_label.clip_text = false
 	activity_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row_control.add_child(activity_label)
+	row_control.add_child(_make_star_rating(int(row.get("star", 0))))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row_control.add_child(spacer)
@@ -378,7 +377,6 @@ func _render_tools_workers(rows: Array) -> void:
 
 func _render_tools_units(rows: Array) -> void:
 	_close_city_action()
-	city_item_info.clear_item()
 	_clear_children(tools_unit_list)
 	_clear_children(city_storage_list)
 	var units: Array = _get_tool_rows(_selected_worker_id)
@@ -440,8 +438,6 @@ func _add_city_tool_cell(unit: Dictionary, worker_locked: bool, occupied: bool) 
 	slot.selected_qty.visible = equipped or not bool(unit.get("available", false))
 	slot.set_meta("unit_id", unit_id)
 	slot.disabled = str(unit.get("slot", "")) != _active_tool_slot or worker_locked or (equipped and not bool(unit.get("can_unequip", true))) or (not equipped and (occupied or not bool(unit.get("available", false))))
-	slot.mouse_entered.connect(_show_city_item_info.bind(unit))
-	slot.mouse_exited.connect(city_item_info.clear_item)
 	slot.pressed.connect(_open_city_action.bind(unit, slot))
 
 
@@ -456,7 +452,6 @@ func _open_city_action(unit: Dictionary, slot: Button) -> void:
 	if slot.disabled or not city_storage_view.visible:
 		return
 	_close_city_action()
-	city_item_info.clear_item()
 	city_action_panel = preload("res://scenes/ui/option_panel/option_panel.tscn").instantiate()
 	$Root.add_child(city_action_panel)
 	city_action_panel.use_button.text = "Unequip" if bool(unit.get("equipped", false)) else "Equip"
@@ -482,30 +477,6 @@ func _position_city_action(rect: Rect2) -> void:
 		clampf(rect.end.x + 2, 4, maxf(4, bounds.x - city_action_panel.size.x - 4)),
 		clampf(rect.position.y, 4, maxf(4, bounds.y - city_action_panel.size.y - 4))
 	).round()
-
-
-func _show_city_item_info(unit: Dictionary) -> void:
-	if not city_storage_view.visible or is_instance_valid(city_action_panel):
-		return
-	if not city_item_info.display_item(str(unit.get("tool_id", ""))):
-		# Scene-local tool units do not all have ItemDatabase entries yet.
-		city_item_info.name_label.text = "name: %s" % unit.get("name", "Tool")
-		city_item_info.category_label.text = "category: EQUIP"
-		city_item_info.weight_label.text = "weight: -"
-		city_item_info.description_label.text = "Worker hauling cart." if unit.get("tool_id") == "cart" else "-"
-		city_item_info.effect_label.text = "effect: 3 items / trip" if unit.get("tool_id") == "cart" else "effect: -"
-		city_item_info._refresh_size()
-		city_item_info.show()
-	city_item_info.category_label.text = "category: EQUIP (%s)" % str(unit.get("slot", "tool")).capitalize()
-	var item_data: ItemData = ItemDatabase.get_item_data(str(unit.get("tool_id", "")))
-	if unit.get("tool_id") == "cart":
-		city_item_info.effect_label.text = "effect: 3 items / trip"
-	if item_data != null and bool(item_data.get_meta("weight_pending", false)):
-		city_item_info.weight_label.text = "weight: -"
-	city_item_info.description_label.text += "\nOwner: %s" % str(unit.get("owner_name", "City Storage"))
-	city_item_info._refresh_size()
-	var footer: Control = city_storage_view.get_node("Margin/Content/Footer")
-	city_item_info.position_lower_center(footer.global_position.y)
 
 
 func _make_tool_row(unit: Dictionary, worker_locked: bool, slot_occupied: bool = false) -> Control:
@@ -629,20 +600,35 @@ func _render_level(rows: Array) -> void:
 	for row: Dictionary in rows:
 		var card := PanelContainer.new()
 		card.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-		var label := _make_label(
-			"%s\n%s\nStar: %d | XP: %d | Contributions: %d"
-			% [
-				str(row.get("name", "Unnamed worker")),
-				str(row.get("profession", "")),
-				int(row.get("star", 0)),
-				int(row.get("xp", 0)),
-				int(row.get("contributions", 0))
-			],
-			6
-		)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		card.add_child(label)
+		var contents := VBoxContainer.new()
+		contents.add_theme_constant_override("separation", 2)
+		card.add_child(contents)
+		var heading := _make_label("%s\n%s" % [str(row.get("name", "Unnamed worker")), str(row.get("profession", ""))], 6)
+		heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		contents.add_child(heading)
+		var stats := HBoxContainer.new()
+		stats.add_theme_constant_override("separation", 4)
+		contents.add_child(stats)
+		stats.add_child(_make_star_rating(int(row.get("star", 0))))
+		stats.add_child(_make_label("XP: %d | Contributions: %d" % [int(row.get("xp", 0)), int(row.get("contributions", 0))], 6))
 		level_list.add_child(card)
+
+
+func _make_star_rating(stars: int) -> HBoxContainer:
+	var rating := HBoxContainer.new()
+	rating.name = "StarRating"
+	rating.add_theme_constant_override("separation", 2)
+	var icon := TextureRect.new()
+	icon.texture = STAR_ICON
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.stretch_mode = TextureRect.STRETCH_KEEP
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rating.add_child(icon)
+	var count := _make_label(str(stars), 6)
+	count.name = "Count"
+	rating.add_child(count)
+	return rating
 
 
 func _set_active_tab(tab: String) -> void:
@@ -749,7 +735,13 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 	details_header_label.text = str(row.get("name", "Unnamed worker"))
 	details_label.text = _format_details_text(row)
 	var visuals: VBoxContainer = details_scroll.get_node("Visuals")
-	visuals.get_node("Overview/Level").text = "Level %d" % int(row.get("star", 0))
+	visuals.get_node("Overview/Level").hide()
+	var rating: HBoxContainer = visuals.get_node_or_null("Overview/StarRating")
+	if rating == null:
+		rating = _make_star_rating(0)
+		visuals.get_node("Overview").add_child(rating)
+		visuals.get_node("Overview").move_child(rating, 0)
+	rating.get_node("Count").text = str(int(row.get("star", 0)))
 	visuals.get_node("Overview/WageRow/Wage").text = str(row.get("wage", "")).replace(" Shekel", "")
 	visuals.get_node("Location").text = "Location: %s" % str(row.get("location", ""))
 	visuals.get_node("ProductiveDays").text = "Productive days: %d" % int(row.get("productive_days", 0))
@@ -911,7 +903,6 @@ func _show_tool_picker(slot: String) -> void:
 
 func _close_tools_picker() -> void:
 	_close_city_action()
-	city_item_info.clear_item()
 	_active_tool_slot = ""
 	city_storage_view.hide()
 	window.show()

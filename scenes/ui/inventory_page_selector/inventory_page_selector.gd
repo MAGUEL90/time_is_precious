@@ -9,7 +9,6 @@ signal page_changed(page: int)
 @onready var dot_template: TextureRect = $DotsContainer/DotTemplate
 @onready var prev_button: Button = $PrevButton
 @onready var next_button: Button = $NextButton
-@onready var item_info_panel_root: Control = $"../../../../../ItemInfoPanelRoot"
 
 var current_page: int = 0
 var total_pages: int = 1
@@ -17,7 +16,6 @@ var total_pages: int = 1
 # Setup / Public API
 
 func _ready() -> void:
-	item_info_panel_root.visible = false
 	prev_button.pressed.connect(_on_prev_button_pressed)
 	next_button.pressed.connect(_on_next_button_pressed)
 

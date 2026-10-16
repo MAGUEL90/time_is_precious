@@ -5,14 +5,14 @@ const HOME_SCENE: PackedScene = preload("res://scenes/player_home_interior/playe
 const TEST_WORKER_ID: String = "city_storage_supply_flow_worker"
 const INITIAL_CART_UNIT_ID: String = "initial_worksite_cart"
 const FORBIDDEN_PLAYER_IDS: Array[String] = [
-	"gold_nugget", "egg", "butchers_cut", "barley_grain_sack", "clay_lump", "wood_log",
+	"gold_nugget", "egg", "butchers_cut", "barley_grain_sack", "clay_lump",
 	"reed_bundle", "straw_bundle", "water_jar", "copper_ore", "copper_chunk",
-	"limestone_piece", "large_stone", "stone", "bronze_ingot", "wet_mudbrick",
+	"limestone_piece", "large_stone", "bronze_ingot", "wet_mudbrick",
 	"sun_dried_mudbrick", "raw_wool"
 ]
 const VISIBLE_ALLOWED_PLAYER_IDS: Array[String] = [
 	"barley_bread", "simple_clothes", "clay_worn_wrap", "plain_linen_wrap", "shekel",
-	"basic_glove", "cart", "stone_hammer"
+	"basic_glove", "cart", "stone_hammer", "wood_log", "stone"
 ]
 
 var failures: int = 0
@@ -103,6 +103,8 @@ func _prepare_global_fixture() -> void:
 	Inventory.add_item("cart", 1)
 	Inventory.add_item("basic_glove", 1)
 	Inventory.add_item("stone_hammer", 2)
+	Inventory.add_item("wood_log", 1)
+	Inventory.add_item("stone", 1)
 	for item_id: String in FORBIDDEN_PLAYER_IDS:
 		Inventory.add_item(item_id, 1)
 	# Keep one personal bread in Inventory; City Storage has no return path.

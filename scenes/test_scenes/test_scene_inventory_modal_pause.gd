@@ -7,9 +7,11 @@ var failures: int = 0
 var content: Node
 var inventory: InventoryUI
 var workshop_menu: WorkshopMenuUI
+var capture_directory: String = ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	capture_directory = OS.get_environment("TIP_INVENTORY_CAPTURE_DIR")
 	_run.call_deferred()
 
 func _expect(condition: bool, message: String) -> void:
@@ -37,6 +39,72 @@ func _wait_for_paused_clock_check() -> bool:
 	await get_tree().create_timer(TimeComponentManager.seconds_per_minute + 0.15, true).timeout
 	return _clock_minute_stamp() == before
 
+func _expect_action_popup_inside_viewport(entry_path: String) -> void:
+	var popup: Control = inventory.active_action_confirm_panel
+	_expect(is_instance_valid(popup), entry_path + " opens an item action confirmation panel.")
+	if not is_instance_valid(popup):
+		return
+	var bounds: Rect2 = get_viewport().get_visible_rect()
+	var popup_rect: Rect2 = popup.get_global_rect()
+	var margin: float = InventoryUI.INVENTORY_SCREEN_MARGIN
+	_expect(popup_rect.position.x >= bounds.position.x + margin
+		and popup_rect.position.y >= bounds.position.y + margin
+		and popup_rect.end.x <= bounds.end.x - margin
+		and popup_rect.end.y <= bounds.end.y - margin,
+		entry_path + " keeps the complete confirmation panel inside the viewport margin.")
+
+func _test_action_popup_edge_layout() -> void:
+	var original_items: Dictionary = Inventory.items.duplicate(true)
+	Inventory.items = {"wood_log": 1}
+	Inventory.items_changed.emit()
+	inventory.open_inventory()
+	await get_tree().process_frame
+
+	var wood_slot: ItemSlot
+	for child: Node in inventory.grid.get_children():
+		var slot: ItemSlot = child as ItemSlot
+		if slot != null and slot._item_id == "wood_log":
+			wood_slot = slot
+			break
+	_expect(is_instance_valid(wood_slot), "The popup geometry fixture finds its staged wood slot.")
+	if is_instance_valid(wood_slot):
+		var edge_position: Vector2 = get_viewport().get_visible_rect().end - Vector2.ONE
+		inventory._open_drag_drop_confirm_panel(
+			{"item_id": "wood_log", "slot_ref": wood_slot}, edge_position
+		)
+		await get_tree().process_frame
+		_expect_action_popup_inside_viewport("Drag-drop")
+		await _capture("inventory-drag-drop-confirm")
+		inventory._close_inventory_floating_panels()
+		await get_tree().process_frame
+
+		inventory._on_item_slot_clicked("wood_log", 1, wood_slot)
+		await get_tree().process_frame
+		_expect(is_instance_valid(inventory.active_option_panel),
+			"Clicking an item opens its existing action menu.")
+		if is_instance_valid(inventory.active_option_panel):
+			inventory.active_option_panel.global_position = edge_position
+			inventory._open_item_action_confirm_panel("drop")
+			await get_tree().process_frame
+			_expect_action_popup_inside_viewport("Click action")
+			await _capture("inventory-click-action-confirm")
+		inventory._close_inventory_floating_panels()
+		await get_tree().process_frame
+
+	inventory.close_inventory()
+	Inventory.items = original_items
+	Inventory.items_changed.emit()
+	await get_tree().process_frame
+
+func _capture(name: String) -> void:
+	if capture_directory.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var save_error: Error = get_viewport().get_texture().get_image().save_png(
+		capture_directory.path_join(name + ".png")
+	)
+	_expect(save_error == OK, "Saved rendered evidence: " + name)
+
 func _run() -> void:
 	var original_tree_paused: bool = get_tree().paused
 	var original_clock_paused: bool = TimeComponentManager.is_paused
@@ -52,6 +120,31 @@ func _run() -> void:
 	if inventory == null:
 		_finish(original_tree_paused, original_clock_paused)
 		return
+
+	var city_ui: RaidUI = get_tree().get_first_node_in_group("city_notification_ui") as RaidUI
+	_expect(is_instance_valid(city_ui), "The normal map provides the city HUD for the stacking check.")
+	if is_instance_valid(city_ui):
+		city_ui.open_details()
+		inventory.open_inventory()
+		await get_tree().process_frame
+		_expect(inventory.layer > city_ui.layer, "An active Inventory renders above City Hub and its notification icon.")
+		var original_items: Dictionary = Inventory.items.duplicate(true)
+		Inventory.items["shekel"] = 12345
+		Inventory.items_changed.emit()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_expect(inventory.shekel_amount.text == "12345", "Inventory wallet updates from the authoritative item balance.")
+		var wallet_icon: Control = inventory.shekel_amount.get_parent().get_node("ShekelIcon")
+		_expect(is_equal_approx(wallet_icon.global_position.x, inventory.grid.global_position.x), "Wallet aligns with the left item column.")
+		_expect(wallet_icon.get_global_rect().end.y <= inventory.grid.global_position.y, "Wallet sits above the item grid.")
+		await _capture("inventory-wallet")
+		Inventory.items = original_items
+		Inventory.items_changed.emit()
+		await _capture("inventory-over-city-hub")
+		await _press(&"ui_cancel")
+		_expect(not inventory.visible and city_ui.details_panel.visible, "Escape closes only the foreground Inventory and preserves City Hub below it.")
+		city_ui.close_details()
+	await _test_action_popup_edge_layout()
 
 	for cycle: int in range(2):
 		await _press(&"open_inventory")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scenes/raid/raid_party_config.gd" id="1"]
+[ext_resource type="Resource" path="res://scenes/raid/light_raider.tres" id="2_light"]
+[ext_resource type="Resource" path="res://scenes/raid/normal_raider.tres" id="3_normal"]
+[ext_resource type="Resource" path="res://scenes/raid/heavy_raider.tres" id="4_heavy"]
+[ext_resource type="Resource" path="res://scenes/raid/raid_stage_early.tres" id="5_early"]
+[ext_resource type="Resource" path="res://scenes/raid/raid_stage_developing.tres" id="6_developing"]
+[ext_resource type="Resource" path="res://scenes/raid/raid_stage_advanced.tres" id="7_advanced"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Raider party"
+composition_enabled = true
+unit_types = Array[Resource]([ExtResource("2_light"), ExtResource("3_normal"), ExtResource("4_heavy")])
+composition_stages = Array[Resource]([ExtResource("5_early"), ExtResource("6_developing"), ExtResource("7_advanced")])

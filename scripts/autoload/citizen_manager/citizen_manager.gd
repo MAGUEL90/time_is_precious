@@ -1,6 +1,7 @@
 extends Node
 
 signal citizen_added(citizen_data: CitizenData)
+signal citizen_left(citizen_data: CitizenData)
 
 @export var seed_debug_citizens: bool = false
 @export var seed_generated_citizen: bool = false
@@ -70,6 +71,18 @@ func get_citizen(citizen_id: String) -> CitizenData:
 		return null
 
 	return citizens_by_id[clean_citizen_id]
+
+## First raid MVP can remove nonworkers only; employment reservations stay intact.
+func leave_city(citizen_id: String) -> bool:
+	var citizen: CitizenData = get_citizen(citizen_id)
+	if citizen == null or citizen.population_status != CitizenData.PopulationStatus.RESIDENT:
+		return false
+	if citizen.employment_status not in [CitizenData.EmploymentStatus.UNEMPLOYED, CitizenData.EmploymentStatus.APPLICANT] or WorkerDatabase.has_worker_data(citizen.citizen_id):
+		return false
+	citizen.population_status = CitizenData.PopulationStatus.LEFT_CITY
+	citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	citizen_left.emit(citizen)
+	return true
 
 func get_all_residents() -> Array[CitizenData]:
 	var residents: Array[CitizenData] = []

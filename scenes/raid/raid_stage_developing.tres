@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/raid/raid_composition_stage.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"developing"
+display_name = "Developing"
+min_count = 4
+max_count = 7
+min_strength = 8
+max_strength = 11
+heavy_chance = 0.25
+max_heavy = 2

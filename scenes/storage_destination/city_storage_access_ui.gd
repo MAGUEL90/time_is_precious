@@ -17,7 +17,6 @@ var access_check: Callable
 var deposit_button: Button
 var transfer_ui: ItemTransferUI
 var clear_button: Button
-var item_info: ItemInfoPanel
 var _transfer_mode: String = ""
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
@@ -28,6 +27,7 @@ var _needs_manager: Node
 func _ready() -> void:
 	visible = false
 	context.hide()
+	$Root/CitySupplyPanel.hide()
 	stock_summary = RichTextLabel.new()
 	stock_summary.name = "StockSummary"
 	stock_summary.bbcode_enabled = true
@@ -45,8 +45,6 @@ func _ready() -> void:
 	deposit_button.pressed.connect(_open_transfer.bind("deposit"))
 	categories.category_changed.connect(func(_category): _refresh_view())
 	grid.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	item_info = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate()
-	$Root.add_child(item_info)
 	_connect_refresh_signals()
 	_add_supply_icon(food_summary, preload("res://assets/items/butcher’s_cut.png"))
 	_add_supply_icon(clothing_summary, preload("res://assets/items/trimmed_robe.png"))
@@ -189,7 +187,6 @@ func _refresh_view() -> void:
 		return
 	var food_supply_summary: Dictionary = _refresh_food_summary()
 	_refresh_clothing_summary()
-	item_info.clear_item()
 	for child: Node in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
@@ -210,8 +207,6 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
 		slot.interaction_locked = true
-		slot.mouse_entered.connect(_show_item_info.bind(item_id))
-		slot.mouse_exited.connect(item_info.clear_item)
 	stock_summary.text = "[center]Available: %d [img=2x6]res://assets/ui/ui_icon/separator_icon_2.png[/img] Equipped: %d[/center]" % [quantity, equipped]
 	feedback.text = _feedback_text
 	if feedback.text.is_empty() and grid.get_child_count() == 0:
@@ -264,12 +259,6 @@ func _refresh_clothing_summary() -> void:
 	elif awaiting > 0:
 		clothing_summary.text += "\nReady tomorrow"
 
-func _show_item_info(item_id: String) -> void:
-	if not view.visible or not item_info.display_item(item_id):
-		return
-	var footer: Control = view.get_node("Margin/Content/Footer")
-	item_info.position_lower_center(footer.global_position.y)
-
 func _open_transfer(mode: String) -> void:
 	if not visible or not view.visible or is_instance_valid(transfer_ui) or mode != "deposit":
 		return
@@ -278,7 +267,6 @@ func _open_transfer(mode: String) -> void:
 		return
 	_transfer_mode = mode
 	_feedback_text = ""
-	item_info.clear_item()
 	$Root.hide()
 	transfer_ui = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn").instantiate()
 	add_child(transfer_ui)

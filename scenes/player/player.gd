@@ -188,6 +188,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		current_interactable.on_player_interact(self)
 	elif current_interactable.is_in_group("workshop_plots"):
 		current_interactable.on_player_interact(self)
+	elif current_interactable.is_in_group("wall_management_spots"):
+		current_interactable.on_player_interact(self)
 	elif current_interactable.is_in_group("traveling_merchants"):
 		current_interactable.on_player_interact(self)
 

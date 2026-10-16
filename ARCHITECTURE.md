@@ -630,3 +630,178 @@ never observe a half trade. UI only requests actions; the scene adapter revalida
 physical access, departure, collapse and transitions. Browsing locks movement but
 keeps world time running; departure closes the menu. Trading consumes/produces only
 personal Inventory goods, never held workshop output or city-owned stock.
+
+
+## Castle wall / raid branch checkpoint (2026-10-10)
+
+RaidBootstrap owns map projection and finds the persistent CityRaid ledger/RaidUI
+under the existing WorkStateRuntime host. Wall HP, reports, expedition timestamps
+and a single pending wall job survive map changes. There is no new autoload or
+disk-save schema. Authored WallStone cells retain their coordinates and use atlas
+source 0 when ruined or 1 when standing.
+
+Iddin-Sin (the existing WallManagementSpot node) uses the player's nearest-E
+routing and native dialogue. The NPC holds only its own movement lock; world time
+continues. Dialogue presents a cost/duration quote, and the ledger revalidates it
+after selection. Details is informational. Materials are consumed atomically from
+CityToolStorage, independently of personal Inventory, allocated equipment and food
+portions. The storage accepts Stone/Wood Log deposits. Completion advances on the
+monotonic world-minute high-water mark; repeats/rewinds cannot duplicate progress
+or payments. Attacks suspend work. Breached repairs refund their paid materials,
+with a pending refund retained if storage temporarily rejects the transaction.
+
+The live mixed party profile references per-unit Resources (Light/Normal/Heavy)
+and stage Resources (Early/Developing/Advanced). At departure, the ledger rolls
+Heavy presence, chooses a feasible composition within the stage's count/strength
+bounds, and snapshots counts, per-member stats, total strength and travel duration.
+Group strength is the sum of count times member strength; group travel follows its
+slowest member (2/3/4 days). Defend is deducted once per five-second group hit.
+The first departure is initial construction completion. A completed raid schedules
+three recovery days before generating the next party; no next ETA exists during
+that cooldown. Inspection, wall changes, repeated clock ticks and map reload do
+not reroll a travelling party. Skipping across departure/arrival creates one party
+at its original departure and clamps construction progress at arrival.
+
+Departure/arrival timestamps remain internal while undetected. Detection is one
+day before arrival or two with the tower, without shifting arrival. The city threat
+stage defaults to Early; only the debug selector currently changes it through the
+ledger's stage API, and changes affect future departures. No wall tier/date-based
+or automatic city progression is inferred. Fixed normal-party and randomized
+interval modes remain for isolated regression fixtures. Real gameplay seconds
+drive attacks, with pause/transition guards; clock speed does not accelerate hits.
+
+RaidUI provides City Hub on shortcut C, with Management and Supply tabs. Supply
+reads live CitizenNeedsManager summaries; physical deposits remain in City Storage.
+The old storage-side Supply panel stays hidden. RaidUI also provides a map-gated 16x16
+notification button, and read-only wall/raid reports. Its fixed-size opacity-only emergency pulse shares
+the existing animation process with the edge warning, resets on threat end/map exit
+and does not restart on repeated ledger refreshes. The notification popup binds
+the persistent merchant ledger and detected raid status. Clock signals update the
+travel row from detection-gated schedule values; the castle stays left and the
+raider approaches it from the right. Hidden expeditions expose no journey values; its
+legacy bottom-right status panel stays hidden. A map-owned indicator above the
+south wall presents attack HP. During work it reuses the same DefenseWorkProgress
+icon/bar component as City Management, anchored at the wall or tower site. The
+component only reads the ledger; it owns no work clock or gameplay state. Raid results
+resolve once. Breach enters a looting phase using the remaining active raid seconds;
+satisfaction applies once at breach. CityToolStorage exposes a ranked preview and
+atomic one-count theft API, using existing ItemData metadata without modifying it.
+The raid ledger accumulates loot receipts and carried weight, then records the
+retreat reason at capacity, timeout or no fitting item. Counted stacks have no
+reserve; unique equipment units and fractional food portions remain outside this API.
+Main playtest uses 10 weight, one item/second and 5 pp satisfaction loss; citizen
+flight remains disabled. Legacy bulk loot stays available for regression fixtures. Debug dispatch starts a composed travelling party and cannot restart an expedition
+already underway. Arrival countdown and a material top-up action provide explicit
+playtest tools; no resources are seeded
+automatically. The same session ledger now owns wall tier, completed watchtower
+and timed upgrade/addition jobs. Quotes include source condition and target benefits
+and are revalidated at confirmation. Derived HP/Defend use the retained wall tier.
+Detection uses the completed tower's warning window without changing arrival time;
+inspect_raiders() returns no information unless the tower exists and the party is
+detected/active. It returns a deep copy of the departure snapshot with party ID,
+current phase and ETA. RaidUI owns the separate RaiderInspectionPanel, renders a
+card only for each present type and refreshes the same cards while the party ID
+is unchanged. Loss of access, replacement party, map exit, rebind or raid end
+clears the cached inspection and hidden UI data. Per-unit optional textures replace
+the local pixel placeholders without changing composition logic. Wall management
+is read-only; the NPC owns wall upgrade confirmation. Bootstrap draws a replaceable
+tower marker on the map without adding collisions. Gate/collision, scouts, guard
+posts, raider effects/statuses and save persistence remain outside
+this change.
+
+### City progression session ledger
+
+`scenes/city_progression/city_progression_state.gd` lives under WorkStateRuntime as
+CityProgression. RaidBootstrap creates it once and binds the existing RaidUI; map reloads
+reuse both. It observes completed CitizenNeedsManager daily settlements and guards by
+last-awarded day. Resident settlement records provide food/clothing/satisfaction results,
+so post-consumption stock and UI refreshes cannot accidentally change the daily score.
+Applicants without a settlement record join the next day's cohort.
+
+RaidState emits wall_breached only when an attack destroys a previously standing wall.
+CityProgression deduplicates by raid report sequence and applies the one-time loss separately
+from the missing-wall daily penalty. Level Up calls set_city_threat_stage; existing departed
+party snapshots remain authoritative. The shared City Hub header observes level/progress
+and offers the explicit level-up action; Supply shows the last daily breakdown. No new
+autoload, settings, save format, building unlocks or construction costs are introduced.
+
+
+### City/home checkpoint and sleep autosave (2026-10-11)
+
+`scenes/new_scenes/save_game/` owns the first main-map disk checkpoint. RaidBootstrap
+binds `CitySave` under the existing WorkStateRuntime host. A successful SleepSpot
+interaction writes the single slot after sleep recovery and the fade complete; refused
+sleep and Collapse do not trigger it. A small six-pixel message above the bed confirms
+success or failure. City Hub has no manual Save/Load controls. Load restores the
+stored clock; closed-game time does not produce goods, apply needs, or advance raids. Active timed construction, production,
+travel, combat and looting are included. Debug speed controls and transient UI selections
+are not saved.
+
+`city_save_state.gd` explicitly lists owners/fields and validates the entire staged
+snapshot before synchronous application. `city_save_worksites.gd` reconstructs scene-local
+worksite callbacks, jobs, cargo and visual projection using known map endpoints.
+`city_save_values.gd` uses bounded tagged JSON and six explicit object factories;
+64-bit counts/RNG states use decimal strings, preserving their precision. Saved files
+cannot name a script to instantiate or a resource path to load. Authored raid/job icons
+are rebound from current game data. Daily settlement cursors, paid construction inputs,
+raid penalties, owned output lots and fee records are restored together with inventory.
+Presentation refresh uses `time_changed`, never elapsed-minute or new-day signals.
+
+`city_save_file.gd` manages `user://city_save/checkpoint_v1.json` separately from the
+legacy isolated Clay fixture slot. It checks observations for external edits, verifies
+staged JSON before replacement and keeps the previous primary as `.bak`. Valid staging
+or backup files are recovery candidates only when the primary is absent. A corrupt or
+unsupported primary blocks both loading and replacement; it is not silently discarded.
+Schema version 2 adds an explicit `city`/`home` location header; all state keys remain
+unchanged. The existing slot filename stays stable. Version-1 city-only files are read
+explicitly as city checkpoints and upgraded by the next successful save. Unsupported
+future versions and the isolated worksite prototype are not silently migrated.
+
+For the authored city/home pair, SceneDoor asks CitySave to retain the existing worksite
+subtree under the runtime host before freeing the city. Its frame/input/physics processing
+and visible layers stop, while the existing minute-driven daily/hauling scheduler continues.
+No second production simulator is introduced. On return, the current state is adopted by
+the new map projection, then the old projection is cleaned up without releasing adopted
+workers. Detached city drops and persistent workshop-plot references retain city ownership.
+Failed scene switches restore the original worksite parent and layer visibility. Other
+map routes keep their previous lifecycle. Home saves include the live offscreen worksite
+state plus the home Player. Home Load validates from the city and uses the existing fade
+to place the player at the saved home position; clock/raid processing is suspended only
+for that load transition. See the sleep-save task report for coverage and limitations.
+
+City Hub Supply presents Shelter from `CityStockManager.shelter_capacity` against
+`CitizenNeedsManager.get_daily_shelter_capacity_need()`. It shows capacity, resident need
+and short/spare/covered status alongside food and clothing. Displaying it neither consumes
+housing nor changes needs settlement, satisfaction values or city-progress balance.
+
+
+### Startup and content-editing entrypoints (2026-10-11)
+
+`scenes/ui/start_menu/start_menu.tscn` is the F5 main scene. It pauses simulation
+while presenting Continue/New Game/Quit. It retains its CanvasLayer over the
+normal city scene transition, waits for RaidBootstrap to bind CitySave, then uses
+the existing checkpoint loader. A home checkpoint follows the existing fade/home
+handoff. Failed validation preserves files and keeps the menu usable; no new
+autoload, save schema, clock or inventory authority is introduced.
+
+New Game asks for confirmation when checkpoint files exist. The scene-local
+`checkpoint_archive.gd` observes the four known slot files and moves them into a
+unique sibling `archive/` directory only if those observations still match.
+It attempts rollback on a partial move failure without overwriting newly appeared
+files. A fresh slot is observed by CitySave at the next sleep. No automatic save
+is written just for opening or starting a session.
+
+F6 on ContentScene bypasses this menu and starts the authored map for content
+iteration. The main-map merchant uses its normal schedule instead of the former
+debug day-zero override. Explicit debug tools remain available in debug builds,
+with normal clock speed and player/worker needs as their startup defaults.
+
+### Palm pickup ownership at the gameplay/main boundary
+
+Date palms retain their existing per-tree session ledger under WorkStateRuntime.
+Their PickUpItem views use the `date_palm_pickups` group and are excluded from
+CitySave's personal city-drop capture/restore. Home/city handoff and checkpoint
+restore must not recreate those views as detached inventory drops. Collected dates
+remain ordinary Inventory items. Palm depletion, refill timers and RNG are not
+part of the disk checkpoint; full persistence requires a separate compatibility
+extension. This integration does not change schema version 2 or legacy readers.

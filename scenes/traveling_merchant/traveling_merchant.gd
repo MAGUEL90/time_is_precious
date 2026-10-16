@@ -6,6 +6,9 @@ const BALLOON: PackedScene = preload("res://dialogue/game_dialogue_balloon/game_
 const GREETING_DIALOGUE: DialogueResource = preload("res://dialogue/game_dialogue_conversations/traveling_merchant.dialogue")
 const STATE_NAME: String = "CommonTravelingMerchant"
 
+## Main-map playtest: show the first visit on day zero without changing the template.
+@export var debug_first_day_visit: bool = false
+
 @onready var interactable_label_component: Control = $InteractableLabelComponent
 @onready var interaction_area: Area2D = $InteractionArea
 var state: Node
@@ -24,6 +27,9 @@ func _ready() -> void:
 	if state == null:
 		state = STATE.new()
 		state.name = STATE_NAME
+		if OS.is_debug_build() and debug_first_day_visit:
+			state.config = state.config.duplicate(true)
+			state.config.first_day = 0
 		WorkStateRuntime.add_child(state)
 	interaction_area.body_entered.connect(_on_body_entered)
 	interaction_area.body_exited.connect(_on_body_exited)
@@ -31,6 +37,7 @@ func _ready() -> void:
 	_dialogue_manager = get_node_or_null("/root/DialogueManager")
 	if is_instance_valid(_dialogue_manager):
 		_dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
+	_bind_notification_ui()
 	_refresh()
 
 func _on_body_entered(body: Node2D) -> void:
@@ -190,6 +197,8 @@ func _refresh() -> void:
 	var present: bool = state.is_present()
 	$MerchantVisual.visible = present
 	$VisitNotice/Label.text = state.get_status_text()
+	$VisitNotice.hide()
+	_bind_notification_ui()
 	$Caption.text = "Traveling Merchant" if present else "Merchant Stop"
 	if not present:
 		close_menu()
@@ -201,6 +210,11 @@ func _refresh() -> void:
 		player._on_interactable_activated(self)
 		if is_instance_valid(menu):
 			interactable_label_component.hide()
+
+func _bind_notification_ui() -> void:
+	var notification_ui: Node = get_tree().get_first_node_in_group("city_notification_ui")
+	if is_instance_valid(notification_ui) and notification_ui.has_method("bind_merchant_state"):
+		notification_ui.call("bind_merchant_state", state)
 
 func _process(_delta: float) -> void:
 	# Catch collapse, fades and teleports even when no physics exit has fired yet.

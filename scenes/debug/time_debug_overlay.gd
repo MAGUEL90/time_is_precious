@@ -27,6 +27,11 @@ var step_buttons: Array[Button] = []
 var materials_button: Button
 var shekel_button: Button
 var production_button: Button
+var raid_journey_button: Button
+var raid_stage_button: Button
+var raid_journey_label: Label
+var raid_reset_button: Button
+var wall_materials_button: Button
 var worker_guard_check_button: CheckButton
 var player_guard_check_button: CheckButton
 var inventory_capacity_button: CheckButton
@@ -55,14 +60,17 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
-	if can_advance() and speed_multiplier > 1:
+	var effective_speed: int = get_effective_speed()
+	if can_advance() and effective_speed > 1:
 		# The normal clock still advances its own minutes. Add the remaining rate
 		# through the same minute/day signals without accelerating movement/physics.
-		_extra_minutes += delta * (speed_multiplier - 1) / maxf(TimeComponentManager.seconds_per_minute, 0.001)
-		while _extra_minutes >= 1.0 and can_advance():
+		_extra_minutes += delta * (effective_speed - 1) / maxf(TimeComponentManager.seconds_per_minute, 0.001)
+		while _extra_minutes >= 1.0 and can_advance() and not _raid_is_active():
 			_extra_minutes -= 1.0
 			TimeComponentManager.advance_one_minute()
 			TimeComponentManager.day_cycle()
+		if _raid_is_active():
+			_extra_minutes = 0.0
 	else:
 		_extra_minutes = 0.0
 	_refresh_controls()
@@ -73,19 +81,31 @@ func can_advance() -> bool:
 	var player: Player = get_tree().get_first_node_in_group("player") as Player
 	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
 
+func _raid_is_active() -> bool:
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state):
+		return false
+	if state.has_method("is_raid_active"):
+		return bool(state.call("is_raid_active"))
+	return str(state.get("phase")) in ["attacking", "looting"]
+
+func get_effective_speed() -> int:
+	# Preserve the chosen debug speed for automatic restoration after combat.
+	return 1 if _raid_is_active() else speed_multiplier
+
 func set_speed(multiplier: int) -> void:
-	if not SPEEDS.has(multiplier):
+	if not SPEEDS.has(multiplier) or _raid_is_active():
 		return
 	speed_multiplier = multiplier
 	_extra_minutes = 0.0
 	_refresh_controls()
 
 func step_minutes(minutes: int) -> void:
-	if minutes <= 0 or not can_advance():
+	if minutes <= 0 or not can_advance() or _raid_is_active():
 		return
 	# Check after each minute so a modal/collapse/transition can stop a jump.
 	for _minute in range(minutes):
-		if not can_advance():
+		if not can_advance() or _raid_is_active():
 			break
 		TimeComponentManager.advance_minutes(1)
 	_extra_minutes = 0.0
@@ -166,6 +186,103 @@ func set_player_guard(enabled: bool) -> void:
 	if enabled and player.has_method("_reset_debug_needs"):
 		player.call("_reset_debug_needs")
 	_refresh_player_guard_button()
+
+func give_wall_materials() -> bool:
+	if not OS.is_debug_build() or not can_advance():
+		return false
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state) or not is_instance_valid(state.storage):
+		return false
+	var quote: Dictionary = state.get_work_quote()
+	# Supply the next eligible improvement when the current wall is already sound.
+	if quote.materials.is_empty() and state.config.defense_improvements_enabled:
+		for kind: String in ["upgrade", "watchtower"]:
+			var improvement: Dictionary = state.get_work_quote(kind)
+			if not improvement.materials.is_empty():
+				quote = improvement
+				break
+	var available: Dictionary = state.storage.get_available_items()
+	var missing: Dictionary = {}
+	for id: String in quote.materials:
+		var amount: int = maxi(0, int(quote.materials[id]) - int(available.get(id, 0)))
+		if amount > 0:
+			missing[id] = amount
+	if missing.is_empty():
+		return false
+	var result: bool = state.storage.refund_materials(missing)
+	if result:
+		materials_status.text = "Wall materials added to City Storage (debug)."
+	_refresh_controls()
+	return result
+
+func cycle_raid_stage() -> bool:
+	if not OS.is_debug_build() or not can_advance():
+		return false
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state) or state.config.party_profile == null or not state.config.party_profile.composition_enabled:
+		return false
+	var stages: Array = state.config.party_profile.composition_stages
+	for index: int in range(stages.size()):
+		if stages[index].id == state._composition_stage:
+			var changed: bool = state.set_debug_threat_stage(stages[(index + 1) % stages.size()].id)
+			_refresh_controls()
+			return changed
+	return false
+
+func dispatch_raid_journey() -> bool:
+	if not OS.is_debug_build() or not can_advance():
+		return false
+	var state: Node = _get_raid_state()
+	if not is_instance_valid(state):
+		return false
+	var dispatched: bool = state.dispatch_debug_party()
+	_refresh_controls()
+	return dispatched
+
+func reset_wall_test() -> bool:
+	if not OS.is_debug_build():
+		_set_raid_error("Wall reset is debug only.")
+		return false
+	if not can_advance():
+		_set_raid_error("Resume gameplay and wake the player first.")
+		return false
+	var raid_state: Node = _get_raid_state()
+	if not is_instance_valid(raid_state) or not raid_state.has_method("get_status"):
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var status_value: Variant = raid_state.call("get_status")
+	if not status_value is Dictionary:
+		_set_raid_error("Raid controls are not ready.")
+		return false
+	var raid_status: Dictionary = status_value
+	if str(raid_status.get("phase", "")) in ["attacking", "looting"]:
+		_set_raid_error("A raid is already underway.")
+		return false
+	if int(raid_status.get("level", 0)) <= 0 or int(raid_status.get("hp", 0)) <= 0:
+		_set_raid_error("Rebuild the wall before resetting HP.")
+		return false
+	if int(raid_status.get("hp", 0)) >= int(raid_status.get("max_hp", 0)):
+		_set_raid_error("Wall HP is already full.")
+		return false
+	if not raid_state.has_method("reset_debug_wall"):
+		_set_raid_error("Wall reset is not available.")
+		return false
+	if not bool(raid_state.call("reset_debug_wall")):
+		_set_raid_error("Could not reset wall HP.")
+		_refresh_controls()
+		return false
+	materials_status.text = "Wall HP restored for testing."
+	_refresh_controls()
+	return true
+
+func _get_raid_state() -> Node:
+	if not is_instance_valid(WorkStateRuntime):
+		return null
+	return WorkStateRuntime.get_node_or_null("CityRaid")
+
+func _set_raid_error(message: String) -> void:
+	if is_instance_valid(materials_status):
+		materials_status.text = message
 
 func _top_up_inventory(target_items: Dictionary, success_message: String, capacity_message: String) -> bool:
 	if not OS.is_debug_build() or not can_supply_materials():
@@ -248,7 +365,7 @@ func _create_controls() -> void:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Local theme copy also covers tooltip text without changing the shared theme.
+	# Keep dynamically created controls on the same local pixel font.
 	var debug_theme: Theme = THEME.duplicate()
 	debug_theme.default_font = THEME.get_font("font", "HudShortcutButton")
 	debug_theme.default_font_size = 6
@@ -317,46 +434,66 @@ func _create_controls() -> void:
 	supply_buttons.add_theme_constant_override("separation", 3)
 	column.add_child(supply_buttons)
 	materials_button = _button("Build kit")
-	materials_button.tooltip_text = "Top up Inventory for one workshop: 6 Wood Logs, 12 Clay Lumps, 8 Reed Bundles."
 	materials_button.pressed.connect(give_build_materials)
 	materials_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supply_buttons.add_child(materials_button)
 	production_button = _button("Production")
-	production_button.tooltip_text = "Top up two mudbrick recipes and non-output materials for Drying Yard levels 1 and 2."
 	production_button.pressed.connect(give_production_materials)
 	production_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supply_buttons.add_child(production_button)
 	shekel_button = _button("100 Shekel")
-	shekel_button.tooltip_text = "Top up personal Inventory to 100 Shekel."
 	shekel_button.pressed.connect(give_shekel)
 	shekel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(shekel_button)
 	inventory_capacity_button = _check_button("Inventory 500")
-	inventory_capacity_button.tooltip_text = "Increase personal capacity for testing. Unload to the original limit before switching off."
 	inventory_capacity_button.toggled.connect(set_large_inventory)
 	column.add_child(inventory_capacity_button)
 	var guard_buttons := HBoxContainer.new()
 	guard_buttons.add_theme_constant_override("separation", 3)
 	column.add_child(guard_buttons)
 	worker_guard_check_button = _check_button("Worker guard")
-	worker_guard_check_button.tooltip_text = "Hold hired workers and linked citizens at 0.5 satisfaction / 0.9 reliability while enabled."
 	worker_guard_check_button.toggled.connect(set_worker_guard)
 	worker_guard_check_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	guard_buttons.add_child(worker_guard_check_button)
 	player_guard_check_button = _check_button("Player guard")
-	player_guard_check_button.tooltip_text = "Toggle the player's authored needs and fatigue debug protection."
 	player_guard_check_button.toggled.connect(set_player_guard)
 	player_guard_check_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	guard_buttons.add_child(player_guard_check_button)
 	materials_status = _label("")
 	materials_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(materials_status)
+	var raid_buttons := HBoxContainer.new()
+	raid_buttons.add_theme_constant_override("separation", 3)
+	column.add_child(raid_buttons)
+	column.move_child(raid_buttons, 4)
+	raid_journey_button = _button("Send raiders")
+	raid_journey_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_journey_button.pressed.connect(dispatch_raid_journey)
+	raid_buttons.add_child(raid_journey_button)
+	raid_journey_label = _label("")
+	raid_journey_label.name = "RaidJourney"
+	raid_journey_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(raid_journey_label)
+	column.move_child(raid_journey_label, 5)
+	raid_reset_button = _button("Reset wall HP")
+	raid_reset_button.name = "RaidWallReset"
+	raid_reset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_reset_button.pressed.connect(reset_wall_test)
+	raid_buttons.add_child(raid_reset_button)
+	wall_materials_button = _button("Wall materials")
+	wall_materials_button.pressed.connect(give_wall_materials)
+	column.add_child(wall_materials_button)
+	column.move_child(wall_materials_button, 5)
+	raid_stage_button = _button("Next party: Early")
+	raid_stage_button.name = "RaidStage"
+	raid_stage_button.pressed.connect(cycle_raid_stage)
+	column.add_child(raid_stage_button)
+	column.move_child(raid_stage_button, 6)
 	column.add_child(_label("DATE PICKUPS"))
 	date_status = _label("")
 	date_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(date_status)
 	date_refill_button = _button("Refill dates (all trees)")
-	date_refill_button.tooltip_text = "Debug only: fill missing ground pickups and clear their timers. Does not advance time or grant inventory items."
 	date_refill_button.pressed.connect(refill_dates)
 	column.add_child(date_refill_button)
 	column.add_child(_label("Close: Debug button / `"))
@@ -386,19 +523,63 @@ func _check_button(caption: String) -> CheckButton:
 	button.focus_mode = Control.FOCUS_NONE
 	return button
 
+func _refresh_raid_buttons(player_available: bool) -> void:
+	if raid_journey_button == null or raid_reset_button == null:
+		return
+	var state: Node = _get_raid_state()
+	var can_use: bool = OS.is_debug_build() and player_available
+	wall_materials_button.disabled = not can_use
+	raid_journey_button.disabled = true
+	raid_reset_button.disabled = true
+	raid_stage_button.disabled = true
+	raid_journey_label.text = "Build the wall to start the first journey."
+	if not is_instance_valid(state):
+		return
+	raid_journey_button.disabled = not (can_use and state.can_dispatch_debug_party())
+	var profile: Resource = state.config.party_profile
+	raid_stage_button.visible = profile != null and profile.composition_enabled
+	if raid_stage_button.visible:
+		var stage: Resource = profile.get_stage(state._composition_stage)
+		raid_stage_button.disabled = not can_use or stage == null
+		if stage != null:
+			raid_stage_button.text = "Next party: " + stage.display_name
+	var status: Dictionary = state.get_status()
+	var phase: String = str(status.get("phase", ""))
+	var raid_active: bool = phase in ["attacking", "looting"]
+	raid_reset_button.disabled = not (can_use and status.hp > 0 and status.hp < status.max_hp and not raid_active and str(status.get("work_kind", "")).is_empty())
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	if phase == "attacking":
+		raid_journey_label.text = "Raid in progress (clock x1)."
+	elif phase == "looting":
+		var seconds_left: float = maxf(0.0, float(status.get("loot_seconds_remaining", status.get("seconds_left", 0.0))))
+		raid_journey_label.text = "Raiders looting (%ds, clock x1)." % int(ceil(seconds_left))
+	elif state._attack_at < 0 and state._departure_at >= 0 and profile != null:
+		var until_departure: int = maxi(0, state._departure_at - now)
+		raid_journey_label.text = "Next departure in %dd %dh %dm (debug)." % [until_departure / 1440, (until_departure % 1440) / 60, until_departure % 60]
+	elif state._attack_at >= 0 and profile != null:
+		var remaining: int = maxi(0, state._attack_at - now)
+		raid_journey_label.text = "Raid arrives in %dd %dh %dm (debug)." % [remaining / 1440, (remaining % 1440) / 60, remaining % 60]
+		if state._departure_at > now:
+			raid_journey_label.text = "Recovery. " + raid_journey_label.text
+
 func _refresh_controls() -> void:
 	if status_label == null:
 		return
 	var available: bool = can_advance()
+	var raid_active: bool = _raid_is_active()
+	var raid_state: Node = _get_raid_state()
+	var looting: bool = is_instance_valid(raid_state) and str(raid_state.get("phase")) == "looting"
+	var effective_speed: int = get_effective_speed()
 	var status := "Day %d  %02d:%02d  x%d%s" % [TimeComponentManager.current_day, TimeComponentManager.current_hour,
-		TimeComponentManager.current_minute, speed_multiplier, "  PAUSED" if not available else ""]
+		TimeComponentManager.current_minute, effective_speed, "  PAUSED" if not available else ("  LOOT" if looting else ("  RAID" if raid_active else ""))]
 	if status != _last_status:
 		status_label.text = status
 		_last_status = status
 	for index in range(speed_buttons.size()):
-		speed_buttons[index].set_pressed_no_signal(SPEEDS[index] == speed_multiplier)
+		speed_buttons[index].set_pressed_no_signal(SPEEDS[index] == effective_speed)
+		speed_buttons[index].disabled = raid_active
 	for button in step_buttons:
-		button.disabled = not available
+		button.disabled = not available or raid_active
 	materials_button.disabled = not can_supply_materials()
 	production_button.disabled = not can_supply_materials()
 	shekel_button.disabled = not can_supply_materials()
@@ -406,6 +587,7 @@ func _refresh_controls() -> void:
 		worker_guard_check_button.set_pressed_no_signal(worker_guard_enabled)
 	_refresh_player_guard_button()
 	_refresh_inventory_capacity_button()
+	_refresh_raid_buttons(available)
 	_refresh_date_controls()
 
 func _get_date_states() -> Array[Node]:

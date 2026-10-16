@@ -1,0 +1,243 @@
+# Raid branch — wall and manual combat playtest
+
+Status: PASSED — NEEDS HUMAN REVIEW (build and manual raid checkpoint; random-raid balance remains pending).
+Date: 2026-10-05
+Branch: feature/time-world/raid-mvp
+Baseline: 83a67f3efb7bb734e4d5efd201ad02600e89369d (merchant MVP merge, PR #110)
+Starting working tree: first checkpoint began clean except the scope document; the second checkpoint preserves and extends its uncommitted changes.
+Risk: LEVEL 3 for the scoped runtime/storage integration. Director-owned balance is not enabled implicitly.
+
+## Latest Director direction
+
+The wall starts destroyed. The first playtest is building it: an instant, free Build button creates a level 1 wall with 50 HP. Durability is represented by HP for this checkpoint. Wall upgrades, weaponry and watchtowers follow later. The previously proposed 100 HP profile was superseded and was not enabled.
+
+The eventual raid lasts at most 60 real gameplay seconds, with a hit every five seconds. Raider strength minus wall Defend gives nonnegative wall damage. At zero HP the raiders enter; a result panel reports stock losses, destruction, satisfaction loss and fleeing residents. No soldiers exist yet.
+
+## Playtest instructions
+
+1. Run the normal project and enter the city map, or F6 `scenes/content_scene/content_scene.tscn`.
+2. In the lower-right wall panel, choose **Details**.
+3. The wall starts ruined at level 0. Choose **Build wall (free)**.
+4. Confirm level 1 and **50 / 50 HP**, with a filled durability bar. No time or Inventory materials are consumed.
+5. Close/reopen the panel and enter/leave home: the same wall state remains, with no repeat-build action.
+
+Construction has panel presentation only in this checkpoint. There is no new wall sprite, collision perimeter, construction animation, upgrade, weapon slot or paid repair economy.
+
+## Continuing the playtest: manual raids
+
+After building the wall, open **Debug** (button or backtick). The first row below
+time controls now offers:
+
+- **Raid light**: fixed debug damage of 3 HP per hit. From full 50 HP it survives
+  twelve five-second hits and ends at 14 HP after 60 real gameplay seconds.
+- **Raid heavy**: fixed debug damage of 5 HP per hit. From full HP it breaches on
+  the tenth hit, at 50 seconds. An already-damaged wall can breach sooner.
+- **Reset wall HP**: explicit debug restoration of a damaged standing wall, for
+  repeating tests. It does not change level, report, next schedule or balance.
+  A breached wall uses the existing **Rebuild wall (free)** action instead.
+
+Controls require an already-built wall, active gameplay and no ongoing attack.
+They never seed stock or citizens. Opening Debug does nothing to the raid state.
+The debug panel and old report close when a test starts, exposing the live HP bar.
+The result opens automatically once at the end. An active raid continues across
+home/map changes, and world-time acceleration does not accelerate its real-time
+hit counter. Pause and scene transitions suspend the counter.
+
+A separate free-repair API/button has fixture coverage but its production setting
+remains disabled pending the Director's balance choice. Nonzero theft, satisfaction
+and departure parameters also remain disabled in the main profile. The dormant
+population effects now go through CitizenManager and remove matching visible actors;
+reports in the main build-only profile correctly show zero such losses.
+
+## Runtime and UI
+
+`RaidBootstrap` on the city map creates a single `CityRaid` ledger under existing `WorkStateRuntime`, plus one persistent `RaidUI`. It follows the merchant's session ownership pattern and requires no new autoload. The production `wall_playtest.tres` explicitly permits free construction and leaves random raids disabled. The template resource is loaded after script initialization and deep-duplicated for runtime use. A regression exposed incomplete exported values on a compile-time preloaded template; runtime loading fixed this, and both the profile-value assertions and actual map Build test pass.
+
+The small HUD shows castle/wall HP and level. Details stay compact before any raid report; reports expand to a scrollable panel. The UI subscribes once, formats copies, opens each new report once and never reapplies losses. It does not pause or unpause other systems. Escape is handled only when otherwise unhandled and details are open.
+
+Wall state lasts for this running session. Closing the game resets it. No existing disk-save schema was changed; persistence across restarts is not claimed.
+
+## Raid foundation — test fixtures only
+
+The reusable state and report presentation are available through explicit debug tests and deterministic fixtures. They are not an enabled random-raid balance profile:
+
+- Building the initial wall starts a configurable grace period when raids are enabled.
+- A bounded random interval selects the next attack. Warning text does not reveal its exact date.
+- Repeated/rewound clock updates cannot reroll or duplicate an attack. A jump over a warning grants the configured preparation lead rather than replaying missed raids.
+- Clock progress schedules the event; attack strength is rolled once per raid, and elapsed real gameplay time produces individual hits. Pausing gameplay or a scene transition stops the attack timer. The last hit at 60 seconds resolves before the survival result.
+- Surviving damage remains. Reopening panels or calling Build again cannot heal a damaged standing wall.
+- Breach effects resolve once, then the next recovery interval starts. Report dictionaries are deep copies.
+- `CityToolStorage.take_raid_loot` subtracts actual counted stacks with a total whole-item capacity and a configurable reserve per stack. Sorted item IDs make the first foundation deterministic. Equipment, opened food portions, personal Inventory and unrelated workshop storage are not taken.
+- Test breach satisfaction loss applies to actual resident data, retains the existing 0.01 floor, and reports the actual average loss in percentage points. Fixture departures exclude workers and retain at least one resident.
+- Destruction currently counts the castle wall only. There is no general building damage/destruction system. A preexisting ruin is not counted as newly destroyed twice.
+
+Before enabling raids on the main map, the Director still needs to set Defend, attack strength, schedule, theft limits, satisfaction/departure rules and recovery/repair costs. Worker departure and destruction of other buildings require their own integration; the dormant foundation does not claim those systems are complete.
+
+## Changed files
+
+- New `scenes/raid/`: config script, build-only profile, state ledger, map bootstrap and UI scene/script (with script UID sidecars).
+- `scenes/content_scene/content_scene.tscn`: one bootstrap script resource/node.
+- `scenes/storage_destination/city_tool_storage.gd`: guarded bounded-loot API; inactive in the build-only profile.
+- `scenes/debug/time_debug_overlay.gd`: explicit manual raid/reset controls.
+- `scripts/autoload/citizen_manager/citizen_manager.gd`: guarded nonworker departure and signal.
+- `scenes/citizen_actor/citizen_actor.gd`: remove the actor matching a departed resident.
+- New test scenes/scripts: `test_scene_wall_build`, `test_scene_raid`, `test_scene_raid_ui`, `test_scene_raid_playtest`, `test_scene_raid_recovery`.
+- `scenes/test_scenes/content_depth_time_debug_test.gd`: isolate multi-day construction/depth verification from player needs; gameplay needs are unchanged.
+- `ROADMAP.md`, `ARCHITECTURE.md`, and this report: checkpoint status and ownership boundaries.
+
+No assets deleted/renamed; no control-pack, project-setting, plugin, autoload-definition or save-format changes. Godot editor side effects on project settings and three addon import metadata files were reverted after inspection.
+
+## Validation
+
+Engine: existing Godot 4.5.2, GL Compatibility. No engine/dependency installation.
+
+- Project editor import/parse and normal startup smoke: passed, no script/parse errors.
+- WallBuildTest: actual map UI build, HP/level, no resource/time charge, repeated use, menu pause ownership and home/map continuity.
+- RaidRegressionTest: synthetic schedule, hit timing, blocked/weak/breaching attacks, bounded stock conservation, satisfaction/flight, immutable reports and repeated resolution guards.
+- RaidUITest: HP/timer, auto-open once, rebind/unbind, accurate report units, no data mutation, viewport bounds and long report scrolling.
+- RaidPlaytestTest: actual Debug buttons, real five-second processing/pause, HP/results, active home/map continuation, rebuild, and Debug reset without enabling gameplay repair.
+- RaidRecoveryRegressionTest: repair guards, fixed strength per raid, recovery without rerolls, last unemployed resident protection, worker exclusion and actor departure signal.
+- Existing CityFoodStockTest and CityClothingNeedsTest passed at the first checkpoint; PopulationEmploymentIntegrationTest, MerchantMainMapLoopTest and DebugProductionFlowTest passed at the second checkpoint.
+- ContentDepthTimeDebugTest initially failed both on this branch and a separate checkout of baseline 83a67f3: multi-day advancement triggered player collapse and prevented construction completion. Its isolated fixture now disables player needs/fatigue; all original assertions remain. The corrected baseline and final branch graphical runs passed.
+- Graphical wall and report tests run at a 1200×675 desktop window with the project's 400×225 logical viewport. Captures inspected under `/workspace/scratch/raid-captures/`.
+- `git diff --check` and changed-file review: passed; only the listed scope remains changed.
+
+The virtual graphics driver cannot enable V-Sync; graphical validation used software rendering and Dummy audio. The initial capture attempt also reported no ALSA device; subsequent captures explicitly used Dummy audio. These are environment limitations, not gameplay failures. Android, restart persistence and live raid balancing are untested.
+
+Human playtest and merge remain pending. No commit, push or merge performed.
+
+### 2026-10-08 — attack screen warning
+- Requested presentation change: a soft red pulse around the screen edges while the castle is under attack.
+- RaidUI owns the mouse-transparent overlay, behind its controls. It follows the attacking phase, stops on resolution/unbind, and freezes animation with the existing raid pause/transition gates.
+- No gameplay balance or project settings changed.
+- Godot 4.5.2 RaidUITest passed headless and with GL Compatibility at 1200x675; captures inspected for the active red edges and clean post-raid report. Virtual-display VSync warning only.
+
+### 2026-10-08 — softer warning pulse
+- User feedback: reduce distracting pulse intensity. Peak edge opacity reduced from 55% to 22%, with a narrower opacity swing and a slower 3-second cycle (previously 1.6 seconds).
+- RaidUITest passed headless on Godot 4.5.2; diff check passed. The revised subjective intensity awaits local playtest.
+- Wall interaction versus City Layout remains a design discussion; construction flow is unchanged.
+
+### 2026-10-08 — wall painting setup
+- Imported the user's asset commit 141d32e by fast-forward.
+- Added empty ContentScene/YSortWorld/WallStone TileMapLayer and a separate wall_stone_tile_set.tres, with both 112x48 textures sliced into occupied 16x16 atlas cells.
+- Nearest filtering and existing world Y sorting retained. Layout is left for the user to paint; collision, terrain autotiling and raid-driven visual changes are not configured.
+- Godot 4.5.2 editor import and main-map headless launch completed without script/resource errors. No project settings or addon changes retained.
+
+### 2026-10-08 — ruined wall layout
+- Fast-forwarded the user's plot design (87924f0), preserving the ground layout and other scene edits.
+- Painted 67 cells on YSortWorld/WallStone using only atlas source 0 (wall_stone_0). The perimeter follows the outer edge of the northern city plot, with a three-tile southern entrance.
+- Wall artwork remains a static editor layout; construction/upgrade visual swapping and collision are not part of this pass.
+- Loaded/rendered the actual main scene in Godot 4.5.2 GL Compatibility and inspected a 1200x900 overview screenshot with HUD hidden and temporary overview camera. Capture-only camera/window changes were outside the repository.
+
+### 2026-10-08 — build from a physical wall spot
+- User requested wall improvement through a nearby spot or NPC instead of the HUD Details panel. Implemented a labeled Wall Management sign by the south wall using the existing nearest-interactable E routing; NPC art/dialogue remains a later extension.
+- Details and automatic raid reports are now read-only. The management view exposes the existing free instant build/rebuild only while the player has live physical access. Leaving range, changing maps, pausing or losing player availability revokes access; closing the panel never changes pause/movement ownership.
+- Authored wall cells now display source 0 when ruined and source 1 when HP is positive. Build/rebuild/breach and map reentry preserve the user's exact tile positions and atlas coordinates.
+- No new balance, repair approval, NPC behavior, collision or save schema. Scope remains the authorized raid UI/main-map integration with a narrow Player input route.
+- Godot 4.5.2 editor import and RaidUITest passed. GL Compatibility preview at 1200x675 verified the E prompt, management panel, successful 50 HP build and intact-wall artwork. Screenshots: /workspace/scratch/wall-management-spot.png, wall-management-menu.png, wall-management-built.png. Virtual-display VSync warning only.
+- WallBuildTest and RaidPlaytestTest passed: real Player E routing, read-only Details, immediate stale click after teleport, management closure on exit/map free, free build invariants, repair fixture, breach/rebuild and atlas/layout continuity. Final diff check passed.
+
+### 2026-10-08 — caretaker dialogue replaces the board
+- Director requested an NPC and repair dialogue instead of the wall board. Replaced the board art/caption with Mandor Tembok using the existing worker character assets; retained the node path and nearest-E routing.
+- Native Dialogue Manager conversation offers "Perbaiki tembok (gratis)" when the wall needs work, or "Nanti saja". The selected work directly builds/rebuilds a ruined wall or repairs a standing damaged wall after dialogue ends; no management panel is opened. Full HP and active raids explain why work is unavailable.
+- Retains free instant construction at level 1 / 50 HP and enables the existing free instant repair option for this requested repair playtest. No new costs, progression or random-raid balance.
+- The NPC holds only a wall_npc movement lock and never pauses the world clock. Physical access and authoritative wall state are rechecked at commit; cancel, leaving range, pause, collapse and map exit discard work and release the NPC lock.
+- Godot 4.5.2 dialogue import and RaidUITest passed. Native dialogue response tested in GL Compatibility at 1200x675: work completes at 50 HP and movement resumes. Dialogue/response screenshots inspected; portrait uses the same character appearance. Virtual-display VSync warning only.
+- WallBuildTest and RaidPlaytestTest passed on Godot 4.5.2: native response selection, decline, stale/out-of-range action rejection, movement/time cleanup, full-HP/active-raid/repair-disabled gating, repair and rebuild, and visual state across map changes. Helper initially used 4.6.3; root reran both with the required 4.5.2 binary. Diff check clean.
+
+### 2026-10-08 — caretaker location and English dialogue
+- Moved the NPC inside the south wall, renamed the visible role to Wall Keeper, removed the dialogue portrait and translated all conversation lines/responses into English.
+- Updated the existing dialogue tests for the English wording. Godot 4.5.2 import, WallBuildTest and RaidPlaytestTest passed after updating the old Indonesian text assertions. No repair rules changed.
+
+### 2026-10-08 — expeditions, warnings, and paid wall work
+- Director authorized all proposed next steps except gate/collision, then clarified raids as travelling parties and approved normal-only first: 3 days travel, detection 1 day before arrival, strength 5–7, Defend 2, and 3 days recovery before the next departure. Fast/heavy groups and watchtower/scout detection remain future extensions.
+- Approved costs: build/rebuild 10 Stone + 5 Wood Log / 120 game minutes; repair 1 Stone per started 5 missing HP / 60 game minutes, from City Storage.
+- First expedition departs on initial construction completion. Arrival timestamps remain fixed; large clock jumps can cross detection and immediately start the one due attack. Normal gameplay still supplies a full detection-day interval. Repeated/rewound snapshots do not replay arrivals.
+- The party resource separates travel and strength from detection/recovery. Existing randomized interval mode remains for isolated regression fixtures; normal main-profile arrivals now follow the explicit expedition model.
+- Iddin-Sin shows the quote and a Start wall work choice, shortage/progress text and detected-threat dialogue. HUD warns only after detection and displays remaining job minutes. Quote terms and supplies are revalidated before starting.
+- City Storage now accepts Stone and Wood Log. New counted-material consume/refund operations preflight all stacks atomically and guard reentrancy, without touching personal Inventory, unique gear or food portions. Work charges once, persists under CityRaid, pauses during attacks, and only changes HP on completion. A breached repair is cancelled/refunded; a blocked refund is retained for retry.
+- Main map lacks a Stone source, so Debug > Wall materials explicitly tops up only missing materials for the next quote. It is debug-only, respects player/pause guards, and does not seed normal gameplay. No gates/collision, worker assignment, save schema or nonzero raid loot/population losses were added.
+- Godot 4.5.2: RaidRegressionTest, WallWorkTest, WallBuildTest (explicit free fixture), RaidPlaytestTest (explicit free fixture), CityStorageMaterialConsumption test, RaidExpeditionTest, CityFoodStockTest and DebugProductionFlowTest passed. Expedition tests cover native paid dialogue, state across map reload, exact timestamps, late detection, attack range, safe gap, refunds/shortages, and debug material top-up without duplicates.
+- Editor import completed without script/resource errors. GL Compatibility 1200x675 screenshots of native cost dialogue and the detected-threat HUD were inspected at /workspace/scratch/wall-cost-dialogue.png and /workspace/scratch/raid-travel-warning.png. Temporary graphics/clock/material fixtures are not production seeds. Some simultaneous helper tests logged the existing godot-mcp loopback-port conflict; assertions and process exit were successful. Virtual-display VSync warning only in graphics preview.
+
+### 2026-10-08 — keep combat at normal clock speed
+- Director reported that the three-day journey felt like three days of attacks: Debug x60 advanced 2.5 game days during the existing 60-second combat timer.
+- Debug now enforces effective x1 during active combat, preserves the selected speed for restoration afterward, and disables speed selection and manual time jumps. Both accelerated-minute loops and manual jumps stop immediately when an arriving party begins attacking; leftover accelerated minutes are discarded.
+- Travel remains three game days; combat remains at most 60 active gameplay seconds, ending earlier on breach. No raid balance, global clock settings, or protected project settings changed.
+- Godot 4.5.2 headless RaidPlaytestTest, RaidExpeditionTest and DebugProductionFlowTest passed. Coverage includes scheduled arrival midway through a jump/accelerated frame, locked controls, restoration after survival and breach, and no leftover-minute burst. Visual layout was not changed; no new graphical preview was run.
+
+### 2026-10-08 — travelling debug raids and wall-local progress
+- Director requested that Debug follow the journey before combat, remove the persistent bottom-right raid card, provide a City Management shortcut, and show construction progress above the wall.
+- Removed Raid light/heavy buttons from Debug. Send raiders dispatches a normal party for the configured three-day journey during recovery; an existing journey cannot be restarted. The first party still departs on initial wall completion. Debug explicitly shows arrival days/hours/minutes; normal threat detection remains one day before arrival. Instant combat helpers remain only for synthetic test fixtures.
+- The former status card remains hidden. A city-map shortcut opens the read-only City Management wall/raid panel; construction and repairs still require Iddin-Sin. The shortcut hides on city-map exit and when no ledger is bound.
+- RaidBootstrap owns a world-space progress indicator above the eastern half of the south wall, clear of the NPC. It shows construction/repair progress and minutes remaining, switches to HP during attacks, and disappears when idle. It follows the world camera and disconnects on map exit.
+- Graphical review found and fixed a parent-busy initialization error, NPC overlap, and clipped progress text. Godot 4.5.2 editor import, RaidUITest, RaidExpeditionTest, RaidPlaytestTest and DebugProductionFlowTest passed. New coverage includes actual shortcut clicks, partial/completed work, HP, cleanup, no damage in transit, duplicate dispatch protection, and full debug travel.
+- GL Compatibility preview inspected at the project's logical 400x225 in a 1200x675 window: /workspace/scratch/wall-construction-progress.png, raid-three-day-journey.png, city-management-wall.png and wall-attack-progress.png. Initial parallel runs logged the existing MCP port conflict; the stale failed test process was stopped and final preview rerun. Virtual-display VSync warning only remains. Import-only project/addon changes restored; no protected settings changed.
+
+### 2026-10-08 — annotated UI polish
+- Director requested a bar-only wall indicator, removal of the floating City Management button in favor of a shortcut, font size 6 for warnings, and corrected margins/space/font sizes in both information and result panels.
+- Removed the indicator frame and labels; its 64x5 bar sits immediately above the south wall. Press C to toggle City Management; Escape still closes it. The shortcut respects city-map availability, other paused menus and player interaction locks.
+- Raid notice now explicitly uses the HUD pixel-font variation at size 6 with horizontal margins. Detail/report body uses 6, heading 12, inner margins 18 horizontal / 16 vertical and 4px content spacing. Compact panel sizes replace the nearly full-screen report and oversized idle panel. Old construction-complete text no longer accompanies active combat.
+- Godot 4.5.2 RaidUITest and RaidExpeditionTest passed; shortcut coverage checks open/close, paused menus and NPC movement locks. GL Compatibility preview inspected construction, warning, information and result views at logical 400x225 / window 1200x675. Only virtual-display VSync warning; no gameplay balance changed.
+
+### 2026-10-08 — wall discussion choices and merchant font
+- Director requested a properly sized portrait-free discussion area, Build/Not now choices on Enter with the panel retained, and merchant notice font size 6.
+- Wall conversation now uses a 240x104 panel with a full-width text area, no portrait frame, and Build/Repair + Not now choices inside the same panel. Enter while typing completes the line; the next Enter reveals choices. Shared balloon behavior is opt-in only for the wall, preserving other conversations.
+- Merchant visit notice now explicitly selects the HUD pixel-font variation at size 6, replacing the fallback-font appearance.
+- Godot 4.5.2 import, RaidExpeditionTest, RaidPlaytestTest and TravelingMerchantGreetingTest passed. Expedition regression exercises Enter via the balloon input handler and confirms text plus responses stay visible. Graphical review inspected the cost and choice panels and corrected texture-driven minimum-width expansion. Screenshot: /workspace/scratch/wall-cost-choices.png. Virtual display VSync warning only.
+- No breach rules changed: HP zero ends the raid, swaps wall to ruins and records the result. Loot/satisfaction/fleeing remain zero in the main profile; rebuild costs and the three-day recovery plus three-day next journey remain as authorized.
+
+### 2026-10-09 — immediate merchant dialogue preview
+- Director asked which scene controls the wall balloon and requested an immediately visible merchant for dialogue inspection.
+- Main-map TravelingMerchant now enables an Inspector-exposed debug_first_day_visit flag. On initial ledger creation in debug builds, a private configuration copy starts visits on day zero; the template resource and release behavior remain unchanged. Existing ledger stock/budget is never recreated on map reload.
+- Godot 4.5.2 TravelingMerchantGreetingTest passed. A real main-map day-zero preview verified presence, physical E access and the native greeting; screenshot inspected at /workspace/scratch/merchant-direct-dialogue.png. Virtual-display VSync warning only.
+- Shared artwork is dialogue/game_dialogue_balloon/game_dialogue_balloon.tscn; wall-specific runtime sizing remains in wall_management_spot.gd::_fit_dialogue(), merchant sizing in traveling_merchant.gd::_fit_greeting_to_viewport().
+
+### 2026-10-09 — match Iddin-Sin balloon to merchant
+- Director requested the merchant's compact dialogue-box layout for Iddin-Sin.
+- Restored the shared 176x60 artwork, empty left portrait frame, right text area and lower-left nameplate. Choices sit immediately below the artwork within the positioned root; Enter still retains the visible conversation.
+- Godot 4.5.2 RaidExpeditionTest passed. GL preview verified cost text and Build/Not now choices at /workspace/scratch/wall-cost-choices.png; no script errors, only the virtual-display VSync warning.
+
+### 2026-10-09 — compact horizontal wall choices
+- Director requested a lower dialogue and small side-by-side Build / Not now buttons.
+- Wall dialogue now reserves one 14px response row, with centered 40px minimum-width buttons and 4px separation. Reduced total root height from 92 to 78 and head gap from 8 to 4 brings the panel closer to Iddin-Sin.
+- Reuses the existing response-menu script on a wall-local HBoxContainer without changing plugin files or other dialogues. Fixed the dynamic script/container type binding discovered by initial parse checks.
+- Godot 4.5.2 RaidExpeditionTest passed. Visual preview confirmed the lower panel, padded horizontal buttons, and successful Build action; screenshot /workspace/scratch/wall-cost-choices.png. No script errors in final preview, only virtual-display VSync warning.
+
+### 2026-10-09 — notifications and detected-raider travel
+- Director requested a left 16x16 exclamation panel for merchant/raid notices, red threat text, and a castle/approaching-raider progress bar in City Management.
+- Replaced overlapping top text with a clickable, framed 16x16 notification button and bounded popup. It shows merchant status and detected/active raid information, links to City Management, supports Escape, respects pause/interaction locks, and hides on map exit.
+- Threat text and notification button turn red during warning/attack. The travel bar uses small drawn pixel icons and actual total/remaining journey minutes, updated on clock ticks. State exposes those schedule values only for detected or attacking parties; hidden departures remain hidden. Castle stays left and the raider approaches from the right.
+- Main profile reserve_per_stack is now zero per explicit instruction; theft capacity and satisfaction penalty remain zero. New loot rules, rarity classification and mixed-party movement are still design discussion, not implemented by this UI change. Existing ItemData already contains rarity/category/weight/base value metadata.
+- Godot 4.5.2 editor import and RaidUITest, RaidExpeditionTest, TravelingMerchantGreetingTest passed. Tests cover popup actions, pause guards, merchant refresh, hidden journeys, clock-driven movement, threat colors and signal cleanup. Root corrected the initially unframed exclamation icon to a centered icon inside the requested 16x16 panel.
+- Inspected GL Compatibility screenshots: /workspace/scratch/raid-notifications.png, raid-travel-panel.png and raid-travel-halfday.png. Final preview had no script errors; virtual-display VSync warning only. Unrelated editor import changes restored.
+- No new user storage assets were present in this workspace at completion; the request to help commit those assets remains for their later update.
+
+
+### 2026-10-09 — ranked looting and breach satisfaction
+- Director authorized sequential implementation and approved 10 weight per party, one item per active second, and 5 percentage-point satisfaction loss once when breached. No counted-stack reserve.
+- Added ranked preview/atomic one-item storage removal. Balanced selection considers existing value/food points per weight; food and valuables preferences are supported, rarity breaks score ties, then item ID stabilizes ties. Item definitions/prices are unchanged. Unique equipment instances and opened fractional food portions are outside this first API.
+- Breach enters looting for the remainder of the same 60-second attack budget. No wall means a full loot window; a last-second breach leaves no loot time. Retreat occurs at capacity, timeout or no fitting goods. Large frames preserve actual breach time, and transaction/reentrancy guards prevent duplicate theft.
+- Satisfaction applies at breach and is retained in the final report without reapplying. Reports include actual stolen items, weight, breach/loot timing and retreat reason. Citizen flight remains disabled. City Management shows live loot count/weight and countdown; threat styling and debug x1/skip/work locks persist through looting.
+- Godot 4.5.2: ranked storage, timed looting, raid, recovery, UI, main-map expedition and caretaker playtest tests passed. Coverage includes empty/depleted/overweight/zero-weight stock, ranking, conservation, pause, reentrancy, last-hit breach, approved main-profile integration and once-only satisfaction.
+- GL Compatibility preview inspected active looting and scrollable report at /workspace/scratch/raid-looting-active.png and raid-looting-result.png. Preview fixture breached at 10s and took 30 eggs plus 8 stone over 38s, then left because remaining wood exceeded capacity; satisfaction fell 5 pp. Only unsupported virtual-display VSync warning in the final preview. Mixed-party movement and city-level progression remain later work.
+
+
+### 2026-10-09 — compact city state, visible satisfaction and stock access
+- Director requested size-6/12 Notifications, no City Management button inside that popup, separate notification points, compact visual city status, a working next-party travel view, and investigation of invisible satisfaction/theft.
+- Notifications use size 6, padded bullet rows and Close. C opens current city state. Wall HP and live resident-average satisfaction use meters; an optional Last raid view presents brief outcome/loss values and item icons. A new detected party returns to current status, so a previous report cannot displace its travel indicator. Undetected journeys remain hidden under existing detection rules.
+- Exposed current loot-eligible City Storage count and affected-resident count for empty-state clarity. No residents renders satisfaction as --; the existing 1% floor and balance are unchanged. Read-only UI does not generate goods or residents.
+- Investigation found the production map had no CityStorageArea, while the separate content fixture did. Reused the existing access scene to the west of Iddin-Sin (main-map WorkerRuntime local -75,55), automatically bound by the existing adapter to the raid's persistent provider. Players can now use E and Deposit; no resources are seeded. Existing placeholder warehouse art is reused.
+- Main-map integration verifies E -> Deposit moves a synthetic Stone out of Inventory, then an undefended raid steals that same Stone. It also verifies the live satisfaction meter changes 50% -> 45% at breach. UI regression covers size-6 title, bullet notices, removed shortcut, compact result, default current view on reopen and moving next-party progress despite an existing report.
+- Godot 4.5.2 raid UI, expedition, caretaker, looting, core raid, recovery and ranked-storage checks passed. Existing supply-flow test still expected Stone/Wood Log rejection from before the approved wall-material change; updated its allowed-item expectations and reran the supply flow. Visual checks at logical 400x225/window 1200x675 inspect compact notifications, next-party journey, results and warehouse placement. Only virtual-display VSync warning in final preview.
+
+
+### 2026-10-10 — wall level 2, watchtower and Inspect
+- Branch feature/time-world/raid-mvp; baseline 224d076; starting working tree clean. Scoped runtime/dialogue integration retains LEVEL 3 risk, with gameplay values explicitly approved by the Director. No settings, plugins, autoloads or save format changes.
+- Director approved the MVP scope and explicit playtest values: level 2 grants 80 HP / Defend 3, costs 20 Stone + 10 Wood Log, and takes 240 game minutes. Watchtower costs 10 Stone + 10 Wood Log / 180 minutes and moves warning to two days before the normal party arrives. Completed tier/tower survive wall destruction.
+- Extended the existing single timed-work ledger with upgrade/watchtower quotes and jobs. Upgrade starts from a repaired standing level-1 wall; tower can be added to either standing tier. Quote reads spend nothing; confirmation validates the full displayed quote, consumes City Storage once and grants benefits only at completion. Work pauses during raid; breached unfinished repair/upgrade/tower work refunds once. Surviving raid damage carries through upgrade completion. Rebuild/repair use the retained tier maximum without changing raid timestamps.
+- Native Iddin-Sin dialogue adds Improve -> Wall Lv.2 / Watchtower -> Start / Back. English benefits/materials/time fit the existing empty-portrait merchant-style balloon with horizontal responses and size-6 text. Basic Build/Repair/Not now remains. Debug Wall materials supplies the next eligible upgrade/addition when the current wall is sound.
+- Tower detection recalculates on completion, including during a journey, without moving arrival. Undetected parties and parties without a tower remain Unknown. Authoritative inspect_raiders() is gated by completed tower plus detected/active phase; the UI calls it explicitly through Inspect and clears old intelligence when access ends. No scouting, mixed parties, guard posts, city level system or new balance beyond approved values.
+- Map bootstrap shows a small procedural tower marker at the south-east wall after completion; dedicated tower art can replace it. Existing wall tiles and collision rules are unchanged.
+- Added DefenseImprovementsTest and native DefenseDialogueTest for payments, duplicate/stale quotes, insufficient resources, timers, derived defense, paused/cancelled work, refund, damaged upgrades, real breach retention, map reload, native Back/Start, quote layout and actual Inspect. Updated prior expedition test to permit the new Improve response alongside Not now.
+- All nine Godot 4.5.2 target suites passed: defense improvements/dialogue, raid UI, expedition, playtest, wall work, core raid, recovery and looting. The native dialogue flow also passed GL Compatibility. Native graphical flow captures wall-upgrade-quote.png, watchtower-quote.png, watchtower-inspect.png and watchtower-world.png under /workspace/scratch. Final GL run passed; the virtual display cannot change VSync and the environment has no audio device, so Godot falls back to its dummy audio driver. No gameplay/script errors. Editor's unrelated project/plugin import changes excluded.
