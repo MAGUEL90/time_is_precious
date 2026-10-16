@@ -133,6 +133,7 @@ func _seed() -> void:
 
 func _assert_seed() -> void:
 	_expect(TimeComponentManager.current_day == 7, "A later-day checkpoint restores into a fresh day-zero session.")
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == 18, "Checkpoint restore preserves the eighteen palm-owned pickup views without duplicating them.")
 	var drops: Array = store.snapshot._capture_city_drops(content)
 	_expect(drops.size() == 1 and drops[0].quantity == 4 and drops[0].item_id == "clay_lump", "Dropped inventory items survive without duplication.")
 	_expect(Inventory.items.get("shekel") == 17 and Inventory.items.get("stone") == 3, "Player inventory survives the checkpoint.")

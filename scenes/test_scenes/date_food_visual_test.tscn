@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://scenes/test_scenes/date_food_visual_test.gd" id="1"]
+[node name="DateFoodVisualTest" type="Node"]
+script = ExtResource("1")

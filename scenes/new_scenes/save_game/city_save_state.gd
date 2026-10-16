@@ -522,9 +522,9 @@ func _capture_city_drops(map: Node) -> Array:
 		return WorkStateRuntime.get_node("CitySave").city_drops.duplicate(true)
 	var drops: Array = []
 	# Inventory drops are direct children of the player's YSortWorld. Worksite
-	# GroundOutput is owned separately by the worksite adapter.
+	# GroundOutput is owned by the worksite adapter; palm views by their session ledger.
 	for node: Node in map.get_node("YSortWorld").get_children():
-		if node is PickUpItem and not node.is_queued_for_deletion() and not node.is_collecting:
+		if node is PickUpItem and not node.is_in_group("date_palm_pickups") and not node.is_queued_for_deletion() and not node.is_collecting:
 			drops.append({"item_id": node.item_id, "quantity": node.quantity, "position": node.position})
 	return drops
 
@@ -534,7 +534,7 @@ func _restore_city_drops(drops: Array, map: Node) -> void:
 		return
 	var parent: Node = map.get_node("YSortWorld")
 	for node: Node in parent.get_children():
-		if node is PickUpItem:
+		if node is PickUpItem and not node.is_in_group("date_palm_pickups"):
 			node.free()
 	for data: Dictionary in drops:
 		var pickup: PickUpItem = PICKUP.instantiate()

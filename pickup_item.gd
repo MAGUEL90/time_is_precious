@@ -3,10 +3,14 @@ class_name PickUpItem extends Node2D
 const ITEM_CHANGE_POPUP_SCENE: PackedScene = preload("res://scenes/ui/item_change_popup/item_change_popup.tscn")
 const INVENTORY_FULL_COLOR: Color = Color(1.0, 0.0, 0.18, 1.0)
 
+signal collected
+
 var player_reff: Player
 
 @export var item_id: String
 @export var quantity: int = 1
+## Optional world sprite; inventory and popup keep the item data icon.
+@export var world_texture: Texture2D
 @onready var icon: Sprite2D = $Icon
 @onready var interactable_component: InteractableComponent = $InteractableComponent
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
@@ -30,10 +34,10 @@ func _ready() -> void:
 		push_error("PickupItem: item_id '%s' not found in ItemDatabase." % item_id)
 		return
 
-	if item_data.icon == null:
+	if world_texture == null and item_data.icon == null:
 		push_error("ItemData does not have icon.")
 
-	icon.texture = item_data.icon
+	icon.texture = world_texture if world_texture != null else item_data.icon
 	icon_default_position = icon.position
 	icon_default_scale = icon.scale
 	icon_default_modulate = icon.modulate
@@ -81,6 +85,7 @@ func on_player_interact(player: Player) -> void:
 		var is_success: bool = Inventory.call("try_add_item", item_id, quantity)
 		if is_success:
 			is_collecting = true
+			collected.emit()
 
 			if idle_tween and idle_tween.is_valid():
 				idle_tween.kill()

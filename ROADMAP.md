@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-10-11
+Last updated: 2026-10-17
 
 ## Purpose of This Document
 
@@ -18,6 +18,18 @@ Other documents have different jobs:
 - `DEMO_DISTRIBUTION.md` = demo rollout strategy after the prototype is ready.
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
+
+## Gameplay/main integration — review checkpoint (2026-10-17)
+
+The gameplay branch now combines the current wall/warehouse city layout with the
+six Food MVP palms, relocated with Game Director approval. Both raid and date
+debug controls remain available, while the later no-tooltip inventory policy is
+preserved. Food values, refill timing and save format are unchanged. Palm pickup
+views remain owned by their session ledger and are excluded from personal dropped
+items during city/home handoff and checkpoint restore. Palm stock/refill timers
+remain session-only; persisting them to disk is a separate outstanding boundary.
+The previous 72-hour walking results describe the old map, not these new positions.
+See `docs/task_reports/gameplay-main-integration-2026-10-17.md` for current checks.
 
 ## City progression MVP — implemented, pending human playtest (2026-10-10)
 
@@ -93,6 +105,20 @@ raider effects/statuses and disk saving remain future work. Citizen flight remai
 disabled. Unique equipment instances and opened food portions remain outside the
 counted-stack loot API. See `docs/task_reports/raider-composition-inspect-2026-10-10.md`
 for this checkpoint and `docs/task_reports/raid-mvp-scope-2026-10-05.md` for earlier scope.
+## Food MVP — six-palm walking playtest, pending human review (2026-10-05)
+
+The approved main-map layout now has six date palms. Each reuses the pickup scene,
+retains independent session stock, and replenishes missing slots after a random
+1–18 game hours, capped at three pickups by default. Debug stock/countdown/refill
+and the existing inventory consumption flow are integrated on `feature/item/food-mvp`.
+
+A scripted 72-hour walking route passed three seeds with active needs, normal
+movement/clock rates, real home doors/sleep, and 18 hours of wood gathering.
+Each run ate 108 dates, produced 35 logs and retained 6–15 dates without collapse.
+Travel, work and sleep are now covered together; human pacing, Godot 4.5.x/Windows,
+longer sessions and wider seed coverage remain pending. Keep current food values
+for review rather than treating these three samples as final balance approval.
+See `docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 was merged into main; Cooking, barley and new weather rules are deferred.
 
 ## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
 

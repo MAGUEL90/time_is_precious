@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=23 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -19,6 +19,10 @@
 [ext_resource type="TileSet" path="res://scenes/raid/wall_stone_tile_set.tres" id="27_wall_tiles"]
 
 [ext_resource type="PackedScene" path="res://scenes/raid/wall_management_spot.tscn" id="28_wall_spot"]
+
+[ext_resource type="Texture2D" uid="uid://cpqkibgpx517m" path="res://assets/objects/date_palm_tree.png" id="11_a6f02"]
+[ext_resource type="Texture2D" uid="uid://dx07s233vny6e" path="res://assets/objects/dates_pickup.png" id="12_fmlq8"]
+[ext_resource type="Script" path="res://scenes/pickup_item/date_palm_spawner.gd" id="26_date_spawner"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -118,6 +122,48 @@ shape = SubResource("RectangleShape2D_home_door")
 
 [node name="NightmareWorld" parent="YSortWorld" instance=ExtResource("23_nightmare")]
 position = Vector2(9744, 9792)
+
+[node name="DatePalmTree" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-384, -512)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(8, 30), Vector2(16, 40), Vector2(24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
+
+[node name="DatePalmTree2" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-144, -512)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
+
+[node name="DatePalmTree3" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-392, -440)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(8, 30), Vector2(16, 40), Vector2(24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
+
+[node name="DatePalmTree4" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-144, -440)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
+
+[node name="DatePalmTree5" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-256, -224)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
+
+[node name="DatePalmTree6" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(-144, -352)
+texture = ExtResource("11_a6f02")
+script = ExtResource("26_date_spawner")
+pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
+pickup_texture = ExtResource("12_fmlq8")
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
 visible = false

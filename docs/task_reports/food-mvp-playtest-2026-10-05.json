@@ -1,0 +1,358 @@
+{
+  "baseline": "d727b2236c452a0bc1ad8cd1059d527ad423a0be",
+  "engine": "Godot 4.6.3 headless",
+  "runs": [
+    {
+      "seed": 1,
+      "measurements": [
+        {
+          "eaten": 0,
+          "energy": 0.5,
+          "focus": 1.0,
+          "harvested": 0,
+          "hunger": 0.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 1,
+          "stage": "start",
+          "time": "D0 10:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.35000000000002,
+          "focus": 0.885310000000004,
+          "harvested": 3,
+          "hunger": 0.24,
+          "inventory": 0,
+          "remaining": 600,
+          "seed": 1,
+          "stage": "before_sleep",
+          "time": "D0 16:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.88300000000002,
+          "focus": 1.0,
+          "harvested": 3,
+          "hunger": 0.660000000000001,
+          "inventory": 0,
+          "remaining": 180,
+          "seed": 1,
+          "stage": "after_sleep",
+          "time": "D0 23:00"
+        },
+        {
+          "eaten": 9,
+          "energy": 0.61300000000002,
+          "focus": 0.686256999999996,
+          "harvested": 9,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 420,
+          "seed": 1,
+          "stage": "daily",
+          "time": "D1 10:00"
+        },
+        {
+          "eaten": 9,
+          "energy": 0.433000000000027,
+          "focus": 0.465734499999989,
+          "harvested": 9,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 60,
+          "seed": 1,
+          "stage": "before_sleep",
+          "time": "D1 16:00"
+        },
+        {
+          "eaten": 9,
+          "energy": 0.595500000000027,
+          "focus": 0.653234499999989,
+          "harvested": 9,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 1,
+          "stage": "after_sleep",
+          "time": "D1 23:00"
+        },
+        {
+          "eaten": 15,
+          "energy": 0.325500000000049,
+          "focus": 0.236080499999998,
+          "harvested": 15,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 240,
+          "seed": 1,
+          "stage": "daily",
+          "time": "D2 10:00"
+        },
+        {
+          "eaten": 15,
+          "energy": 0.242000000000058,
+          "focus": 0.0997250000000068,
+          "harvested": 15,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 73,
+          "seed": 1,
+          "stage": "collapse",
+          "time": "D2 12:47"
+        }
+      ],
+      "result": {
+        "delays_hours": [
+          16,
+          1,
+          14,
+          5,
+          10
+        ],
+        "eaten": 15,
+        "failures": 0,
+        "first_hunger_cap": "D1 08:40",
+        "harvested": 15,
+        "seed": 1,
+        "stop": "collapse",
+        "time": "D2 12:47"
+      }
+    },
+    {
+      "seed": 2,
+      "measurements": [
+        {
+          "eaten": 0,
+          "energy": 0.5,
+          "focus": 1.0,
+          "harvested": 0,
+          "hunger": 0.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 2,
+          "stage": "start",
+          "time": "D0 10:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.35000000000002,
+          "focus": 0.885310000000004,
+          "harvested": 3,
+          "hunger": 0.24,
+          "inventory": 0,
+          "remaining": 300,
+          "seed": 2,
+          "stage": "before_sleep",
+          "time": "D0 16:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.88300000000002,
+          "focus": 1.0,
+          "harvested": 3,
+          "hunger": 0.660000000000001,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 2,
+          "stage": "after_sleep",
+          "time": "D0 23:00"
+        },
+        {
+          "eaten": 9,
+          "energy": 0.61300000000002,
+          "focus": 0.701376999999996,
+          "harvested": 9,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 360,
+          "seed": 2,
+          "stage": "daily",
+          "time": "D1 10:00"
+        },
+        {
+          "eaten": 12,
+          "energy": 0.463000000000027,
+          "focus": 0.480854499999989,
+          "harvested": 12,
+          "hunger": 0.88,
+          "inventory": 0,
+          "remaining": 180,
+          "seed": 2,
+          "stage": "before_sleep",
+          "time": "D1 16:00"
+        },
+        {
+          "eaten": 12,
+          "energy": 0.684000000000027,
+          "focus": 0.735854499999989,
+          "harvested": 12,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 2,
+          "stage": "after_sleep",
+          "time": "D1 23:00"
+        },
+        {
+          "eaten": 18,
+          "energy": 0.414000000000039,
+          "focus": 0.341722499999984,
+          "harvested": 18,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 840,
+          "seed": 2,
+          "stage": "daily",
+          "time": "D2 10:00"
+        },
+        {
+          "eaten": 18,
+          "energy": 0.256000000000057,
+          "focus": 0.0999034999999992,
+          "harvested": 18,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 524,
+          "seed": 2,
+          "stage": "collapse",
+          "time": "D2 15:16"
+        }
+      ],
+      "result": {
+        "delays_hours": [
+          11,
+          4,
+          13,
+          3,
+          8,
+          17
+        ],
+        "eaten": 18,
+        "failures": 0,
+        "first_hunger_cap": "D1 08:40",
+        "harvested": 18,
+        "seed": 2,
+        "stop": "collapse",
+        "time": "D2 15:16"
+      }
+    },
+    {
+      "seed": 3,
+      "measurements": [
+        {
+          "eaten": 0,
+          "energy": 0.5,
+          "focus": 1.0,
+          "harvested": 0,
+          "hunger": 0.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 3,
+          "stage": "start",
+          "time": "D0 10:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.35000000000002,
+          "focus": 0.885310000000004,
+          "harvested": 3,
+          "hunger": 0.24,
+          "inventory": 0,
+          "remaining": 420,
+          "seed": 3,
+          "stage": "before_sleep",
+          "time": "D0 16:00"
+        },
+        {
+          "eaten": 3,
+          "energy": 0.88300000000002,
+          "focus": 1.0,
+          "harvested": 3,
+          "hunger": 0.660000000000001,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 3,
+          "stage": "after_sleep",
+          "time": "D0 23:00"
+        },
+        {
+          "eaten": 12,
+          "energy": 0.64300000000002,
+          "focus": 0.744336,
+          "harvested": 12,
+          "hunger": 0.960000000000001,
+          "inventory": 0,
+          "remaining": 600,
+          "seed": 3,
+          "stage": "daily",
+          "time": "D1 10:00"
+        },
+        {
+          "eaten": 12,
+          "energy": 0.463000000000023,
+          "focus": 0.527494499999991,
+          "harvested": 12,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 240,
+          "seed": 3,
+          "stage": "before_sleep",
+          "time": "D1 16:00"
+        },
+        {
+          "eaten": 12,
+          "energy": 0.625500000000023,
+          "focus": 0.714994499999991,
+          "harvested": 12,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 0,
+          "seed": 3,
+          "stage": "after_sleep",
+          "time": "D1 23:00"
+        },
+        {
+          "eaten": 15,
+          "energy": 0.325500000000042,
+          "focus": 0.293454999999994,
+          "harvested": 15,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 420,
+          "seed": 3,
+          "stage": "daily",
+          "time": "D2 10:00"
+        },
+        {
+          "eaten": 15,
+          "energy": 0.209000000000055,
+          "focus": 0.0993660000000051,
+          "harvested": 15,
+          "hunger": 1.0,
+          "inventory": 0,
+          "remaining": 187,
+          "seed": 3,
+          "stage": "collapse",
+          "time": "D2 13:53"
+        }
+      ],
+      "result": {
+        "delays_hours": [
+          13,
+          1,
+          4,
+          16,
+          18
+        ],
+        "eaten": 15,
+        "failures": 0,
+        "first_hunger_cap": "D1 10:40",
+        "harvested": 15,
+        "seed": 3,
+        "stop": "collapse",
+        "time": "D2 13:53"
+      }
+    }
+  ]
+}

@@ -147,6 +147,7 @@ func _verify_return_to_city() -> void:
 	_expect(not is_instance_valid(store.parked_worksite), "Returning to city releases the hidden projection after adoption.")
 	_expect(_same_snapshot(store.snapshot._sites.capture(runtime), before), "Return to city preserves the offscreen jobs, cargo, resource stock and ground yield.")
 	_expect(_wood_total() == 72, "All wood remains conserved across sleep and both scene transitions.")
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == 18, "Returning home/city recreates exactly eighteen palm views, not inventory drops.")
 	var drops: Array = store.snapshot._capture_city_drops(content)
 	_expect(drops.size() == 1 and drops[0].item_id == "clay_lump" and drops[0].quantity == 4, "Dropped player items survive the trip home exactly once.")
 	ui.open_details()
