@@ -1,6 +1,22 @@
 # Capture portrait: manual vs delegation
 
-## Pemasangan lokal Hendro
+## Status branch setelah integrasi — 2026-10-16
+
+Pekerjaan capture tersimpan di branch `content/portrait-capture`, commit
+`19d1da9`. Commit merge `11a6d13` mengintegrasikan startup/save `d901018` tanpa
+konflik dan tanpa mengubah script, scene, preset, atau tes capture.
+
+Pada branch ini, F5 membuka start menu dengan Continue / New Game / Quit.
+Untuk capture, buka `scenes/content_scene/capture/portrait_capture.tscn` dan F6.
+Preset lokal tetap memakai preview 360×640 dan hasil PNG 1080×1920.
+
+Verifikasi Windows/Godot 4.5.1 setelah integrasi mencakup capture headless dan
+grafis, PNG, hiring/hauling, New Game, save rusak, serta Continue kota/rumah.
+Rincian hasil terbaru ada di bagian awal laporan QA. Bagian berikut menyimpan
+riwayat pemasangan dan pengujian sebelumnya; nama branch/baseline di bagian
+riwayat bukan status checkout saat ini.
+
+## Riwayat pemasangan lokal Hendro
 
 Capture sudah dipasang langsung di
 `C:\Users\Hendro\OneDrive\Documents\Project\Github\time_is_precious` pada branch

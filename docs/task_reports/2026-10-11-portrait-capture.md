@@ -1,5 +1,54 @@
 # Portrait capture — laporan implementasi dan QA
 
+## Pengamanan konten dan integrasi startup/save — 2026-10-16
+
+Branch: `content/portrait-capture`. Baseline lokal: `696da34`.
+Scope: pengamanan konten dan integrasi terbatas LEVEL 2, sesuai permintaan
+Game Director untuk commit, fetch, integrasi `d901018`, verifikasi, dan push.
+
+- `19d1da9` menyimpan tepat 11 file capture, tes, dan dokumentasi yang sebelumnya
+  untracked. Seluruh file cocok dengan SHA-256 backup awal sebelum commit.
+- Fetch origin mengonfirmasi `origin/fix/gameplay-hud/ui-consistency` di `d901018`.
+- Merge `11a6d13` memiliki parent `19d1da9` dan `d901018`; tidak ada konflik.
+  Seluruh perubahan startup/save diterima utuh. Script, scene, preset, dan tes
+  capture tetap identik dengan pekerjaan konten semula.
+- Perubahan daftar dialog otomatis pada `project.godot` dan metadata
+  `scenes/raid/wall_stone_tile_set.tres` dikeluarkan dari commit konten/merge.
+  Keduanya dikembalikan sebagai perubahan lokal. TileSet cocok byte-per-byte
+  dengan backup; project settings mempertahankan perubahan lokal dan main scene
+  start menu dari `d901018`.
+- Backup 13 file awal, manifest SHA-256, patch, dan log QA berada di
+  `.git/codex-backups/portrait-capture-20261016-120648/` pada checkout lokal.
+  Stash pengaman `93d0ff317b7d7edfa67de00bf9b0500c7b7e56af` tetap disimpan setelah
+  diterapkan; stash lama tidak diubah.
+
+Godot **4.5.1**, Windows, GL Compatibility. APPDATA/LOCALAPPDATA QA diarahkan ke
+`.godot/portrait-integration-qa/profile/`; probe runtime memverifikasi lokasi
+`user://` tersebut sebelum pengujian. Save gameplay pengguna tidak digunakan.
+
+| Pemeriksaan setelah integrasi | Hasil |
+| --- | --- |
+| Import/parser editor | PASS, exit 0. |
+| PortraitCaptureTest headless dan grafis | PASS pada kedua mode, exit 0. |
+| PNG dan tampilan capture | PNG 1080×1920; opening dan Worker Progress diperiksa. |
+| MainMapHaulerStartTest | PASS, exit 0. |
+| StartMenuTest empty / corrupt | PASS; New Game dan preservasi/arsip save diuji. |
+| CitySaveTest write + StartMenuTest city | PASS; Continue kota dalam proses baru. |
+| CitySleepSaveTest write + StartMenuTest home | PASS; autosave sleep dan Continue rumah dalam proses baru. |
+| TravelingMerchantAccessTest | PASS, exit 0. |
+| Main scene dari project settings | Smoke test headless, exit 0. |
+| Empat sentinel slot normal QA | Primary/.bak/.tmp/.pending tetap identik. |
+| Diff, whitespace, scope | PASS; delta terhadap `d901018` hanya file konten terkait. |
+
+Satu warning `City checkpoint: invalid` memang dipicu oleh pengujian save rusak;
+tidak ditemukan script/parser error pada run akhir. Tampilan start menu juga
+diperiksa dari renderer grafis. Tombol restart R, audio, export/mobile, dan
+acceptance pengguna tidak diuji ulang pada pekerjaan integrasi ini.
+
+Bagian berikut merupakan riwayat pengembangan/QA sebelumnya. Pernyataan tentang
+branch, engine yang belum diuji, atau belum adanya commit berlaku pada tahap
+historis masing-masing, bukan hasil integrasi di atas.
+
 ## Revisi font dan rumah capture lokal
 
 Font capture diseragamkan ke `res://assets/font/pixel_rpg.ttf`, ukuran logis 6.
