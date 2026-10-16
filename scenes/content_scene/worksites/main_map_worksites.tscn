@@ -274,7 +274,7 @@ autowrap_mode = 2
 
 
 [node name="CityStorageArea" parent="." instance=ExtResource("12_city_storage")]
-position = Vector2(-75, 55)
+position = Vector2(-120, 55)
 
 [editable path="WorksiteMarkers/ClaySiteA"]
 [editable path="WorksiteMarkers/WoodSite"]
