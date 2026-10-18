@@ -1,0 +1,145 @@
+{
+  "baseline": "d6ea244 (temporary git archive; original test helper restored from this revision before valid comparison)",
+  "valid_comparison_setup": {
+    "command": "Godot --headless --editor --path <baseline-copy> --import",
+    "exit_code": 0,
+    "timeout_seconds": 30,
+    "log": "regression-logs/baseline_import.log"
+  },
+  "valid_city_progression_hub_comparison": [
+    {
+      "name": "city_progression_hub_valid_baseline",
+      "scene": "res://scenes/test_scenes/test_scene_city_progression_hub.tscn",
+      "timeout_seconds": 30,
+      "duration_seconds": 1.833,
+      "exit_code": 1,
+      "timed_out": false,
+      "pass_lines": [],
+      "fail_lines": [
+        "CityProgressionHubTest: FAIL"
+      ],
+      "runtime_error_count": 2,
+      "runtime_error_sample": [
+        "ERROR: Construction and attack status preserve the same City Hub frame.",
+        "ERROR: The dense City Hub fits the logical viewport."
+      ],
+      "leak_lines": [],
+      "result": "FAILED",
+      "log": "regression-logs/city_progression_hub_valid_baseline.log"
+    },
+    {
+      "name": "city_progression_hub_valid_baseline_after_3frames",
+      "scene": "res://scenes/test_scenes/test_scene_city_progression_hub.tscn",
+      "timeout_seconds": 30,
+      "duration_seconds": 1.922,
+      "exit_code": 1,
+      "timed_out": false,
+      "pass_lines": [],
+      "fail_lines": [
+        "CityProgressionHubTest: FAIL"
+      ],
+      "runtime_error_count": 1,
+      "runtime_error_sample": [
+        "ERROR: The dense City Hub fits the logical viewport."
+      ],
+      "leak_lines": [],
+      "result": "FAILED",
+      "log": "regression-logs/city_progression_hub_valid_baseline_after_3frames.log"
+    }
+  ],
+  "post_fix_home_save_continue_rechecks": [
+    {
+      "name": "postfix_city_sleep_write",
+      "project": "/workspace/time_is_precious",
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "args": [
+        "--sleep-save-phase=write"
+      ],
+      "data_group": "postfix_home_sleep_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 6.558,
+      "pass_lines": [
+        "CitySleepSaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/postfix_city_sleep_write.log"
+    },
+    {
+      "name": "postfix_start_menu_home_continue",
+      "project": "/workspace/time_is_precious",
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "args": [
+        "--menu-mode=home"
+      ],
+      "data_group": "postfix_home_sleep_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.749,
+      "pass_lines": [
+        "StartMenuTest home: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/postfix_start_menu_home_continue.log"
+    },
+    {
+      "name": "postfix_city_sleep_read",
+      "project": "/workspace/time_is_precious",
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "args": [
+        "--sleep-save-phase=read"
+      ],
+      "data_group": "postfix_home_sleep_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.915,
+      "pass_lines": [
+        "CitySleepSaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/postfix_city_sleep_read.log"
+    }
+  ],
+  "excluded_unimported_baseline_attempts": [
+    {
+      "name": "city_progression_hub_baseline",
+      "duration_seconds": 120.017,
+      "exit_code": null,
+      "timed_out": true,
+      "parse_error_count": 4026,
+      "first_parse_error": "SCRIPT ERROR: Parse Error: Could not find type \"ItemData\" in the current scope.",
+      "valid_hub_comparison": false,
+      "reason": "Fresh git-archive baseline had not been editor-imported; the missing ItemData type and imported resources caused a parse-error cascade. These results are setup failures, not Hub assertions; large raw cascade logs are intentionally excluded."
+    },
+    {
+      "name": "city_progression_hub_baseline_after_3frames",
+      "duration_seconds": 52.045,
+      "exit_code": -15,
+      "timed_out": false,
+      "parse_error_count": 4026,
+      "first_parse_error": "SCRIPT ERROR: Parse Error: Could not find type \"ItemData\" in the current scope.",
+      "valid_hub_comparison": false,
+      "reason": "Fresh git-archive baseline had not been editor-imported; the missing ItemData type and imported resources caused a parse-error cascade. These results are setup failures, not Hub assertions; large raw cascade logs are intentionally excluded."
+    }
+  ],
+  "interpretation": [
+    "With the imported baseline and original helper, CityProgressionHub fails both the same-frame status assertion and dense-viewport assertion.",
+    "In a separate temporary-copy probe, moving the helper’s existing three process_frame awaits before its headless early return removes the same-frame assertion but leaves dense-viewport failure. This is evidence of headless layout settling affecting one assertion; viewport fit still fails.",
+    "Post-fix home sleep-save write, fresh-process StartMenu home Continue, and sleep-save read all pass with exit 0 and no warnings, runtime errors, or leak diagnostics."
+  ]
+}

@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 ## Purpose of This Document
 
@@ -19,7 +19,49 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
-## Reusable pickup sources — branch checkpoint (2026-10-18)
+## Current merged baseline — PR #115 (2026-10-18)
+
+The current baseline includes PR #114 (gameplay/main integration, merge commit
+`78779c4`) and PR #115 (date-palm persistence and reusable pickup sources, merge
+commit `d6ea244`). The repository is on the PR #115 result; old branch and
+"pending merge" notes below describe their dated checkpoints only.
+
+PR #114 integrated the current city layout, warehouse access, raid/city
+progression work, startup Continue flow, sleep checkpoints and UI consistency.
+PR #115 generalized persistent pickup stock into registered city sources and
+upgraded the checkpoint format to v4. It reads v1/v2/v3 explicitly; v3 palm
+records migrate through the legacy six-palm adapter, while v4 requires an exact
+authored source/config match. New or changed source content in a v4 save
+generation still needs an explicit migration.
+
+The Game Director reported a Windows 4.5.1 manual sleep-checkpoint/Continue
+round trip with harvested palm stock restored, and confirmed
+`PickupSourcesTest: PASS`. These results are recorded in
+`docs/task_reports/reusable-pickup-sources-2026-10-18.md`. They validate that
+checkpoint/source path, not a full fresh-start daily or production journey.
+
+## Current validation gate — fresh-start first playthrough
+
+Cloud Godot 4.5.1 headless now demonstrates a fresh New Game with empty personal
+inventory/wallet/worker roster reaching two paid drying batches, a normal merchant
+brick sale, Drying Yard level 2, sleep checkpoint and exact separate-process
+Continue. Player and worker needs stay active; requests use natural RNG. The
+branch fixes a detached merchant view still receiving runtime-ledger signals.
+See `docs/task_reports/mvp-first-playthrough-2026-10-18.md` for runs and limitations.
+
+**Overall acceptance remains partial:** automated workshop progression is proven
+for the recorded samples, but human understanding/visuals are untested. Clothing,
+shelter and Stone have no normal supply path on this map, so city level-up and
+wall preparation are blocked by content/design decisions. First financing can
+wait multiple merchant visits. Existing fixture passes remain separate evidence.
+
+## Historical implementation checkpoints
+
+The dated sections that follow preserve the scope and evidence recorded at each
+checkpoint. Any old branch, local-only, pending-review or pending-merge wording
+is historical; consult the current merged baseline above for present status.
+
+### PR #115 — reusable pickup sources (merged 2026-10-18)
 
 Pickup sources now share configurable item/quantity, slot stock and optional refill
 behavior. Date palms are compatibility wrappers; their gameplay remains unchanged.
@@ -27,40 +69,43 @@ Schema v4 persists registered city sources without a six-tree writer list, and r
 v1/v2/v3 explicitly. The old six-ID list remains only in v3 migration. New content
 within a v4 save generation still requires an explicit layout/config migration.
 See `docs/task_reports/reusable-pickup-sources-2026-10-18.md` for usage, tests and
-scope limits. Human review remains pending.
+scope limits. The work was merged in PR #115; its prior branch-review status is closed.
 
-## Date palm disk persistence — branch checkpoint (2026-10-17)
+### Date palm disk persistence — original v3 checkpoint (2026-10-17)
 
-`fix/save-load/date-palm-persistence` extends the checkpoint to schema v3 with the
+The original persistence checkpoint extended the save format to schema v3 with the
 six palms' available slots, remaining refill minutes, and independent RNG state.
 Continue and home sleep checkpoints use the existing city/home load path with no
 offline progress. Legacy v1/v2 files explicitly start trees full with zero timer
 and fresh RNG; they contain no historical tree data. Gameplay and balance stay
 unchanged. Validation evidence and limitations are recorded in
-`docs/task_reports/date-palm-persistence-2026-10-17.md`. Human review remains pending.
+`docs/task_reports/date-palm-persistence-2026-10-17.md`. PR #115 subsequently
+generalized this state and advanced the active format to v4.
 
-## Gameplay/main integration — review checkpoint (2026-10-17)
+### PR #114 — gameplay/main integration (merged 2026-10-17)
 
 The gameplay branch now combines the current wall/warehouse city layout with the
 six Food MVP palms, relocated with Game Director approval. Both raid and date
 debug controls remain available, while the later no-tooltip inventory policy is
-preserved. Food values, refill timing and save format are unchanged. Palm pickup
-views remain owned by their session ledger and are excluded from personal dropped
-items during city/home handoff and checkpoint restore. Palm stock/refill timers
-remain session-only; persisting them to disk is a separate outstanding boundary.
+preserved. Food values and refill timing are unchanged. At this checkpoint palm
+stock/refill timers were session-only and palm views were excluded from personal
+drops during handoff/checkpoint restore. PR #115 later added disk persistence.
 The previous 72-hour walking results describe the old map, not these new positions.
-See `docs/task_reports/gameplay-main-integration-2026-10-17.md` for current checks.
+See `docs/task_reports/gameplay-main-integration-2026-10-17.md` for the PR #114
+integration evidence and its platform/playthrough limits.
 
-## City progression MVP — implemented, pending human playtest (2026-10-10)
+## City progression MVP — merged in PR #114 (2026-10-10 implementation checkpoint)
 
 Branch `feature/time-world/city-progression` adds session city level/progress to City Hub (C).
 Settled daily resident needs grant +5 each for all fed, all clothed, and average satisfaction >=70%.
 A missing wall costs 5 daily; an actual standing-wall breach costs 10 once. Progress clamps to
 0–100. At 100, Level Up advances one city level and resets progress; city levels never fall.
 Level 1 uses Early raiders, level 2 Developing, level 3+ Advanced for future departures only.
-Existing departing parties retain their composition and arrival. Disk persistence is still pending.
+Existing departing parties retain their composition and arrival. The original
+implementation note predated the PR #114 save integration; city progression is
+included in the current city checkpoint. Current normal-start results and remaining gates are recorded above.
 
-## Raid branch — mixed raider parties and Inspect cards (2026-10-10)
+## Raid system — merged in PR #114 (2026-10-10 implementation checkpoint)
 
 Approach **Iddin-Sin** inside the south wall, press **E**, advance the opening greeting, review the quote and
 choose **Build** or **Repair**. Enter reveals these choices alongside **Not now**,
@@ -120,15 +165,16 @@ pixel icon and x quantity, plus the current phase/ETA. Back or Escape returns to
 City Management; C closes both. Lost access, a new party, map exit and raid end
 clear old intelligence. Fonts use 6/12 and the former oversized tooltip is removed.
 
-Gate/collision work, scout patrols, guard posts/soldiers, weapons,
-raider effects/statuses and disk saving remain future work. Citizen flight remains
+Gate/collision work, scout patrols, guard posts/soldiers, weapons and
+raider effects/statuses remain future work. Raid disk saving was still future
+work at this checkpoint; PR #114 added raid state to the city save. Citizen flight remains
 disabled. Unique equipment instances and opened food portions remain outside the
 counted-stack loot API. See `docs/task_reports/raider-composition-inspect-2026-10-10.md`
 for this checkpoint and `docs/task_reports/raid-mvp-scope-2026-10-05.md` for earlier scope.
-## Food MVP — six-palm walking playtest, pending human review (2026-10-05)
+## Historical Food MVP — PR #111 six-palm walking checkpoint (2026-10-05)
 
-The approved main-map layout now has six date palms. Each reuses the pickup scene,
-retains independent session stock, and replenishes missing slots after a random
+The approved main-map layout introduced six date palms. At this checkpoint, each
+reused the pickup scene, retained independent session stock, and replenished missing slots after a random
 1–18 game hours, capped at three pickups by default. Debug stock/countdown/refill
 and the existing inventory consumption flow are integrated on `feature/item/food-mvp`.
 
@@ -138,9 +184,11 @@ Each run ate 108 dates, produced 35 logs and retained 6–15 dates without colla
 Travel, work and sleep are now covered together; human pacing, Godot 4.5.x/Windows,
 longer sessions and wider seed coverage remain pending. Keep current food values
 for review rather than treating these three samples as final balance approval.
-See `docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 was merged into main; Cooking, barley and new weather rules are deferred.
+PR #115 later added disk persistence for the source stock/timers. See
+`docs/task_reports/food-walking-playtest-2026-10-05.md`. PR #111 was merged into
+main; Cooking, barley and new weather rules are deferred.
 
-## Traveling merchant MVP — implementation complete, pending merge (2026-10-04)
+## Traveling merchant MVP — merged in PR #110 (2026-10-04)
 
 The Game Director selected the common traveling merchant as the next economy step,
 with customer quests and Rare visitors deferred. The feature branch adds finite
@@ -153,12 +201,14 @@ Prices, stock and purchase quotas are explicitly provisional playtest configurat
 Each visit now randomly selects one or two requests from wood (3–6) and dry
 bricks (10–20), with fixed prices and a stable request ledger during the visit;
 buying goods from the merchant never restores those quotas. Selling
-personally held sun-dried mudbricks provides Shekel; this does not complete the
-full zero-capital workshop construction/production loop or disk saving.
+personally held sun-dried mudbricks provides Shekel; at this checkpoint it did
+not complete the full zero-capital workshop construction/production loop or
+disk saving. Later PRs added city/home checkpoint persistence.
 The fixed-profile accounting regression verifies seven logs from six hours of
 wood gathering and a six-log sale for 12 Shekel. Randomized gameplay does not
 guarantee that request on the first visit; the randomized ledger passed a separate
-20-visit test. Human review and merge remain pending in PR #110.
+20-visit test. PR #110 later merged this MVP (merge commit `83a67f3`); the earlier
+pending-review statement is historical.
 
 The Game Director closed the merchant MVP scope: no additional request-explanation
 dialogue or quest flow. Keep the two-item request pool for this MVP. Broader goods,
@@ -190,7 +240,9 @@ Long-term progression should also avoid becoming fully deterministic. Controlled
 
 The project is currently in **Technical Prototype -> Playable Loop Integration**.
 
-The project is **not blocked by lack of systems**. The main objective is to connect and validate the systems that already exist as one complete player-facing loop.
+The existing systems support the recorded normal-start workshop loop. Remaining
+gates concern human readability, merchant pacing and missing supply paths for
+city progression/defense; adding large systems is not the current priority.
 
 ```text
 TIME IS PRECIOUS
@@ -209,17 +261,17 @@ TIME IS PRECIOUS
 |   |   |-- Collapse / Nightmare                     [MVP DONE]
 |   |   `-- Full-loop balance and validation         [IN PROGRESS]
 |   |
-|   |-- B. Core Production Loop                      [MAIN BLOCKER]
+|   |-- B. Core Production Loop                      [NORMAL-START AUTOMATION PASS; HUMAN QA OPEN]
 |   |   |-- Inventory / item handling                [DONE]
 |   |   |-- Workshop deposit / withdraw              [DONE]
 |   |   |-- Worker assignment                        [DONE - PROTOTYPE]
 |   |   |-- Profession/resource validation           [DONE - PROTOTYPE]
 |   |   |-- Start mudbrick job                       [DONE]
 |   |   |-- Produce wet_mudbrick                     [DONE]
-|   |   |-- Player-facing claim / continue flow      [PENDING]
-|   |   |-- Dry wet_mudbrick                         [PENDING]
-|   |   |-- Produce sun_dried_mudbrick               [PENDING]
-|   |   `-- Use final output for progression         [PENDING]
+|   |   |-- Player-facing claim / continue flow      [NORMAL-START AUTOMATION PASS]
+|   |   |-- Dry wet_mudbrick                         [NORMAL-START AUTOMATION PASS]
+|   |   |-- Produce sun_dried_mudbrick               [NORMAL-START AUTOMATION PASS]
+|   |   `-- Use final output for progression         [YARD UPGRADE / MERCHANT NORMAL-START PASS]
 |   |
 |   |-- C. Population / Worker Layer
 |   |   |-- Citizen generation                       [DONE - PROTOTYPE]
@@ -242,9 +294,9 @@ TIME IS PRECIOUS
 |   |
 |   `-- E. Persistence
 |       |-- Runtime state across scene changes       [DONE]
-|       `-- Real save / load to disk                 [PENDING]
+|       `-- City/home checkpoint + Continue          [IMPLEMENTED; TESTED SCOPE NOTED ABOVE]
 |
-|-- 2. INTERNAL PLAYTEST                             [NOT READY YET]
+|-- 2. INTERNAL PLAYTEST                             [ENTRY GATE NOT YET VERIFIED]
 |   |-- Complete daily loop without manual setup
 |   |-- Repeatable production loop
 |   |-- Condition / Sleep / Focus tuning
@@ -260,7 +312,11 @@ TIME IS PRECIOUS
 
 ## You Are Here
 
-The most important incomplete chain remains:
+The new normal-start driver completes two drying batches, pays production fees
+from earned sales, upgrades the yard and resumes after sleep/Continue. The older
+main-map integration fixture remains implementation coverage only. City-level
+progression uses a separate needs/wall ledger and lacks necessary supply paths.
+Human readability and long-term sustainability remain unverified.
 
 ```text
 Clay / straw / water
@@ -275,7 +331,8 @@ Clay / straw / water
 -> Visible / usable progression
 ```
 
-Until this chain is complete, avoid starting another large production chain or major management feature.
+Until the fresh-start path is reviewed, avoid expanding into another large
+production chain or major management feature.
 
 ## Approved Storage Integration Checkpoints - 2026-09-20
 
@@ -347,6 +404,15 @@ for the food checkpoint's verification and remaining limits.
 
 Work from top to bottom unless a concrete blocker requires otherwise.
 
+**Current gate (2026-10-18):** review the recorded normal-start automation, then
+resolve clothing/shelter/Stone scope and validate human understanding. Keep the
+user-reported Windows Continue result, existing fixtures and new normal-start
+journey evidence separate. No balance/content change is approved by these tests.
+
+The dated notes below are historical integration checkpoints. Their branch and
+merge status reflects the date of each note and does not replace the current
+baseline at the top of this roadmap.
+
 **Map authoring reset - 2026-09-28:** At the Game Director's request, ContentScene
 now has empty tile layers using `tile_set_base_new_28_09_2026.png`, retaining
 WorkshopPlot, Job Board and player/HUD support. Worksites, HomeDoor and the
@@ -401,12 +467,14 @@ The production-chain suite preserves the rejected empty-wallet payment check.
 See `scenes/test_scenes/README.md` for active entrypoints and result criteria, and
 `docs/task_reports/audit-part-1-cleanup-2026-10-03.md` for validation evidence.
 
-**Audit technical follow-up - 2026-10-04:** The approved parts 2–8 fixes and the
+**Historical audit technical follow-up - 2026-10-04:** The approved parts 2–8 fixes and the
 remaining clock, fade/Nightmare timing and shutdown cleanup have passed 41 unique
 regression suites on Godot 4.5.2, including graphical workshop/depth checks and
-real dialogue cycles. The Game Director chose to retain the minimal two-plot map;
-normal income, full normal-game integration and real disk saving remain separate
-unfinished features. Desktop software rendering was checked at the existing
+real dialogue cycles. The Game Director chose to retain the minimal two-plot map.
+At that audit date, normal income, full normal-game integration and real disk
+saving remained separate unfinished features. Later PRs integrated the current
+main map and city/home checkpoint; the 2026-10-18 audit records clean-start results.
+Desktop software rendering was checked at the existing
 viewport/window settings; local hardware/OS and Android playtests remain unverified.
 See `docs/task_reports/audit-followup-2026-10-04.md`. Human PR/merge review is pending.
 
@@ -418,7 +486,7 @@ Opening now shows both layers. MainMapWorkerHubTest and WorkshopPlotAccessTest
 pass; the user's K-specific symptom has not been reproduced. See
 `docs/task_reports/worker-hub-pause-investigation.md`.
 
-**Current handoff - 2026-09-26:** City Storage supply work is merged into main
+**Historical handoff - 2026-09-26:** City Storage supply work is merged into main
 through PR #105 (merge commit 2a7b773). The earlier instruction to remain on
 feature/workers/city-storage-supply is historical; do not reopen that completed
 branch merely because earlier checkpoint descriptions still say awaiting review.
@@ -451,18 +519,25 @@ Gather component has been removed. These are integrated locally; InitialWorkshop
 workers through manual gathering, hiring, construction and map reload without material
 seeding. See docs/task_reports/shared-resource-worksites.md. Job Board audit confirms the original
 basic hiring UI is still current; Worker Hub has no alternative applicant-hiring flow.
-The integration is locally validated, not merged. Do not mark Priority 1 complete:
-normal access to Shekel for production fees is still undefined, and the full daily loop
-with normal player/citizen needs and final UI remains unvalidated.
+Historical status at the end of September: that local integration was later
+merged through PR #108 and further incorporated by PR #114. Its test-owned
+resources and worker do not establish the normal fresh-start route. The full
+daily loop with ordinary player/citizen needs remains a validation question.
 
-## Priority 1 - Finish Mudbrick Output Chain
+## Priority 1 - Validate Fresh-Start Production
 
-- [ ] Make `wet_mudbrick` claim / continue-process flow fully player-facing.
-- [ ] Make drying process readable and usable without manual debugging.
-- [ ] Produce final `sun_dried_mudbrick` through the normal player flow.
-- [ ] Confirm final output can be seen, stored, and used for visible progression.
+- [x] Reach `wet_mudbrick` from a fresh normal start without supplied resources (headless).
+- [x] Complete claim/payment and two drying batches with active needs (headless).
+- [x] Confirm final `sun_dried_mudbrick` is stored and withdrawable; visual review remains open.
+- [x] Use earned final bricks for yard level 2 and normal merchant sales.
 
-**Exit condition:** the mudbrick loop can be completed repeatedly from inputs to final output without developer intervention.
+The authored main-map integration test completes two cycles with fixture-owned
+resources, a worker and Shekel. Use it as implementation coverage, not evidence
+that a fresh start completes this priority. The separate 2026-10-18 normal-start
+driver supplies that automated evidence; human readability remains open.
+
+**Exit condition:** the mudbrick loop can be completed repeatedly from normal
+inputs to final output without developer intervention.
 
 ## Priority 2 - Validate the Complete Daily Loop
 
@@ -482,8 +557,8 @@ Wake at home
 -> Continue into next day
 ```
 
-- [ ] Confirm no manual setup is required between steps.
-- [ ] Confirm scene transitions preserve intended runtime state.
+- [x] No developer supplies/setup between recorded normal-start steps (automated route).
+- [x] Recorded city/home transitions and separate-process Continue preserve the earned snapshot.
 - [ ] Confirm Sleep and Collapse rules do not break the day loop.
 - [ ] Confirm Job Board / Worker Hub / workshop state remains understandable.
 - [ ] Confirm accepted residents can reach applicant/hired/assigned states through the normal player-facing flow when conditions allow.
@@ -518,18 +593,21 @@ Tune/validate:
 
 **Exit condition:** time pressure, conditions and worker management create meaningful trade-offs without obvious exploits or opaque punishment.
 
-## Priority 5 - Save / Load Persistence
+## Priority 5 - Save / Load Scope and Follow-up
 
-Only after the runtime daily loop is stable:
+City/home checkpointing, sleep autosave and Continue are implemented. PR #115
+persists registered city pickup-source stock, refill timers and RNG using schema
+v4. The Game Director confirmed a Windows sleep-checkpoint/Continue round trip
+and `PickupSourcesTest: PASS` (see the current baseline and source report above).
 
-- [ ] Player conditions.
-- [ ] Sleep usage / day state.
-- [ ] Inventory.
-- [ ] Citizens / workers and employment states.
-- [ ] Workshop / production state as required.
-- [ ] Progression values.
+Remaining save work is limited to future scope such as multiple selectable slots,
+other map types, and explicit migration when authored source identities or
+configuration change. Do not describe the implemented city/home checkpoint as
+pending or imply that arbitrary-map persistence is complete.
 
-**Exit condition:** the playable prototype can be safely stopped and resumed.
+The implemented city/home checkpoint path has passed the scoped automated and
+user-reported checks noted above; full fresh-start playthrough validation remains
+separate.
 
 ## Priority 6 - Internal Playtest
 
@@ -567,9 +645,13 @@ Do not reopen this phase broadly unless a concrete blocker appears.
 
 Goal: connect existing systems into a readable, repeatable player-facing loop.
 
-Main remaining blocker:
+Main remaining gates:
 
-`wet_mudbrick -> claim / continue -> drying -> sun_dried_mudbrick -> progression`
+`human readability + merchant pacing + citizen/defense supply access`
+
+The claim/dry chain now has separate normal-start automated evidence as well as
+fixture coverage. City level-up and wall access remain blocked by missing supply;
+headless checks do not establish human understanding or final balance.
 
 ## Phase 1 - Core Loop Prototype
 
@@ -611,7 +693,10 @@ Merged implementation now includes:
 
 Population status and employment status must stay separate.
 
-Remaining work is mainly end-to-end gameplay validation, balancing, persistence, broader professions/content, and later systemic consequences — not rebuilding the lifecycle from scratch.
+Remaining work is mainly end-to-end gameplay validation, balancing, broader
+professions/content, and later systemic consequences — not rebuilding the
+lifecycle from scratch. City/home persistence is implemented; other save scopes
+are listed under Phase 5.
 
 Do not let Phase 2 expansion delay completion of the production / daily loop.
 
@@ -634,8 +719,8 @@ Use enough consistent art to make the prototype readable. Do not wait for final 
 **Status: Partially implemented.**
 
 Inventory, HUD, dialogue, Job Board and workshop interfaces exist at prototype level.
-The current-playable-loop UI consistency pass is implemented on
-`fix/gameplay-hud/ui-consistency`: shared small pixel fonts and disabled states,
+The current-playable-loop UI consistency pass was merged in PR #114:
+shared small pixel fonts and disabled states,
 City Hub Supply alignment, padded Inspect cards, centered physical City Storage,
 bounded inventory confirmations and Job Board empty-state placement. The existing
 Mesopotamian pixel style and player actions are preserved. Native visual review and
@@ -645,25 +730,29 @@ the current playable loop.
 
 ## Phase 5 - Save / Load
 
-**Status: City/home checkpoint and sleep autosave implemented on `feature/time-world/city-save-load`; awaiting playtest.**
+**Status: City/home checkpoint, sleep autosave and Continue implemented; scoped
+Windows and automated source checks passed.**
 
 Successful sleep now saves one checkpoint after recovery. Manual Save/Load buttons
-have been removed from City Hub. The startup menu on `fix/gameplay-hud/ui-consistency`
+have been removed from City Hub. PR #114 integrated the startup menu, which
 provides Continue, New Game and Quit. Continue restores city/home checkpoints; New Game
 requires confirmation when a checkpoint exists and archives the previous files.
 The slot covers stocks, residents, jobs, construction,
 progression and raids; home visits preserve the live worksite/hauling session. Loading
 a sleep checkpoint returns to the saved home position and time without offline production.
-Version-1 city saves remain readable. Supply also displays existing Shelter capacity.
+PR #115 advances source saves to schema v4 and retains explicit readers/migrations
+for earlier formats. Supply also displays existing Shelter capacity.
 The isolated worksite prototype slot stays separate. Multiple selectable slots and
 other-map saves remain follow-up work. F5 opens the startup menu; F6 runs the authored
 scene directly for content editing. The main map no longer forces a day-zero merchant
 in debug builds. See `docs/task_reports/2026-10-11-city-sleep-save.md` and
-`docs/task_reports/2026-10-11-content-ready.md`.
+`docs/task_reports/2026-10-11-content-ready.md`. Full fresh-start playthrough
+evidence is recorded separately in the 2026-10-18 audit.
 
 ## Phase 6 - Internal Playtest
 
-**Status: Not ready.**
+**Status: Automated normal-start loop demonstrated; human readability, pacing and
+city/defense supply decisions remain open.**
 
 Entry gate:
 - complete mudbrick chain

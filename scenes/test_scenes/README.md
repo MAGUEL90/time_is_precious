@@ -20,12 +20,13 @@ needs `godot --headless --editor --import --path .` before command-line tests.
 | `mudbrick_production_chain_integration_test.tscn` | Held output, rejected empty-wallet payment, fee payment, drying and overdue fees |
 | `population_employment_integration_test.tscn` | Population/employment separation and worker lifecycle |
 
-The current map has no resource sites or stockpile destinations. Worksite tests
-use the preserved `fixtures/content_worksites_map.tscn` or isolated Clay fixtures:
+The current PR #115 map has Clay, Wood, Reed, Straw and Water worksites and
+matching stockpiles under `YSortWorld/WorkerRuntime`. The earlier no-resource-map
+statement described the 2026-10-03 authoring checkpoint. Some worksite tests still
+use `fixtures/content_worksites_map.tscn` or isolated Clay fixtures:
 `resource_worksites_test.tscn` covers resource hauling and withdrawal, while
 `initial_workshop_start_test.tscn` covers gathering, hiring and construction.
-These fixtures do not establish that gathering or hauling is available on the
-current main map.
+Their fixture setups do not prove the complete current-map economy from zero.
 
 ## Audit regression cases
 
@@ -50,6 +51,23 @@ For automated Hauler fixtures, set `TIP_TEST_HAULER=1` for
 `clay_worksite_test/test_scene_clay_worksite_hauler.tscn`, or
 `TIP_TEST_HAULER_TARGET=1` for `clay_worksite_test/test_scene_hauler_delivery_setup.tscn`.
 Without those switches the scenes are interactive demos.
+
+## Known incompatible legacy entrypoint (2026-10-18)
+
+`current_map_funded_production_test.tscn` reuses the older
+`mudbrick_player_flow_test.gd` with `use_authored_map=true`. That branch still
+expects `YSortWorld/Worksites`; the current ContentScene uses WorkerRuntime.
+It fails before production and is not valid current-map acceptance evidence.
+Use `mudbrick_main_map_flow_test.tscn` for supplied integration coverage and
+`mvp_first_playthrough.tscn` for normal-start evidence. The old failure is retained
+in the audit report; do not count a timeout/forced shutdown as PASS.
+
+`test_scene_city_progression_hub.tscn` currently fails the dense attack/construction
+viewport check on the imported d6ea244 baseline as well as this branch. Its
+headless capture helper also returns before layout settling; a temporary
+three-frame probe removes the frame-equality failure but not viewport overflow.
+`test_scene_wall_build.tscn` also fails its older caretaker-dialogue assertions.
+See the 2026-10-18 audit evidence; neither is accepted as a passing suite.
 
 ## Reading results
 
@@ -110,5 +128,35 @@ The 2026-10-17 gameplay/main integration retains six palms on the newer wall cit
 layout. `date_pickup_access_test.tscn` checks all eighteen pickup positions for
 authored land, clear approach, real E interaction and restored movement. The older
 72-hour walking report/route is historical and does not certify this new layout.
-Palm pickup views are session-owned, separate from saved personal inventory drops;
-palm stock and refill timers are not yet part of the disk checkpoint.
+PR #115 persists registered source slots, refill timers and RNG in schema v4;
+source views stay separate from personal inventory drops. Explicit readers handle
+v1/v2/v3. See `test_scene_pickup_sources.tscn` and the 2026-10-18 source report.
+
+
+## Normal-start MVP journey (2026-10-18)
+
+`mvp_first_playthrough.tscn` is separate from supplied production fixtures. It
+opens New Game with zero personal resources/workers, walks using input, gathers,
+eats, supplies city food, hires, builds and pays for repeated brick production.
+Merchant requests remain randomized; player/worker needs remain active. UI
+callbacks and known routes make this system automation, not human/visual QA.
+
+Use **Godot 4.5.1** and a fresh isolated user-data directory for write. For example
+on Linux, after import (replace the binary path):
+
+```sh
+export XDG_DATA_HOME="$(mktemp -d /tmp/tip-journey.XXXXXX)"
+/path/to/Godot-4.5.1 --headless --path . --fixed-fps 60 res://scenes/test_scenes/mvp_first_playthrough.tscn -- --journey-phase=write
+/path/to/Godot-4.5.1 --headless --path . --fixed-fps 60 res://scenes/test_scenes/mvp_first_playthrough.tscn -- --journey-phase=read
+```
+
+Run the commands as two processes against the **same** data directory. The
+write phase requires two drying batches, a brick sale, yard level 2 and a sleep
+checkpoint for PASS; a day-limit without these goals is PARTIAL/exit 2. Read
+compares the entire saved snapshot at Continue before clock drift, then returns
+to the city and resumes food upkeep. Read counters start at zero: pair its result
+with its write run. Exit 0 plus the named PASS and **no runtime/leak errors** are
+required. Bound the process externally (the audit used 600s write / 120s read);
+a timeout is not a pass. `MVP_VISIT`, `MVP_MEASURE`, and `MVP_RESULT` expose the
+observed requests, economy and conditions. No seed is forced, so outcomes differ.
+See `docs/task_reports/mvp-first-playthrough-2026-10-18.md` for evidence and limits.

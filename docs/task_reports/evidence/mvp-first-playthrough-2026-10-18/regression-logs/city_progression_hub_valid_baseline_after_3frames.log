@@ -1,0 +1,10 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+ERROR: The dense City Hub fits the logical viewport.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _expect (res://scenes/test_scenes/test_scene_raid_expedition.gd:28)
+       [1] _run (res://scenes/test_scenes/test_scene_city_progression_hub.gd:68)
+       [2] capture_defense (res://scenes/test_scenes/test_scene_defense_dialogue.gd:163)
+CityProgressionHubTest: FAIL

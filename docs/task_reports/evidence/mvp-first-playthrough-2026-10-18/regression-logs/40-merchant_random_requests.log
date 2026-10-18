@@ -1,0 +1,24 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+RANDOM_VISIT 1 {"wood_log":5}
+RANDOM_VISIT 4 {"sun_dried_mudbrick":10,"wood_log":3}
+RANDOM_VISIT 7 {"sun_dried_mudbrick":18}
+RANDOM_VISIT 10 {"sun_dried_mudbrick":13,"wood_log":3}
+RANDOM_VISIT 13 {"sun_dried_mudbrick":20}
+RANDOM_VISIT 16 {"sun_dried_mudbrick":13,"wood_log":6}
+RANDOM_VISIT 19 {"sun_dried_mudbrick":11}
+RANDOM_VISIT 22 {"sun_dried_mudbrick":19,"wood_log":3}
+RANDOM_VISIT 25 {"sun_dried_mudbrick":16}
+RANDOM_VISIT 28 {"wood_log":5}
+RANDOM_VISIT 31 {"sun_dried_mudbrick":20}
+RANDOM_VISIT 34 {"sun_dried_mudbrick":14,"wood_log":6}
+RANDOM_VISIT 37 {"sun_dried_mudbrick":11,"wood_log":6}
+RANDOM_VISIT 40 {"wood_log":3}
+RANDOM_VISIT 43 {"sun_dried_mudbrick":15,"wood_log":5}
+RANDOM_VISIT 46 {"wood_log":4}
+RANDOM_VISIT 49 {"sun_dried_mudbrick":16}
+RANDOM_VISIT 52 {"wood_log":3}
+RANDOM_VISIT 55 {"sun_dried_mudbrick":18,"wood_log":5}
+RANDOM_VISIT 58 {"sun_dried_mudbrick":13,"wood_log":6}
+MerchantRandomRequestsTest: PASS unique_profiles=15

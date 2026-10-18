@@ -1,0 +1,1299 @@
+{
+  "engine": "/tmp/godot451/Godot_v4.5.1-stable_linux.x86_64",
+  "repo": "/workspace/time_is_precious",
+  "baseline": "d6ea244",
+  "suite_count": 48,
+  "completed_count": 48,
+  "passed_count": 45,
+  "failed_count": 3,
+  "results": [
+    {
+      "name": "pickup_sources",
+      "scene": "res://scenes/test_scenes/test_scene_pickup_sources.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "pickup_sources",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.17,
+      "named_pass_lines": [
+        "PickupSourcesTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "pickup_sources_write",
+      "scene": "res://scenes/test_scenes/test_scene_pickup_sources.tscn",
+      "args": [
+        "--sources-phase=write"
+      ],
+      "env": {},
+      "data_group": "pickup_source_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.111,
+      "named_pass_lines": [
+        "PickupSourcesTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "pickup_sources_read",
+      "scene": "res://scenes/test_scenes/test_scene_pickup_sources.tscn",
+      "args": [
+        "--sources-phase=read"
+      ],
+      "env": {},
+      "data_group": "pickup_source_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.586,
+      "named_pass_lines": [
+        "PickupSourcesTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "date_pickup",
+      "scene": "res://scenes/test_scenes/date_pickup_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "date_pickup",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 5.006,
+      "named_pass_lines": [
+        "DatePickupTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "date_respawn",
+      "scene": "res://scenes/test_scenes/date_respawn_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "date_respawn",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.108,
+      "named_pass_lines": [
+        "DateRespawnTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "date_tree_duplicate",
+      "scene": "res://scenes/test_scenes/date_tree_duplicate_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "date_tree_duplicate",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.016,
+      "named_pass_lines": [
+        "DateTreeDuplicateTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "date_pickup_access",
+      "scene": "res://scenes/test_scenes/date_pickup_access_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "date_pickup_access",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 21.268,
+      "named_pass_lines": [
+        "DatePickupAccessTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_values",
+      "scene": "res://scenes/test_scenes/test_scene_city_save_values.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_save_values",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.723,
+      "named_pass_lines": [
+        "CitySaveValuesTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_file",
+      "scene": "res://scenes/test_scenes/test_scene_city_save_file.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_save_file",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.813,
+      "named_pass_lines": [
+        "CitySaveFileTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_roundtrip",
+      "scene": "res://scenes/test_scenes/test_scene_city_save.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_save_roundtrip",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.045,
+      "named_pass_lines": [
+        "CitySaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 20,
+      "warning_lines": [
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: unsupported",
+        "WARNING: City checkpoint: invalid",
+        "WARNING: City checkpoint: read_required:"
+      ],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_write",
+      "scene": "res://scenes/test_scenes/test_scene_city_save.tscn",
+      "args": [
+        "--city-save-phase=write"
+      ],
+      "env": {},
+      "data_group": "city_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.014,
+      "named_pass_lines": [
+        "CitySaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_read",
+      "scene": "res://scenes/test_scenes/test_scene_city_save.tscn",
+      "args": [
+        "--city-save-phase=read"
+      ],
+      "env": {},
+      "data_group": "city_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.735,
+      "named_pass_lines": [
+        "CitySaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "start_menu_city_continue",
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "args": [
+        "--menu-mode=city"
+      ],
+      "env": {},
+      "data_group": "city_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.64,
+      "named_pass_lines": [
+        "StartMenuTest city: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_save_economy",
+      "scene": "res://scenes/test_scenes/test_scene_city_save_economy.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_save_economy",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.49,
+      "named_pass_lines": [
+        "CitySaveEconomyTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_sleep_save",
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_sleep_save",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 12.824,
+      "named_pass_lines": [
+        "CitySleepSaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 1,
+      "warning_lines": [
+        "WARNING: City checkpoint: changed:"
+      ],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_sleep_write",
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "args": [
+        "--sleep-save-phase=write"
+      ],
+      "env": {},
+      "data_group": "home_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 6.292,
+      "named_pass_lines": [
+        "CitySleepSaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "start_menu_home_continue",
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "args": [
+        "--menu-mode=home"
+      ],
+      "env": {},
+      "data_group": "home_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.575,
+      "named_pass_lines": [
+        "StartMenuTest home: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_sleep_read",
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "args": [
+        "--sleep-save-phase=read"
+      ],
+      "env": {},
+      "data_group": "home_continue",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.534,
+      "named_pass_lines": [
+        "CitySleepSaveTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "start_menu_empty",
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "args": [
+        "--menu-mode=empty"
+      ],
+      "env": {},
+      "data_group": "start_menu_empty",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.736,
+      "named_pass_lines": [
+        "StartMenuTest empty: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "start_menu_corrupt",
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "args": [
+        "--menu-mode=corrupt"
+      ],
+      "env": {},
+      "data_group": "start_menu_corrupt",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.828,
+      "named_pass_lines": [
+        "StartMenuTest corrupt: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 1,
+      "warning_lines": [
+        "WARNING: City checkpoint: invalid"
+      ],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "warehouse",
+      "scene": "res://scenes/test_scenes/test_scene_warehouse.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "warehouse",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.296,
+      "named_pass_lines": [
+        "PASS: One physical City Storage in ContentScene",
+        "PASS: Warehouse asset bound",
+        "PASS: Existing shared provider retained",
+        "PASS: Entrance and delivery point are accessible",
+        "PASS: Entrance is not inside building collision",
+        "PASS: Walking north is blocked by building footprint",
+        "PASS: E opens existing storage menu",
+        "PASS: Closing restores movement",
+        "PASS: E opens existing storage menu",
+        "PASS: Closing restores movement",
+        "PASS: Browsing never changes stock",
+        "PASS: Rear of warehouse cannot open storage",
+        "WarehouseTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "inventory_feedback_lifecycle",
+      "scene": "res://scenes/test_scenes/inventory_feedback_lifecycle_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "inventory_feedback_lifecycle",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 4.345,
+      "named_pass_lines": [
+        "InventoryFeedbackLifecycleTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "status_tab",
+      "scene": "res://scenes/test_scenes/status_tab_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "status_tab",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 7.377,
+      "named_pass_lines": [
+        "StatusTabTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "inventory_modal_pause",
+      "scene": "res://scenes/test_scenes/test_scene_inventory_modal_pause.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "inventory_modal_pause",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 8.773,
+      "named_pass_lines": [
+        "InventoryModalPauseTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "raid_regression",
+      "scene": "res://scenes/test_scenes/test_scene_raid.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "raid_regression",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.805,
+      "named_pass_lines": [
+        "RaidRegressionTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "raid_composition",
+      "scene": "res://scenes/test_scenes/test_scene_raid_composition.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "raid_composition",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.548,
+      "named_pass_lines": [
+        "RaidCompositionRegressionTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "raid_recovery",
+      "scene": "res://scenes/test_scenes/test_scene_raid_recovery.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "raid_recovery",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.804,
+      "named_pass_lines": [
+        "RaidRecoveryRegressionTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_progression",
+      "scene": "res://scenes/test_scenes/test_scene_city_progression.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_progression_retry_normal",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.919,
+      "named_pass_lines": [
+        "CityProgressionTest PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/28-city_progression-retry-normal.log"
+    },
+    {
+      "name": "city_progression_hub",
+      "scene": "res://scenes/test_scenes/test_scene_city_progression_hub.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_progression_hub",
+      "exit_code": 1,
+      "timed_out": false,
+      "duration_seconds": 1.836,
+      "named_pass_lines": [],
+      "fail_lines": [
+        "CityProgressionHubTest: FAIL"
+      ],
+      "runtime_error_lines": [
+        "ERROR: Construction and attack status preserve the same City Hub frame.",
+        "ERROR: The dense City Hub fits the logical viewport."
+      ],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "FAILED",
+      "log": "regression-logs/29-city_progression_hub.log"
+    },
+    {
+      "name": "city_storage_hauling",
+      "scene": "res://scenes/test_scenes/clay_worksite_test/test_scene_city_storage_hauling.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_storage_hauling",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.55,
+      "named_pass_lines": [
+        "CityStorageHaulingTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_tool_supply",
+      "scene": "res://scenes/test_scenes/clay_worksite_test/test_scene_city_tool_supply.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_tool_supply",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.803,
+      "named_pass_lines": [
+        "CityToolSupplyTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "storage_destination",
+      "scene": "res://scenes/test_scenes/test_scene_storage_destination.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "storage_destination",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.709,
+      "named_pass_lines": [
+        "StorageDestinationTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_storage_overflow",
+      "scene": "res://scenes/test_scenes/test_scene_city_storage_overflow.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_storage_overflow",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.709,
+      "named_pass_lines": [
+        "CityStorageOverflowTest PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_storage_material_consumption",
+      "scene": "res://scenes/test_scenes/test_scene_city_storage_material_consumption.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_storage_material_consumption",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.709,
+      "named_pass_lines": [
+        "CityStorageMaterialConsumptionTest PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_storage_supply_flow",
+      "scene": "res://scenes/test_scenes/clay_worksite_test/test_scene_city_storage_supply_flow.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_storage_supply_flow",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.755,
+      "named_pass_lines": [
+        "CityStorageSupplyFlowTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "clay_worksite_hauler",
+      "scene": "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite_hauler.tscn",
+      "args": [],
+      "env": {
+        "TIP_TEST_HAULER": "1"
+      },
+      "data_group": "clay_worksite_hauler",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 1.27,
+      "named_pass_lines": [
+        "ClayWorksiteHaulerTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "hauler_delivery_setup",
+      "scene": "res://scenes/test_scenes/clay_worksite_test/test_scene_hauler_delivery_setup.tscn",
+      "args": [],
+      "env": {
+        "TIP_TEST_HAULER_TARGET": "1"
+      },
+      "data_group": "hauler_delivery_setup",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.29,
+      "named_pass_lines": [
+        "HaulerDeliverySetupTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "resource_worksites",
+      "scene": "res://scenes/test_scenes/resource_worksites_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "resource_worksites",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.666,
+      "named_pass_lines": [
+        "ResourceWorksitesTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "city_storage_ranked_raid_loot",
+      "scene": "res://scenes/test_scenes/test_scene_city_storage_ranked_raid_loot.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "city_storage_ranked_raid_loot",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.71,
+      "named_pass_lines": [
+        "CityStorageRankedRaidLootTest PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "merchant_random_requests",
+      "scene": "res://scenes/test_scenes/test_scene_merchant_random_requests.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "merchant_random_requests",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 2.481,
+      "named_pass_lines": [
+        "MerchantRandomRequestsTest: PASS unique_profiles=15"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/40-merchant_random_requests.log"
+    },
+    {
+      "name": "merchant_main_map_loop",
+      "scene": "res://scenes/test_scenes/test_scene_merchant_main_map_loop.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "merchant_main_map_loop",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 12.338,
+      "named_pass_lines": [
+        "MerchantMainMapLoopTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/41-merchant_main_map_loop.log"
+    },
+    {
+      "name": "traveling_merchant_access",
+      "scene": "res://scenes/test_scenes/test_scene_traveling_merchant_access.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "traveling_merchant_access",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.315,
+      "named_pass_lines": [
+        "TravelingMerchantAccessTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/42-traveling_merchant_access.log"
+    },
+    {
+      "name": "mudbrick_production_chain",
+      "scene": "res://scenes/test_scenes/mudbrick_production_chain_integration_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "mudbrick_production_chain",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.713,
+      "named_pass_lines": [
+        "MudbrickProductionChainIntegrationTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "mudbrick_player_flow",
+      "scene": "res://scenes/test_scenes/mudbrick_player_flow_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "mudbrick_player_flow",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 3.874,
+      "named_pass_lines": [
+        "MudbrickPlayerFlowTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "mudbrick_main_map_flow",
+      "scene": "res://scenes/test_scenes/mudbrick_main_map_flow_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "mudbrick_main_map_flow",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 4.162,
+      "named_pass_lines": [
+        "MudbrickPlayerFlowTest PASSED"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": null
+    },
+    {
+      "name": "current_map_funded_production",
+      "scene": "res://scenes/test_scenes/current_map_funded_production_test.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "current_map_funded_production",
+      "exit_code": 1,
+      "timed_out": false,
+      "duration_seconds": 2.008,
+      "named_pass_lines": [],
+      "fail_lines": [],
+      "runtime_error_lines": [
+        "ERROR: Node not found: \"YSortWorld/Worksites\" (relative to \"ContentScene\").",
+        "SCRIPT ERROR: Invalid assignment of property or key 'seed_playtest_hauler' with value of type 'bool' on a base object of type 'null instance'.",
+        "SCRIPT ERROR: Invalid access to property or key 'construction' on a base object of type 'Nil'.",
+        "SCRIPT ERROR: Invalid access to property or key 'current_interactable' on a base object of type 'Nil'.",
+        "ERROR: The expected UI did not open: res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd",
+        "SCRIPT ERROR: Cannot call method 'find_child' on a null value.",
+        "SCRIPT ERROR: Invalid access to property or key 'manage_button' on a base object of type 'Nil'.",
+        "ERROR: 2 RID allocations of type 'P11GodotBody2D' were leaked at exit.",
+        "ERROR: 14 RID allocations of type 'P11GodotArea2D' were leaked at exit.",
+        "ERROR: 71 RID allocations of type 'P12GodotShape2D' were leaked at exit.",
+        "ERROR: 151 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 10 RID allocations of type 'N13RendererDummy9DummyMeshE' were leaked at exit.",
+        "ERROR: 1 RID allocations of type 'N13RendererDummy15MaterialStorage13DummyMaterialE' were leaked at exit.",
+        "ERROR: 1 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.",
+        "ERROR: 114 RID allocations of type 'PN18TextServerAdvanced22ShapedTextDataAdvancedE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 1223 resources still in use at exit (run with --verbose for details)."
+      ],
+      "leak_lines": [
+        "ERROR: 2 RID allocations of type 'P11GodotBody2D' were leaked at exit.",
+        "ERROR: 14 RID allocations of type 'P11GodotArea2D' were leaked at exit.",
+        "ERROR: 71 RID allocations of type 'P12GodotShape2D' were leaked at exit.",
+        "ERROR: 151 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 10 RID allocations of type 'N13RendererDummy9DummyMeshE' were leaked at exit.",
+        "ERROR: 1 RID allocations of type 'N13RendererDummy15MaterialStorage13DummyMaterialE' were leaked at exit.",
+        "ERROR: 1 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.",
+        "ERROR: 114 RID allocations of type 'PN18TextServerAdvanced22ShapedTextDataAdvancedE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "WARNING: ObjectDB instances leaked at exit (run with --verbose for details).",
+        "ERROR: 1223 resources still in use at exit (run with --verbose for details)."
+      ],
+      "warning_count": 3,
+      "warning_lines": [
+        "WARNING: 10 RIDs of type \"Canvas\" were leaked.",
+        "WARNING: 384 RIDs of type \"CanvasItem\" were leaked.",
+        "WARNING: ObjectDB instances leaked at exit (run with --verbose for details)."
+      ],
+      "result": "FAILED",
+      "log": "regression-logs/46-current_map_funded_production.log"
+    },
+    {
+      "name": "wall_build_dialogue",
+      "scene": "res://scenes/test_scenes/test_scene_wall_build.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "wall_build_dialogue",
+      "exit_code": 1,
+      "timed_out": false,
+      "duration_seconds": 52.75,
+      "named_pass_lines": [],
+      "fail_lines": [
+        "WallBuildTest: FAIL"
+      ],
+      "runtime_error_lines": [
+        "ERROR: The caretaker shows the introductory wall dialogue before responses.",
+        "ERROR: A ruined wall offers free construction or declining.",
+        "ERROR: Wall greeting exposes the Not now response.",
+        "ERROR: Wall dialogue ends or cancels cleanly.",
+        "ERROR: Ending wall dialogue releases its Player movement lock without pausing time.",
+        "ERROR: The caretaker offers work while the wall is ruined and Player is nearby.",
+        "ERROR: Wall greeting exposes the Repair wall (free) response.",
+        "ERROR: Returning to range restores the caretaker work response.",
+        "ERROR: Wall greeting exposes the Repair wall (free) response.",
+        "ERROR: Wall dialogue ends or cancels cleanly.",
+        "ERROR: Ending wall dialogue releases its Player movement lock without pausing time.",
+        "ERROR: The real dialogue response builds level 1 at 50 HP.",
+        "ERROR: HP bar shows the actual full wall durability.",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-25, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-25, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-24, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-24, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-23, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-23, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-22, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-22, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-21, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-21, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-20, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-20, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-19, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-19, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-18, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-17, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-16, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-15, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-15, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-14, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-14, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-13, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-13, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-12, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-12, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-11, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-11, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-10, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-10, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-9, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-9, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -34) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -33) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -33) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -32) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -32) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -31) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -31) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -30) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -30) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -29) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -29) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -28) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -28) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -27) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -27) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -26) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -26) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -25) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -25) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -24) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -24) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -23) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -23) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -22) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -22) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -21) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -21) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -20) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -20) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -19) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -19) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-26, -18) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-8, -18) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-17, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-18, -17) source)",
+        "ERROR: Building changes every existing wall cell to the intact tile source while preserving coordinates (cell (-16, -17) source)",
+        "ERROR: Opening read-only Details and forcing both action signals cannot build or repair.",
+        "ERROR: A full wall does not offer unnecessary free repairs.",
+        "ERROR: Wall greeting exposes the Not now response.",
+        "ERROR: Wall dialogue ends or cancels cleanly.",
+        "ERROR: Ending wall dialogue releases its Player movement lock without pausing time.",
+        "ERROR: A full wall does not offer unnecessary free repairs.",
+        "ERROR: Wall greeting exposes the Not now response.",
+        "ERROR: Wall dialogue ends or cancels cleanly.",
+        "ERROR: Ending wall dialogue releases its Player movement lock without pausing time.",
+        "ERROR: A full wall does not offer unnecessary free repairs.",
+        "ERROR: Wall greeting exposes the Not now response.",
+        "ERROR: Wall dialogue ends or cancels cleanly.",
+        "ERROR: Ending wall dialogue releases its Player movement lock without pausing time.",
+        "ERROR: Repeated requests do not rebuild or grant extra levels."
+      ],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "FAILED",
+      "log": "regression-logs/47-wall_build_dialogue.log"
+    },
+    {
+      "name": "wall_work",
+      "scene": "res://scenes/test_scenes/test_scene_wall_work.tscn",
+      "args": [],
+      "env": {},
+      "data_group": "wall_work",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_seconds": 0.805,
+      "named_pass_lines": [
+        "WallWorkTest: PASS"
+      ],
+      "fail_lines": [],
+      "runtime_error_lines": [],
+      "leak_lines": [],
+      "warning_count": 0,
+      "warning_lines": [],
+      "result": "PASSED",
+      "log": "regression-logs/48-wall_work.log"
+    }
+  ],
+  "unique_scene_path_count": 39,
+  "invocation_count_note": "48 serial scene invocations across 39 unique .tscn paths; repeated write/read and StartMenu modes are separate invocations, not unique scenes.",
+  "invocation_method": {
+    "engine": "/tmp/godot451/Godot_v4.5.1-stable_linux.x86_64",
+    "flags": [
+      "--headless",
+      "--path",
+      "<repo>",
+      "<scene>"
+    ],
+    "arguments": "When args are present, append -- followed by the listed args.",
+    "ordering": "Serial; no overlapping Godot processes.",
+    "isolation": "XDG_DATA_HOME isolated by data_group; config/cache/TMPDIR under /tmp/tip-regression.",
+    "per_invocation_timeout_seconds": 180
+  },
+  "repeated_scene_modes": [
+    {
+      "scene": "res://scenes/test_scenes/test_scene_pickup_sources.tscn",
+      "invocations": [
+        {
+          "name": "pickup_sources",
+          "args": []
+        },
+        {
+          "name": "pickup_sources_write",
+          "args": [
+            "--sources-phase=write"
+          ]
+        },
+        {
+          "name": "pickup_sources_read",
+          "args": [
+            "--sources-phase=read"
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "res://scenes/test_scenes/test_scene_city_save.tscn",
+      "invocations": [
+        {
+          "name": "city_save_roundtrip",
+          "args": []
+        },
+        {
+          "name": "city_save_write",
+          "args": [
+            "--city-save-phase=write"
+          ]
+        },
+        {
+          "name": "city_save_read",
+          "args": [
+            "--city-save-phase=read"
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "res://scenes/test_scenes/test_scene_start_menu.tscn",
+      "invocations": [
+        {
+          "name": "start_menu_city_continue",
+          "args": [
+            "--menu-mode=city"
+          ]
+        },
+        {
+          "name": "start_menu_home_continue",
+          "args": [
+            "--menu-mode=home"
+          ]
+        },
+        {
+          "name": "start_menu_empty",
+          "args": [
+            "--menu-mode=empty"
+          ]
+        },
+        {
+          "name": "start_menu_corrupt",
+          "args": [
+            "--menu-mode=corrupt"
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "res://scenes/test_scenes/test_scene_city_sleep_save.tscn",
+      "invocations": [
+        {
+          "name": "city_sleep_save",
+          "args": []
+        },
+        {
+          "name": "city_sleep_write",
+          "args": [
+            "--sleep-save-phase=write"
+          ]
+        },
+        {
+          "name": "city_sleep_read",
+          "args": [
+            "--sleep-save-phase=read"
+          ]
+        }
+      ]
+    }
+  ],
+  "transient_attempts": [
+    {
+      "name": "city_progression initial attempt",
+      "scene": "res://scenes/test_scenes/test_scene_city_progression.tscn",
+      "timeout_seconds": 180,
+      "outcome": "timed out; unresolved transient/non-reproduced",
+      "evidence_limit": "The first wrapper hit its bytes/string output handling bug before saving a log, so no test PASS/FAIL marker was retained.",
+      "subsequent_verbose_retry": {
+        "duration_seconds": 0.827,
+        "exit_code": 0,
+        "named_result": "PASS",
+        "shutdown_diagnostics": "38 built-in orphan StringName diagnostics; not considered leak-clean evidence."
+      },
+      "subsequent_normal_retry": {
+        "duration_seconds": 0.919,
+        "exit_code": 0,
+        "named_result": "CityProgressionTest PASS",
+        "warnings": 0,
+        "runtime_errors": 0,
+        "leak_diagnostics": 0,
+        "log": "regression-logs/28-city_progression-retry-normal.log"
+      },
+      "counted_in_48_results": "Only the clean normal retry is represented in the 48-row suite result list; the initial timeout remains recorded here."
+    }
+  ]
+}
