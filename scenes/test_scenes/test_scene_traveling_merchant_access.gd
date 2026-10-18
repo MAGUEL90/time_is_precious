@@ -92,6 +92,14 @@ func _run() -> void:
 	_expect(not is_instance_valid(merchant.menu) and player.can_move, "Escape closes menu and releases only merchant movement lock.")
 	var ledger: Node = merchant.state
 	var stock_before: Array = ledger.get_catalog()
+	# Scene replacement can detach the old city before its deferred deletion.
+	# Its runtime ledger keeps ticking during that gap.
+	remove_child(content)
+	_expect(not ledger.changed.is_connected(Callable(merchant, "_refresh")),
+		"Detached merchant releases its runtime ledger subscription.")
+	_clock(1, 8, 2)
+	_expect(ledger.get_catalog() == stock_before and ledger.get_budget() == initial_budget + 4,
+		"An offscreen clock tick preserves the live visit transaction ledger.")
 	content.free()
 	_load_map()
 	await _settle()

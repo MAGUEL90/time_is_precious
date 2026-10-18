@@ -231,6 +231,9 @@ func _on_menu_closed() -> void:
 	_release_interaction_lock()
 
 func _exit_tree() -> void:
+	# The ledger outlives a detached city until the old view is freed.
+	if is_instance_valid(state) and state.changed.is_connected(_refresh):
+		state.changed.disconnect(_refresh)
 	close_menu()
 	_cancel_greeting()
 	if is_instance_valid(_dialogue_manager):
