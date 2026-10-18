@@ -19,6 +19,26 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Reusable pickup sources — branch checkpoint (2026-10-18)
+
+Pickup sources now share configurable item/quantity, slot stock and optional refill
+behavior. Date palms are compatibility wrappers; their gameplay remains unchanged.
+Schema v4 persists registered city sources without a six-tree writer list, and reads
+v1/v2/v3 explicitly. The old six-ID list remains only in v3 migration. New content
+within a v4 save generation still requires an explicit layout/config migration.
+See `docs/task_reports/reusable-pickup-sources-2026-10-18.md` for usage, tests and
+scope limits. Human review remains pending.
+
+## Date palm disk persistence — branch checkpoint (2026-10-17)
+
+`fix/save-load/date-palm-persistence` extends the checkpoint to schema v3 with the
+six palms' available slots, remaining refill minutes, and independent RNG state.
+Continue and home sleep checkpoints use the existing city/home load path with no
+offline progress. Legacy v1/v2 files explicitly start trees full with zero timer
+and fresh RNG; they contain no historical tree data. Gameplay and balance stay
+unchanged. Validation evidence and limitations are recorded in
+`docs/task_reports/date-palm-persistence-2026-10-17.md`. Human review remains pending.
+
 ## Gameplay/main integration — review checkpoint (2026-10-17)
 
 The gameplay branch now combines the current wall/warehouse city layout with the
