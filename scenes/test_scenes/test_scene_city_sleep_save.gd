@@ -45,7 +45,7 @@ func _run() -> void:
 		palm.state._rng.seed = 2000 + index
 		palm.state.collect(index % 3)
 		palm.state.remaining_minutes = 10 if index == 0 else 1000 - index * 17
-	var palms_before_sleep: Dictionary = store.snapshot._palms.capture()
+	var sources_before_sleep: Dictionary = store.snapshot._sources.capture()
 	var original_runtime: Node = runtime
 	var before_departure: Dictionary = store.snapshot._sites.capture(runtime)
 	_expect(store.prepare_home_departure(content, store.snapshot.HOME_PATH), "The city can prepare a home handoff.")
@@ -81,15 +81,24 @@ func _run() -> void:
 	_expect(original_runtime._daily_output_count(WOOD_SITE) > 0, "Assigned workers continue producing during the real sleep time skip.")
 	var saved: String = FileAccess.get_file_as_string(SLEEP_SAVE_PATH)
 	var parsed: Dictionary = JSON.parse_string(saved)
-	_expect(parsed.schema_version == 3 and parsed.location == "home", "Sleep checkpoints record the home location explicitly.")
+	_expect(parsed.schema_version == 4 and parsed.location == "home", "Sleep checkpoints record the current schema and home location explicitly.")
 	var raw: Dictionary = store.snapshot.prepared
-	for id: String in palms_before_sleep:
-		var old: Dictionary = palms_before_sleep[id]
-		var current: Dictionary = raw.date_palms[id]
-		var remaining: int = maxi(0, old.remaining_minutes - player.sleep_duration_minutes)
+	var current_sources: Dictionary = raw.pickup_sources
+	for id: String in sources_before_sleep:
+		var old: Dictionary = sources_before_sleep[id]
+		var current: Dictionary = current_sources[id]
+		var remaining: int = old.remaining_minutes
+		var expected_available: Array = old.available
+		if old.config.refill_enabled:
+			remaining = maxi(0, old.remaining_minutes - player.sleep_duration_minutes)
+			if remaining == 0:
+				expected_available = []
+				expected_available.resize(old.config.capacity)
+				expected_available.fill(true)
 		_expect(current.remaining_minutes == remaining, "Sleep saves the exact elapsed refill minutes: " + id)
-		_expect(current.available == ([true, true, true] if remaining == 0 else old.available), "Sleep refills only the due tree: " + id)
-		_expect(current.rng == old.rng, "Sleep/refill does not consume new palm RNG draws: " + id)
+		_expect(current.available == expected_available, "Sleep refills only sources whose authored timer expires: " + id)
+		_expect(current.rng == old.rng, "Sleep/refill does not consume new pickup-source RNG draws: " + id)
+		_expect(current.config == old.config, "Sleep preserves each pickup source's authored configuration: " + id)
 	_expect(raw.player.last_sleep_day == TimeComponentManager.current_day and is_equal_approx(raw.player.focus, player.focus), "The checkpoint includes completed sleep recovery and the daily sleep latch.")
 	_expect(sleep_spot._save_feedback.visible and sleep_spot._save_feedback.text == "Game saved", "Successful sleep gives visible save feedback in the existing pixel font.")
 	await capture_defense("sleep-save-home.png")
@@ -105,11 +114,33 @@ func _run() -> void:
 	var restored: Dictionary = JSON.parse_string(JSON.stringify(store.snapshot.capture(get_tree().current_scene), "", true, true))
 	_expect(_same_snapshot(restored, parsed), "Loading returns every saved owner, stock, job, clock and home position without repeating sleep.")
 	await _verify_return_to_city()
+	# Version 3 home checkpoints retain the exact palm state through migration.
+	var v3_codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
+	var v3: Dictionary = parsed.duplicate(true)
+	var v3_raw: Dictionary = v3_codec.decode(v3.state)
+	var expected_sources: Dictionary = v3_raw.pickup_sources.duplicate(true)
+	var v3_palms: Dictionary = expected_sources.duplicate(true)
+	for record: Dictionary in v3_palms.values():
+		record.erase("config")
+	v3_raw.erase("pickup_sources")
+	v3_raw.date_palms = v3_palms
+	v3.schema_version = 3
+	v3.state = v3_codec.encode(v3_raw)
+	var v3_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
+	v3_file.store_string(JSON.stringify(v3, "", true, true))
+	v3_file.close()
+	_expect(store.load_checkpoint(), "A v3 home checkpoint migrates through the normal handoff.")
+	await _wait_scene(store.snapshot.HOME_PATH)
+	var v3_deadline: int = Time.get_ticks_msec() + 5000
+	while store._busy and Time.get_ticks_msec() < v3_deadline:
+		await get_tree().process_frame
+	_expect(store.status == "Loaded" and store.snapshot._sources.capture() == expected_sources, "v3 home migration preserves all palm slots, timers and RNG.")
+	await _verify_return_to_city()
 	# A v2 home file had no palms: exercise fallback through the real home loader.
 	var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
 	var legacy: Dictionary = parsed.duplicate(true)
 	var legacy_raw: Dictionary = codec.decode(legacy.state)
-	legacy_raw.erase("date_palms")
+	legacy_raw.erase("pickup_sources")
 	legacy.schema_version = 2
 	legacy.state = codec.encode(legacy_raw)
 	var legacy_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
@@ -121,7 +152,7 @@ func _run() -> void:
 	while store._busy and Time.get_ticks_msec() < legacy_deadline:
 		await get_tree().process_frame
 	_expect(store.status == "Loaded" and not store._busy, "Legacy home load completes without replaying sleep.")
-	for palm: Dictionary in store.snapshot._palms.capture().values():
+	for palm: Dictionary in store.snapshot._sources.capture().values():
 		_expect(palm.available == [true, true, true] and palm.remaining_minutes == 0, "Legacy home load initializes full trees with no inferred history.")
 	await _verify_return_to_city()
 	# A blocked sleep-save must not destroy an existing corrupt checkpoint.
@@ -172,7 +203,7 @@ func _verify_return_to_city() -> void:
 		_expect(false, "The return trip begins in the saved home.")
 		return
 	var before: Dictionary = store.snapshot._sites.capture(store.parked_worksite)
-	var palms_before: Dictionary = store.snapshot._palms.capture()
+	var palms_before: Dictionary = store.snapshot._sources.capture()
 	var person: Player = home.get_node("YSortWorld/Player")
 	home.get_node("YSortWorld/ExitDoor")._on_body_entered(person)
 	if not await _wait_scene("res://scenes/content_scene/content_scene.tscn"):
@@ -181,7 +212,7 @@ func _verify_return_to_city() -> void:
 	_expect(not is_instance_valid(store.parked_worksite), "Returning to city releases the hidden projection after adoption.")
 	_expect(_same_snapshot(store.snapshot._sites.capture(runtime), before), "Return to city preserves the offscreen jobs, cargo, resource stock and ground yield.")
 	_expect(_wood_total() == 72, "All wood remains conserved across sleep and both scene transitions.")
-	_expect(store.snapshot._palms.capture() == palms_before, "Home/city transition preserves every palm slot, timer and RNG.")
+	_expect(store.snapshot._sources.capture() == palms_before, "Home/city transition preserves every palm slot, timer and RNG.")
 	var view_count: int = 0
 	for index: int in range(6):
 		var palm: Node = content.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))

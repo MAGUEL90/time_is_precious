@@ -831,3 +831,31 @@ randomized per-tree RNG. Validation and merely observing an old slot do not appl
 this fallback or mutate live trees. No historical depletion is inferred from
 Inventory. The next successful save writes v3 to the unchanged checkpoint filename;
 older game builds do not read v3. See the date-palm persistence task report for tests.
+
+### Shared pickup-source components (2026-10-18)
+
+The v3 palm boundary above is now the legacy compatibility path. `pickup_source.gd`
+owns view reconciliation for any configured item, quantity and slot set;
+`pickup_source_state.gd` owns stock, optional refill and per-source RNG. The date
+scripts inherit these components and preserve their old defaults/IDs/debug group.
+No production source layout or item balance changed.
+
+States register in `pickup_source_states` with owning scene and authored config.
+`city_save_pickup_sources.gd` captures all registered city states under
+WorkStateRuntime, even while the city is unloaded. Source views carry `source_pickups`
+and are never personal city drops. Prefab instances derive distinct identities from
+their owning map and paths; optional scene-scoped explicit IDs support stable authored
+identity. A second active view with the same identity is rejected.
+
+Schema v4 replaces `date_palms` with `pickup_sources`, retaining slots/minutes/RNG
+and adding authored config for validation, not file-driven gameplay. Exact identities
+and config types/values must match before synchronous apply. One-shot sources allow
+depleted slots with timer zero; refill sources retain the existing full/timer-zero
+invariant. Legacy v1/v2 initialize fresh source stock; v3 restores its six palms and
+initializes only additional sources. The six-ID adapter is migration-only. No new
+source-specific save code is needed to author another registered city source.
+
+Checkpoint scope remains the existing city/home scenario. New procedural entities,
+other map checkpoints, or content changes to a v4 identity/config set need an explicit
+migration/lifecycle policy. See the reusable pickup sources task report for the
+configuration recipe, compatibility behavior and verification evidence.

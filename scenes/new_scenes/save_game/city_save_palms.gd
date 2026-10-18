@@ -1,6 +1,6 @@
 extends RefCounted
 
-## The six authored city palms are checkpoint identities, including while home.
+## Legacy v3 migration only. New checkpoints use registered pickup sources.
 ## Renaming their scene/node paths requires an explicit save migration.
 const CITY_PATH: String = "res://scenes/content_scene/content_scene.tscn"
 const STATE = preload("res://scenes/pickup_item/date_palm_state.gd")

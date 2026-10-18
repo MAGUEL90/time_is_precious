@@ -22,7 +22,7 @@ func _run() -> void:
 		_expect(store.load_checkpoint(), "A fresh game process loads the disk checkpoint: " + store.last_error)
 		var read_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
 		var read_raw: Dictionary = VALUES.new().decode(read_document.state)
-		await _assert_seed(read_raw.get("date_palms", {}))
+		await _assert_seed(read_raw.get("pickup_sources", {}))
 		_expect(JSON.parse_string(JSON.stringify(store.snapshot.capture(content), "", true, true)) == JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)), "Fresh-process restore matches every captured owner and RNG state.")
 		_finish()
 		return
@@ -34,17 +34,17 @@ func _run() -> void:
 	if not saved:
 		_finish()
 		return
-	await _assert_seed(VALUES.new().decode(store.snapshot.capture(content).state).date_palms)
+	await _assert_seed(VALUES.new().decode(store.snapshot.capture(content).state).pickup_sources)
 	if mode == "write":
 		_finish()
 		return
 	var before: Dictionary = store.snapshot.capture(content)
 	var codec = VALUES.new()
 	var saved_raw: Dictionary = codec.decode(before.state)
-	_expect(saved_raw.date_palms is Dictionary and saved_raw.date_palms.size() == 6,
-		"The version-3 snapshot records exactly the six authored palm identities.")
+	_expect(saved_raw.pickup_sources is Dictionary and saved_raw.pickup_sources.size() == 6,
+		"The version-4 snapshot records exactly the six authored pickup-source identities.")
 	_expect(is_equal_approx(saved_raw.clock._timer, 0.375), "The fractional clock tick is captured alongside pending palm timers.")
-	_assert_saved_palm_shape(saved_raw.date_palms)
+	_assert_saved_source_shape(saved_raw.pickup_sources)
 	Inventory.items.clear()
 	storage.items.clear()
 	state._work_remaining = 1
@@ -53,32 +53,32 @@ func _run() -> void:
 	player.global_position += Vector2(30, 20)
 	player.focus = 0.1
 	_expect(store.load_checkpoint(), "Manual Load restores the checkpoint: " + store.last_error)
-	await _assert_seed(saved_raw.date_palms)
+	await _assert_seed(saved_raw.pickup_sources)
 	var after: Dictionary = store.snapshot.capture(content)
 	_expect(before == after, "Every captured owner round-trips exactly, without offline time or duplicated rewards.")
 	_expect(store.load_checkpoint(), "A repeated Manual Load restores the same checkpoint: " + store.last_error)
-	await _assert_seed(saved_raw.date_palms)
+	await _assert_seed(saved_raw.pickup_sources)
 	_expect(before == store.snapshot.capture(content), "Repeated Load does not duplicate date inventory or pickup views.")
 	await _assert_refill_boundaries(before, saved_raw)
 	await _assert_future_palm_rng_sequence(saved_raw)
 	_expect(store.load_checkpoint(), "Palm RNG sequence probing is rolled back by another Load: " + store.last_error)
-	await _assert_seed(saved_raw.date_palms)
+	await _assert_seed(saved_raw.pickup_sources)
 	# Reject malformed palm ledgers through the disk boundary and prove each Load
 	# leaves every live owner untouched.
 	var valid_bytes: String = FileAccess.get_file_as_string(CHECKPOINT_PATH)
-	for invalid_case: String in ["missing_collection", "missing_identity", "unknown_identity", "wrong_capacity", "non_bool_slot", "full_with_timer", "depleted_without_timer", "timer_too_large", "timer_float", "rng_bool", "rng_float", "rng_extra_field", "timer_negative", "missing_rng", "extra_field"]:
+	for invalid_case: String in ["missing_collection", "missing_identity", "unknown_identity", "wrong_capacity", "non_bool_slot", "full_with_timer", "depleted_without_timer", "timer_too_large", "timer_float", "rng_bool", "rng_float", "rng_extra_field", "timer_negative", "missing_rng", "extra_field", "missing_config", "config_wrong_capacity", "config_extra_field"]:
 		await _assert_invalid_palm_case(before, saved_raw, invalid_case)
 	_write_text(CHECKPOINT_PATH, valid_bytes)
 	_expect(store.load_checkpoint(), "Explicit Load accepts the restored valid checkpoint: " + store.last_error)
-	await _assert_seed(saved_raw.date_palms)
-	# Legacy v1 and v2 files lack palm data. Applying either version restores
-	# every authored tree to full stock, clears its timer and starts a fresh RNG.
+	await _assert_seed(saved_raw.pickup_sources)
+	# Legacy v1 and v2 files lack pickup-source data. Applying either version
+	# restores every registered source to full stock and starts a fresh RNG.
 	var legacy_rng: Dictionary = _set_palm_rng_sentinels()
 	var legacy: Dictionary = before.duplicate(true)
 	legacy.schema_version = 1
 	legacy.erase("location")
 	var legacy_raw: Dictionary = saved_raw.duplicate(true)
-	legacy_raw.erase("date_palms")
+	legacy_raw.erase("pickup_sources")
 	legacy.state = codec.encode(legacy_raw)
 	_assert_legacy_validation_only(legacy)
 	var legacy_file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
@@ -89,7 +89,7 @@ func _run() -> void:
 	legacy = before.duplicate(true)
 	legacy.schema_version = 2
 	legacy_raw = saved_raw.duplicate(true)
-	legacy_raw.erase("date_palms")
+	legacy_raw.erase("pickup_sources")
 	legacy.state = codec.encode(legacy_raw)
 	legacy_file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
@@ -98,8 +98,31 @@ func _run() -> void:
 	_assert_legacy_validation_only(legacy)
 	_expect(store.load_checkpoint(), "A version-2 manual city checkpoint still loads.")
 	await _assert_legacy_palms_reset(legacy_rng)
+	# Version 3 stored the old six palms without source configuration. Its load
+	# path restores those six records exactly and initializes newer sources.
+	var legacy_palms: Dictionary = {}
+	for identity: String in saved_raw.pickup_sources:
+		if not identity.begins_with("DatePalm_"):
+			continue
+		var palm_record: Dictionary = saved_raw.pickup_sources[identity].duplicate(true)
+		palm_record.erase("config")
+		legacy_palms[identity] = palm_record
+	_expect(legacy_palms.size() == 6, "The v3 migration fixture contains the original six DatePalm identities.")
+	legacy = before.duplicate(true)
+	legacy.schema_version = 3
+	legacy_raw = saved_raw.duplicate(true)
+	legacy_raw.erase("pickup_sources")
+	legacy_raw["date_palms"] = legacy_palms
+	legacy.state = codec.encode(legacy_raw)
+	legacy_rng = _set_palm_rng_sentinels()
+	_assert_legacy_validation_only(legacy)
+	legacy_file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
+	legacy_file.close()
+	_expect(store.load_checkpoint(), "A version-3 palm checkpoint restores through the migration path.")
+	await _assert_v3_palms_restored(legacy_palms, legacy_rng)
 	_expect(store.save_checkpoint(), "The next explicit save writes the current location-aware version.")
-	_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 3, "A successful save explicitly upgrades the legacy header.")
+	_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 4, "A successful save explicitly upgrades the legacy header.")
 	# A malformed document must fail before any live mutation, and block Save.
 	valid_bytes = FileAccess.get_file_as_string(CHECKPOINT_PATH)
 	var file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
@@ -235,83 +258,105 @@ func _authored_palm_trees() -> Array:
 	result.sort_custom(func(left: Node, right: Node) -> bool: return left.name < right.name)
 	return result
 
-func _assert_saved_palm_shape(palms: Dictionary) -> void:
+func _assert_saved_source_shape(sources: Dictionary) -> void:
 	var expected_ids: Dictionary = {}
 	for tree: Node in _authored_palm_trees():
 		expected_ids[tree.state.name] = true
-	_expect(palms.size() == expected_ids.size(), "Palm save has the exact authored identity count.")
+	_expect(sources.size() == expected_ids.size(), "Pickup-source save has the exact authored identity count.")
 	for identity: String in expected_ids:
-		_expect(palms.has(identity), "Palm save includes the authored runtime identity " + identity)
-		if not palms.has(identity):
+		_expect(sources.has(identity), "Pickup-source save includes the authored runtime identity " + identity)
+		if not sources.has(identity):
 			continue
-		var value: Dictionary = palms[identity]
-		_expect(value.size() == 3 and value.available is Array and value.available.size() == 3,
-			"Palm save uses the exact authored capacity for " + identity)
+		var value: Dictionary = sources[identity]
+		_expect(value.size() == 4 and value.available is Array and value.available.size() == 3,
+			"Pickup-source save uses the exact authored capacity for " + identity)
 		_expect(value.available.count(false) == 1 and value.available.count(true) == 2,
 			"Palm save records exactly one harvested slot for " + identity)
 		_expect(typeof(value.remaining_minutes) == TYPE_INT and value.remaining_minutes >= 1 and value.remaining_minutes <= 18 * TimeComponentManager.minute_per_hour,
 			"Palm save records a bounded integer refill timer for " + identity)
 		_expect(value.rng is Dictionary and value.rng.size() == 2 and typeof(value.rng.get("seed")) == TYPE_INT and typeof(value.rng.get("state")) == TYPE_INT,
-			"Palm save records exact integer RNG seed and state for " + identity)
+			"Pickup-source save records exact integer RNG seed and state for " + identity)
+		_expect(value.config is Dictionary and value.config.size() == 6,
+			"Pickup-source save retains its complete authored configuration for " + identity)
+		if value.config is Dictionary:
+			_expect(typeof(value.config.get("item_id")) == TYPE_STRING and typeof(value.config.get("quantity")) == TYPE_INT
+				and typeof(value.config.get("capacity")) == TYPE_INT and typeof(value.config.get("refill_enabled")) == TYPE_BOOL
+				and typeof(value.config.get("refill_min_hours")) == TYPE_INT and typeof(value.config.get("refill_max_hours")) == TYPE_INT,
+				"Pickup-source config values keep their exact declared types for " + identity)
+		if identity.begins_with("DatePalm_") and value.config is Dictionary:
+			_expect(value.config == {"item_id": "date_cluster", "quantity": 1, "capacity": 3,
+				"refill_enabled": true, "refill_min_hours": 1, "refill_max_hours": 18},
+				"Date palm source config preserves its authored item, capacity and refill range.")
 
 func _assert_future_palm_rng_sequence(saved_raw: Dictionary) -> void:
 	var expected_by_id: Dictionary = {}
-	for identity: String in saved_raw.date_palms:
-		var saved_rng: Dictionary = saved_raw.date_palms[identity].rng
+	for identity: String in saved_raw.pickup_sources:
+		var record: Dictionary = saved_raw.pickup_sources[identity]
+		var saved_rng: Dictionary = record.rng
+		var config: Dictionary = record.config
 		var expected_rng := RandomNumberGenerator.new()
 		expected_rng.seed = saved_rng.seed
 		expected_rng.state = saved_rng.state
-		expected_by_id[identity] = [
-			expected_rng.randi_range(1, 18) * TimeComponentManager.minute_per_hour,
-			expected_rng.randi_range(1, 18) * TimeComponentManager.minute_per_hour
-		]
+		var expected_delays: Array[int] = []
+		for draw: int in range(mini(2, record.available.size())):
+			var delay: int = 0
+			if config.refill_enabled:
+				delay = expected_rng.randi_range(config.refill_min_hours, config.refill_max_hours) * TimeComponentManager.minute_per_hour
+			expected_delays.append(delay)
+		expected_by_id[identity] = expected_delays
 	for tree: Node in _authored_palm_trees():
 		var state_node: Node = tree.state
 		var actual: Array = []
-		for slot: int in range(2):
+		for slot: int in range(mini(2, state_node.available.size())):
 			state_node.available.fill(true)
 			state_node.remaining_minutes = 0
 			state_node.collect(slot)
 			actual.append(state_node.remaining_minutes)
 		_expect(actual == expected_by_id[state_node.name], "Palm RNG resumes its exact future refill sequence: " + tree.name)
 	_expect(store.load_checkpoint(), "Load restores palm RNG after sequence probing: " + store.last_error)
-	await _assert_seed(saved_raw.date_palms)
+	await _assert_seed(saved_raw.pickup_sources)
 
 func _assert_invalid_palm_case(valid_document: Dictionary, valid_raw: Dictionary, case_name: String) -> void:
 	var invalid_raw: Dictionary = valid_raw.duplicate(true)
-	var identity: String = str(invalid_raw.date_palms.keys()[0])
+	var identity: String = str(invalid_raw.pickup_sources.keys()[0])
 	match case_name:
 		"missing_collection":
-			invalid_raw.erase("date_palms")
+			invalid_raw.erase("pickup_sources")
 		"missing_identity":
-			invalid_raw.date_palms.erase(identity)
+			invalid_raw.pickup_sources.erase(identity)
 		"unknown_identity":
-			invalid_raw.date_palms["DatePalm_NotAnAuthoredTree"] = invalid_raw.date_palms[identity].duplicate(true)
-			invalid_raw.date_palms.erase(identity)
+			invalid_raw.pickup_sources["DatePalm_NotAnAuthoredTree"] = invalid_raw.pickup_sources[identity].duplicate(true)
+			invalid_raw.pickup_sources.erase(identity)
 		"wrong_capacity":
-			invalid_raw.date_palms[identity].available.pop_back()
+			invalid_raw.pickup_sources[identity].available.pop_back()
 		"non_bool_slot":
-			invalid_raw.date_palms[identity].available[0] = 1
+			invalid_raw.pickup_sources[identity].available[0] = 1
 		"full_with_timer":
-			invalid_raw.date_palms[identity].available.fill(true)
+			invalid_raw.pickup_sources[identity].available.fill(true)
 		"depleted_without_timer":
-			invalid_raw.date_palms[identity].remaining_minutes = 0
+			invalid_raw.pickup_sources[identity].remaining_minutes = 0
 		"timer_too_large":
-			invalid_raw.date_palms[identity].remaining_minutes = 18 * TimeComponentManager.minute_per_hour + 1
+			invalid_raw.pickup_sources[identity].remaining_minutes = 18 * TimeComponentManager.minute_per_hour + 1
 		"timer_negative":
-			invalid_raw.date_palms[identity].remaining_minutes = -1
+			invalid_raw.pickup_sources[identity].remaining_minutes = -1
 		"missing_rng":
-			invalid_raw.date_palms[identity].erase("rng")
+			invalid_raw.pickup_sources[identity].erase("rng")
 		"extra_field":
-			invalid_raw.date_palms[identity]["extra"] = true
+			invalid_raw.pickup_sources[identity]["extra"] = true
 		"timer_float":
-			invalid_raw.date_palms[identity].remaining_minutes = 60.0
+			invalid_raw.pickup_sources[identity].remaining_minutes = 60.0
 		"rng_bool":
-			invalid_raw.date_palms[identity].rng.seed = true
+			invalid_raw.pickup_sources[identity].rng.seed = true
 		"rng_float":
-			invalid_raw.date_palms[identity].rng.state = 1.0
+			invalid_raw.pickup_sources[identity].rng.state = 1.0
 		"rng_extra_field":
-			invalid_raw.date_palms[identity].rng["extra"] = 1
+			invalid_raw.pickup_sources[identity].rng["extra"] = 1
+		"missing_config":
+			invalid_raw.pickup_sources[identity].erase("config")
+		"config_wrong_capacity":
+			invalid_raw.pickup_sources[identity].config.capacity = true
+		"config_extra_field":
+			invalid_raw.pickup_sources[identity].config["extra"] = 1
 	var codec = VALUES.new()
 	var invalid_document: Dictionary = valid_document.duplicate(true)
 	invalid_document.state = codec.encode(invalid_raw)
@@ -323,25 +368,53 @@ func _assert_invalid_palm_case(valid_document: Dictionary, valid_raw: Dictionary
 
 func _set_palm_rng_sentinels() -> Dictionary:
 	var sentinel_by_id: Dictionary = {}
-	for index: int in range(_authored_palm_trees().size()):
-		var tree: Node = _authored_palm_trees()[index]
-		tree.state._rng.seed = 900000 + index
-		tree.state._rng.state = 800000 + index
-		sentinel_by_id[tree.state.name] = {"seed": tree.state._rng.seed, "state": tree.state._rng.state}
+	var source_nodes: Dictionary = store.snapshot._sources.nodes()
+	for index: int in range(source_nodes.size()):
+		var source_id: String = str(source_nodes.keys()[index])
+		var source: Node = source_nodes[source_id]
+		source._rng.seed = 900000 + index
+		source._rng.state = 800000 + index
+		sentinel_by_id[source_id] = {"seed": source._rng.seed, "state": source._rng.state}
 	return sentinel_by_id
 
 func _assert_legacy_palms_reset(sentinels: Dictionary) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	for tree: Node in _authored_palm_trees():
-		_expect(tree.state.available.count(true) == 3 and tree.state.remaining_minutes == 0,
-			"A legacy checkpoint explicitly restores full palm stock and clears its timer: " + tree.name)
-		var sentinel: Dictionary = sentinels[tree.state.name]
-		_expect(tree.state._rng.seed != sentinel.seed or tree.state._rng.state != sentinel.state,
-			"A legacy checkpoint starts a fresh palm RNG: " + tree.name)
+	var source_nodes: Dictionary = store.snapshot._sources.nodes()
+	for source_id: String in source_nodes:
+		var source: Node = source_nodes[source_id]
+		_expect(source.available.count(true) == source.available.size() and source.remaining_minutes == 0,
+			"A legacy checkpoint explicitly restores full pickup stock and clears its timer: " + source_id)
+		var sentinel: Dictionary = sentinels[source_id]
+		_expect(source._rng.seed != sentinel.seed or source._rng.state != sentinel.state,
+			"A legacy checkpoint starts a fresh pickup-source RNG: " + source_id)
 	_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == 18,
 		"Legacy palm fallback recreates exactly eighteen pickup views.")
 	_expect(Inventory.items.get("date_cluster", 0) == 6, "Legacy palm fallback preserves collected dates without granting more.")
+
+func _assert_v3_palms_restored(legacy_palms: Dictionary, sentinels: Dictionary) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var captured: Dictionary = store.snapshot._sources.capture()
+	for identity: String in legacy_palms:
+		var expected: Dictionary = legacy_palms[identity]
+		var actual: Dictionary = captured[identity]
+		_expect(actual.available == expected.available and actual.remaining_minutes == expected.remaining_minutes
+			and actual.rng == expected.rng,
+			"A v3 checkpoint restores the legacy palm slots, timer and RNG exactly: " + identity)
+	var source_nodes: Dictionary = store.snapshot._sources.nodes()
+	for identity: String in source_nodes:
+		if legacy_palms.has(identity):
+			continue
+		var source: Node = source_nodes[identity]
+		_expect(source.available.count(true) == source.available.size() and source.remaining_minutes == 0,
+			"A v3 checkpoint initializes sources absent from the v3 ledger: " + identity)
+		var sentinel: Dictionary = sentinels[identity]
+		_expect(source._rng.seed != sentinel.seed or source._rng.state != sentinel.state,
+			"A v3 checkpoint starts a fresh RNG for sources absent from its ledger: " + identity)
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == 12,
+		"A v3 load preserves the six depleted palm views without duplication.")
+	_expect(Inventory.items.get("date_cluster", 0) == 6, "A v3 load preserves collected dates without granting more.")
 
 func _write_text(path: String, value: String) -> void:
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -360,8 +433,10 @@ func _assert_legacy_validation_only(document: Dictionary) -> void:
 func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 	var staged: Dictionary = raw.duplicate(true)
 	var index: int = 0
-	for id: String in staged.date_palms:
-		staged.date_palms[id].remaining_minutes = 4 + index
+	for id: String in staged.pickup_sources:
+		if not id.begins_with("DatePalm_"):
+			continue
+		staged.pickup_sources[id].remaining_minutes = 4 + index
 		index += 1
 	var codec = VALUES.new()
 	var short_timers: Dictionary = document.duplicate(true)
@@ -377,7 +452,7 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 		await get_tree().process_frame
 		var total_views: int = 0
 		for tree: Node in _authored_palm_trees():
-			var saved: Dictionary = staged.date_palms[str(tree.state.name)]
+			var saved: Dictionary = staged.pickup_sources[str(tree.state.name)]
 			var remaining: int = maxi(0, saved.remaining_minutes - elapsed)
 			var slots: Array = [true, true, true] if remaining == 0 else saved.available
 			_expect(tree.state.remaining_minutes == remaining and tree.state.available == slots, "Only the due palm refills at the exact restored minute: " + str(tree.name))
@@ -387,9 +462,9 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 			_expect(tree.state._rng.state == saved.rng.state, "Refill consumes no random draw.")
 		_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == total_views, "Refill never duplicates pickup views.")
 		_expect(Inventory.items == inventory_before, "Refill never grants Inventory goods.")
-	var full_palms: Dictionary = store.snapshot._palms.capture()
+	var full_palms: Dictionary = store.snapshot._sources.capture()
 	_expect(store.save_checkpoint() and store.load_checkpoint(), "Fully stocked palms also round-trip through disk.")
-	_expect(store.snapshot._palms.capture() == full_palms, "Full palm stock preserves the next RNG draw across Load.")
+	_expect(store.snapshot._sources.capture() == full_palms, "Full palm stock preserves the next RNG draw across Load.")
 	_write_text(CHECKPOINT_PATH, JSON.stringify(document, "", true, true))
 	_expect(store.load_checkpoint(), "The original checkpoint restores after the countdown test.")
-	await _assert_seed(raw.date_palms)
+	await _assert_seed(raw.pickup_sources)
