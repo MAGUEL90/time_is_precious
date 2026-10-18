@@ -145,7 +145,28 @@ komponen `pickup_source.gd`, `pickup_source_state.gd`, adapter
 dan laporan ini. Perubahan lain terbatas pada wrapper kurma, komentar adapter v3,
 integrasi CitySave, tiga fixture save/menu, ROADMAP dan ARCHITECTURE.
 
-Pengujian visual manusia, Windows/Android, physical GPU dan pacing belum dilakukan.
+## Konfirmasi QA Windows oleh Game Director
+
+Pengujian dilakukan pengguna pada worktree terpisah `time_is_precious_pickup_test`,
+commit `4b2ba11475fd97b11cfe8dead7df17dfc2d55366`, dengan Godot 4.5.1 Windows.
+Agent hanya memandu melalui chat dan membaca screenshot, tanpa mengakses laptop.
+
+- Pengguna melaporkan pengujian manual sudah oke: panen sebagian, masuk rumah,
+  tidur hingga checkpoint tersimpan, tutup proses, Continue dan kembali ke kota.
+- Screenshot memperlihatkan stok tetap: pohon pertama 2/3, pohon ketiga 0/3,
+  empat pohon lain penuh. Timer sebelum penutupan 4h27m/3h16m dan setelah Continue
+  4h28m/3h17m konsisten dengan kembali ke checkpoint tidur yang lebih awal daripada
+  screenshot setelah berjalan ke kota; bukan bukti timer diundi ulang atau offline gain.
+  Ketepatan timer dan tidak adanya offline gain juga tercakup tes otomatis cloud.
+- Setelah membuka scene `test_scene_pickup_sources.tscn` dan menjalankan F6,
+  pengguna secara eksplisit mengonfirmasi output `PickupSourcesTest: PASS`.
+  Ini bukan klaim seluruh 30 suite dijalankan ulang di Windows.
+- Folder utama telah diverifikasi pengguna pada `main` dengan working tree bersih;
+  pekerjaan content dan pickup test berada di worktree terpisah. Edit lokal content
+  tetap terpisah dan tidak dimasukkan ke branch ini.
+
+Pembaruan QA ini hanya dokumentasi; kode tidak berubah setelah commit yang diuji.
+Android, export build dan pengujian pacing menyeluruh belum dilakukan.
 Tidak ada merge ke main atau force-push. Identitas/konfigurasi content di antara
 rilis tetap merupakan kontrak save; migrasi content lintas versi bukan otomatis
 menganggap semua record hilang sebagai sumber baru.
