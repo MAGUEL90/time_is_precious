@@ -1,0 +1,42 @@
+[
+  {
+    "sample": 1,
+    "phase": "write",
+    "exit": 2,
+    "seconds": 85.84,
+    "errors": [],
+    "status": "PARTIAL"
+  },
+  {
+    "sample": 1,
+    "phase": "read",
+    "exit": 0,
+    "seconds": 2.42,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 2,
+    "phase": "write",
+    "exit": 2,
+    "seconds": 82.79,
+    "errors": [],
+    "status": "PARTIAL"
+  },
+  {
+    "sample": 2,
+    "phase": "read",
+    "exit": 0,
+    "seconds": 2.98,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 3,
+    "phase": "write",
+    "exit": 0,
+    "seconds": 66.52,
+    "errors": [],
+    "status": "PASS"
+  }
+]

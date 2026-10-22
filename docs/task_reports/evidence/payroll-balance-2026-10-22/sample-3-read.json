@@ -1,0 +1,112 @@
+{
+	"dried": 0,
+	"failures": 0,
+	"fees_paid": 0,
+	"first_period_only": true,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.441000000000012,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 12,
+				"reed_bundle": 8,
+				"shekel": 51,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 7,
+				"water_jar": 3,
+				"wood_log": 6
+			},
+			"minute": 15921,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued",
+			"walked_pixels": 0.0,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 1,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "built",
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 11,
+			"fatigue": 0.01,
+			"focus": 0.993750000000001,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 6,
+			"held": [],
+			"hunger": 0.0240000000000124,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 7,
+				"reed_bundle": 8,
+				"shekel": 51,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 7,
+				"water_jar": 3,
+				"wood_log": 6
+			},
+			"minute": 15944,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_city",
+			"walked_pixels": 751.666446328163,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 1,
+				"wet_mudbrick": 14
+			}
+		}
+	],
+	"phase": "read",
+	"policy": "sell available bricks; observe first paid period; gather inputs",
+	"settlements": [],
+	"shaped": 0,
+	"sold_bricks": 0,
+	"status": "PASS",
+	"visits": []
+}

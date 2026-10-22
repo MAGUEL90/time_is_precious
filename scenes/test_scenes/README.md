@@ -274,3 +274,18 @@ real bed/Continue coverage. The driver clicks the deposit arrows, checks bounds,
 reopens Job Board, reviews worker details, cancels Fire, and verifies that money
 and employment are unchanged by these UI actions. Needs stay active; no grants.
 See `docs/task_reports/payroll-ui-readability-2026-10-22.md` for provenance and limits.
+
+### Payroll cash-flow balance samples
+
+`test_scene_payroll_balance.tscn -- --journey-phase=write`, then `read`, uses
+Godot4.5.1 headless with `--fixed-fps 60`. Give every sample fresh isolated XDG
+folders; share them only between that sample's write/read processes. Allow600s
+write/120s read. This inherits normal onboarding/production with no grants or
+RNG/rate/needs overrides. It sells available bricks within carrying capacity rather
+than retaining ten for a future upgrade, and observes the remaining first paid
+period. Upkeep's final-day bed checkpoint is reused to avoid sleeping an extra day.
+A PARTIAL result is evidence of an unmet route goal, not a test to reroll away.
+
+Results use `user://paid_production_journey/` and checkpoints use the inherited
+`user://payroll_first_playthrough/` path. See the balance report for the three
+preselected samples, cash reconciliation, pilot-driver correction and limits.
