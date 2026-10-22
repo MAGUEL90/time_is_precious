@@ -22,6 +22,7 @@ const OBJECT_FIELDS: Dictionary = {
 	"WorkerData": [
 		"worker_id", "display_name", "profession", "profession_xp", "current_order_id",
 		"current_job_id", "current_work_status", "profession_star", "efficiency",
+		"payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day",
 		"reliability", "wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
 		"shelter_fulfilled", "satisfaction",
 	],
@@ -39,6 +40,8 @@ const OBJECT_FIELDS: Dictionary = {
 	],
 }
 
+const PAYROLL_FIELDS: Array[String] = ["payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day"]
+var allow_legacy_worker_fields: bool = false
 var error: String = ""
 
 
@@ -291,7 +294,10 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 	if field_data.size() > MAX_COLLECTION_SIZE:
 		_fail("Object field map exceeds the %d item limit." % MAX_COLLECTION_SIZE)
 		return null
-	var allowed_fields: Array = OBJECT_FIELDS[type_name]
+	var allowed_fields: Array = OBJECT_FIELDS[type_name].duplicate()
+	if allow_legacy_worker_fields and type_name == "WorkerData":
+		for field: String in PAYROLL_FIELDS:
+			allowed_fields.erase(field)
 	if field_data.size() != allowed_fields.size():
 		_fail("Object field map does not match the complete %s schema." % type_name)
 		return null

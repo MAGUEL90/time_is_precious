@@ -9,6 +9,22 @@ var clothing_supply: int
 var treasury_shekel: int
 var shelter_capacity: int
 
+func deposit_wallet_shekel(amount: int) -> bool:
+	# Explicit player action; payroll never reads the personal inventory.
+	if amount <= 0 or amount > MAX_SHEKEL - treasury_shekel:
+		return false
+	if not Inventory.has_item("shekel", amount):
+		return false
+	# Commit both balances before notifying inventory listeners.
+	var remaining: int = Inventory.items.get("shekel", 0) - amount
+	treasury_shekel += amount
+	if remaining == 0:
+		Inventory.items.erase("shekel")
+	else:
+		Inventory.items["shekel"] = remaining
+	Inventory.items_changed.emit()
+	return true
+
 func deposit_food_item(item_id: String, amount: int, inventory: Inventory) -> bool:
 	if inventory == null:
 		return false

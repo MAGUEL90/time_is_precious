@@ -15,6 +15,12 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
 @export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
 @export var wage_shekel_per_day: int = 0
+# Stage 1 records only the first prepaid period. -1 preserves legacy saves/fixtures.
+@export var payroll_start_day: int = -1
+@export var payroll_paid_from_day: int = -1
+@export var payroll_paid_until_day: int = -1
+@export var payroll_period_rate: int = 0
+@export var payroll_last_attempt_day: int = -1
 @export var food_fulfilled: bool = false
 @export var clothing_fulfilled: bool = false
 @export var shelter_fulfilled: bool = false
@@ -89,6 +95,16 @@ func get_reliability_success_chance() -> float:
 
 # Work lifecycle
 
+func is_waiting_for_first_payment() -> bool:
+	return payroll_start_day >= 0 and payroll_paid_from_day < 0
+
+func get_onboarding_status() -> String:
+	if not is_waiting_for_first_payment():
+		return ""
+	if TimeComponentManager.current_day < payroll_start_day:
+		return "Starts day %d at 08:00, after payment" % payroll_start_day
+	return "Waiting for city payment at 08:00"
+
 func is_working() -> bool:
 	return current_work_status == WorkStatus.WORKING
 
@@ -100,6 +116,8 @@ func set_work_activity(order_id: String, activity: WorkStatus) -> void:
 		current_work_status = activity
 
 func get_work_activity_text() -> String:
+	if is_waiting_for_first_payment():
+		return get_onboarding_status()
 	match current_work_status:
 		WorkStatus.WORKING:
 			return "Working"

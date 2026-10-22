@@ -280,6 +280,9 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 	if worker_kind == WorkOrder.Worker_Type.NPC:
 		if WorkerDatabase.has_worker_data(requested_worker_id):
 			var worker_data: WorkerData = WorkerDatabase.get_worker_data(requested_worker_id)
+			if worker_data.is_waiting_for_first_payment():
+				last_start_job_error = worker_data.get_onboarding_status()
+				return ""
 			if not _worker_matches_job(worker_data, job):
 				last_start_job_error = "Worker Profession doesn't match"
 				return ""
@@ -293,7 +296,7 @@ func _resolve_worker_id(worker_kind: int, requested_worker_id: String, job: JobD
 				if not (worker is WorkerData):
 					continue
 				var worker_data: WorkerData = worker as WorkerData
-				if worker_data.is_reserved():
+				if worker_data.is_reserved() or worker_data.is_waiting_for_first_payment():
 					continue
 				if not _worker_matches_job(worker_data, job):
 					continue

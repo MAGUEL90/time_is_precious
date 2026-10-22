@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 4
+const VERSION: int = 5
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -131,7 +131,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -141,6 +141,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail("Invalid checkpoint location.")
 		prepared_location = document.location
 	var values = VALUES.new()
+	values.allow_legacy_worker_fields = version < 5
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
@@ -166,7 +167,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
-	if version == VERSION:
+	if version >= 4:
 		if not _sources.validate(raw.get("pickup_sources")):
 			return fail("Invalid pickup source state.")
 	else:
@@ -421,6 +422,8 @@ func _validate_people(raw: Dictionary) -> bool:
 			var worker: WorkerData = group[id]
 			if worker.worker_id != id or worker.current_work_status < 0 or worker.current_work_status > 4 or worker.profession_xp < 0:
 				return fail("Invalid worker.")
+			if not _valid_onboarding(worker):
+				return fail("Invalid worker first-payment state.")
 	for id: Variant in raw.city_storage.units:
 		var unit: Variant = raw.city_storage.units[id]
 		if not id is String or not unit is Dictionary or not unit.get("tool_id") is String or not unit.get("worker_id") is String or not unit.get("name") is String:
@@ -568,3 +571,14 @@ func _restore_city_drops(drops: Array, map: Node) -> void:
 		pickup.quantity = data.quantity
 		pickup.position = data.position
 		parent.add_child(pickup)
+
+func _valid_onboarding(worker: WorkerData) -> bool:
+	if worker.payroll_start_day == -1:
+		return worker.payroll_paid_from_day == -1 and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and worker.payroll_last_attempt_day == -1
+	if worker.payroll_start_day < 0 or worker.payroll_last_attempt_day < -1:
+		return false
+	if worker.payroll_last_attempt_day != -1 and worker.payroll_last_attempt_day < worker.payroll_start_day:
+		return false
+	if worker.payroll_paid_from_day == -1:
+		return worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and not worker.is_reserved()
+	return worker.payroll_paid_from_day >= worker.payroll_start_day and worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6 and worker.payroll_period_rate > 0 and worker.payroll_last_attempt_day == worker.payroll_paid_from_day

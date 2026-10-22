@@ -59,7 +59,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(260, 160)
+custom_minimum_size = Vector2(320, 205)
 layout_mode = 2
 texture = SubResource("Atlas_window")
 patch_margin_left = 16
@@ -79,7 +79,7 @@ theme_override_constants/margin_bottom = 16
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 layout_mode = 2
@@ -89,7 +89,7 @@ text = "JOB BOARD"
 horizontal_alignment = 1
 
 [node name="ApplicantList" type="ItemList" parent="Root/Center/Window/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/v_separation = 6
@@ -116,6 +116,29 @@ theme_override_font_sizes/font_size = 6
 text = "No applicants available."
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="TreasuryLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 6
+horizontal_alignment = 1
+
+[node name="Deposit" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="Amount" type="SpinBox" parent="Root/Center/Window/Margin/MainVBox/Deposit"]
+custom_minimum_size = Vector2(60, 16)
+layout_mode = 2
+theme_override_font_sizes/font_size = 6
+min_value = 1.0
+max_value = 9999.0
+value = 1.0
+
+[node name="DepositButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/Deposit"]
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Deposit to city"
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 16)
