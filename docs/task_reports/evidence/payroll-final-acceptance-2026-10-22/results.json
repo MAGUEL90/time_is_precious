@@ -1,0 +1,101 @@
+[
+  {
+    "test": "normal-write",
+    "exit": 0,
+    "elapsed_seconds": 28.67,
+    "errors": [],
+    "pass_lines": [
+      "NormalRenewalJourney write: PASS"
+    ]
+  },
+  {
+    "test": "normal-fund",
+    "exit": 0,
+    "elapsed_seconds": 14.31,
+    "errors": [],
+    "pass_lines": [
+      "NormalRenewalJourney fund: PASS"
+    ]
+  },
+  {
+    "test": "normal-read",
+    "exit": 0,
+    "elapsed_seconds": 2.97,
+    "errors": [],
+    "pass_lines": [
+      "NormalRenewalJourney read: PASS"
+    ]
+  },
+  {
+    "test": "first-write",
+    "exit": 0,
+    "elapsed_seconds": 2.62,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue write: PASS"
+    ]
+  },
+  {
+    "test": "first-pending",
+    "exit": 0,
+    "elapsed_seconds": 2.27,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue pending: PASS"
+    ]
+  },
+  {
+    "test": "first-waiting",
+    "exit": 0,
+    "elapsed_seconds": 1.77,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue waiting: PASS"
+    ]
+  },
+  {
+    "test": "first-paid",
+    "exit": 0,
+    "elapsed_seconds": 2.12,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue paid: PASS"
+    ]
+  },
+  {
+    "test": "first-sleep-write",
+    "exit": 0,
+    "elapsed_seconds": 6.44,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue sleep-write: PASS"
+    ]
+  },
+  {
+    "test": "first-sleep-read",
+    "exit": 0,
+    "elapsed_seconds": 2.92,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue sleep-read: PASS"
+    ]
+  },
+  {
+    "test": "first-core",
+    "exit": 0,
+    "elapsed_seconds": 1.17,
+    "errors": [],
+    "pass_lines": [
+      "WorkerPayrollFixtureTest: PASS (0 checks failed)"
+    ]
+  },
+  {
+    "test": "renewal-core",
+    "exit": 0,
+    "elapsed_seconds": 1.27,
+    "errors": [],
+    "pass_lines": [
+      "WorkerPayrollRenewalFixtureTest: PASS (0 checks failed)"
+    ]
+  }
+]
