@@ -521,6 +521,7 @@ text_overrun_behavior = 3
 [node name="DetailsScroll" type="ScrollContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
 [node name="DetailsLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll"]
 visible = false
@@ -572,9 +573,11 @@ stretch_mode = 5
 
 [node name="Wage" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview/WageRow"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "0 / day"
+autowrap_mode = 3
 
 [node name="Location" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
 layout_mode = 2

@@ -262,3 +262,15 @@ reselect/release workaround. Old earned checkpoints may differ only in the expli
 ASSIGNED → HIRED repair for an idle worker with no persistent reservation. New
 snapshots omit that transient status consistently; schema stays v6. See
 `docs/task_reports/workshop-idle-assignment-2026-10-22.md` for this fix's evidence.
+
+### Payroll UI readability review
+
+`test_scene_payroll_ui_review.tscn -- --ui-phase=capture`, then `write`, `read`
+uses an isolated copy of the earned v6 renewal checkpoint from the final payroll
+acceptance report. Use Godot4.5.1 with `--fixed-fps 60`. The optional rendered
+`capture` process saves five unedited 400×225 viewport screenshots, leaving the
+checkpoint untouched. Run `write` and `read` headless as separate processes for
+real bed/Continue coverage. The driver clicks the deposit arrows, checks bounds,
+reopens Job Board, reviews worker details, cancels Fire, and verifies that money
+and employment are unchanged by these UI actions. Needs stay active; no grants.
+See `docs/task_reports/payroll-ui-readability-2026-10-22.md` for provenance and limits.
