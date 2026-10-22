@@ -139,6 +139,8 @@ func dismiss_worker(worker_id: String) -> bool:
 		citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	dismissed_workers[worker_id] = worker
 	workers_by_id.erase(worker_id)
+	# Prepaid time is forfeited; removal only refreshes the next payroll quote.
+	payroll_changed.emit()
 	return true
 
 func assign_worker(worker_id: String) -> bool:

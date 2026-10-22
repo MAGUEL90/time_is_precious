@@ -1,0 +1,82 @@
+[
+  {
+    "test": "worker-control",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkerControlTest PASSED"
+    ]
+  },
+  {
+    "test": "population",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PopulationEmploymentIntegrationTest PASSED"
+    ]
+  },
+  {
+    "test": "construction",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkshopConstructionTest: PASS"
+    ]
+  },
+  {
+    "test": "renewal-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue write: PASS"
+    ]
+  },
+  {
+    "test": "renewal-expire",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue expire: PASS"
+    ]
+  },
+  {
+    "test": "renewal-resume",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue resume: PASS"
+    ]
+  },
+  {
+    "test": "renewal-finish",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue finish: PASS"
+    ]
+  },
+  {
+    "test": "production-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue write: PASS"
+    ]
+  },
+  {
+    "test": "production-continue-shape",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue continue-shape: PASS"
+    ]
+  },
+  {
+    "test": "production-continue-dry",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue continue-dry: PASS"
+    ]
+  }
+]

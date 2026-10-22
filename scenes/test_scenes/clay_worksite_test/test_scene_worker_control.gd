@@ -212,6 +212,15 @@ func _run() -> void:
 	_expect(fixture.city_tools.has_equipped(ids[0], "stone_hammer"), "Picker equips the physical tool unit.")
 	fixture.worker_control.close()
 	_expect(management.unequip(ids[1], "test_cart_0") != "Tool returned to City Storage.", "Standing Hauler retains mandatory equipment until unassigned.")
+	# Fixture: give this idle Hauler a prepaid period for confirmation coverage.
+	var prepaid: WorkerData = WorkerDatabase.get_worker_data(ids[1])
+	prepaid.payroll_start_day = TimeComponentManager.current_day
+	prepaid.payroll_paid_from_day = TimeComponentManager.current_day
+	prepaid.payroll_paid_until_day = TimeComponentManager.current_day + 6
+	prepaid.payroll_period_rate = 1
+	prepaid.payroll_last_attempt_day = TimeComponentManager.current_day
+	var wallet_before_fire: int = Inventory.items.get("shekel", 0)
+	var treasury_before_fire: int = CityStockManager.treasury_shekel
 	var xp_before: int = WorkerDatabase.get_worker_data(ids[1]).profession_xp
 	fixture.worker_control.open()
 	fixture.worker_control.status_tab_button.pressed.emit()
@@ -229,6 +238,8 @@ func _run() -> void:
 	fixture.worker_control._show_manage(ids[1])
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	_expect(fixture.worker_control._confirmation_overlay.visible and WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "Fire asks before dismissing worker.")
+	_expect(fixture.worker_control._confirm_label.text.contains("Unused pay is not refunded.")
+		and fixture.worker_control._confirm_label.text.contains("remain."), "Fire explains prepaid time forfeiture before Yes.")
 	await _capture("worker-hub-remove.png")
 	fixture.worker_control._confirm_no_button.pressed.emit()
 	_expect(WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "No preserves assignment.")
@@ -242,6 +253,7 @@ func _run() -> void:
 	fixture.worker_control._confirm_yes_button.pressed.emit()
 	await get_tree().process_frame
 	_expect(not WorkerDatabase.has_worker_data(ids[1]) and not fixture.daily.jobs[&"ClaySiteA"].ids.has(ids[1]), "Yes dismisses worker and cancels Daily assignment.")
+	_expect(Inventory.items.get("shekel", 0) == wallet_before_fire and CityStockManager.treasury_shekel == treasury_before_fire, "Confirmed Fire issues no payroll refund.")
 	fixture.worker_control.close()
 	_expect(not fixture.city_tools.has_equipped(ids[1], "cart"), "Firing returns equipped cart to City Storage.")
 	_expect(management.equip(ids[2], "test_cart_0") == "Tool equipped.", "Released cart can be allocated to another worker.")
@@ -250,6 +262,9 @@ func _run() -> void:
 	for id: String in ids:
 		WorkerDatabase.workers_by_id.erase(id)
 		WorkerDatabase.dismissed_workers.erase(id)
+	# This legacy UI fixture ends its shift after the Job Board closes.
+	# Run the linked-citizen API checks at the next normal opening boundary.
+	TimeComponentManager.advance_minutes((1440 + 480 - fixture.daily.now() % 1440) % 1440)
 	var citizen := CitizenData.new()
 	citizen.citizen_id = "control_linked"
 	citizen.display_name = "Linked worker"
@@ -258,6 +273,10 @@ func _run() -> void:
 	citizen.profession = WorkerData.Profession.LABORER
 	CitizenManager.add_citizen(citizen)
 	var hired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id, 2)
+	_expect(hired != null, "Linked applicant can be hired during Job Board hours.")
+	if hired == null:
+		get_tree().quit(1)
+		return
 	hired.profession_xp = 9
 	hired.profession_star = 2
 	hired.start_work("test_busy", "test_job")

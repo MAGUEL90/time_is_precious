@@ -943,7 +943,8 @@ func _request_remove(row: Dictionary) -> void:
 
 
 func _remove_confirmation_message(row: Dictionary) -> String:
-	return fire_confirmation_text
+	var payroll_warning: String = str(row.get("dismissal_payroll_warning", ""))
+	return fire_confirmation_text + ("\n" + payroll_warning if not payroll_warning.is_empty() else "")
 
 
 func _build_confirmation() -> void:
@@ -958,7 +959,7 @@ func _build_confirmation() -> void:
 	var panel: NinePatchRect = CONFIRM_SCENE.instantiate()
 	center.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	panel.custom_minimum_size = Vector2(180, 64)
+	panel.custom_minimum_size = Vector2(200, 96)
 	_confirm_label = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
 	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_label.add_theme_font_size_override("font_size", 6)

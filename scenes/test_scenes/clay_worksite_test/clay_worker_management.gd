@@ -153,7 +153,7 @@ func rows() -> Array[Dictionary]:
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,
 				"hair_style": profile.hair_style, "accessory": profile.accessory},
 			"can_goto": working and not site_id.is_empty(),
-			"wage": _wage_text(worker)})
+			"wage": _wage_text(worker), "dismissal_payroll_warning": _dismissal_payroll_warning(worker)})
 	result.sort_custom(func(a: Dictionary, b: Dictionary):
 		if a.assigned != b.assigned:
 			return a.assigned
@@ -162,6 +162,18 @@ func rows() -> Array[Dictionary]:
 		return str(a.name) < str(b.name)
 	)
 	return result
+
+func _dismissal_payroll_warning(worker: WorkerData) -> String:
+	if worker.payroll_start_day < 0:
+		return ""
+	if worker.payroll_paid_from_day < 0:
+		return "No payment made yet."
+	var expires: int = (worker.payroll_paid_until_day + 1) * 1440 + 480
+	var remaining: int = maxi(0, expires - schedule.now())
+	if remaining == 0:
+		return "Paid period has ended. No refund."
+	return "Paid until Day %d, 08:00.\n%d d %02d h %02d m remain.\nUnused pay is not refunded." % [worker.payroll_paid_until_day + 1,
+		remaining / 1440, (remaining % 1440) / 60, remaining % 60]
 
 func _wage_text(worker: WorkerData) -> String:
 	if worker.payroll_start_day < 0:
