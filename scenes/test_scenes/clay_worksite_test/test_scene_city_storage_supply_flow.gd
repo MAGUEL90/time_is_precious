@@ -34,6 +34,7 @@ var original_storage_portions: Dictionary = {}
 var original_storage_sequence: int = 0
 var original_food_supply: int = 0
 var original_clothing_supply: int = 0
+var original_treasury_shekel: int = 0
 var original_worker: WorkerData
 var original_dismissed_worker: WorkerData
 var original_clock: Dictionary = {}
@@ -79,6 +80,7 @@ func _snapshot_global_state() -> void:
 		original_storage_sequence = int(original_storage._unit_sequence)
 	original_food_supply = CityStockManager.food_supply
 	original_clothing_supply = CityStockManager.clothing_supply
+	original_treasury_shekel = CityStockManager.treasury_shekel
 	original_worker = WorkerDatabase.workers_by_id.get(TEST_WORKER_ID, null)
 	original_dismissed_worker = WorkerDatabase.dismissed_workers.get(TEST_WORKER_ID, null)
 	original_clock = {
@@ -219,6 +221,7 @@ func _test_physical_city_storage() -> void:
 	var inventory_before_deposit: Dictionary = Inventory.items.duplicate(true)
 	var units_before_deposit: Dictionary = storage.units.duplicate(true)
 	var items_before_deposit: Dictionary = storage.items.duplicate(true)
+	var treasury_before_deposit: int = CityStockManager.treasury_shekel
 	var deposit_transfer: ItemTransferUI = await _open_area_transfer(access_ui, "deposit")
 	var deposit_selection: Dictionary = {
 		"stone_hammer": 1, "basic_glove": 1, "barley_bread": 2,
@@ -238,12 +241,14 @@ func _test_physical_city_storage() -> void:
 		and _inventory_quantity("simple_clothes") == int(inventory_before_deposit.get("simple_clothes", 0)) - 1
 		and _inventory_quantity("clay_worn_wrap") == int(inventory_before_deposit.get("clay_worn_wrap", 0)) - 1
 		and _inventory_quantity("shekel") == int(inventory_before_deposit.get("shekel", 0)) - 1
+		and CityStockManager.treasury_shekel == treasury_before_deposit + 1
 		and _unit_count("stone_hammer") == _unit_count_from(units_before_deposit, "stone_hammer") + 1
 		and _unit_count("basic_glove") == _unit_count_from(units_before_deposit, "basic_glove") + 1
-		and storage.items == {"barley_bread": 2, "simple_clothes": 1, "clay_worn_wrap": 1, "shekel": 1}
+		and storage.items == {"barley_bread": 2, "simple_clothes": 1, "clay_worn_wrap": 1}
+		and not storage.items.has("shekel")
 		and CityStockManager.food_supply == original_food_supply
 		and CityStockManager.clothing_supply == original_clothing_supply,
-		"Mixed physical deposit transfers exact accepted quantities without CityStock conversion.")
+		"Mixed physical deposit sends Shekel to treasury and other accepted goods to physical storage.")
 	_expect(view.visible and get_tree().paused and not is_instance_valid(_area_transfer(access_ui)),
 		"Repeated stale Deposit confirmation preserves the area menu pause and transfers once.")
 
@@ -734,6 +739,7 @@ func _restore_global_state() -> void:
 	Inventory.max_load = original_max_load
 	CityStockManager.food_supply = original_food_supply
 	CityStockManager.clothing_supply = original_clothing_supply
+	CityStockManager.treasury_shekel = original_treasury_shekel
 	SceneTransition.is_transitioning = original_transitioning
 	Inventory.items_changed.emit()
 	if is_instance_valid(original_storage):

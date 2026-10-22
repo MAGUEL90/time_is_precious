@@ -207,7 +207,7 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
 		slot.interaction_locked = true
-	stock_summary.text = "[center]Available: %d [img=2x6]res://assets/ui/ui_icon/separator_icon_2.png[/img] Equipped: %d[/center]" % [quantity, equipped]
+	stock_summary.text = "[center]City cash: %d\nAvailable: %d | Equipped: %d[/center]" % [CityStockManager.treasury_shekel, quantity, equipped]
 	feedback.text = _feedback_text
 	if feedback.text.is_empty() and grid.get_child_count() == 0:
 		if items.is_empty() and int(food_supply_summary.get("portion_points", 0)) > 0:
@@ -219,8 +219,6 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_empty()
 	deposit_button.disabled = storage.get_depositable_items().is_empty()
-	if feedback.text.is_empty():
-		feedback.text = "Food, clothes, Shekel, tools."
 
 func _refresh_food_summary() -> Dictionary:
 	if not is_instance_valid(food_summary):
@@ -302,8 +300,8 @@ func _confirm_transfer(items: Dictionary, source: ItemTransferUI) -> void:
 		close()
 		return
 	_return_from_transfer(source)
-	var result: Dictionary = storage.deposit_items_from_inventory(items)
-	_feedback_text = str(result.message)
+	var result: Dictionary = storage.deposit_items_from_inventory(items, true)
+	_feedback_text = "Deposited." if result.ok else str(result.message)
 	_refresh_view()
 
 func _return_from_transfer(source: ItemTransferUI) -> void:

@@ -32,25 +32,85 @@ func _run() -> void:
 		await walk(board.get_node("InteractableComponent").global_position + Vector2(0, 8))
 		await interact(board)
 		var panel: JobBoardUI = board.job_board_ui
-		var wallet: int = Inventory.items.get("shekel", 0)
-		var treasury: int = CityStockManager.treasury_shekel
+		_expect(panel.find_child("Deposit", true, false) == null,
+			"Job Board has no currency deposit controls")
+		_expect(panel.quote_label.text.contains("Next 08:00"),
+			"Job Board shows the next payroll quote")
 		await _capture("job-board")
-		var amount_rect: Rect2 = panel.deposit_amount.get_global_rect()
-		await _click(amount_rect.position + Vector2(amount_rect.size.x - 3, 3))
-		_expect(panel.deposit_amount.value == 2, "Up arrow increments amount")
-		await _click(amount_rect.end - Vector2(3, 3))
-		_expect(panel.deposit_amount.value == 1, "Down arrow decrements amount")
-		await _click(amount_rect.end - Vector2(3, 3))
-		_expect(panel.deposit_amount.value == 1, "Down arrow respects minimum")
-		panel.deposit_amount.value = 2
-		await _capture("deposit-amount")
-		_expect(Inventory.items.get("shekel", 0) == wallet and CityStockManager.treasury_shekel == treasury, "Changing amount alone transfers no money")
 		await press(panel.close_button)
-		await interact(board)
-		panel = board.job_board_ui
-		await _frames()
-		_expect(panel.deposit_amount.value == 1, "Recreated panel resets amount without a transfer")
-		await press(panel.close_button)
+
+		var area: Area2D = runtime.get_node("CityStorageArea")
+		await walk(area.global_position + Vector2(0, 8))
+		_expect(area.has_player_access(), "Reach physical City Storage for the earned Shekel deposit")
+		await interact(area)
+		var storage_menu = area.menu
+		_expect(is_instance_valid(storage_menu), "Physical City Storage menu opens")
+		if not is_instance_valid(storage_menu):
+			return
+		var storage = WorkStateRuntime.get_node("CityToolStorage")
+		var wallet_before: int = Inventory.items.get("shekel", 0)
+		var treasury_before: int = CityStockManager.treasury_shekel
+		_expect(not storage.items.has("shekel"), "Earned review checkpoint has no physical Shekel stack")
+		await press(storage_menu.deposit_button)
+		var transfer: ItemTransferUI = storage_menu.transfer_ui
+		_expect(is_instance_valid(transfer), "Physical City Storage opens the shared item selector")
+		if not is_instance_valid(transfer):
+			return
+		var shekel_slot: ItemSlot = _find_transfer_slot(transfer, "shekel")
+		_expect(is_instance_valid(shekel_slot) and shekel_slot._quantity >= 1,
+			"Earned wallet contains a selectable Shekel")
+		if not is_instance_valid(shekel_slot) or shekel_slot._quantity < 1:
+			return
+		shekel_slot.pressed.emit()
+		_expect(int(transfer.selected_items.get("shekel", 0)) == 1,
+			"Item selector stages exactly one Shekel")
+		await _capture("deposit-selector")
+		await press(transfer.close_button)
+		_expect(Inventory.items.get("shekel", 0) == wallet_before
+			and CityStockManager.treasury_shekel == treasury_before
+			and not storage.items.has("shekel"),
+			"Cancelling the selected Shekel leaves wallet, treasury and physical stock unchanged")
+		await press(storage_menu.deposit_button)
+		transfer = storage_menu.transfer_ui
+		_expect(is_instance_valid(transfer), "Reopened City Storage opens a fresh item selector")
+		if not is_instance_valid(transfer):
+			return
+		shekel_slot = _find_transfer_slot(transfer, "shekel")
+		_expect(is_instance_valid(shekel_slot) and shekel_slot._quantity >= 1,
+			"Reopened item selector still exposes the earned Shekel")
+		if not is_instance_valid(shekel_slot) or shekel_slot._quantity < 1:
+			return
+		shekel_slot.pressed.emit()
+		await press(transfer.confirm_button)
+		_expect(Inventory.items.get("shekel", 0) == wallet_before - 1
+			and CityStockManager.treasury_shekel == treasury_before + 1
+			and not storage.items.has("shekel"),
+			"Confirmed City Storage deposit transfers one Shekel to treasury without a physical coin stack")
+		_expect(storage_menu.stock_summary.get_line_count() == 2, "Storage cash and stock summaries fit two explicit lines")
+		await _capture("city-storage")
+		var storage_close: BaseButton = storage_menu.view.get_node("Close") as BaseButton
+		await press(storage_close)
+
+		var inventory_after_deposit: Dictionary = Inventory.items.duplicate(true)
+		var treasury_after_deposit: int = CityStockManager.treasury_shekel
+		var raid_bootstrap: Node = content.get_node_or_null("RaidBootstrap")
+		var city_management: RaidUI
+		if is_instance_valid(raid_bootstrap):
+			city_management = raid_bootstrap.get("raid_ui") as RaidUI
+		_expect(is_instance_valid(city_management), "Live RaidBootstrap exposes City Management")
+		if is_instance_valid(city_management):
+			city_management.open_details()
+			_expect(city_management.treasury_summary.text == "City cash: %d Shekel" % treasury_after_deposit, "Management shows the deposited city balance")
+			await _capture("city-management")
+			city_management._select_hub_tab(true)
+			await _capture("city-supply")
+			_expect(city_management.treasury_summary.is_visible_in_tree(), "Supply keeps the cash summary visible")
+			_expect(city_management.details_panel.visible
+				and Inventory.items == inventory_after_deposit
+				and CityStockManager.treasury_shekel == treasury_after_deposit,
+				"Opening read-only City Management preserves earned balances")
+			city_management.close_details()
+
 		var hub = runtime.worker_control
 		hub.open()
 		await _capture("worker-hub")
@@ -64,7 +124,10 @@ func _run() -> void:
 		_expect(hub._confirm_label.get_line_count() <= hub._confirm_label.get_visible_line_count(), "Confirmation text fits")
 		await press(hub._confirm_no_button)
 		hub.close()
-		_expect(WorkerDatabase.has_worker_data(worker.worker_id) and Inventory.items.get("shekel", 0) == wallet and CityStockManager.treasury_shekel == treasury, "Review and cancel leave worker and money unchanged")
+		_expect(WorkerDatabase.has_worker_data(worker.worker_id)
+			and Inventory.items.get("shekel", 0) == wallet_before - 1
+			and CityStockManager.treasury_shekel == treasury_before + 1,
+			"Worker review and cancel preserve the hire and post-deposit balances")
 		if phase == "write":
 			while not player.can_sleep() and not stopped:
 				await upkeep()
@@ -89,12 +152,9 @@ func _capture(label: String) -> void:
 		await RenderingServer.frame_post_draw
 		_expect(get_viewport().get_texture().get_image().save_png("user://payroll_ui_review/" + label + ".png") == OK, "Save " + label + " screenshot")
 
-func _click(position: Vector2) -> void:
-	for down: bool in [true, false]:
-		var event := InputEventMouseButton.new()
-		event.button_index = MOUSE_BUTTON_LEFT
-		event.position = position
-		event.global_position = position
-		event.pressed = down
-		get_viewport().push_input(event, true)
-		await _frames()
+func _find_transfer_slot(transfer: ItemTransferUI, item_id: String) -> ItemSlot:
+	for child: Node in transfer.grid_container.get_children():
+		var slot: ItemSlot = child as ItemSlot
+		if is_instance_valid(slot) and slot._item_id == item_id:
+			return slot
+	return null

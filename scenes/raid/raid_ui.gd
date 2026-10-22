@@ -70,6 +70,7 @@ var result_note: Label
 var report_toggle: Button
 var _loot_display_key: String = ""
 var hub_tabs: HBoxContainer
+var treasury_summary: Label
 var supply_view: VBoxContainer
 var supply_food: Label
 var supply_clothing: Label
@@ -641,6 +642,9 @@ func _create_hub_tabs() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
 		hub_tabs.add_child(button)
+	treasury_summary = _small_label(contents, "")
+	treasury_summary.name = "TreasurySummary"
+	contents.move_child(treasury_summary, 2)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
 	supply_view.add_theme_constant_override("separation", 2)
@@ -657,6 +661,8 @@ func _create_hub_tabs() -> void:
 	_small_label(supply_view, "Deposit goods at City Storage.")
 	supply_view.hide()
 	CitizenNeedsManager.needs_changed.connect(_on_supply_changed)
+	Inventory.items_changed.connect(_on_supply_changed)
+	WorkerDatabase.payroll_changed.connect(_on_supply_changed)
 	var provider := WorkStateRuntime.get_node_or_null("CityToolStorage")
 	if is_instance_valid(provider):
 		provider.changed.connect(_on_supply_changed, CONNECT_DEFERRED)
@@ -765,12 +771,13 @@ func _render_hub() -> void:
 		_supply_selected = false
 	hub_tabs.get_child(0).set_pressed_no_signal(not _supply_selected)
 	hub_tabs.get_child(1).set_pressed_no_signal(_supply_selected)
+	treasury_summary.text = "City cash: %d Shekel" % CityStockManager.treasury_shekel
 	supply_view.visible = _supply_selected
 	if not _supply_selected:
 		return
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
 	for control: Control in contents.get_children():
-		if control in [hub_tabs, supply_view, city_progression_row, footer_spacer, contents.get_node("TitleLabel"), contents.get_node("FooterRow")] or control in _hub_section_spacers:
+		if control in [hub_tabs, supply_view, treasury_summary, city_progression_row, footer_spacer, contents.get_node("TitleLabel"), contents.get_node("FooterRow")] or control in _hub_section_spacers:
 			continue
 		_management_visibility[control] = control.visible
 		control.hide()

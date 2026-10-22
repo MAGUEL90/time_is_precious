@@ -110,7 +110,11 @@ func _run() -> void:
 	board.open()
 	for frame: int in range(3):
 		await get_tree().process_frame
-	check(board.treasury_label.text.contains("City"), "Job Board shows shared treasury")
+	check(board.quote_label.text.contains("Next 08:00")
+		and board.quote_label.text.contains("workers")
+		and board.quote_label.text.contains("Short:"), "Job Board shows the next payroll quote and group shortfall")
+	check(board.get_node_or_null("Root/Center/Window/Margin/MainVBox/Deposit") == null,
+		"Job Board has no currency deposit controls")
 	var window: Control = board.get_node("Root/Center/Window")
 	check(window.size.x <= 400 and window.size.y <= 225, "Job Board fits logical viewport")
 	var actions: Control = board.get_node("Root/Center/Window/Margin/MainVBox/Actions")

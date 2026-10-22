@@ -268,12 +268,24 @@ snapshots omit that transient status consistently; schema stays v6. See
 `test_scene_payroll_ui_review.tscn -- --ui-phase=capture`, then `write`, `read`
 uses an isolated copy of the earned v6 renewal checkpoint from the final payroll
 acceptance report. Use Godot4.5.1 with `--fixed-fps 60`. The optional rendered
-`capture` process saves five unedited 400×225 viewport screenshots, leaving the
+`capture` process saves unedited 400×225 viewport screenshots, leaving the
 checkpoint untouched. Run `write` and `read` headless as separate processes for
-real bed/Continue coverage. The driver clicks the deposit arrows, checks bounds,
-reopens Job Board, reviews worker details, cancels Fire, and verifies that money
-and employment are unchanged by these UI actions. Needs stay active; no grants.
-See `docs/task_reports/payroll-ui-readability-2026-10-22.md` for provenance and limits.
+real bed/Continue coverage. The driver verifies that Job Board has no deposit
+controls, cancels then confirms one earned Shekel via physical City Storage,
+checks the read-only City Management cash summary, and cancels worker dismissal.
+Needs stay active; no grants. See
+`docs/task_reports/city-storage-treasury-review-2026-10-22.md` for current behavior.
+The earlier readability report describes the superseded Job Board spinner.
+
+`test_scene_storage_treasury.tscn` is an explicit-grant transaction fixture:
+mixed cash/goods atomicity, cap and wallet rejection, invalid selections,
+signal reentry, and compatibility with legacy physical coin receipts.
+`clay_worksite_test/test_scene_city_storage_supply_flow.tscn` also covers the
+physical selector, stale confirmation, access loss, and unchanged item filters.
+
+The older `test_scene_city_food_ui.tscn` is incompatible with the current UI:
+it expects the hidden physical City Supply side panel and ignores two authored
+startup applicants in its consumer count. It is not current UI acceptance evidence.
 
 ### Payroll cash-flow balance samples
 
