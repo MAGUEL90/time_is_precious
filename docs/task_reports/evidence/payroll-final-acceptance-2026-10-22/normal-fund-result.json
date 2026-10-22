@@ -1,0 +1,202 @@
+{
+	"failures": 0,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 1,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.454000000000011,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 3,
+				"reed_bundle": 8,
+				"shekel": 7,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 9,
+			"minute": 14856,
+			"paid": 0,
+			"paid_from": 2,
+			"paid_until": 8,
+			"payroll_blocked": true,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_fund",
+			"walked_pixels": 0.0,
+			"worker_reliability": 0.5,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 1,
+			"clothing_missing": 2,
+			"construction": "built",
+			"dried": 0,
+			"earned": 0,
+			"eaten": 6,
+			"fatigue": 0.015,
+			"focus": 0.989500000000001,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 1,
+				"portion_points": 0
+			},
+			"harvested": 3,
+			"held": [],
+			"hunger": 0.254000000000012,
+			"inventory": {
+				"clay_lump": 9,
+				"reed_bundle": 8,
+				"shekel": 6,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 10,
+			"minute": 14896,
+			"paid": 0,
+			"paid_from": 2,
+			"paid_until": 8,
+			"payroll_blocked": true,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "deposited_waiting",
+			"walked_pixels": 307.500766396523,
+			"worker_reliability": 0.5,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "built",
+			"dried": 0,
+			"earned": 0,
+			"eaten": 47,
+			"fatigue": 0.3475,
+			"focus": 0.628000000000041,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 45,
+			"held": [],
+			"hunger": 0.0600000000000126,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 1,
+				"reed_bundle": 8,
+				"shekel": 6,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 11,
+			"minute": 16342,
+			"paid": 0,
+			"paid_from": 11,
+			"paid_until": 17,
+			"payroll_blocked": false,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "renewed",
+			"walked_pixels": 4558.33105814457,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 48,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 45,
+			"held": [],
+			"hunger": 0.447000000000013,
+			"inventory": {
+				"clay_lump": 9,
+				"reed_bundle": 8,
+				"shekel": 6,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 11,
+			"minute": 16769,
+			"paid": 0,
+			"paid_from": 11,
+			"paid_until": 17,
+			"payroll_blocked": false,
+			"shaped": 0,
+			"sleeps": 1,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 4771.66243326664,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		}
+	],
+	"phase": "fund",
+	"renewals": [
+		{
+			"from": 11,
+			"minute": 16320,
+			"until": 17
+		}
+	],
+	"status": "PASS"
+}
