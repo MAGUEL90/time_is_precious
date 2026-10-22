@@ -6,9 +6,15 @@ var workers_by_id: Dictionary[String, WorkerData] = {}
 var is_loaded: bool = false
 var dismissed_workers: Dictionary[String, WorkerData] = {}
 signal payroll_changed
-# Final profession prices remain a Game Director decision, not inferred daily wages.
-# Tests supply their own explicit fixture table. An unpriced profession cannot hire.
-var onboarding_period_rates: Dictionary = {}
+# Temporary test rates approved by the Game Director on 2026-10-22.
+# These are seven-day prices, not validated final balance or daily wages.
+var onboarding_period_rates: Dictionary = {
+	WorkerData.Profession.LABORER: 1,
+	WorkerData.Profession.HAULER: 1,
+	WorkerData.Profession.SCAVENGER: 1,
+	WorkerData.Profession.CRAFTER: 2,
+	WorkerData.Profession.FARMER: 2,
+}
 const PAYROLL_PERIOD_DAYS: int = 7
 
 func _ready() -> void:

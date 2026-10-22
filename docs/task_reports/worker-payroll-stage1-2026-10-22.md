@@ -1,6 +1,10 @@
 # Payroll tahap 1 — 2026-10-22 (Asia/Jakarta)
 
-Status: **PARTIAL — fondasi pembayaran pertama teruji, belum siap merge/aktivasi normal**.
+Status: **PARTIAL — pembayaran pertama aktif dengan tarif uji yang disetujui; review UI dan tahap renewal masih terbuka**.
+
+Update sesi lanjutan: pengguna menyetujui tarif sementara pada 2026-10-22.
+Laporan normal-start dan screenshot review dicatat pada
+`worker-payroll-normal-start-2026-10-22.md`.
 
 ## Kontrak scope dan asal branch
 
@@ -36,13 +40,12 @@ potongan, worker tetap HIRED/pending, retry besok. Deposit sesudah attempt tidak
 mengulang pembayaran hari itu. Callback berulang dan restore tidak menagih ulang.
 Pekerja yang sudah menerima pembayaran pertama tidak masuk batch initial berikutnya.
 
-**Tarif produksi masih kosong (`onboarding_period_rates = {}`).** Handoff menyebut
-1/2 Shekel sebagai kandidat, bukan tabel final. Tidak ada persetujuan angka pada
-sesi ini. UI menampilkan `Rate TBD` dan Hire dinonaktifkan untuk profesi tanpa tarif;
-API juga menolak. Karena itu **New Game belum bisa menyelesaikan rekrutmen normal**
-pada branch draft ini. Jangan menganggap fixture sebagai validasi balance atau
-perjalanan normal. Pertanyaan tarif sudah diajukan; perlu tabel untuk Laborer,
-Hauler, Crafter, Farmer dan Scavenger (atau scope profesi yang diaktifkan).
+**Tarif uji sementara sudah disetujui pengguna** setelah review fondasi: Laborer,
+Hauler, Scavenger = 1 Shekel/7 hari; Crafter, Farmer = 2 Shekel/7 hari. Tabel
+produksi kini terisi sehingga rekrutmen normal aktif. Ini bukan balance final.
+Profesi yang tidak terdaftar tetap ditolak (`Rate TBD`), bukan diberi fallback
+harga diam-diam. Fixture tetap memakai harga milik tes; bukti perjalanan normal
+pada laporan lanjutan menggunakan tabel produksi dan uang penjualan sebenarnya.
 
 Batas irisan: tanggal akhir periode dicatat, tetapi **expiry/renewal dan penghentian
 kontribusi pekerjaan aktif setelah periode berakhir belum diterapkan**. Sesuai
@@ -106,7 +109,8 @@ interaksi/kondisi pemain; tidak dihitung PASS. Fixture diganti penempatan bounda
 07:59, sedangkan skip nyata diuji terpisah lewat bed. Populasi fixture lama gagal
 karena mengharapkan hire langsung aktif, kemudian diperbarui ke kontrak baru.
 Suite lama lain yang mengasumsikan immediate hire/daily wage belum dimigrasikan
-semuanya. Perjalanan normal lama belum diulang karena tarif produksi masih TBD.
+semuanya. Perjalanan normal lama belum diulang pada checkpoint fondasi ini; pengujian
+lanjutan memakai driver tahap 1 khusus setelah tarif uji disetujui.
 
 ## Reproduksi
 
@@ -128,7 +132,7 @@ Dua scene test baru, adaptasi fixture populasi, laporan/bukti dan petunjuk test.
 Tidak ada penghapusan/rename, perubahan AGENTS/control, project settings, addon,
 filter City Storage atau alur kepemilikan. Noise import editor dipulihkan ke HEAD.
 
-Sebelum aktivasi normal: tetapkan tarif uji per profesi, ulangi perjalanan normal
+Tarif uji kini sudah disetujui; lihat laporan lanjutan untuk perjalanan normal
 mendapat Shekel → deposit → hire → tidur/bayar → assignment → save/Continue dengan
-kebutuhan aktif; review UI manusia. Renewal/jeda/resume/progres/cargo dan dismissal
+kebutuhan aktif. Review UI manusia tetap diperlukan. Renewal/jeda/resume/progres/cargo dan dismissal
 warning tetap pekerjaan tahap berikutnya. Jangan merge atau force-push.
