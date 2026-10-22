@@ -1,0 +1,26 @@
+[
+  {
+    "test": "read",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollUIReview read: PASS"
+    ]
+  },
+  {
+    "test": "worker-control",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkerControlTest PASSED"
+    ]
+  },
+  {
+    "test": "first-core",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkerPayrollFixtureTest: PASS (0 checks failed)"
+    ]
+  }
+]

@@ -21,10 +21,27 @@ func _ready() -> void:
 	# ItemList has no gameplay-theme variation; set its local font explicitly.
 	applicant_list.add_theme_font_override("font", preload("res://assets/font/pixel_rpg.ttf"))
 	applicant_list.add_theme_font_size_override("font_size", 6)
+	_style_deposit_amount()
 	hire_button.pressed.connect(_on_hire_button_pressed)
 	close_button.pressed.connect(_on_close_button_pressed)
 	deposit_button.pressed.connect(_deposit)
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
+
+func _style_deposit_amount() -> void:
+	# SpinBox renders its number through a child LineEdit, not its own font overrides.
+	var field: LineEdit = deposit_amount.get_line_edit()
+	field.add_theme_font_override("font", preload("res://assets/font/pixel_rpg.ttf"))
+	field.add_theme_font_size_override("font_size", 6)
+	field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var arrow: Texture2D = preload("res://assets/ui/ui_icon/right_arrow_icon.png")
+	for direction: String in ["up", "down"]:
+		var pixels: Image = arrow.get_image()
+		pixels.rotate_90(COUNTERCLOCKWISE if direction == "up" else CLOCKWISE)
+		var icon: ImageTexture = ImageTexture.create_from_image(pixels)
+		for suffix: String in ["", "_hover", "_pressed"]:
+			deposit_amount.add_theme_icon_override(direction + suffix, icon)
+		pixels.adjust_bcs(0.5, 1.0, 0.0)
+		deposit_amount.add_theme_icon_override(direction + "_disabled", ImageTexture.create_from_image(pixels))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
