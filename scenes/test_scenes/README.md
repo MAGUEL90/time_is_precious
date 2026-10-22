@@ -248,3 +248,17 @@ controls and a bed save; no money/needs/time grants. Rendering write under the
 normal1200×675 window also captures the confirmation at logical400×225. Do not
 reuse the source save directory. See the dismissal task report for source SHA,
 UI evidence, the transient workshop-selection limitation and exact results.
+
+### Idle workshop selection after Continue
+
+`test_scene_idle_assignment_continue.tscn -- --idle-assignment-phase=write`, then `read`,
+uses separate Godot4.5.1 processes with one initially empty isolated XDG data
+folder. It distinguishes a transient idle selector from actual worker reservations,
+checks capture/prepare do not mutate the live selection, and verifies direct
+Worker Hub dismissal after Continue. This is a fixture, not an earned-income run.
+
+The dismissal journey above now fires directly after Continue: no workshop
+reselect/release workaround. Old earned checkpoints may differ only in the explicit
+ASSIGNED → HIRED repair for an idle worker with no persistent reservation. New
+snapshots omit that transient status consistently; schema stays v6. See
+`docs/task_reports/workshop-idle-assignment-2026-10-22.md` for this fix's evidence.
