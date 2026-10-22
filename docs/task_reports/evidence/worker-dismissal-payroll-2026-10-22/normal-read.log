@@ -1,0 +1,6 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MVP_MEASURE {"clothing_missing":2,"dried":0,"earned":0,"eaten":0,"fatigue":0.001,"focus":0.9995,"food":{"consumer_count":2,"daily_need":2,"days_remaining":0,"points":0,"portion_points":0},"harvested":0,"held":[],"hunger":0.431000000000014,"inventory":{"clay_lump":9,"reed_bundle":8,"shekel":6,"straw_bundle":8,"sun_dried_mudbrick":5,"water_jar":2,"wood_log":10},"minute":17713,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"continued_read","walked_pixels":0.0,"workshop_stock":{"sun_dried_mudbrick":15,"wet_mudbrick":14}}
+MVP_MEASURE {"clothing_missing":2,"construction":"built","dried":0,"earned":0,"eaten":11,"fatigue":0.0,"focus":0.990250000000001,"food":{"consumer_count":2,"daily_need":2,"days_remaining":0,"points":0,"portion_points":0},"harvested":12,"held":[],"hunger":0.0280000000000138,"inventory":{"clay_lump":9,"date_cluster":1,"reed_bundle":8,"shekel":6,"straw_bundle":8,"sun_dried_mudbrick":5,"water_jar":2,"wood_log":10},"minute":17750,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"dismissed_continue_city","walked_pixels":1104.99888956547,"workshop_stock":{"sun_dried_mudbrick":15,"wet_mudbrick":14}}
+NormalDismissalJourney read: PASS

@@ -455,7 +455,10 @@ func _validate_work(raw: Dictionary, map: Node) -> bool:
 			return fail("Invalid construction payroll progress.")
 		plot_ids.append(p.order_id)
 		for worker: Variant in p.worker_ids:
-			if not worker is String or not raw.workers.workers_by_id.has(worker):
+			# Finished plots retain historical team IDs after employment ends.
+			# Active construction still requires a member of the hired roster.
+			var archived: bool = p.phase in ["empty", "built"] and raw.workers.dismissed_workers.has(worker)
+			if not worker is String or (not raw.workers.workers_by_id.has(worker) and not archived):
 				return fail("Construction worker missing.")
 	var orders: Dictionary = raw.work.active_orders
 	if raw.order_plots.size() != orders.size():

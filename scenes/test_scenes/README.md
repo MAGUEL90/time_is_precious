@@ -230,3 +230,21 @@ Require exit 0, the named PASS, and no runtime/leak errors; timeout is not PASS.
 
 See `docs/task_reports/worker-payroll-renewal-2026-10-22.md` for exact source-save
 provenance, fixture distinctions, results and limitations.
+
+### Dismissal without payroll refund
+
+Use Godot 4.5.1 and isolated XDG data/config/cache directories. Run
+`test_scene_dismissal_continue.tscn -- --dismissal-phase=write`, then `rehire`,
+`pay`, `expired` as separate processes sharing one initially empty data directory
+(120s bound each). This is a fixture: money, XP, clock placements and re-applicant
+eligibility are explicit grants. It checks archive/rehire, no refund or later
+charge, one new payment, and completed-vs-active construction references.
+
+For needs-active normal evidence, copy the earned renewal checkpoint into
+`user://dismissal_journey/checkpoint.json`, then run
+`test_scene_dismissal_journey.tscn -- --dismissal-phase=write` and `read` with
+`--headless --fixed-fps 60` (360s / 120s bounds). It uses normal workshop/Worker Hub
+controls and a bed save; no money/needs/time grants. Rendering write under the
+normal1200×675 window also captures the confirmation at logical400×225. Do not
+reuse the source save directory. See the dismissal task report for source SHA,
+UI evidence, the transient workshop-selection limitation and exact results.
