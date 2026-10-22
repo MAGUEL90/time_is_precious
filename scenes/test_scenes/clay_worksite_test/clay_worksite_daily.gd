@@ -19,9 +19,21 @@ var stock_min: int = 72
 var stock_max: int = 72
 var rng := RandomNumberGenerator.new()
 var journey_provider: Callable
-var hauling
+var hauling = null:
+	set(value):
+		hauling = value
+		if hauling != null:
+			hauling.payroll_unpaid_minutes_provider = _payroll_unpaid_minutes
 var hauler_ready: Callable
 var tool_requirement: Callable
+
+func _payroll_unpaid_minutes(id: String, from_minute: int, to_minute: int) -> int:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	return worker.get_payroll_unpaid_minutes(from_minute, to_minute) if worker != null else 0
+
+func _payroll_blocked(id: String) -> bool:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	return worker != null and worker.is_payroll_blocked()
 
 func is_hauler(id: String) -> bool:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
@@ -40,7 +52,13 @@ func start_reason(site_id: StringName) -> String:
 		return str(hauler_ready.call(site_id, count))
 	return ""
 
-func _hauler_eligible(id: String) -> bool:
+func _hauler_eligible(id: String, from_minute: int = -1, to_minute: int = -1) -> bool:
+	# Flush an already-active trip through its previous paid interval, but do
+	# not start a new load at the renewal boundary before payroll has settled.
+	if _payroll_blocked(id):
+		return false
+	if to_minute > from_minute and _payroll_unpaid_minutes(id, from_minute, to_minute) > 0:
+		return false
 	if hauling != null and hauling.target_reached(id, now() / 1440):
 		return false
 	for site_id in jobs:
@@ -67,6 +85,10 @@ func setup(site_sessions: Dictionary) -> void:
 	rng.randomize()
 	for key in sites:
 		selected[key] = []
+	if WorkerDatabase.has_signal("payroll_settling") and not WorkerDatabase.is_connected("payroll_settling", tick):
+		WorkerDatabase.connect("payroll_settling", tick)
+	if not WorkerDatabase.payroll_changed.is_connected(_sync_activities):
+		WorkerDatabase.payroll_changed.connect(_sync_activities)
 
 func now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
@@ -80,7 +102,7 @@ func unavailable(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Unavailable"
-	if worker.is_waiting_for_first_payment():
+	if worker.is_payroll_blocked():
 		return worker.get_onboarding_status()
 	if worker.is_reserved():
 		return "Working"
@@ -201,13 +223,15 @@ func active_count(site_id: StringName) -> int:
 	var count: int = 0
 	if jobs.has(site_id):
 		for id: String in jobs[site_id].ids:
-			if not is_hauler(id) and activity(site_id, id) == WorkerData.WorkStatus.WORKING:
+			if not _payroll_blocked(id) and not is_hauler(id) and activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				count += 1
 	return count
 
 func activity(site_id: StringName, id: String) -> WorkerData.WorkStatus:
 	if not jobs.has(site_id) or not jobs[site_id].ids.has(id):
 		return WorkerData.WorkStatus.IDLE
+	if _payroll_blocked(id):
+		return WorkerData.WorkStatus.RESTING
 	if is_hauler(id) and hauling != null and hauling.routes.has(id):
 		var visual: Dictionary = hauling.get_visual(id, float(now()))
 		if visual.get("moving", false):
@@ -260,6 +284,7 @@ func tick() -> void:
 	var current: int = now()
 	if current <= last_tick:
 		return
+	var previous: int = last_tick
 	# The clock emits every elapsed minute, including explicit time skips.
 	var interval: int = current - 1
 	var day: int = interval / 1440
@@ -274,6 +299,8 @@ func tick() -> void:
 			var session = sites[site_id]
 			for id: String in job.ids:
 				if is_hauler(id):
+					continue
+				if _payroll_unpaid_minutes(id, interval, interval + 1) > 0:
 					continue
 				if interval < int(job.starts[id]):
 					continue
@@ -294,7 +321,9 @@ func tick() -> void:
 					_settle(site_id)
 			if session.stock <= 0 or minute == SHIFT_END - 1:
 				_settle(site_id)
-				job.progress.clear()
+				for id: String in job.ids:
+					if _payroll_unpaid_minutes(id, interval, interval + 1) == 0:
+						job.progress.erase(id)
 	# Replace only unharvested natural stock; ground output is never rerolled.
 	var current_day: int = current / 1440
 	if current_day != last_stock_day:
@@ -302,7 +331,7 @@ func tick() -> void:
 			session.stock = rng.randi_range(session.daily_stock_min if session.daily_stock_min >= 0 else stock_min, session.daily_stock_max if session.daily_stock_max >= 0 else stock_max)
 		last_stock_day = current_day
 	if hauling != null:
-		hauling.tick(current, _hauler_eligible, _site_depleted)
+		hauling.tick(current, _hauler_eligible.bind(previous, current), _site_depleted, previous, current)
 		for site_id in jobs.keys():
 			for id: String in jobs[site_id].ids.duplicate():
 				if is_hauler(id) and hauling.finished(id):
@@ -324,6 +353,10 @@ func _release_worker(job: Dictionary, id: String) -> void:
 	job.stats.erase(id)
 
 func cleanup() -> void:
+	if WorkerDatabase.has_signal("payroll_settling") and WorkerDatabase.is_connected("payroll_settling", tick):
+		WorkerDatabase.disconnect("payroll_settling", tick)
+	if WorkerDatabase.payroll_changed.is_connected(_sync_activities):
+		WorkerDatabase.payroll_changed.disconnect(_sync_activities)
 	for job: Dictionary in jobs.values():
 		for id: String in job.ids:
 			_release_worker(job, id)
@@ -334,4 +367,5 @@ func cleanup() -> void:
 	tool_requirement = Callable()
 	if hauling != null:
 		hauling.routes.clear()
+		hauling.payroll_unpaid_minutes_provider = Callable()
 		hauling = null

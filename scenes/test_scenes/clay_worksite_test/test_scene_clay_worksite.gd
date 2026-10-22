@@ -265,7 +265,10 @@ func worker_journey(site_id: StringName, id: String, day: int) -> Dictionary:
 	var arrival: int = day * 1440 + DailySchedule.SHIFT_START
 	var duration: float = origin.distance_to(destination) / worker_walk_pixels_per_game_minute if enable_worker_commute else 0.0
 	var route: Dictionary = {"origin": origin, "target": destination, "start": arrival - duration, "arrival": arrival}
-	worker_journeys[key] = route
+	# First-departure checks may query an older assignment day. The persistent
+	# commute cache belongs only to the current day; historical queries are transient.
+	if day == journey_cache_day:
+		worker_journeys[key] = route
 	return route
 
 func _reset_worker_draft() -> void:

@@ -40,6 +40,10 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 			continue
 		actor.show()
 		var direction: String = "left" if entry.x < actor.global_position.x else "right"
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker != null and worker.is_payroll_blocked():
+			visuals._play(actor, "idle", direction)
+			continue
 		actor.global_position = actor.global_position.move_toward(entry, WALK_SPEED * delta)
 		visuals._play(actor, "walk", direction)
 		if actor.global_position.distance_to(entry) < 0.1:

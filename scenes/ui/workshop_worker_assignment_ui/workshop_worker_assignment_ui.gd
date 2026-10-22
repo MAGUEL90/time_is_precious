@@ -458,7 +458,7 @@ func _has_available_selected_worker() -> bool:
 
 
 func _is_worker_available_for_selection(worker_data: WorkerData) -> bool:
-	if worker_data == null or worker_data.is_reserved() or worker_data.is_waiting_for_first_payment():
+	if worker_data == null or worker_data.is_reserved() or worker_data.is_payroll_blocked():
 		return false
 	var option: Variant = _selection_options_by_id.get(worker_data.worker_id, null)
 	if option is Dictionary:

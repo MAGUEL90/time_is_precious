@@ -66,9 +66,13 @@ func _has_dust_activity() -> bool:
 	if construction.phase in ["clearing", "building"]:
 		var task_key: String = construction.order_id + ":" + construction.phase
 		for worker_id: String in construction.worker_ids:
-			if str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+			if worker != null and not worker.is_payroll_blocked() and str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
 				return true
 	for order: WorkOrder in WorkManager.active_orders.values():
+		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
+		if worker != null and worker.is_payroll_blocked():
+			continue
 		if order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id and str(_arrived_worker_tasks.get(order.worker_id, "")) == order.order_id:
 			return true
 	return false

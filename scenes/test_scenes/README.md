@@ -204,3 +204,29 @@ materials, clear weather, construction clock placement and production RNG seed
 are test-owned. It verifies pending-worker rejection, exact mid-Shape/mid-Drying
 Continue, distinct payroll/fee balances, and no duplicate output or fee entries.
 It refuses an existing checkpoint instead of deleting it.
+
+### Seven-day renewal and payroll pause
+
+Use Godot **4.5.1**, isolated XDG data/config/cache directories, and separate
+processes sharing the same data directory for each multi-phase test below.
+Require exit 0, the named PASS, and no runtime/leak errors; timeout is not PASS.
+
+- `test_scene_payroll_renewal.tscn`: due-group atomicity, current-rate renewal,
+  continuing paid workers, no arrears/replay, production and mixed-team progress.
+- `clay_worksite_test/test_scene_clay_worksite_payroll.tscn`: paused gathering,
+  partial progress, cargo and eligibility at the 08:00 boundary.
+- `test_scene_renewal_continue.tscn -- --renewal-phase=write`, then `expire`,
+  `resume`, `finish`: full snapshots, active production, fractional construction,
+  schema v1–v5 migration and strict v6 validation.
+- `test_scene_payroll_cargo_continue.tscn -- --cargo-phase=write`, then `paused`,
+  `resume`, `deliver`: actual map/start menu/Continue and City Storage delivery.
+  These four scenes use explicit money/material/clock fixtures; they do not prove
+  normal-income viability. Bound each process to 120 seconds.
+- `test_scene_renewal_journey.tscn -- --renewal-phase=write`, then `fund`, `read`:
+  normal needs-active continuation from the earned production checkpoint. Copy
+  that checkpoint to `user://renewal_journey/checkpoint.json` first. Use
+  `--headless --fixed-fps 60` and 360/360/120 second bounds. This driver does not
+  grant resources or override time/needs/rates/RNG; the worker is idle here.
+
+See `docs/task_reports/worker-payroll-renewal-2026-10-22.md` for exact source-save
+provenance, fixture distinctions, results and limitations.

@@ -129,6 +129,7 @@ func _test_legacy_and_corruption(store: Node, city: Node) -> void:
 	var current: Dictionary = store.snapshot.capture(city)
 	var legacy: Dictionary = current.duplicate(true)
 	legacy.schema_version = 4
+	_strip_plot_payroll(legacy)
 	_strip_payroll(legacy.state)
 	check(store.snapshot.prepare(legacy, city), "v4 worker codec explicitly migrates omitted fields")
 	check(store.snapshot.prepared.workers.workers_by_id.initial_workshop_laborer.payroll_start_day == -1, "Legacy workers retain old behavior without retroactive charge")
@@ -148,11 +149,12 @@ func _test_legacy_and_corruption(store: Node, city: Node) -> void:
 		if version == 1:
 			older.erase("location")
 		older.state = legacy_values.encode(legacy_raw)
+		_strip_plot_payroll(older)
 		_strip_payroll(older.state)
 		check(store.snapshot.prepare(older, city), "Legacy v%d with original worker schema prepares" % version)
 	var malformed: Dictionary = current.duplicate(true)
 	_strip_payroll(malformed.state)
-	check(not store.snapshot.prepare(malformed, city), "v5 cannot silently accept missing payroll fields")
+	check(not store.snapshot.prepare(malformed, city), "Current schema cannot silently accept missing payroll fields")
 	var values = VALUES.new()
 	var raw: Dictionary = values.decode(current.state)
 	raw.workers.workers_by_id.initial_workshop_laborer.payroll_paid_until_day += 1
@@ -213,3 +215,10 @@ func _sleep_flow(city: Node, player: Player, store: Node) -> void:
 	check(TimeComponentManager.current_hour == 8 and TimeComponentManager.current_minute == 0, "Real seven-hour sleep crosses exactly 08:00")
 	check(not worker.is_waiting_for_first_payment() and CityStockManager.treasury_shekel == 0, "Sleep pays once from the city")
 	check(store.status == "Saved" and FileAccess.file_exists(checkpoint_path), "Real bed writes paid home checkpoint: " + store.last_error)
+
+func _strip_plot_payroll(document: Dictionary) -> void:
+	var values = VALUES.new()
+	var raw: Dictionary = values.decode(document.state)
+	for plot: Dictionary in raw.plots.values():
+		plot.erase("payroll_work_remainder")
+	document.state = values.encode(raw)

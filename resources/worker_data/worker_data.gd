@@ -15,7 +15,7 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
 @export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
 @export var wage_shekel_per_day: int = 0
-# Stage 1 records only the first prepaid period. -1 preserves legacy saves/fixtures.
+# Last prepaid period and last morning attempt. -1 preserves legacy saves/fixtures.
 @export var payroll_start_day: int = -1
 @export var payroll_paid_from_day: int = -1
 @export var payroll_paid_until_day: int = -1
@@ -98,8 +98,28 @@ func get_reliability_success_chance() -> float:
 func is_waiting_for_first_payment() -> bool:
 	return payroll_start_day >= 0 and payroll_paid_from_day < 0
 
+func is_payroll_due(day: int) -> bool:
+	return payroll_start_day >= 0 and payroll_start_day <= day and (payroll_paid_from_day < 0 or day > payroll_paid_until_day)
+
+func is_payroll_blocked() -> bool:
+	if payroll_start_day < 0:
+		return false
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	return payroll_paid_from_day < 0 or now < payroll_paid_from_day * 1440 + 480 or now >= (payroll_paid_until_day + 1) * 1440 + 480
+
+func get_payroll_unpaid_minutes(from_minute: int, to_minute: int) -> int:
+	var elapsed: int = maxi(0, to_minute - from_minute)
+	if payroll_start_day < 0:
+		return 0
+	if payroll_paid_from_day < 0:
+		return elapsed
+	var paid_start: int = payroll_paid_from_day * 1440 + 480
+	var paid_end: int = (payroll_paid_until_day + 1) * 1440 + 480
+	var paid: int = maxi(0, mini(to_minute, paid_end) - maxi(from_minute, paid_start))
+	return elapsed - paid
+
 func get_onboarding_status() -> String:
-	if not is_waiting_for_first_payment():
+	if not is_payroll_blocked():
 		return ""
 	if TimeComponentManager.current_day < payroll_start_day:
 		return "Starts day %d at 08:00, after payment" % payroll_start_day
@@ -116,7 +136,7 @@ func set_work_activity(order_id: String, activity: WorkStatus) -> void:
 		current_work_status = activity
 
 func get_work_activity_text() -> String:
-	if is_waiting_for_first_payment():
+	if is_payroll_blocked():
 		return get_onboarding_status()
 	match current_work_status:
 		WorkStatus.WORKING:
