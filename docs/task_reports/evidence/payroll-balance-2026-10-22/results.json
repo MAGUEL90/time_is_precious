@@ -1,0 +1,50 @@
+[
+  {
+    "sample": 1,
+    "phase": "write",
+    "exit": 0,
+    "seconds": 66.78,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 1,
+    "phase": "read",
+    "exit": 0,
+    "seconds": 3.27,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 2,
+    "phase": "write",
+    "exit": 0,
+    "seconds": 118.89,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 2,
+    "phase": "read",
+    "exit": 0,
+    "seconds": 2.78,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 3,
+    "phase": "write",
+    "exit": 0,
+    "seconds": 93.08,
+    "errors": [],
+    "status": "PASS"
+  },
+  {
+    "sample": 3,
+    "phase": "read",
+    "exit": 0,
+    "seconds": 2.52,
+    "errors": [],
+    "status": "PASS"
+  }
+]
