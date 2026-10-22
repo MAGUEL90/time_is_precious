@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 5
+const VERSION: int = 6
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -28,7 +28,7 @@ const GROUPS: Dictionary = {
 	"raid": ["phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
 	"merchant": ["_stock", "_offers", "_demand", "_budget", "_visit_day", "_latest_minute", "_present"]
 }
-const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time"]
+const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time", "payroll_work_remainder"]
 var error: String = ""
 var prepared: Dictionary = {}
 var prepared_location: String = "city"
@@ -84,6 +84,8 @@ func busy_reason(map: Node) -> String:
 		return "Finish gathering first."
 	if nodes.city_storage._transfer_in_progress or nodes.merchant._trading or nodes.raid._advancing or nodes.raid._resolving or nodes.raid._starting_work or nodes.raid._refund_pending:
 		return "Wait for the current transaction."
+	if WorkerDatabase._payroll_settling:
+		return "Wait for payroll settlement."
 	if CitizenNeedsManager._processing_daily_needs or CitizenNeedsManager._processing_food or CitizenNeedsManager._processing_clothing:
 		return "Wait for daily settlement."
 	for plot: Node in plots(map).values():
@@ -131,7 +133,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -154,6 +156,12 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	for key: String in ["rng", "plots", "work_sources", "work_outputs", "order_plots", "worksites"]:
 		if not raw.get(key) is Dictionary:
 			return fail("Missing " + key + ".")
+	if version < 6:
+		# Earlier plots did not accumulate partial paid-team minutes.
+		for plot: Variant in raw.plots.values():
+			if not plot is Dictionary or plot.has("payroll_work_remainder"):
+				return fail("Invalid legacy workshop plot.")
+			plot["payroll_work_remainder"] = 0
 	if not raw.get("city_drops") is Array:
 		return fail("Missing dropped inventory items.")
 	for drop: Variant in raw.city_drops:
@@ -423,7 +431,7 @@ func _validate_people(raw: Dictionary) -> bool:
 			if worker.worker_id != id or worker.current_work_status < 0 or worker.current_work_status > 4 or worker.profession_xp < 0:
 				return fail("Invalid worker.")
 			if not _valid_onboarding(worker):
-				return fail("Invalid worker first-payment state.")
+				return fail("Invalid worker payroll state.")
 	for id: Variant in raw.city_storage.units:
 		var unit: Variant = raw.city_storage.units[id]
 		if not id is String or not unit is Dictionary or not unit.get("tool_id") is String or not unit.get("worker_id") is String or not unit.get("name") is String:
@@ -443,6 +451,8 @@ func _validate_work(raw: Dictionary, map: Node) -> bool:
 		var p: Dictionary = raw.plots[id]
 		if p.order_id != plot_nodes[id].order_id or p.phase not in ["uncleared", "clearing", "empty", "building", "built"] or p.clearing_by_player or p.clearing_remaining < 0:
 			return fail("Invalid construction state.")
+		if p.payroll_work_remainder < 0 or p.payroll_work_remainder >= maxi(1, p.worker_ids.size()):
+			return fail("Invalid construction payroll progress.")
 		plot_ids.append(p.order_id)
 		for worker: Variant in p.worker_ids:
 			if not worker is String or not raw.workers.workers_by_id.has(worker):
@@ -581,4 +591,4 @@ func _valid_onboarding(worker: WorkerData) -> bool:
 		return false
 	if worker.payroll_paid_from_day == -1:
 		return worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and not worker.is_reserved()
-	return worker.payroll_paid_from_day >= worker.payroll_start_day and worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6 and worker.payroll_period_rate > 0 and worker.payroll_last_attempt_day == worker.payroll_paid_from_day
+	return worker.payroll_paid_from_day >= worker.payroll_start_day and worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6 and worker.payroll_period_rate > 0 and worker.payroll_last_attempt_day >= worker.payroll_paid_from_day

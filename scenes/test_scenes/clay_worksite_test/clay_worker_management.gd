@@ -169,4 +169,9 @@ func _wage_text(worker: WorkerData) -> String:
 	if worker.is_waiting_for_first_payment():
 		var rate: int = WorkerDatabase.get_onboarding_rate(worker.profession)
 		return "%d Shekel / 7 days; awaiting payment" % rate if rate > 0 else "Rate TBD; awaiting payment"
-	return "%d Shekel; paid days %d–%d" % [worker.payroll_period_rate, worker.payroll_paid_from_day, worker.payroll_paid_until_day]
+	var next_due_day: int = worker.payroll_paid_until_day + 1
+	if worker.is_payroll_blocked():
+		var renewal_rate: int = WorkerDatabase.get_onboarding_rate(worker.profession)
+		return "%d Shekel / 7 days; renewal blocked (due Day %d, 08:00)" % [renewal_rate, next_due_day] if renewal_rate > 0 else "Rate TBD; renewal blocked (due Day %d, 08:00)" % next_due_day
+	return "%d Shekel; paid days %d–%d; next due Day %d, 08:00" % [worker.payroll_period_rate,
+		worker.payroll_paid_from_day, worker.payroll_paid_until_day, next_due_day]

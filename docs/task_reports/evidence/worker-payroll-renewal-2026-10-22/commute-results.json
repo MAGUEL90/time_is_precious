@@ -1,0 +1,18 @@
+[
+  {
+    "test": "commute",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorksiteCommuteTest PASSED"
+    ]
+  },
+  {
+    "test": "departure",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorksiteDepartureTest PASSED"
+    ]
+  }
+]

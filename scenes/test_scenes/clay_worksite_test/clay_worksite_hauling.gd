@@ -22,6 +22,7 @@ var take_output: Callable
 var output_count: Callable
 var return_output: Callable
 var item_provider: Callable
+var payroll_unpaid_minutes_provider: Callable
 var item_id: String = "clay_lump"
 var speed: float = 10.0
 
@@ -52,12 +53,16 @@ func begin(id: String, site_id: StringName, now: int, plan: Dictionary = {}) -> 
 	}
 
 
-func tick(current: int, eligible: Callable, depleted: Callable) -> void:
+func tick(current: int, eligible: Callable, depleted: Callable, from_minute: int = -1, to_minute: int = -1) -> void:
 	for id_variant in routes.keys().duplicate():
 		var id: String = str(id_variant)
 		if not routes.has(id):
 			continue
 		var route: Dictionary = routes[id]
+		if route.phase != PHASE_IDLE and from_minute >= 0 and to_minute >= from_minute and payroll_unpaid_minutes_provider.is_valid():
+			var paused_minutes: int = maxi(int(payroll_unpaid_minutes_provider.call(id, from_minute, to_minute)), 0)
+			route.start += paused_minutes
+			route.arrival += paused_minutes
 		if route.phase == PHASE_IDLE:
 			if bool(route.removing):
 				routes.erase(id)
@@ -85,18 +90,28 @@ func finished(id: String) -> bool:
 	return not routes.has(id)
 
 
-func get_visual(id: String, time: float) -> Dictionary:
+func get_visual(id: String, time: float, unpaid_minutes_provider: Callable = Callable()) -> Dictionary:
 	if not routes.has(id):
 		return {}
 	var route: Dictionary = routes[id]
+	var provider: Callable = unpaid_minutes_provider if unpaid_minutes_provider.is_valid() else payroll_unpaid_minutes_provider
+	var visual_time: float = time
+	var payroll_paused: bool = false
+	if provider.is_valid():
+		var current_minute: int = int(floor(time))
+		if int(provider.call(id, current_minute, current_minute + 1)) > 0:
+			payroll_paused = true
+			visual_time = float(current_minute)
 	var position: Vector2 = route.position
 	var moving: bool = false
 	if route.phase == PHASE_OUTBOUND:
-		position = _position_at(route, time, route.origin, route.target)
-		moving = time >= float(route.start) and time < float(route.arrival)
+		position = _position_at(route, visual_time, route.origin, route.target)
+		moving = visual_time >= float(route.start) and visual_time < float(route.arrival)
 	elif route.phase == PHASE_RETURNING:
-		position = _position_at(route, time, route.target, route.origin)
-		moving = time >= float(route.start) and time < float(route.arrival)
+		position = _position_at(route, visual_time, route.target, route.origin)
+		moving = visual_time >= float(route.start) and visual_time < float(route.arrival)
+	if payroll_paused:
+		moving = false
 	return {
 		"position": position,
 		"moving": moving,

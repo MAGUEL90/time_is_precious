@@ -6,6 +6,9 @@ var workers_by_id: Dictionary[String, WorkerData] = {}
 var is_loaded: bool = false
 var dismissed_workers: Dictionary[String, WorkerData] = {}
 signal payroll_changed
+# Flush elapsed work under the old entitlement before replacing paid-period dates.
+signal payroll_settling
+var _payroll_settling: bool = false
 # Temporary test rates approved by the Game Director on 2026-10-22.
 # These are seven-day prices, not validated final balance or daily wages.
 var onboarding_period_rates: Dictionary = {
@@ -142,7 +145,7 @@ func assign_worker(worker_id: String) -> bool:
 	var worker_data: WorkerData = get_worker_data(worker_id)
 	if worker_data == null:
 		return false
-	if worker_data.is_waiting_for_first_payment():
+	if worker_data.is_payroll_blocked():
 		return false
 
 	var citizen_data: CitizenData = worker_data.get_linked_citizen()
@@ -185,11 +188,15 @@ func get_onboarding_rate(profession: WorkerData.Profession) -> int:
 	return int(onboarding_period_rates.get(profession, -1))
 
 func get_first_payment_quote(day: int) -> Dictionary:
+	# Compatibility for existing callers; projections now include renewals.
+	return get_payroll_quote(day)
+
+func get_payroll_quote(day: int) -> Dictionary:
 	var total: int = 0
 	var count: int = 0
 	var unpriced: bool = false
 	for worker: WorkerData in workers_by_id.values():
-		if not worker.is_waiting_for_first_payment() or worker.payroll_start_day > day:
+		if not worker.is_payroll_due(day):
 			continue
 		count += 1
 		var rate: int = get_onboarding_rate(worker.profession)
@@ -202,26 +209,30 @@ func get_first_payment_quote(day: int) -> Dictionary:
 
 func _on_payroll_hour(hour: int) -> void:
 	# elapsed-hour only: restore/snapshot broadcasts must never charge the treasury.
-	if hour != 8:
+	if hour != 8 or TimeComponentManager.current_hour != 8 or TimeComponentManager.current_minute != 0 or _payroll_settling:
 		return
 	var day: int = TimeComponentManager.current_day
 	var due: Array[WorkerData] = []
 	for worker: WorkerData in workers_by_id.values():
-		if worker.is_waiting_for_first_payment() and worker.payroll_start_day <= day:
+		if worker.is_payroll_due(day):
 			# A replay, including a retry after a midday deposit, is a no-op.
 			if worker.payroll_last_attempt_day >= day:
 				return
 			due.append(worker)
 	if due.is_empty():
 		return
-	var quote: Dictionary = get_first_payment_quote(day)
+	_payroll_settling = true
+	payroll_settling.emit()
+	var quote: Dictionary = get_payroll_quote(day)
 	for worker: WorkerData in due:
 		worker.payroll_last_attempt_day = day
 	if quote.unpriced or not CityStockManager.spend_shekel(quote.total):
+		_payroll_settling = false
 		payroll_changed.emit()
 		return
 	for worker: WorkerData in due:
 		worker.payroll_paid_from_day = day
 		worker.payroll_paid_until_day = day + PAYROLL_PERIOD_DAYS - 1
 		worker.payroll_period_rate = get_onboarding_rate(worker.profession)
+	_payroll_settling = false
 	payroll_changed.emit()

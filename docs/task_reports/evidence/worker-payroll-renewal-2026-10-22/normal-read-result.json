@@ -1,0 +1,101 @@
+{
+	"failures": 0,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.447000000000013,
+			"inventory": {
+				"clay_lump": 9,
+				"reed_bundle": 8,
+				"shekel": 6,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 11,
+			"minute": 16769,
+			"paid": 0,
+			"paid_from": 11,
+			"paid_until": 17,
+			"payroll_blocked": false,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_read",
+			"walked_pixels": 0.0,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "built",
+			"dried": 0,
+			"earned": 0,
+			"eaten": 9,
+			"fatigue": 0.0,
+			"focus": 0.992000000000001,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 9,
+			"held": [],
+			"hunger": 0.117000000000013,
+			"inventory": {
+				"clay_lump": 9,
+				"reed_bundle": 8,
+				"shekel": 6,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"last_attempt": 11,
+			"minute": 16799,
+			"paid": 0,
+			"paid_from": 11,
+			"paid_until": 17,
+			"payroll_blocked": false,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "renewed_continue_city",
+			"walked_pixels": 925.001803994179,
+			"worker_reliability": 0.45,
+			"worker_satisfaction": 0.01,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		}
+	],
+	"phase": "read",
+	"renewals": [],
+	"status": "PASS"
+}

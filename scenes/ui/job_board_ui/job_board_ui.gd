@@ -128,7 +128,7 @@ func _rate_text(profession: WorkerData.Profession) -> String:
 
 func _refresh_quote() -> void:
 	var day: int = TimeComponentManager.current_day + 1
-	var quote: Dictionary = WorkerDatabase.get_first_payment_quote(day)
+	var quote: Dictionary = WorkerDatabase.get_payroll_quote(day)
 	var selected: PackedInt32Array = applicant_list.get_selected_items()
 	var rate: int = -1
 	if not selected.is_empty() and selected[0] < applicants.size():

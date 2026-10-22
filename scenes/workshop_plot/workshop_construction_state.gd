@@ -20,9 +20,13 @@ var started_at: int = 0
 var completes_at: int = 0
 var _latest_time: int = 0
 var _starting: bool = false
+# Fractional team progress, in worker-minutes modulo the assigned team size.
+var payroll_work_remainder: int = 0
 
 func _ready() -> void:
 	TimeComponentManager.time_changed.connect(_on_time_changed)
+	WorkerDatabase.payroll_settling.connect(_flush_payroll_boundary)
+	WorkerDatabase.payroll_changed.connect(_refresh_payroll_status)
 	_latest_time = _now()
 
 func get_requirements() -> Dictionary:
@@ -35,7 +39,7 @@ func _worker_reason(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Worker unavailable."
-	if worker.is_waiting_for_first_payment():
+	if worker.is_payroll_blocked():
 		return worker.get_onboarding_status()
 	if worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
 		return "Worker is busy."
@@ -70,6 +74,8 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 			message = "Missing materials in Inventory."
 	if phase != "empty":
 		message = "Clear the site first." if phase in ["uncleared", "clearing"] else ("Construction in progress." if phase == "building" else "Workshop ready.")
+	if phase == "building" and _all_workers_payroll_blocked():
+		message = "Waiting for city payment at 08:00."
 	elif _starting:
 		message = "Starting construction."
 	var duration: int = ceili(float(SOLO_MINUTES) / selected_ids.size()) if not selected_ids.is_empty() else 0
@@ -105,6 +111,7 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 			return {"success": false, "message": "Materials changed; construction was not started."}
 		consumed[id] = quantity
 	worker_ids = reserved
+	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
@@ -119,13 +126,41 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	var next_time: int = day * 1440 + hour * 60 + minute
 	if next_time <= _latest_time:
 		return
+	var elapsed: int = next_time - _latest_time
+	if not clearing_by_player and not worker_ids.is_empty():
+		var contribution: int = payroll_work_remainder
+		for id: String in worker_ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+			if worker != null:
+				contribution += elapsed - worker.get_payroll_unpaid_minutes(_latest_time, next_time)
+		var worked: int = contribution / worker_ids.size()
+		payroll_work_remainder = contribution % worker_ids.size()
+		started_at += elapsed - worked
+		completes_at += elapsed - worked
 	_latest_time = next_time
 	if _latest_time >= completes_at:
 		phase = "empty" if phase == "clearing" else "built"
+		payroll_work_remainder = 0
 		clearing_remaining = 0
 		clearing_by_player = false
 		_release_workers(worker_ids)
 	changed.emit()
+
+func _all_workers_payroll_blocked() -> bool:
+	if worker_ids.is_empty():
+		return false
+	for id: String in worker_ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker != null and not worker.is_payroll_blocked():
+			return false
+	return true
+
+func _refresh_payroll_status() -> void:
+	if phase in ["building", "clearing"]:
+		changed.emit()
+
+func _flush_payroll_boundary() -> void:
+	_on_time_changed(TimeComponentManager.current_day, TimeComponentManager.current_hour, TimeComponentManager.current_minute, TimeComponentManager.current_weather)
 
 func _release_workers(ids: Array[String]) -> void:
 	for id: String in ids:
@@ -150,6 +185,8 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 			message = "Assign player or one worker."
 		else:
 			message = _worker_reason(ids[0])
+	if phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked():
+		message = "Waiting for city payment at 08:00."
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "clearing" else clearing_remaining
 	var progress: float = 1.0 - float(remaining) / CLEARING_MINUTES
 	return {"can_start": message.is_empty(), "message": message, "duration_minutes": clearing_remaining,
@@ -165,6 +202,7 @@ func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 		WorkerDatabase.get_worker_data(ids[0]).start_work(order_id, "Clear Workshop Site")
 	worker_ids = ids.duplicate()
 	clearing_by_player = use_player
+	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + clearing_remaining
