@@ -160,3 +160,13 @@ required. Bound the process externally (the audit used 600s write / 120s read);
 a timeout is not a pass. `MVP_VISIT`, `MVP_MEASURE`, and `MVP_RESULT` expose the
 observed requests, economy and conditions. No seed is forced, so outcomes differ.
 See `docs/task_reports/mvp-first-playthrough-2026-10-18.md` for evidence and limits.
+
+### Worker payroll stage 1 (fixture; production rates still TBD)
+
+Run `test_scene_worker_payroll.tscn` for first-payment atomicity/deposit checks.
+Run `test_scene_payroll_continue.tscn` in six separate processes with
+`-- --payroll-phase=write`, `pending`, `waiting`, `paid`, `sleep-write`, `sleep-read`,
+in that order, sharing one initially empty isolated XDG data directory. The last
+pair uses the real home bed and startup Continue. These tests inject rates/money;
+they are not a normal-start economy journey. Use Godot 4.5.1. See
+`docs/task_reports/worker-payroll-stage1-2026-10-22.md` for stage limits and evidence.
