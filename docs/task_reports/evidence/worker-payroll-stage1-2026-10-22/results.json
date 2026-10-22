@@ -1,0 +1,146 @@
+[
+  {
+    "name": "payroll-write",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=write"
+    ]
+  },
+  {
+    "name": "payroll-pending",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=pending"
+    ]
+  },
+  {
+    "name": "payroll-waiting",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=waiting"
+    ]
+  },
+  {
+    "name": "payroll-paid",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=paid"
+    ]
+  },
+  {
+    "name": "payroll-sleep-write",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=sleep-write"
+    ]
+  },
+  {
+    "name": "payroll-sleep-read",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_continue.tscn",
+      "--",
+      "--payroll-phase=sleep-read"
+    ]
+  },
+  {
+    "name": "test_scene_worker_payroll",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_worker_payroll.tscn"
+    ]
+  },
+  {
+    "name": "population_employment_integration_test",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/population_employment_integration_test.tscn"
+    ]
+  },
+  {
+    "name": "test_scene_city_save_values",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_city_save_values.tscn"
+    ]
+  },
+  {
+    "name": "test_scene_clock_state_broadcast",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_clock_state_broadcast.tscn"
+    ]
+  },
+  {
+    "name": "mudbrick_production_chain_integration_test",
+    "exit_code": 0,
+    "passed": true,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--path",
+      ".",
+      "scenes/test_scenes/mudbrick_production_chain_integration_test.tscn"
+    ]
+  }
+]

@@ -80,6 +80,8 @@ func unavailable(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Unavailable"
+	if worker.is_waiting_for_first_payment():
+		return worker.get_onboarding_status()
 	if worker.is_reserved():
 		return "Working"
 	if tool_requirement.is_valid():

@@ -35,6 +35,8 @@ func _worker_reason(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Worker unavailable."
+	if worker.is_waiting_for_first_payment():
+		return worker.get_onboarding_status()
 	if worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
 		return "Worker is busy."
 	var citizen: CitizenData = worker.get_linked_citizen()

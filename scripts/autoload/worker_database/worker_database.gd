@@ -5,11 +5,23 @@ const WORKERS_PATH: String = "res://resources/worker_data"
 var workers_by_id: Dictionary[String, WorkerData] = {}
 var is_loaded: bool = false
 var dismissed_workers: Dictionary[String, WorkerData] = {}
+signal payroll_changed
+# Temporary test rates approved by the Game Director on 2026-10-22.
+# These are seven-day prices, not validated final balance or daily wages.
+var onboarding_period_rates: Dictionary = {
+	WorkerData.Profession.LABORER: 1,
+	WorkerData.Profession.HAULER: 1,
+	WorkerData.Profession.SCAVENGER: 1,
+	WorkerData.Profession.CRAFTER: 2,
+	WorkerData.Profession.FARMER: 2,
+}
+const PAYROLL_PERIOD_DAYS: int = 7
 
 func _ready() -> void:
 	# Gameplay starts without employees; Job Board hires populate this roster.
 	# Isolated legacy fixtures may explicitly call reload_workers().
 	is_loaded = true
+	TimeComponentManager.hour_changed.connect(_on_payroll_hour)
 
 
 func _load_all_workers(path: String) -> void:
@@ -81,6 +93,8 @@ func hire_applicant(
 	citizen_id: String,
 	wage_shekel_per_day: int = 1
 ) -> WorkerData:
+	if not is_job_board_open():
+		return null
 	var citizen_data: CitizenData = CitizenManager.get_citizen(citizen_id)
 	if citizen_data == null:
 		return null
@@ -90,6 +104,8 @@ func hire_applicant(
 
 	if has_worker_data(citizen_data.citizen_id):
 		return null
+	if get_onboarding_rate(citizen_data.profession) <= 0:
+		return null
 
 	# Preserve earned profession progress if this citizen is hired again.
 	var worker_data: WorkerData = dismissed_workers.get(citizen_data.citizen_id, WorkerData.new())
@@ -98,8 +114,14 @@ func hire_applicant(
 	worker_data.display_name = citizen_data.display_name
 	worker_data.profession = citizen_data.profession
 	worker_data.wage_shekel_per_day = maxi(0, wage_shekel_per_day)
+	worker_data.payroll_start_day = TimeComponentManager.current_day + 1
+	worker_data.payroll_paid_from_day = -1
+	worker_data.payroll_paid_until_day = -1
+	worker_data.payroll_period_rate = 0
+	worker_data.payroll_last_attempt_day = -1
 	workers_by_id[worker_data.worker_id] = worker_data
 	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
+	payroll_changed.emit()
 
 	return worker_data
 
@@ -119,6 +141,8 @@ func dismiss_worker(worker_id: String) -> bool:
 func assign_worker(worker_id: String) -> bool:
 	var worker_data: WorkerData = get_worker_data(worker_id)
 	if worker_data == null:
+		return false
+	if worker_data.is_waiting_for_first_payment():
 		return false
 
 	var citizen_data: CitizenData = worker_data.get_linked_citizen()
@@ -153,3 +177,51 @@ func unassign_worker(worker_id: String) -> bool:
 
 	citizen_data.employment_status = CitizenData.EmploymentStatus.HIRED
 	return true
+
+func is_job_board_open() -> bool:
+	return TimeComponentManager.current_hour >= 8 and TimeComponentManager.current_hour < 17
+
+func get_onboarding_rate(profession: WorkerData.Profession) -> int:
+	return int(onboarding_period_rates.get(profession, -1))
+
+func get_first_payment_quote(day: int) -> Dictionary:
+	var total: int = 0
+	var count: int = 0
+	var unpriced: bool = false
+	for worker: WorkerData in workers_by_id.values():
+		if not worker.is_waiting_for_first_payment() or worker.payroll_start_day > day:
+			continue
+		count += 1
+		var rate: int = get_onboarding_rate(worker.profession)
+		if rate <= 0:
+			unpriced = true
+		else:
+			total += rate
+	return {"count": count, "total": total, "unpriced": unpriced,
+		"shortfall": maxi(0, total - CityStockManager.treasury_shekel)}
+
+func _on_payroll_hour(hour: int) -> void:
+	# elapsed-hour only: restore/snapshot broadcasts must never charge the treasury.
+	if hour != 8:
+		return
+	var day: int = TimeComponentManager.current_day
+	var due: Array[WorkerData] = []
+	for worker: WorkerData in workers_by_id.values():
+		if worker.is_waiting_for_first_payment() and worker.payroll_start_day <= day:
+			# A replay, including a retry after a midday deposit, is a no-op.
+			if worker.payroll_last_attempt_day >= day:
+				return
+			due.append(worker)
+	if due.is_empty():
+		return
+	var quote: Dictionary = get_first_payment_quote(day)
+	for worker: WorkerData in due:
+		worker.payroll_last_attempt_day = day
+	if quote.unpriced or not CityStockManager.spend_shekel(quote.total):
+		payroll_changed.emit()
+		return
+	for worker: WorkerData in due:
+		worker.payroll_paid_from_day = day
+		worker.payroll_paid_until_day = day + PAYROLL_PERIOD_DAYS - 1
+		worker.payroll_period_rate = get_onboarding_rate(worker.profession)
+	payroll_changed.emit()

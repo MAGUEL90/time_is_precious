@@ -153,7 +153,7 @@ func rows() -> Array[Dictionary]:
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,
 				"hair_style": profile.hair_style, "accessory": profile.accessory},
 			"can_goto": working and not site_id.is_empty(),
-			"wage": "%d Shekel / day" % worker.wage_shekel_per_day})
+			"wage": _wage_text(worker)})
 	result.sort_custom(func(a: Dictionary, b: Dictionary):
 		if a.assigned != b.assigned:
 			return a.assigned
@@ -162,3 +162,11 @@ func rows() -> Array[Dictionary]:
 		return str(a.name) < str(b.name)
 	)
 	return result
+
+func _wage_text(worker: WorkerData) -> String:
+	if worker.payroll_start_day < 0:
+		return "%d Shekel / day (legacy)" % worker.wage_shekel_per_day
+	if worker.is_waiting_for_first_payment():
+		var rate: int = WorkerDatabase.get_onboarding_rate(worker.profession)
+		return "%d Shekel / 7 days; awaiting payment" % rate if rate > 0 else "Rate TBD; awaiting payment"
+	return "%d Shekel; paid days %d–%d" % [worker.payroll_period_rate, worker.payroll_paid_from_day, worker.payroll_paid_until_day]

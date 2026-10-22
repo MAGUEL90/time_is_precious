@@ -1,6 +1,6 @@
 class_name JobBoard extends Node2D
 
-const DEFAULT_PROMPT_TEXT: String = "press E\nto access Job Board"
+const DEFAULT_PROMPT_TEXT: String = "press E\nJob Board (08–17)"
 const JOB_BOARD_UI_SCENE: PackedScene = preload(
 	"res://scenes/ui/job_board_ui/job_board_ui.tscn"
 )
@@ -44,6 +44,10 @@ func _on_interact_range_exited() -> void:
 	interactable_label_component.hide()
 
 func on_player_interact(_player: Player) -> void:
+	if not WorkerDatabase.is_job_board_open():
+		interactable_label_component.set_text("Job Board closed\nOpen 08:00–17:00")
+		interactable_label_component.show()
+		return
 	if is_instance_valid(job_board_ui):
 		return
 

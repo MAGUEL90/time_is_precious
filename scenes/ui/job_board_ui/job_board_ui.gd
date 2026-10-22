@@ -10,7 +10,9 @@ signal closed
 
 
 var applicants: Array[CitizenData] = []
-var daily_wage: int = 1
+@onready var treasury_label: Label = $Root/Center/Window/Margin/MainVBox/TreasuryLabel
+@onready var deposit_amount: SpinBox = $Root/Center/Window/Margin/MainVBox/Deposit/Amount
+@onready var deposit_button: Button = $Root/Center/Window/Margin/MainVBox/Deposit/DepositButton
 
 # Lifecycle and visibility
 
@@ -21,14 +23,15 @@ func _ready() -> void:
 	applicant_list.add_theme_font_size_override("font_size", 6)
 	hire_button.pressed.connect(_on_hire_button_pressed)
 	close_button.pressed.connect(_on_close_button_pressed)
+	deposit_button.pressed.connect(_deposit)
+	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()
 
-func open(default_daily_wage: int = 1) -> void:
-	daily_wage = maxi(0, default_daily_wage)
+func open(_default_daily_wage: int = 1) -> void:
 	get_tree().paused = true
 	visible = true
 	_refresh_applicants()
@@ -46,24 +49,24 @@ func _refresh_applicants() -> void:
 	applicants = CitizenManager.get_all_applicants()
 
 	for applicant_data in applicants:
-		var item_index: int = applicant_list.add_item("%s, %s, SAT %d%%, %d/day" % [
+		var item_index: int = applicant_list.add_item("%s, %s, SAT %d%%, %s" % [
 			applicant_data.display_name,
 			_get_profession_name(applicant_data.profession),
 			roundi(applicant_data.satisfaction * 100.0),
-			daily_wage
+			_rate_text(applicant_data.profession)
 		])
 		applicant_list.set_item_tooltip_enabled(item_index, false)
 
 	var no_applicants: bool = applicants.is_empty()
 	empty_state_label.visible = no_applicants
-	hire_button.disabled = no_applicants
+	hire_button.disabled = no_applicants or not WorkerDatabase.is_job_board_open()
 
 	if no_applicants:
-		feedback_label.text = ""
+		_refresh_quote()
 		return
 
 	applicant_list.select(0)
-	feedback_label.text = "Select an applicant to hire."
+	_refresh_quote()
 
 # Actions
 
@@ -83,19 +86,16 @@ func _on_hire_button_pressed() -> void:
 
 	var applicant_data: CitizenData = applicants[selected_index]
 	var hired_worker: WorkerData = WorkerDatabase.hire_applicant(
-		applicant_data.citizen_id,
-		daily_wage
+		applicant_data.citizen_id
 	)
 
 	if hired_worker == null:
 		_refresh_applicants()
-		feedback_label.text = "Applicant is no longer available."
+		feedback_label.text = "Hiring unavailable: check hours, rate and applicant."
 		return
 
-	var success_text: String = "Hired %s for %d/day." % [
-		hired_worker.get_resolved_display_name(),
-		hired_worker.wage_shekel_per_day
-	]
+	var success_text: String = "Hired %s. Start day %d, 08:00 after payment." % [
+		hired_worker.get_resolved_display_name(), hired_worker.payroll_start_day]
 
 	_refresh_applicants()
 	feedback_label.text = success_text
@@ -121,3 +121,32 @@ func _get_profession_name(
 			return "Scavenger"
 		_:
 			return "Unassigned"
+
+func _rate_text(profession: WorkerData.Profession) -> String:
+	var rate: int = WorkerDatabase.get_onboarding_rate(profession)
+	return "%d / 7 days" % rate if rate > 0 else "Rate TBD"
+
+func _refresh_quote() -> void:
+	var day: int = TimeComponentManager.current_day + 1
+	var quote: Dictionary = WorkerDatabase.get_first_payment_quote(day)
+	var selected: PackedInt32Array = applicant_list.get_selected_items()
+	var rate: int = -1
+	if not selected.is_empty() and selected[0] < applicants.size():
+		rate = WorkerDatabase.get_onboarding_rate(applicants[selected[0]].profession)
+		quote.total += maxi(0, rate)
+		quote.count += 1
+		quote.unpriced = quote.unpriced or rate <= 0
+	var wallet: int = Inventory.items.get("shekel", 0)
+	var treasury: int = CityStockManager.treasury_shekel
+	treasury_label.text = "Wallet %d | City %d | Next 08:00: %s (%d workers)\nShortfall: %s | With selected hire; all paid or all wait" % [
+		wallet, treasury, "TBD" if quote.unpriced else str(quote.total), quote.count,
+		"TBD" if quote.unpriced else str(maxi(0, quote.total - treasury))]
+	deposit_button.disabled = wallet <= 0 or treasury >= CityStockManager.MAX_SHEKEL
+	deposit_amount.max_value = maxi(1, mini(wallet, CityStockManager.MAX_SHEKEL - treasury))
+	hire_button.disabled = rate <= 0 or not WorkerDatabase.is_job_board_open()
+	feedback_label.text = "Open 08:00–17:00. Hire starts tomorrow 08:00 after payment." if WorkerDatabase.is_job_board_open() else "Closed. Hiring opens 08:00–17:00."
+
+func _deposit() -> void:
+	var deposited: bool = CityStockManager.deposit_wallet_shekel(int(deposit_amount.value))
+	_refresh_quote()
+	feedback_label.text = "Deposited. Waiting workers retry tomorrow at 08:00." if deposited else "Deposit unavailable: check wallet and city capacity."

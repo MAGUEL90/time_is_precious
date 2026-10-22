@@ -160,3 +160,25 @@ required. Bound the process externally (the audit used 600s write / 120s read);
 a timeout is not a pass. `MVP_VISIT`, `MVP_MEASURE`, and `MVP_RESULT` expose the
 observed requests, economy and conditions. No seed is forced, so outcomes differ.
 See `docs/task_reports/mvp-first-playthrough-2026-10-18.md` for evidence and limits.
+
+### Worker payroll stage 1 (fixture and normal-income journey)
+
+Run `test_scene_worker_payroll.tscn` for first-payment atomicity/deposit checks.
+Run `test_scene_payroll_continue.tscn` in six separate processes with
+`-- --payroll-phase=write`, `pending`, `waiting`, `paid`, `sleep-write`, `sleep-read`,
+in that order, sharing one initially empty isolated XDG data directory. The last
+pair uses the real home bed and startup Continue. These tests inject rates/money;
+they are not a normal-start economy journey. Use Godot 4.5.1. See
+`docs/task_reports/worker-payroll-stage1-2026-10-22.md` for stage limits and evidence.
+
+After approval of temporary rates on 2026-10-22, use
+`test_scene_payroll_first_playthrough.tscn -- --journey-phase=write` then `read`
+in separate Godot 4.5.1 processes with the same initially empty isolated XDG data
+folder. Use `--headless --fixed-fps 60`; allow up to 600s write / 120s read.
+The driver inherits navigation/upkeep/merchant helpers from the original MVP audit,
+but runs only normal income → explicit treasury deposit → pending hire → first
+payment → clearing → real sleep checkpoint → exact Continue. It never grants money,
+materials or workers, overrides rates, or forces merchant requests. Merchant luck
+can delay first income; a deadline without completion returns PARTIAL (exit 2).
+The older full `mvp_first_playthrough` route still assumes immediate hire and is
+historical pre-payroll coverage; do not treat it as current payroll acceptance.
