@@ -120,6 +120,7 @@ func capture(map: Node) -> Dictionary:
 		error = _sites.error
 	if not error.is_empty():
 		return {}
+	_without_transient_worker_assignments(raw)
 	var values = VALUES.new()
 	var payload: Variant = values.encode(raw)
 	if not values.error.is_empty():
@@ -192,8 +193,27 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		# Legacy files cannot describe newly registered sources. Initialize only
 		# those missing histories on apply; never infer depletion from Inventory.
 		raw["pickup_sources"] = migrated
+	_without_transient_worker_assignments(raw)
 	prepared = raw
 	return true
+
+func _without_transient_worker_assignments(raw: Dictionary) -> void:
+	# Workshop selector drafts have no persistent owner. Keep actual reservations,
+	# but do not restore an idle citizen as ASSIGNED to a selection that was not saved.
+	# Copy the affected resources: capture/validation must never release a live draft.
+	var people: Dictionary = raw.citizens.citizens_by_id.duplicate()
+	for id: String in raw.workers.workers_by_id:
+		var worker: WorkerData = raw.workers.workers_by_id[id]
+		var citizen: CitizenData = people.get(id)
+		if citizen == null or citizen.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+			continue
+		if worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
+			continue
+		var restored_citizen: CitizenData = citizen.duplicate()
+		restored_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+		people[id] = restored_citizen
+	raw.citizens = raw.citizens.duplicate()
+	raw.citizens.citizens_by_id = people
 
 func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	# No yields, gameplay commands, or signals until every owner is restored.

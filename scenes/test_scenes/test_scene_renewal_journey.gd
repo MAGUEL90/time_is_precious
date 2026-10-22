@@ -36,7 +36,16 @@ func _run() -> void:
 			p["payroll_work_remainder"] = 0
 		expected.state = values.encode(raw)
 		expected.schema_version = 6
-	_expect(same(expected, restored_snapshot), "Continue restores complete earned state, including explicit v5 migration")
+	# Old earned checkpoints can retain a transient idle workshop selector status.
+	var people_values = VALUES.new()
+	var expected_raw: Dictionary = people_values.decode(expected.state)
+	var prior_worker: WorkerData = expected_raw.workers.workers_by_id.get("initial_workshop_laborer")
+	if prior_worker != null and not prior_worker.is_reserved() and prior_worker.current_work_status == WorkerData.WorkStatus.IDLE:
+		var prior_citizen: CitizenData = expected_raw.citizens.citizens_by_id.get(prior_worker.worker_id)
+		if prior_citizen != null and prior_citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED:
+			prior_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+		expected.state = people_values.encode(expected_raw)
+	_expect(same(expected, restored_snapshot), "Continue restores complete earned state with explicit v5 and idle-selector repair")
 	_expect(worker != null and worker.payroll_paid_from_day >= 0, "Earned worker already has a paid first period")
 	if stopped:
 		return

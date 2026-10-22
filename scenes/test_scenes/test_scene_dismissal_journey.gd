@@ -28,26 +28,22 @@ func _run() -> void:
 	while not launched and not stopped:
 		await get_tree().process_frame
 	bind_map()
-	_expect(same(expected, restored_snapshot), "Continue restores the complete earned snapshot")
+	# This source predates the repair: only its unsaved idle selector status changes.
+	var values = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
+	var raw: Dictionary = values.decode(expected.state)
+	if phase == "write":
+		var prior: WorkerData = raw.workers.workers_by_id[WORKER_ID]
+		_expect(not prior.is_reserved() and prior.current_work_status == WorkerData.WorkStatus.IDLE, "Source worker is idle without an active reservation")
+		raw.citizens.citizens_by_id[WORKER_ID].employment_status = CitizenData.EmploymentStatus.HIRED
+		expected.state = values.encode(raw)
+	_expect(same(expected, restored_snapshot), "Continue restores every earned field with only the explicit idle-assignment repair")
 	measure("continued_" + phase)
 	await leave_home()
 	if phase == "write":
 		_expect(worker != null and not worker.is_payroll_blocked() and not worker.is_reserved(), "Earned worker has unused paid time and is idle")
 		if stopped:
 			return
-		# Release the saved workshop selection through its real assignment UI first.
-		await open_workshop()
-		await press(ui(WorkshopMenuUI).assign_button)
-		await choose(ui(WorkshopProductionUI), JOB.job_id)
-		var assignment = ui(WorkshopWorkerAssignmentUI)
-		# Workshop selection is transient across Continue. Re-select through the UI
-		# if needed, then release it so the linked employment status is consistent.
-		if assignment._get_selected_worker_ids().is_empty():
-			await press(assignment.slot_grid.get_child(0))
-			await press(assignment.worker_list.get_child(0))
-		await press(assignment.slot_grid.get_child(0))
-		await press(assignment.close_button)
-		_expect(worker.get_linked_citizen().employment_status == CitizenData.EmploymentStatus.HIRED, "Workshop selection released before dismissal")
+		_expect(worker.get_linked_citizen().employment_status == CitizenData.EmploymentStatus.HIRED, "Continue releases the unsaved idle workshop selection without reselecting")
 		archived_xp = worker.profession_xp
 		var wallet: int = Inventory.items.get("shekel", 0)
 		var city: int = CityStockManager.treasury_shekel
