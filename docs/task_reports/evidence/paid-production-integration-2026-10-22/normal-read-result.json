@@ -1,0 +1,111 @@
+{
+	"dried": 0,
+	"failures": 0,
+	"fees_paid": 0,
+	"first_period_only": true,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.434000000000008,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 4,
+				"reed_bundle": 8,
+				"shekel": 7,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"minute": 10836,
+			"paid": 0,
+			"paid_from": 2,
+			"paid_until": 8,
+			"payroll_start": 2,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued",
+			"walked_pixels": 0.0,
+			"worker_reliability": 0.65,
+			"worker_satisfaction": 0.15,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "built",
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 12,
+			"fatigue": 0.00000000000000000520417042793042,
+			"focus": 0.987000000000001,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 15,
+			"held": [],
+			"hunger": 0.00400000000000829,
+			"inventory": {
+				"clay_lump": 9,
+				"date_cluster": 7,
+				"reed_bundle": 8,
+				"shekel": 7,
+				"straw_bundle": 8,
+				"sun_dried_mudbrick": 5,
+				"water_jar": 2,
+				"wood_log": 10
+			},
+			"minute": 10886,
+			"paid": 0,
+			"paid_from": 2,
+			"paid_until": 8,
+			"payroll_start": 2,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_city",
+			"walked_pixels": 1555.00200235844,
+			"worker_reliability": 0.65,
+			"worker_satisfaction": 0.15,
+			"workshop_stock": {
+				"sun_dried_mudbrick": 15,
+				"wet_mudbrick": 14
+			}
+		}
+	],
+	"phase": "read",
+	"settlements": [],
+	"shaped": 0,
+	"sold_bricks": 0,
+	"status": "PASS",
+	"visits": []
+}
