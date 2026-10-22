@@ -182,3 +182,25 @@ materials or workers, overrides rates, or forces merchant requests. Merchant luc
 can delay first income; a deadline without completion returns PARTIAL (exit 2).
 The older full `mvp_first_playthrough` route still assumes immediate hire and is
 historical pre-payroll coverage; do not treat it as current payroll acceptance.
+
+### Paid-worker production integration
+
+`test_scene_paid_production_journey.tscn` extends normal onboarding through
+construction, Shape fees, one Drying batch, output withdrawal and bed/Continue.
+Use fresh isolated XDG directories with `--headless --fixed-fps 60`, then
+`-- --journey-phase=write` and `read` as separate processes (600s / 120s bounds).
+It inherits the stage-1 checkpoint path, so never reuse an older run's directory.
+The first paid period is a hard acceptance boundary; incomplete production returns
+PARTIAL/exit 2. Merchant requests and needs stay active. A brick sale is recorded
+if available but is not required for this gate. This does not test renewal.
+See `docs/task_reports/paid-production-integration-2026-10-22.md` for the fixture
+companion, normal evidence and limits.
+
+For deterministic mid-work persistence coverage, run
+`test_scene_paid_production_continue.tscn` in three separate Godot 4.5.1 processes
+with `-- --production-phase=write`, `continue-shape`, and `continue-dry`, sharing
+fresh isolated XDG data/config/cache paths. This is explicitly a fixture: money,
+materials, clear weather, construction clock placement and production RNG seed
+are test-owned. It verifies pending-worker rejection, exact mid-Shape/mid-Drying
+Continue, distinct payroll/fee balances, and no duplicate output or fee entries.
+It refuses an existing checkpoint instead of deleting it.
