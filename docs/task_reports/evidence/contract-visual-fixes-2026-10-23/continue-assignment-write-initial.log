@@ -1,0 +1,31 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+WARNING: City checkpoint: validator_rejected: Invalid worker commute arrival time.
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] _failed (res://scenes/new_scenes/save_game/city_save_store.gd:116)
+         [1] save_checkpoint (res://scenes/new_scenes/save_game/city_save_store.gd:54)
+         [2] _assert_saved_capture (res://scenes/test_scenes/test_scene_contract_continue.gd:536)
+         [3] _write_midshift_assignment (res://scenes/test_scenes/test_scene_contract_continue.gd:449)
+         [4] _run (res://scenes/test_scenes/test_scene_contract_continue.gd:100)
+ERROR: Save the midshift Wood Site assignment checkpoint: validator_rejected: Invalid worker commute arrival time.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_continue.gd:33)
+       [1] _assert_saved_capture (res://scenes/test_scenes/test_scene_contract_continue.gd:536)
+       [2] _write_midshift_assignment (res://scenes/test_scenes/test_scene_contract_continue.gd:449)
+       [3] _run (res://scenes/test_scenes/test_scene_contract_continue.gd:100)
+ERROR: The midshift Wood Site assignment disk checkpoint exactly matches every captured save owner.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_continue.gd:33)
+       [1] _assert_saved_capture (res://scenes/test_scenes/test_scene_contract_continue.gd:538)
+       [2] _write_midshift_assignment (res://scenes/test_scenes/test_scene_contract_continue.gd:449)
+       [3] _run (res://scenes/test_scenes/test_scene_contract_continue.gd:100)
+ERROR: The assignment-write phase did not reach its completion sentinel.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://scenes/test_scenes/test_scene_contract_continue.gd:644)
+       [1] _run (res://scenes/test_scenes/test_scene_contract_continue.gd:103)
+ContractContinue assignment-write: FAIL

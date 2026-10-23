@@ -58,6 +58,7 @@ func _run() -> void:
 		hub.renew_days_option.select(1)
 		hub.renew_days_option.item_selected.emit(1)
 		await _capture("worker-renew")
+		var manage_position: Vector2 = hub.manage_window.position
 		await press(hub.manage_renew_button)
 		await _capture("renew-confirmation")
 		await press(hub._confirm_no_button)
@@ -71,6 +72,8 @@ func _run() -> void:
 		hub._confirm_yes_button.pressed.emit()
 		_expect(Inventory.items.get("shekel", 0) == before - 2, "Repeated stale confirmation never pays twice")
 		await _capture("renewed")
+		_expect(hub.manage_window.position.is_equal_approx(manage_position), "Renewal refresh keeps the Manage popup anchored to its laid-out roster button")
+		_expect(hub.manage_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Renew button stays inside the resized Manage frame")
 		hub.close()
 		if phase == "write":
 			while not player.can_sleep() and not stopped:

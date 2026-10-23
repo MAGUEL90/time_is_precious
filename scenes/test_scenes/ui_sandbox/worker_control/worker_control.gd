@@ -261,10 +261,19 @@ func refresh() -> void:
 			_manage_source_button = _find_manage_button(_manage_worker_id)
 			_update_manage_controls(managed_row)
 			if manage_window.visible:
-				_position_popup(manage_window, _manage_source_button)
+				_reposition_manage_after_layout()
 			elif details_window.visible:
 				_render_details(managed_row)
 				_position_popup(details_window, _manage_source_button)
+
+
+func _reposition_manage_after_layout() -> void:
+	# Refresh replaces the roster buttons; wait for their container geometry.
+	await get_tree().process_frame
+	if not visible or not manage_window.visible or _manage_worker_id.is_empty():
+		return
+	_manage_source_button = _find_manage_button(_manage_worker_id)
+	_position_popup(manage_window, _manage_source_button)
 
 
 func set_feedback(text: String) -> void:
@@ -681,6 +690,8 @@ func _find_manage_button(worker_id: String) -> Button:
 func _position_popup(popup: Control, source_button: Button) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var popup_size: Vector2 = popup.get_combined_minimum_size()
+	if popup == manage_window:
+		popup_size = popup_size.max(popup.get_node("Margin").get_combined_minimum_size())
 	if popup == details_window:
 		popup_size.x = clampf(popup_size.x, details_window.custom_minimum_size.x, viewport_size.x - 4.0)
 		popup_size.y = clampf(popup_size.y, details_window.custom_minimum_size.y, viewport_size.y - 4.0)
@@ -1083,6 +1094,7 @@ func _confirm_pending_action() -> void:
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if not row.is_empty():
 		_update_manage_controls(row)
+		_reposition_manage_after_layout()
 
 
 func _confirm_remove() -> void:

@@ -183,6 +183,12 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var restored_journeys: Dictionary = {}
 	for key: String in data.worker_journeys:
 		restored_journeys[key] = data.worker_journeys[key].duplicate(true)
+	# Route identity is transient; reconnect it to the restored assignment stats.
+	for site_id: StringName in restored_jobs:
+		for worker_id: String in restored_jobs[site_id].ids:
+			var key: String = "%s:%s:%d" % [site_id, worker_id, int(data.journey_cache_day)]
+			if restored_journeys.has(key):
+				restored_journeys[key]["assignment"] = restored_jobs[site_id].stats[worker_id]
 
 	var daily = worksite.daily
 	for site_id: String in data.sites:
@@ -594,7 +600,7 @@ func _validate_journeys(journeys: Dictionary, workers: Dictionary, site_ids: Dic
 			return _fail("Invalid worker commute record.")
 		if not _is_vector(journey.origin) or not _is_vector(journey.target) or not _is_finite_number(journey.start) or float(journey.start) < 0.0 or float(journey.start) > float(MAX_COUNT):
 			return _fail("Invalid worker commute positions or departure time.")
-		if not _is_count(journey.arrival, 0, MAX_COUNT) or float(journey.arrival) < float(journey.start) or int(journey.arrival) != cache_day * 1440 + 420:
+		if not _is_count(journey.arrival, 0, MAX_COUNT) or float(journey.arrival) < float(journey.start) or int(journey.arrival) < cache_day * 1440 + 420:
 			return _fail("Invalid worker commute arrival time.")
 	return true
 

@@ -475,6 +475,13 @@ func _read_midshift_assignment(city: Node, store: Node) -> void:
 		and worker.is_reserved()
 		and worker.current_work_status == WorkerData.WorkStatus.WORKING,
 		"Continue preserves the 10:15 start, three minutes of progress, and reserved standing assignment.")
+	var route_key: String = "%s:%s:%d" % [WOOD_SITE, LEGACY_PENDING_ID, TimeComponentManager.current_day]
+	var saved_route: Dictionary = runtime.worker_journeys.get(route_key, {}).duplicate(true)
+	var resumed_route: Dictionary = runtime.worker_journey(WOOD_SITE, LEGACY_PENDING_ID, TimeComponentManager.current_day)
+	_check(not saved_route.is_empty() and saved_route.start == resumed_route.start
+		and saved_route.arrival == resumed_route.arrival and saved_route.origin == resumed_route.origin
+		and saved_route.target == resumed_route.target,
+		"Continue preserves the in-flight visual route instead of restarting its departure.")
 	if failures == 0:
 		phase_completed = true
 
