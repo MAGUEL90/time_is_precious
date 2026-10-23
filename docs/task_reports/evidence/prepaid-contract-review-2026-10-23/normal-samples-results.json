@@ -1,0 +1,30 @@
+[
+  {
+    "name": "normal2-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 13.26,
+    "log": "normal2-write.log"
+  },
+  {
+    "name": "normal2-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.77,
+    "log": "normal2-read.log"
+  },
+  {
+    "name": "normal3-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 12.3,
+    "log": "normal3-write.log"
+  },
+  {
+    "name": "normal3-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.67,
+    "log": "normal3-read.log"
+  }
+]

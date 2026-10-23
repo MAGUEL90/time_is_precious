@@ -1,0 +1,149 @@
+[
+  {
+    "name": "test_scene_prepaid_contracts",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.17,
+    "log": "test_scene_prepaid_contracts.log"
+  },
+  {
+    "name": "test_scene_contract_assignment",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.52,
+    "log": "test_scene_contract_assignment.log"
+  },
+  {
+    "name": "test_scene_contract_notifications",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.32,
+    "log": "test_scene_contract_notifications.log"
+  },
+  {
+    "name": "population_employment_integration_test",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.22,
+    "log": "population_employment_integration_test.log"
+  },
+  {
+    "name": "test_scene_worker_rehire_regression",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.67,
+    "log": "test_scene_worker_rehire_regression.log"
+  },
+  {
+    "name": "test_scene_raid_ui",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.37,
+    "log": "test_scene_raid_ui.log"
+  },
+  {
+    "name": "test_scene_city_save_values",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.27,
+    "log": "test_scene_city_save_values.log"
+  },
+  {
+    "name": "test_scene_city_save_file",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.52,
+    "log": "test_scene_city_save_file.log"
+  },
+  {
+    "name": "test_scene_city_save_economy",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.92,
+    "log": "test_scene_city_save_economy.log"
+  },
+  {
+    "name": "test_scene_clay_worksite_team",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.97,
+    "log": "test_scene_clay_worksite_team.log"
+  },
+  {
+    "name": "test_scene_content_worksites",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.07,
+    "log": "test_scene_content_worksites.log"
+  },
+  {
+    "name": "hauler-setup",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.57,
+    "log": "hauler-setup.log"
+  },
+  {
+    "name": "continue-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.27,
+    "log": "continue-write.log"
+  },
+  {
+    "name": "continue-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.77,
+    "log": "continue-read.log"
+  },
+  {
+    "name": "continue-readrenew",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.97,
+    "log": "continue-readrenew.log"
+  },
+  {
+    "name": "continue-legacy-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.77,
+    "log": "continue-legacy-read.log"
+  },
+  {
+    "name": "continue-legacy-renew-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.67,
+    "log": "continue-legacy-renew-read.log"
+  },
+  {
+    "name": "continue-assignment-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.67,
+    "log": "continue-assignment-write.log"
+  },
+  {
+    "name": "continue-assignment-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.67,
+    "log": "continue-assignment-read.log"
+  },
+  {
+    "name": "normal-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 10.85,
+    "log": "normal-write.log"
+  },
+  {
+    "name": "normal-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 3.07,
+    "log": "normal-read.log"
+  }
+]

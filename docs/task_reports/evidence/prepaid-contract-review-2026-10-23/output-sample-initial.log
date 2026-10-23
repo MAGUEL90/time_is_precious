@@ -1,0 +1,9 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+ERROR: Authored daily stock is exactly 72 for ClaySiteA
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:68)
+ContractOutputSample: FAIL cases=20/20 results=user://contract_output_sample/results.json

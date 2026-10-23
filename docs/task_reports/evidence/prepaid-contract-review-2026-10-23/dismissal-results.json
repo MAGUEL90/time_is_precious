@@ -1,0 +1,16 @@
+[
+  {
+    "name": "dismissal-retest-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 6.89,
+    "log": "dismissal-retest-write.log"
+  },
+  {
+    "name": "dismissal-retest-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.77,
+    "log": "dismissal-retest-read.log"
+  }
+]

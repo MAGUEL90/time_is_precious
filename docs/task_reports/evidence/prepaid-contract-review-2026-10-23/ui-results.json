@@ -1,0 +1,30 @@
+[
+  {
+    "name": "ui-prepare",
+    "exit": 0,
+    "passed": true,
+    "seconds": 9.09,
+    "log": "ui-prepare.log"
+  },
+  {
+    "name": "ui-write",
+    "exit": 0,
+    "passed": true,
+    "seconds": 2.32,
+    "log": "ui-write.log"
+  },
+  {
+    "name": "ui-read",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.92,
+    "log": "ui-read.log"
+  },
+  {
+    "name": "dismissal-write",
+    "exit": 1,
+    "passed": false,
+    "seconds": 2.52,
+    "log": "dismissal-write.log"
+  }
+]

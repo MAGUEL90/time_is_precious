@@ -51,7 +51,7 @@ func _run() -> void:
 		hub.open()
 		hub._show_manage(WORKER_ID)
 		await press(hub.manage_fire_button)
-		_expect(hub._confirm_label.text.contains("remain.") and hub._confirm_label.text.contains("Unused pay is not refunded."), "Confirmation explains remaining paid time and no refund")
+		_expect(hub._confirm_label.text.contains("remain.") and hub._confirm_label.text.contains("Unused payment is not refunded."), "Confirmation explains remaining paid time and no refund")
 		await _frames()
 		var label: Label = hub._confirm_label
 		_expect(label.get_line_count() <= label.get_visible_line_count(), "All confirmation lines fit")

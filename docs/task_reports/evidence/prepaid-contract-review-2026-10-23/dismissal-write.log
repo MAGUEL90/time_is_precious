@@ -1,0 +1,15 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MVP_MEASURE {"clothing_missing":2,"dried":0,"earned":0,"eaten":0,"fatigue":0.001,"focus":0.9995,"food":{"consumer_count":2,"daily_need":2,"days_remaining":1,"points":2,"portion_points":0},"harvested":0,"held":[],"hunger":0.436000000000003,"inventory":{"date_cluster":3,"shekel":3,"wood_log":5},"minute":3796,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"continued_write","walked_pixels":0.0,"worker_reliability":0.9,"worker_satisfaction":0.4,"workshop_stock":{}}
+ERROR: Confirmation explains remaining paid time and no refund
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _expect (res://scenes/test_scenes/mvp_first_playthrough.gd:43)
+       [1] _run (res://scenes/test_scenes/test_scene_dismissal_journey.gd:54)
+       [2] press (res://scenes/test_scenes/mvp_first_playthrough.gd:379)
+       [3] _frames (res://scenes/test_scenes/mvp_first_playthrough.gd:49)
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2514)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:795)

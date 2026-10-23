@@ -18,6 +18,7 @@ Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and
 | Scene | Coverage / arguments |
 | --- | --- |
 | `test_scene_prepaid_contracts.tscn` | Fixture: wallet purchase, packages, independent expiry, manual renewal, legacy boundaries, dismissal, transaction guards |
+| `test_scene_contract_output_sample.tscn` | Controlled actual-map output measurement: 5 sites × 4 assignment times; explicit clock/wallet/stock setup, commute and player needs disabled; writes `user://contract_output_sample/results.json` |
 | `test_scene_contract_assignment.tscn` | Fixture: same-day 07–15 assignment, partial output, daily cap, hauler cargo |
 | `test_scene_contract_notifications.tscn` | Fixture: existing !, acknowledgement, contract/merchant/raid events, long-name scrolling; rendered runs save screenshots |
 | `test_scene_contract_continue.tscn` | Fixture: separate processes with `-- --contract-phase=write`, `read`, `readrenew`, `legacy-read`, `legacy-renew-read`, `assignment-write`, `assignment-read` in that order |

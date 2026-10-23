@@ -1,0 +1,125 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
+[Godot MCP] TCP server listening on 127.0.0.1:9876
+[Godot MCP] Plugin v1.12.2 loaded — TCP on 127.0.0.1:9876 (auth: off)
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+WARNING: Missing .uid file for path "res://scenes/test_scenes/mvp_first_playthrough.gd". The file was re-created from cache.
+     at: _process_file_system (editor/file_system/editor_file_system.cpp:1363)
+[   0% ] [90m[1mupdate_scripts_classes[22m | Started Registering global classes... (6 steps)[39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | RaidUI[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | WorkerControlUI[39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | JobBoardUI[39m[0m
+[92m[ DONE ][39m [1mupdate_scripts_classes[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Scanning actions... (28 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | icon.svg[39m[0m
+[   3% ] [90m[1m_update_scan_actions[22m | responses_menu.svg[39m[0m
+[   6% ] [90m[1m_update_scan_actions[22m | update.svg[39m[0m
+[  10% ] [90m[1m_update_scan_actions[22m | city-management.png[39m[0m
+[  13% ] [90m[1m_update_scan_actions[22m | city-storage.png[39m[0m
+[  17% ] [90m[1m_update_scan_actions[22m | city-supply.png[39m[0m
+[  20% ] [90m[1m_update_scan_actions[22m | deposit-selector.png[39m[0m
+[  24% ] [90m[1m_update_scan_actions[22m | job-board.png[39m[0m
+[  27% ] [90m[1m_update_scan_actions[22m | before-job-board.png[39m[0m
+[  31% ] [90m[1m_update_scan_actions[22m | before-worker-details.png[39m[0m
+[  34% ] [90m[1m_update_scan_actions[22m | deposit-amount.png[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | fire-confirmation.png[39m[0m
+[  41% ] [90m[1m_update_scan_actions[22m | job-board.png[39m[0m
+[  44% ] [90m[1m_update_scan_actions[22m | worker-details.png[39m[0m
+[  48% ] [90m[1m_update_scan_actions[22m | worker-hub.png[39m[0m
+[  51% ] [90m[1m_update_scan_actions[22m | job-board.png[39m[0m
+[  55% ] [90m[1m_update_scan_actions[22m | renew-confirmation.png[39m[0m
+[  58% ] [90m[1m_update_scan_actions[22m | renewed.png[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | worker-renew.png[39m[0m
+[  65% ] [90m[1m_update_scan_actions[22m | contract-notices.png[39m[0m
+[  68% ] [90m[1m_update_scan_actions[22m | job-board.png[39m[0m
+[  72% ] [90m[1m_update_scan_actions[22m | long-notices.png[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | renew-confirmation.png[39m[0m
+[  79% ] [90m[1m_update_scan_actions[22m | renewed.png[39m[0m
+[  82% ] [90m[1m_update_scan_actions[22m | worker-renew.png[39m[0m
+[  86% ] [90m[1m_update_scan_actions[22m | normal-paid-confirmation.png[39m[0m
+[  89% ] [90m[1m_update_scan_actions[22m | fixture-funded-selected-hire.png[39m[0m
+[  93% ] [90m[1m_update_scan_actions[22m | fixture-pending-group-shortfall.png[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importing Assets (28 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   3% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   6% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  10% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  13% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  17% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  20% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  24% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  27% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  31% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  34% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  37% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  41% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  44% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  48% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  51% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  55% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  58% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  62% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  65% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  68% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  72% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  75% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  79% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  82% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  86% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  89% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[  93% ] [90m[1mreimport[22m | Preparing files to reimport...[39m[0m
+[   0% ] [90m[1mreimport[22m | Executing pre-reimport operations...[39m[0m
+[   0% ] [90m[1mreimport[22m | fixture-pending-group-shortfall.png[39m[0m
+[   3% ] [90m[1mreimport[22m | fixture-funded-selected-hire.png[39m[0m
+[   6% ] [90m[1mreimport[22m | normal-paid-confirmation.png[39m[0m
+[  10% ] [90m[1mreimport[22m | worker-renew.png[39m[0m
+[  13% ] [90m[1mreimport[22m | renewed.png[39m[0m
+[  17% ] [90m[1mreimport[22m | renew-confirmation.png[39m[0m
+[  20% ] [90m[1mreimport[22m | long-notices.png[39m[0m
+[  24% ] [90m[1mreimport[22m | job-board.png[39m[0m
+[  27% ] [90m[1mreimport[22m | contract-notices.png[39m[0m
+[  31% ] [90m[1mreimport[22m | worker-renew.png[39m[0m
+[  34% ] [90m[1mreimport[22m | renewed.png[39m[0m
+[  37% ] [90m[1mreimport[22m | renew-confirmation.png[39m[0m
+[  41% ] [90m[1mreimport[22m | job-board.png[39m[0m
+[  44% ] [90m[1mreimport[22m | worker-hub.png[39m[0m
+[  48% ] [90m[1mreimport[22m | worker-details.png[39m[0m
+[  51% ] [90m[1mreimport[22m | job-board.png[39m[0m
+[  55% ] [90m[1mreimport[22m | fire-confirmation.png[39m[0m
+[  58% ] [90m[1mreimport[22m | deposit-amount.png[39m[0m
+[  62% ] [90m[1mreimport[22m | before-worker-details.png[39m[0m
+[  65% ] [90m[1mreimport[22m | before-job-board.png[39m[0m
+[  68% ] [90m[1mreimport[22m | job-board.png[39m[0m
+[  72% ] [90m[1mreimport[22m | deposit-selector.png[39m[0m
+[  75% ] [90m[1mreimport[22m | city-supply.png[39m[0m
+[  79% ] [90m[1mreimport[22m | city-storage.png[39m[0m
+[  82% ] [90m[1mreimport[22m | city-management.png[39m[0m
+[  86% ] [90m[1mreimport[22m | update.svg[39m[0m
+[  89% ] [90m[1mreimport[22m | responses_menu.svg[39m[0m
+[  93% ] [90m[1mreimport[22m | icon.svg[39m[0m
+[  96% ] [90m[1mreimport[22m | Finalizing Asset Import...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importing Assets (28 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Executing post-reimport operations...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started Loading editor (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m
+[Godot MCP] Plugin unloaded
