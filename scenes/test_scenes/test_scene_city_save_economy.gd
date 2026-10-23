@@ -45,9 +45,9 @@ func _run() -> void:
 	_expect(_all_needs_fulfilled() and is_equal_approx(CitizenManager.get_citizen(PRODUCTION_ID).satisfaction, 0.55),
 		"The hired residents have real fulfilled needs and the resulting satisfaction value.")
 
-	# Assignments begin on the next daily shift. Advance the real clock so the
-	# worksite gathers natural output and the real Hauler takes it into cargo.
-	var deadline: int = _clock_minute() + 1800
+	# Hires and assignments begin during today's shift. Advance the real clock so
+	# the worksite gathers natural output and the real Hauler takes it into cargo.
+	var deadline: int = (TimeComponentManager.current_day * 1440) + 15 * 60
 	while (not runtime.daily.hauling.routes.has(HAULER_ID)
 		or str(runtime.daily.hauling.routes[HAULER_ID].phase) != "outbound") \
 		and _clock_minute() < deadline:
@@ -197,7 +197,7 @@ func _reset_singletons_before_load() -> void:
 func _prepare_city_state() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
-	TimeComponentManager.current_hour = 6
+	TimeComponentManager.current_hour = 8
 	TimeComponentManager.current_minute = 0
 	TimeComponentManager.current_weather = "clear"
 	TimeComponentManager._timer = 0.0
@@ -212,6 +212,9 @@ func _prepare_city_state() -> void:
 	Inventory.add_item("simple_clothes", 3)
 	_expect(Inventory.has_item("barley_bread", 12) and Inventory.has_item("simple_clothes", 3),
 		"Fixture supplies use registered food and clothing items.")
+	# The three explicit three-day hires each cost one shekel from the Player wallet.
+	Inventory.add_item("shekel", 3)
+	_expect(Inventory.has_item("shekel", 3), "The fixture funds all three hires from the Player wallet.")
 	var deposit: Dictionary = city_storage.deposit_items_from_inventory({
 		"barley_bread": 12,
 		"simple_clothes": 3
@@ -240,6 +243,8 @@ func _hire_and_assign_team() -> bool:
 		"Three valid applicants become hired workers through the employment API.")
 	if laborer == null or hauler == null or producer == null or not registered:
 		return false
+	_expect(not Inventory.has_item("shekel", 1) and CityStockManager.treasury_shekel == 19,
+		"The three upfront contract charges use the Player wallet and leave City Treasury unchanged.")
 	for id: String in [LABORER_ID, HAULER_ID, PRODUCTION_ID]:
 		var citizen: CitizenData = CitizenManager.get_citizen(id)
 		citizen.satisfaction = 0.5
@@ -253,11 +258,15 @@ func _hire_and_assign_team() -> bool:
 	var marker: Node = runtime.get_node("WorksiteMarkers/WoodSite")
 	var started: bool = runtime.daily.start(WOOD_SITE, runtime._drop_daily_output.bind(marker))
 	_expect(started, "The valid Worker and Hauler team starts its actual daily worksite job.")
+	_expect(started and runtime.daily.jobs.has(WOOD_SITE)
+		and int(runtime.daily.jobs[WOOD_SITE].starts.get(LABORER_ID, -1)) == _clock_minute()
+		and int(runtime.daily.jobs[WOOD_SITE].starts.get(HAULER_ID, -1)) == _clock_minute(),
+		"Hiring at 08:00 permits both assigned workers to start on the same day.")
 	return started
 
 func _settle_needs() -> void:
 	CitizenNeedsManager.process_daily_needs()
-	# The next day is reached by real minute signals before the assigned shift.
+	# The fixture settles needs explicitly before advancing today's active shift.
 
 func _all_needs_fulfilled() -> bool:
 	for id: String in [LABORER_ID, HAULER_ID, PRODUCTION_ID]:
@@ -284,7 +293,7 @@ func _assert_restored_checkpoint() -> void:
 		and CitizenManager.get_citizen(HAULER_ID).employment_status == CitizenData.EmploymentStatus.HIRED,
 		"Hired citizen status restores alongside each worker's active worksite assignment.")
 	_expect(WorkerDatabase.get_worker_data(PRODUCTION_ID).wage_shekel_per_day == 6
-		and is_equal_approx(CitizenManager.get_citizen(PRODUCTION_ID).satisfaction, 0.60),
+		and is_equal_approx(CitizenManager.get_citizen(PRODUCTION_ID).satisfaction, 0.55),
 		"Worker wages and settled satisfaction restore from the checkpoint.")
 	_expect(CitizenNeedsManager.last_processed_day == TimeComponentManager.current_day
 		and CitizenNeedsManager.last_clothing_processed_day == TimeComponentManager.current_day

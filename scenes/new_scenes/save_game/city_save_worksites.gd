@@ -439,7 +439,7 @@ func _validate_jobs(data: Dictionary, worksite: Node, workers: Dictionary, route
 				return _fail("Daily job and worker order state disagree.")
 			seen_ids[worker_id] = true
 			assigned[worker_id] = site_id
-			if not job.starts.has(worker_id) or not _is_count(job.starts[worker_id], 0, MAX_COUNT) or int(job.starts[worker_id]) % 1440 != int(worksite.daily.SHIFT_START):
+			if not job.starts.has(worker_id) or not _is_count(job.starts[worker_id], 0, MAX_COUNT) or int(job.starts[worker_id]) % 1440 < int(worksite.daily.SHIFT_START) or int(job.starts[worker_id]) % 1440 >= int(worksite.daily.SHIFT_END):
 				return _fail("Invalid daily assignment start time.")
 			if int(job.starts[worker_id]) > (saved_day + 1) * 1440 + int(worksite.daily.SHIFT_START):
 				return _fail("Daily assignment starts after the next workday.")

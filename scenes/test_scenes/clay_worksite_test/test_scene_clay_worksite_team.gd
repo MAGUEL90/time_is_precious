@@ -66,7 +66,7 @@ func _run() -> void:
 	_expect(not panel.start_button.disabled and not panel.duration_buttons.is_visible_in_tree(), "Daily returns to Start without hourly duration.")
 	_expect(not panel.assignment_ui.total_workers_label.visible and panel.assignment_ui.feedback_label.text.contains(ids[0]), "Assignment shows names without redundant total workers.")
 	await _capture("daily-ready.png")
-	# Assign at 14:00: reserve now, first shift starts tomorrow.
+	# Assign at 14:00: the paid team works the remaining hour today.
 	TimeComponentManager.current_hour = 14
 	TimeComponentManager.current_minute = 0
 	schedule.last_tick = schedule.now()
@@ -74,19 +74,19 @@ func _run() -> void:
 	panel.start_button.pressed.emit()
 	_expect(schedule.jobs.has(&"ClaySiteA") and not panel.visible and fixture.player.can_move, "Daily activates a standing assignment and releases Player.")
 	_expect(schedule.now() == before, "Daily Start has no time skip.")
-	_expect(not WorkerDatabase.get_worker_data(ids[0]).is_working(), "New assignment waits until tomorrow.")
+	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working(), "New assignment joins the current paid shift.")
 	_expect(not schedule.toggle(&"ClaySiteB", ids[0]), "Reservation prevents second assignment.")
 	site.participants.assign(["player"])
-	_expect(site.preview(180, fixture.player).reason.is_empty(), "Future Daily members do not consume active site capacity.")
+	_expect(site.preview(180, fixture.player).reason.contains("capacity"), "Current Daily workers occupy active site capacity.")
 	get_tree().paused = true
 	var bag: Dictionary = Inventory.items.duplicate()
 	TimeComponentManager.advance_minutes(60)
-	_expect(site.stock == 72 and fixture.get_node("GroundOutput").get_child_count() == 0, "No production on assignment day.")
+	_expect(site.stock == 60 and fixture.get_node("GroundOutput").get_child_count() == 1, "Both workers produce only the remaining hour on assignment day.")
 	TimeComponentManager.advance_minutes(23 * 60)
-	_expect(fixture.get_node("GroundOutput").get_child_count() == 1, "First workday has depleted output.")
+	_expect(fixture.get_node("GroundOutput").get_child_count() == 1, "First full workday merges depleted output into the existing pile.")
 	TimeComponentManager.advance_minutes(60)
 	var stack: PickUpItem = fixture.get_node("GroundOutput").get_child(0)
-	_expect(stack.quantity == 72 and site.stock == 0, "14:00 assignment first gathers tomorrow, capped by stock.")
+	_expect(stack.quantity == 84 and site.stock == 0, "14:00 assignment keeps today's partial output and depletes next day's stock.")
 	_expect(schedule.minutes_by_worker[ids[0]] == 360 and schedule.status(&"ClaySiteA").contains("Resting"), "Shift ends exactly at 15:00.")
 	_expect(WorkerDatabase.get_worker_data(ids[0]).current_work_status == WorkerData.WorkStatus.RESTING, "Worker activity changes to Resting at 15:00.")
 	_expect(WorkerDatabase.get_worker_data(ids[0]).is_reserved() and not WorkerDatabase.get_worker_data(ids[0]).is_working(), "Resting retains reservation without claiming active work.")
@@ -99,7 +99,7 @@ func _run() -> void:
 	_expect(Inventory.items == bag, "Daily output never goes to Player bag.")
 	# Rest, replace natural stock at midnight, resume automatically at 07:00.
 	TimeComponentManager.advance_minutes(16 * 60)
-	_expect(site.stock == 72 and stack.quantity == 72, "New-day stock replaces remainder without changing ground output.")
+	_expect(site.stock == 72 and stack.quantity == 84, "New-day stock replaces remainder without changing ground output.")
 	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working(), "Standing assignment resumes at 07:00.")
 	TimeComponentManager.advance_minutes(6 * 60)
 	_expect(WorkerDatabase.get_worker_data(ids[0]).current_work_status == WorkerData.WorkStatus.WAITING_FOR_RESOURCES, "Depletion at 13:00 changes worker activity to Waiting for resources.")
@@ -108,7 +108,7 @@ func _run() -> void:
 	var worked_at_depletion: int = schedule.minutes_by_worker[ids[0]]
 	TimeComponentManager.advance_minutes(2 * 60)
 	_expect(schedule.minutes_by_worker[ids[0]] == worked_at_depletion, "Waiting does not consume worked-minute budget.")
-	_expect(site.stock == 0 and stack.quantity == 144, "Next day resumes automatically and merges depleted output into existing stack.")
+	_expect(site.stock == 0 and stack.quantity == 156, "Next day resumes automatically and merges depleted output into existing stack.")
 	_expect(fixture.get_node("GroundOutput").get_child_count() == 1, "Daily outputs do not create unbounded pickup objects.")
 	_expect(int(schedule.minutes_by_worker[ids[0]]) <= 480, "Worker stays within eight-hour ceiling.")
 	# Withdraw via the reused UI; reservation and capacity release immediately.
@@ -122,7 +122,7 @@ func _run() -> void:
 	await _capture("worksite-active-clean.png")
 	panel.progress_button.pressed.emit()
 	_expect(panel.progress_panel.visible and panel.progress_list.get_child_count() == 2, "Progress lists both confirmed workers.")
-	_expect(schedule.progress_rows(&"ClaySiteA")[0].days == 2 and schedule.progress_rows(&"ClaySiteA")[0].output == 72, "Progress counts productive days and individual output.")
+	_expect(schedule.progress_rows(&"ClaySiteA")[0].days == 3 and schedule.progress_rows(&"ClaySiteA")[0].output == 78, "Progress counts productive days and individual output.")
 	await _capture("worksite-worker-progress.png")
 	panel.progress_list.get_child(0).get_child(1).pressed.emit()
 	_expect(panel.remove_overlay.visible and WorkerDatabase.get_worker_data(ids[0]).is_reserved(), "Remove asks first without releasing the worker.")
@@ -210,7 +210,7 @@ func _run() -> void:
 	_expect(remainder != stack and remainder.quantity == pile_before - 2, "Uncollected quantity remains at site.")
 	fixture._drop_daily_output(3, fixture.get_node("WorksiteMarkers/ClaySiteA"))
 	_expect(remainder.quantity == pile_before + 1, "New output merges into remainder, never into the collecting pile.")
-	# 00:01 still schedules the following calendar day, never today's 07:00.
+	# A pre-shift assignment starts at today's shift boundary, with no work before it.
 	schedule.cleanup()
 	schedule.setup(fixture.sites)
 	schedule.stock_min = 72
@@ -219,23 +219,25 @@ func _run() -> void:
 	TimeComponentManager.current_hour = 0
 	TimeComponentManager.current_minute = 1
 	schedule.last_tick = schedule.now()
-	var target_day: int = TimeComponentManager.current_day + 1
+	var target_day: int = TimeComponentManager.current_day
 	schedule.toggle(&"ClaySiteA", ids[0])
-	_expect(schedule.start_day_text(&"ClaySiteA") == "Start work: Day %d" % target_day, "Draft start label uses current day plus one.")
+	_expect(schedule.start_day_text(&"ClaySiteA") == "Start work: Day %d" % target_day, "Pre-shift draft label uses today.")
 	schedule.start(&"ClaySiteA", fixture._drop_output)
 	TimeComponentManager.advance_minutes(419)
-	_expect(not WorkerDatabase.get_worker_data(ids[0]).is_working() and schedule.active_count(&"ClaySiteA") == 0, "00:01 assignment does not start at today's 07:00.")
-	TimeComponentManager.advance_minutes(1439)
-	_expect(not WorkerDatabase.get_worker_data(ids[0]).is_working(), "Worker waits through next-day 06:59.")
+	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working()
+		and int(schedule.minutes_by_worker.get(ids[0], 0)) == 0, "00:01 assignment starts today at 07:00 without backdated work.")
 	TimeComponentManager.advance_minutes(1)
-	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working(), "Worker starts exactly next-day 07:00.")
-	_expect(schedule.start_day_text(&"ClaySiteA") == "Start work: Day %d" % target_day, "Confirmed start date does not drift after midnight.")
+	_expect(int(schedule.minutes_by_worker.get(ids[0], 0)) == 1, "Worker earns the first minute exactly at 07:00.")
+	_expect(schedule.start_day_text(&"ClaySiteA") == "Start work: Day %d" % target_day, "Confirmed start day stays fixed.")
 	schedule.toggle(&"ClaySiteA", ids[1])
 	schedule.start(&"ClaySiteA", fixture._drop_output)
-	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working() and not WorkerDatabase.get_worker_data(ids[1]).is_working(), "Added worker waits tomorrow without delaying existing worker.")
+	_expect(WorkerDatabase.get_worker_data(ids[0]).is_working()
+		and WorkerDatabase.get_worker_data(ids[1]).is_working()
+		and int(schedule.jobs[&"ClaySiteA"].starts[ids[1]]) == schedule.now(),
+		"Added worker joins the same shift at the assignment minute.")
 	var stock_before: int = site.stock
-	TimeComponentManager.advance_minutes(10)
-	_expect(site.stock == stock_before - 1, "Only the eligible worker produces output.")
+	TimeComponentManager.advance_minutes(9)
+	_expect(site.stock == stock_before - 1, "Only completed post-assignment work produces output.")
 	get_tree().paused = false
 	fixture.queue_free()
 	await get_tree().process_frame

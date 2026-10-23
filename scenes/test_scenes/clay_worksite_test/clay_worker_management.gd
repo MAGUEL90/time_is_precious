@@ -168,22 +168,20 @@ func _dismissal_payroll_warning(worker: WorkerData) -> String:
 		return ""
 	if worker.payroll_paid_from_day < 0:
 		return "No payment made yet."
-	var expires: int = (worker.payroll_paid_until_day + 1) * 1440 + 480
+	var expires: int = worker.get_paid_end_minute()
 	var remaining: int = maxi(0, expires - schedule.now())
 	if remaining == 0:
-		return "Paid period has ended. No refund."
-	return "Paid until Day %d, 08:00.\n%d d %02d h %02d m remain.\nUnused pay is not refunded." % [worker.payroll_paid_until_day + 1,
+		return "Contract expired after Day %d. Unused payment is not refunded." % worker.payroll_paid_until_day
+	return "Paid through Day %d.\n%d d %02d h %02d m remain.\nUnused payment is not refunded." % [worker.payroll_paid_until_day,
 		remaining / 1440, (remaining % 1440) / 60, remaining % 60]
 
 func _wage_text(worker: WorkerData) -> String:
 	if worker.payroll_start_day < 0:
 		return "%d Shekel / day (legacy)" % worker.wage_shekel_per_day
 	if worker.is_waiting_for_first_payment():
-		var rate: int = WorkerDatabase.get_onboarding_rate(worker.profession)
-		return "%d Shekel / 7 days; awaiting payment" % rate if rate > 0 else "Rate TBD; awaiting payment"
-	var next_due_day: int = worker.payroll_paid_until_day + 1
+		return "No paid time; renew manually"
+	var contract_days: int = worker.payroll_contract_days if worker.payroll_contract_days > 0 else WorkerDatabase.PAYROLL_PERIOD_DAYS
+	var package_text: String = "%d Shekel / %d days" % [worker.payroll_period_rate, contract_days]
 	if worker.is_payroll_blocked():
-		var renewal_rate: int = WorkerDatabase.get_onboarding_rate(worker.profession)
-		return "%d Shekel / 7 days; renewal blocked (due Day %d, 08:00)" % [renewal_rate, next_due_day] if renewal_rate > 0 else "Rate TBD; renewal blocked (due Day %d, 08:00)" % next_due_day
-	return "%d Shekel; paid days %d–%d; next due Day %d, 08:00" % [worker.payroll_period_rate,
-		worker.payroll_paid_from_day, worker.payroll_paid_until_day, next_due_day]
+		return "Contract expired; paid through Day %d. Renew manually." % worker.payroll_paid_until_day
+	return "%s; paid through Day %d. Renew manually." % [package_text, worker.payroll_paid_until_day]

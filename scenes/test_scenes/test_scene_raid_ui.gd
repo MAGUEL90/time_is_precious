@@ -386,8 +386,8 @@ func _run() -> void:
 	state.changed.emit()
 	_expect(not inspection_panel.visible and ui._inspected_raiders.is_empty() and cards.get_child_count() == 0,
 		"The inspection panel and its hidden card data clear when the raid ends.")
-	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty() and not ui._notice_emergency
-		and ui.notification_button.scale == Vector2.ONE, "Recovery removes attack feedback and stops the red heartbeat.")
+	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty()
+		and not ui.attack_warning.visible and ui._unread_notification, "Recovery removes attack feedback and signals its new notification.")
 	ui.report_toggle.pressed.emit()
 
 	_check_bounds()

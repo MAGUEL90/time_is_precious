@@ -259,17 +259,25 @@ func _run_daily_delivery() -> void:
 	_expect(worksite.daily.start_reason(SITE_A).is_empty(),
 		"The configured cart and Storage A must make the Daily plan startable.")
 	var start_day: int = TimeComponentManager.current_day
+	var first_start: int = start_day * 1440 + worksite.daily.SHIFT_START
 	_expect(worksite.daily.start(SITE_A, worksite._drop_daily_output.bind(
 		worksite.get_node("WorksiteMarkers/ClaySiteA")
 	)), "Daily start must commit the actual content worksite plan.")
-	_expect(worksite.daily.jobs[SITE_A].starts[NARAM_ID] == (start_day + 1) * 1440 + 420,
-		"Daily assignment must begin next day at 07:00.")
+	_expect(worksite.daily.jobs[SITE_A].starts[NARAM_ID] == first_start
+		and worksite.daily.jobs[SITE_A].starts[BELUM_ID] == first_start,
+		"Before-shift Daily assignment must begin today at 07:00.")
+	_expect(float(worksite.daily.jobs[SITE_A].progress[NARAM_ID]) == 0.0
+		and worksite.hauling.routes[BELUM_ID].cargo.quantity == 0,
+		"Starting the content assignment creates no backdated labor progress or Hauler cargo.")
 	_expect(worksite.hauling.routes[BELUM_ID].daily_target == 20,
 		"Belum's committed route must retain its target of exactly 20.")
 
 	deliveries.clear()
 	storage_a.delivery_received.connect(func(_item_id: String, quantity: int): deliveries.append(quantity))
-	TimeComponentManager.advance_minutes((start_day + 1) * 1440 + 420 - worksite.daily.now())
+	TimeComponentManager.advance_minutes(first_start - worksite.daily.now())
+	_expect(int(worksite.daily.minutes_by_worker.get(NARAM_ID, 0)) == 0
+		and worksite.hauling.routes[BELUM_ID].cargo.quantity == 0,
+		"No labor or Hauler load occurs before the current-day 07:00 start.")
 	var guard: int = 0
 	while not worksite.hauling.target_reached(BELUM_ID, TimeComponentManager.current_day) and guard < 720:
 		TimeComponentManager.advance_minutes(1)

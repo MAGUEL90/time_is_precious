@@ -49,6 +49,9 @@ var can_open: Callable = Callable()
 @onready var manage_fire_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/FireButton
 @onready var manage_goto_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/GotoButton
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
+@onready var renew_days_option: OptionButton = $Root/ManageWindow/Margin/MainVBox/RenewDaysOption
+@onready var renew_price_label: Label = $Root/ManageWindow/Margin/MainVBox/RenewPriceLabel
+@onready var manage_renew_button: Button = $Root/ManageWindow/Margin/MainVBox/RenewButton
 @onready var details_header_label: Label = $Root/DetailsWindow/Margin/MainVBox/Header/TitleLabel
 @onready var details_scroll: ScrollContainer = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll
 @onready var details_label: Label = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll/DetailsLabel
@@ -70,6 +73,10 @@ var _active_tab: String = "status"
 var _selected_worker_id: String = ""
 var _pending_remove_id: String = ""
 var _pending_remove_row: Dictionary = {}
+var _pending_renew_id: String = ""
+var _pending_renew_days: int = 3
+var _pending_renew_price: int = 0
+var _renew_feedback_text: String = ""
 var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
@@ -100,6 +107,11 @@ func _ready() -> void:
 	manage_fire_button.pressed.connect(_request_manage_fire)
 	manage_goto_button.pressed.connect(_request_manage_goto)
 	manage_details_button.pressed.connect(_show_manage_details)
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		renew_days_option.add_item("%d days" % days, days)
+	renew_days_option.select(0)
+	renew_days_option.item_selected.connect(func(_index: int): _on_renew_package_changed())
+	manage_renew_button.pressed.connect(_request_manage_renew)
 	details_close_button.pressed.connect(_close_details)
 	_connect_needs_refresh_signal()
 	tools_hands_button.pressed.connect(_show_hands_picker)
@@ -221,6 +233,8 @@ func close() -> void:
 		_cancel_remove_confirmation()
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
+	_pending_renew_id = ""
+	_renew_feedback_text = ""
 	_manage_worker_id = ""
 	_close_manage()
 	_close_tools_picker()
@@ -693,6 +707,7 @@ func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
+	_renew_feedback_text = ""
 	_manage_worker_id = worker_id
 	_manage_source_button = source_button if is_instance_valid(source_button) else _find_manage_button(worker_id)
 	_update_manage_controls(row)
@@ -709,6 +724,61 @@ func _update_manage_controls(row: Dictionary) -> void:
 	var can_fire := bool(row.get("can_fire", row.get("can_remove", false)))
 	manage_fire_button.disabled = working or not can_fire
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
+	var price: int = _renewal_price(row)
+	manage_renew_button.disabled = price <= 0
+	renew_price_label.text = _renew_feedback_text if not _renew_feedback_text.is_empty() else (
+		"Price: %d Shekel" % price if price > 0 else "Price unavailable"
+	)
+
+
+func _on_renew_package_changed() -> void:
+	_renew_feedback_text = ""
+	if _manage_worker_id.is_empty():
+		return
+	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if not row.is_empty():
+		_update_manage_controls(row)
+
+
+func _renewal_price(row: Dictionary) -> int:
+	var days: int = renew_days_option.get_selected_id() if renew_days_option.item_count > 0 else 3
+	var profession: WorkerData.Profession = _profession_from_row(row)
+	return WorkerDatabase.get_contract_price(profession, days)
+
+
+func _profession_from_row(row: Dictionary) -> WorkerData.Profession:
+	match str(row.get("profession", "")).strip_edges().to_lower():
+		"laborer":
+			return WorkerData.Profession.LABORER
+		"crafter":
+			return WorkerData.Profession.CRAFTER
+		"hauler":
+			return WorkerData.Profession.HAULER
+		"farmer":
+			return WorkerData.Profession.FARMER
+		"scavenger":
+			return WorkerData.Profession.SCAVENGER
+		_:
+			return WorkerData.Profession.NONE
+
+
+func _request_manage_renew() -> void:
+	if _manage_worker_id.is_empty() or (_confirmation_overlay != null and _confirmation_overlay.visible):
+		return
+	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if row.is_empty():
+		return
+	var days: int = renew_days_option.get_selected_id()
+	var price: int = _renewal_price(row)
+	if price <= 0:
+		renew_price_label.text = "Price unavailable"
+		return
+	_pending_renew_id = _manage_worker_id
+	_pending_renew_days = days
+	_pending_renew_price = price
+	_confirm_label.text = "Renew for %d paid days?\nCost: %d Shekel from your wallet now.\nManual renewal; no auto-renewal or refunds." % [days, price]
+	_confirmation_overlay.show()
+	_confirm_no_button.grab_focus()
 
 
 func _show_manage_details() -> void:
@@ -937,6 +1007,8 @@ func _request_remove(row: Dictionary) -> void:
 		return
 	_pending_remove_id = worker_id
 	_pending_remove_row = row.duplicate()
+	_pending_renew_id = ""
+	_pending_renew_price = 0
 	_confirm_label.text = _remove_confirmation_message(row)
 	_confirmation_overlay.show()
 	_confirm_no_button.grab_focus()
@@ -968,15 +1040,49 @@ func _build_confirmation() -> void:
 	_confirm_no_button.text = "No"
 	_confirm_yes_button.text = "Yes"
 	_confirm_no_button.pressed.connect(_cancel_remove_confirmation)
-	_confirm_yes_button.pressed.connect(_confirm_remove)
+	_confirm_yes_button.pressed.connect(_confirm_pending_action)
 	_confirmation_overlay.hide()
 
 
 func _cancel_remove_confirmation() -> void:
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
+	_pending_renew_id = ""
+	_pending_renew_days = 3
+	_pending_renew_price = 0
 	if _confirmation_overlay != null:
 		_confirmation_overlay.hide()
+
+
+func _confirm_pending_action() -> void:
+	if _pending_renew_id.is_empty():
+		_confirm_remove()
+		return
+	var worker_id: String = _pending_renew_id
+	var days: int = _pending_renew_days
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	var current_price: int = WorkerDatabase.get_contract_price(worker.profession, days) if worker != null else -1
+	if current_price != _pending_renew_price:
+		if current_price <= 0:
+			_cancel_remove_confirmation()
+			_renew_feedback_text = "Package price unavailable."
+			var current_row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
+			if not current_row.is_empty():
+				_update_manage_controls(current_row)
+			return
+		_pending_renew_price = current_price
+		_confirm_label.text = "Renew for %d paid days?\nCost: %d Shekel from your wallet now.\nManual renewal; no auto-renewal or refunds." % [days, current_price]
+		return
+	var success: bool = WorkerDatabase.renew_contract(worker_id, days)
+	_cancel_remove_confirmation()
+	if success:
+		worker = WorkerDatabase.get_worker_data(worker_id)
+		_renew_feedback_text = "Paid through Day %d" % worker.payroll_paid_until_day if worker != null else "Renewal paid"
+	else:
+		_renew_feedback_text = "Renewal failed; check wallet."
+	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
+	if not row.is_empty():
+		_update_manage_controls(row)
 
 
 func _confirm_remove() -> void:

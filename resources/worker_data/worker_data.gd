@@ -21,6 +21,9 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export var payroll_paid_until_day: int = -1
 @export var payroll_period_rate: int = 0
 @export var payroll_last_attempt_day: int = -1
+# Zero/-1 identify legacy seven-day records; new contracts start at exact purchase time.
+@export var payroll_contract_days: int = 0
+@export var payroll_paid_start_minute: int = -1
 @export var food_fulfilled: bool = false
 @export var clothing_fulfilled: bool = false
 @export var shelter_fulfilled: bool = false
@@ -105,7 +108,7 @@ func is_payroll_blocked() -> bool:
 	if payroll_start_day < 0:
 		return false
 	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
-	return payroll_paid_from_day < 0 or now < payroll_paid_from_day * 1440 + 480 or now >= (payroll_paid_until_day + 1) * 1440 + 480
+	return payroll_paid_from_day < 0 or now < get_paid_start_minute() or now >= get_paid_end_minute()
 
 func get_payroll_unpaid_minutes(from_minute: int, to_minute: int) -> int:
 	var elapsed: int = maxi(0, to_minute - from_minute)
@@ -113,17 +116,22 @@ func get_payroll_unpaid_minutes(from_minute: int, to_minute: int) -> int:
 		return 0
 	if payroll_paid_from_day < 0:
 		return elapsed
-	var paid_start: int = payroll_paid_from_day * 1440 + 480
-	var paid_end: int = (payroll_paid_until_day + 1) * 1440 + 480
+	var paid_start: int = get_paid_start_minute()
+	var paid_end: int = get_paid_end_minute()
 	var paid: int = maxi(0, mini(to_minute, paid_end) - maxi(from_minute, paid_start))
 	return elapsed - paid
+
+func get_paid_start_minute() -> int:
+	return payroll_paid_start_minute if payroll_paid_start_minute >= 0 else payroll_paid_from_day * 1440 + 480
+
+func get_paid_end_minute() -> int:
+	# Preserve already-paid legacy 08:00 contracts; new packages end at shift start.
+	return (payroll_paid_until_day + 1) * 1440 + (420 if payroll_contract_days > 0 else 480)
 
 func get_onboarding_status() -> String:
 	if not is_payroll_blocked():
 		return ""
-	if TimeComponentManager.current_day < payroll_start_day:
-		return "Starts day %d at 08:00, after payment" % payroll_start_day
-	return "Waiting for city payment at 08:00"
+	return "Contract unpaid — renew in Worker Hub" if is_waiting_for_first_payment() else "Contract expired — renew in Worker Hub"
 
 func is_working() -> bool:
 	return current_work_status == WorkStatus.WORKING

@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 6
+const VERSION: int = 7
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -25,7 +25,7 @@ const GROUPS: Dictionary = {
 	"process": ["stations", "current_weather_key", "_last_total_minutes", "_auto_pull_batch_size"],
 	"facilities": ["facility_levels"],
 	"city": ["level", "progress", "last_daily", "last_event", "last_awarded_day", "_last_breach_id"],
-	"raid": ["phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
+	"raid": ["notification_seen_keys", "phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
 	"merchant": ["_stock", "_offers", "_demand", "_budget", "_visit_day", "_latest_minute", "_present"]
 }
 const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time", "payroll_work_remainder"]
@@ -134,7 +134,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -145,12 +145,17 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		prepared_location = document.location
 	var values = VALUES.new()
 	values.allow_legacy_worker_fields = version < 5
+	values.allow_legacy_contract_fields = version < 7
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
 	var nodes: Dictionary = owners(map)
 	if raw.size() != GROUPS.size() + (9 if version >= 3 else 8):
 		return fail("Incomplete checkpoint.")
+	if version < 7:
+		if not raw.get("raid") is Dictionary or raw.raid.has("notification_seen_keys"):
+			return fail("Invalid legacy notification state.")
+		raw.raid["notification_seen_keys"] = {}
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
 			return fail("Invalid " + key + " state.")
@@ -394,6 +399,10 @@ func _validate_core(raw: Dictionary, map: Node) -> bool:
 		if not r is Dictionary or r.size() != 2 or not r.get("seed") is int or not r.get("state") is int:
 			return fail("Invalid random state.")
 	var raid: Dictionary = raw.raid
+	for key: Variant in raid.notification_seen_keys:
+		var value: Variant = raid.notification_seen_keys[key]
+		if not key is String or not value is String or key.length() > 256 or value.length() > 256:
+			return fail("Invalid notification acknowledgement.")
 	if raid.phase not in ["unbuilt", "safe", "warning", "attacking", "looting", "recovery"] or raid.wall_level < 0 or raid.wall_level > 2 or raid.wall_hp < 0 or raid.wall_hp > (80 if raid.wall_level == 2 else 50):
 		return fail("Invalid wall state.")
 	if raid._work_kind not in ["", "build", "rebuild", "repair", "upgrade", "watchtower"] or raid._work_remaining < 0 or raid._work_remaining > raid._work_total or raid._elapsed < 0 or raid._elapsed > 60.0 or raid._loot_weight < 0 or raid._loot_weight > 10.0 or raid._hits < 0 or raid._report_sequence < 0:
@@ -606,12 +615,21 @@ func _restore_city_drops(drops: Array, map: Node) -> void:
 		parent.add_child(pickup)
 
 func _valid_onboarding(worker: WorkerData) -> bool:
+	var legacy: bool = worker.payroll_contract_days == 0 and worker.payroll_paid_start_minute == -1
 	if worker.payroll_start_day == -1:
-		return worker.payroll_paid_from_day == -1 and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and worker.payroll_last_attempt_day == -1
+		return legacy and worker.payroll_paid_from_day == -1 and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and worker.payroll_last_attempt_day == -1
 	if worker.payroll_start_day < 0 or worker.payroll_last_attempt_day < -1:
 		return false
 	if worker.payroll_last_attempt_day != -1 and worker.payroll_last_attempt_day < worker.payroll_start_day:
 		return false
 	if worker.payroll_paid_from_day == -1:
-		return worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and not worker.is_reserved()
-	return worker.payroll_paid_from_day >= worker.payroll_start_day and worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6 and worker.payroll_period_rate > 0 and worker.payroll_last_attempt_day >= worker.payroll_paid_from_day
+		return legacy and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and not worker.is_reserved()
+	if worker.payroll_paid_from_day < worker.payroll_start_day or worker.payroll_period_rate <= 0 or worker.payroll_last_attempt_day < worker.payroll_paid_from_day:
+		return false
+	if legacy:
+		return worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6
+	return worker.payroll_contract_days in WorkerDatabase.CONTRACT_DAYS \
+		and worker.payroll_paid_until_day >= worker.payroll_paid_from_day + worker.payroll_contract_days \
+		and worker.payroll_paid_until_day <= WorkerDatabase.MAX_CONTRACT_DAY \
+		and worker.payroll_paid_start_minute >= worker.payroll_paid_from_day * 1440 \
+		and worker.payroll_paid_start_minute < (worker.payroll_paid_from_day + 1) * 1440

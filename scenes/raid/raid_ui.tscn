@@ -99,8 +99,8 @@ theme_override_styles/disabled = SubResource("NotificationButtonStyle")
 visible = false
 offset_left = 22.0
 offset_top = 54.0
-offset_right = 222.0
-offset_bottom = 154.0
+offset_right = 242.0
+offset_bottom = 206.0
 mouse_filter = 0
 texture = SubResource("RaidPanelTexture")
 patch_margin_left = 16
@@ -154,6 +154,38 @@ theme_override_font_sizes/font_size = 6
 text = "No raiders detected."
 autowrap_mode = 3
 vertical_alignment = 1
+
+[node name="WorkerNoticesTitleLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "WORKER CONTRACTS"
+vertical_alignment = 1
+
+[node name="WorkerNoticesScroll" type="ScrollContainer" parent="Root/NotificationsPopup/Margin/Contents"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="WorkerNoticesList" type="VBoxContainer" parent="Root/NotificationsPopup/Margin/Contents/WorkerNoticesScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="WorkerNoticesEmptyLabel" type="Label" parent="Root/NotificationsPopup/Margin/Contents/WorkerNoticesScroll/WorkerNoticesList"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "No worker contracts need attention."
+autowrap_mode = 3
 
 [node name="ActionsRow" type="HBoxContainer" parent="Root/NotificationsPopup/Margin/Contents"]
 custom_minimum_size = Vector2(0, 14)

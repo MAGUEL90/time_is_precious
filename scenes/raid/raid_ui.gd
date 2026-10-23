@@ -13,6 +13,7 @@ const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
 @onready var notifications_popup: NinePatchRect = $Root/NotificationsPopup
 @onready var merchant_notice_label: Label = $Root/NotificationsPopup/Margin/Contents/MerchantNoticeLabel
 @onready var notification_raid_label: Label = $Root/NotificationsPopup/Margin/Contents/RaidNoticeLabel
+@onready var worker_notices_list: VBoxContainer = $Root/NotificationsPopup/Margin/Contents/WorkerNoticesScroll/WorkerNoticesList
 @onready var notifications_city_button: Button = $Root/NotificationsPopup/Margin/Contents/ActionsRow/CityManagementButton
 @onready var travel_progress: RaidTravelProgress = $Root/Center/DetailsPanel/Margin/Contents/TravelProgressRow
 @onready var travel_eta_label: Label = $Root/Center/DetailsPanel/Margin/Contents/TravelEtaLabel
@@ -50,6 +51,10 @@ var _last_report: Dictionary = {}
 var _last_shown_report_id: int = -1
 var _last_phase: String = ""
 var _city_management_available: bool = false
+var _unread_notification: bool = false
+var _worker_notification_fingerprints: Dictionary = {}
+var _worker_notice_rows: Array[Dictionary] = []
+var _local_notification_seen_keys: Dictionary = {}
 var show_last_raid: bool = false
 var metrics: HBoxContainer
 var wall_meter: ProgressBar
@@ -109,6 +114,8 @@ func _ready() -> void:
 	_apply_theme()
 	if not TimeComponentManager.time_changed.is_connected(_on_clock_changed):
 		TimeComponentManager.time_changed.connect(_on_clock_changed)
+	if not WorkerDatabase.payroll_changed.is_connected(_on_workers_payroll_changed):
+		WorkerDatabase.payroll_changed.connect(_on_workers_payroll_changed)
 	CitizenManager.citizen_added.connect(_on_residents_changed)
 	CitizenManager.citizen_left.connect(_on_residents_changed)
 	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"))
@@ -156,6 +163,8 @@ func _exit_tree() -> void:
 	_clear_inspected_raiders(false)
 	CitizenManager.citizen_added.disconnect(_on_residents_changed)
 	CitizenManager.citizen_left.disconnect(_on_residents_changed)
+	if WorkerDatabase.payroll_changed.is_connected(_on_workers_payroll_changed):
+		WorkerDatabase.payroll_changed.disconnect(_on_workers_payroll_changed)
 	_unbind_state()
 	_unbind_merchant_state()
 	_unbind_city_progression()
@@ -233,6 +242,7 @@ func set_city_management_available(available: bool) -> void:
 func bind_merchant_state(next_state: Node) -> void:
 	if merchant_state == next_state:
 		_refresh_merchant_notice()
+		_refresh_notification_events()
 		return
 	_unbind_merchant_state()
 	merchant_state = next_state
@@ -241,6 +251,7 @@ func bind_merchant_state(next_state: Node) -> void:
 		if not merchant_state.is_connected("changed", changed_callable):
 			merchant_state.connect("changed", changed_callable)
 	_refresh_merchant_notice()
+	_refresh_notification_events()
 
 func bind_city_progression(next_state: Node) -> void:
 	if city_progression == next_state:
@@ -324,12 +335,15 @@ func _request_city_level_up() -> void:
 func refresh() -> void:
 	if not is_instance_valid(raid_state):
 		raid_notice.hide()
+		_status_data.clear()
 		_set_attack_warning(false)
 		status_panel.visible = false
 		details_panel.visible = false
-		_status_data.clear()
 		_clear_inspected_raiders(false)
+		_refresh_merchant_notice()
 		_refresh_raid_notice()
+		_refresh_worker_notices()
+		_refresh_notification_events()
 		_last_report.clear()
 		report_text = "No raid report yet."
 		return
@@ -369,6 +383,9 @@ func refresh() -> void:
 			open_details()
 			show_last_raid = true
 			_render_details()
+	_refresh_merchant_notice()
+	_refresh_worker_notices()
+	_refresh_notification_events()
 
 func _unbind_state() -> void:
 	close_details()
@@ -386,6 +403,7 @@ func _unbind_merchant_state() -> void:
 	if not is_instance_valid(merchant_state):
 		merchant_state = null
 		_refresh_merchant_notice()
+		_refresh_notification_events()
 		return
 	if merchant_state.has_signal("changed"):
 		var changed_callable: Callable = Callable(self, "_on_merchant_state_changed")
@@ -393,6 +411,7 @@ func _unbind_merchant_state() -> void:
 			merchant_state.disconnect("changed", changed_callable)
 	merchant_state = null
 	_refresh_merchant_notice()
+	_refresh_notification_events()
 
 func _on_residents_changed(_citizen: CitizenData) -> void:
 	refresh()
@@ -472,10 +491,14 @@ func _inspect_current_raiders() -> void:
 
 func _on_merchant_state_changed() -> void:
 	_refresh_merchant_notice()
+	_refresh_notification_events()
 
 func _on_clock_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
-	if is_instance_valid(raid_state):
-		refresh()
+	refresh()
+
+func _on_workers_payroll_changed() -> void:
+	_refresh_worker_notices()
+	_refresh_notification_events()
 
 func _toggle_notifications() -> void:
 	if notifications_popup.visible:
@@ -488,6 +511,8 @@ func _toggle_notifications() -> void:
 	notifications_popup.visible = true
 	_refresh_merchant_notice()
 	_refresh_raid_notice()
+	_refresh_worker_notices()
+	_refresh_notification_events()
 
 func _close_notifications() -> void:
 	notifications_popup.visible = false
@@ -516,7 +541,6 @@ func _refresh_merchant_notice() -> void:
 func _refresh_raid_notice() -> void:
 	var phase: String = str(_status_data.get("phase", ""))
 	var threat_active: bool = phase in ["warning", "attacking", "looting"]
-	_set_notice_emergency(threat_active and _city_management_available)
 	if phase == "warning":
 		var remaining: int = maxi(int(_status_data.get("arrival_minutes_remaining", 0)), 0)
 		notification_raid_label.text = "Raiders detected. Arrival in %s." % _format_travel_time(remaining)
@@ -525,6 +549,8 @@ func _refresh_raid_notice() -> void:
 	elif phase == "looting":
 		var seconds_left: float = maxf(0.0, float(_status_data.get("loot_seconds_remaining", 0.0)))
 		notification_raid_label.text = "Raiders are looting City Storage. %ds left." % int(ceil(seconds_left))
+	elif phase == "recovery":
+		notification_raid_label.text = "Raiders have withdrawn. The city has time to recover."
 	else:
 		# Do not expose the scheduled journey before its detection phase.
 		notification_raid_label.text = "No raiders detected."
@@ -543,6 +569,201 @@ func _format_travel_time(total_minutes: int) -> String:
 	if hours > 0:
 		return "%dh %dm" % [hours, minutes]
 	return "%dm" % minutes
+
+func _refresh_worker_notices() -> void:
+	_worker_notification_fingerprints.clear()
+	var notices: Array[Dictionary] = []
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var current_day: int = TimeComponentManager.current_day
+	for worker_value: Variant in WorkerDatabase.get_all_workers():
+		if not worker_value is WorkerData:
+			continue
+		var worker: WorkerData = worker_value as WorkerData
+		if worker.payroll_start_day < 0:
+			continue
+		var status: String = ""
+		var expiry_day: int = worker.payroll_paid_until_day
+		var detail: String = ""
+		if worker.payroll_paid_from_day < 0 or worker.payroll_paid_until_day < 0:
+			status = "pending"
+			expiry_day = worker.payroll_start_day
+			detail = worker.get_onboarding_status()
+		elif worker.is_payroll_blocked() and now >= worker.get_paid_end_minute():
+			status = "expired"
+			detail = worker.get_onboarding_status()
+		elif current_day >= worker.payroll_paid_until_day - 1:
+			status = "expiring"
+			detail = "Contract nearing expiry; paid through day %d." % worker.payroll_paid_until_day
+		if status.is_empty():
+			continue
+		var worker_id: String = worker.worker_id.strip_edges()
+		if worker_id.is_empty():
+			continue
+		var fingerprint: String = "id=%s;expiry=%d;status=%s" % [worker_id, expiry_day, status]
+		var notification_key: String = "worker:%s:%d:%s" % [worker_id, expiry_day, status]
+		var worker_name: String = worker.get_resolved_display_name().strip_edges()
+		if worker_name.is_empty():
+			worker_name = worker.display_name.strip_edges()
+		if worker_name.is_empty():
+			worker_name = "Worker"
+		if notification_key.length() <= 256 and fingerprint.length() <= 256:
+			_worker_notification_fingerprints[notification_key] = fingerprint
+		var notice_text: String = "%s — %s" % [worker_name, detail]
+		notices.append({
+			"worker_id": worker_id,
+			"name": worker_name,
+			"text": notice_text,
+			"status": status,
+		})
+	notices.sort_custom(Callable(self, "_sort_worker_notices_by_name"))
+	if notices == _worker_notice_rows:
+		return
+	_worker_notice_rows = notices.duplicate(true)
+	for child: Node in worker_notices_list.get_children():
+		worker_notices_list.remove_child(child)
+		child.queue_free()
+	if notices.is_empty():
+		var empty_label: Label = _create_worker_notice_label("No worker contracts need attention.")
+		empty_label.name = "WorkerNoticesEmptyLabel"
+		worker_notices_list.add_child(empty_label)
+		return
+	var index: int = 0
+	for notice: Dictionary in notices:
+		var notice_label: Label = _create_worker_notice_label(str(notice.get("text", "")))
+		notice_label.name = "WorkerNotice_%d" % index
+		if str(notice.get("status", "")) in ["expired", "pending"]:
+			notice_label.add_theme_color_override("font_color", THREAT_COLOR)
+		worker_notices_list.add_child(notice_label)
+		index += 1
+
+func _create_worker_notice_label(text_value: String) -> Label:
+	var notice_label: Label = Label.new()
+	notice_label.custom_minimum_size = Vector2(0, 8)
+	notice_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	notice_label.theme_type_variation = &"HudLabelShortcut"
+	notice_label.add_theme_font_size_override("font_size", 6)
+	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	notice_label.text = text_value
+	return notice_label
+
+func _sort_worker_notices_by_name(left: Dictionary, right: Dictionary) -> bool:
+	var left_name: String = str(left.get("name", "")).to_lower()
+	var right_name: String = str(right.get("name", "")).to_lower()
+	if left_name == right_name:
+		return str(left.get("worker_id", "")) < str(right.get("worker_id", ""))
+	return left_name < right_name
+
+func _refresh_notification_events() -> void:
+	var events: Dictionary = {}
+	var merchant_fingerprint: String = _get_merchant_event_fingerprint()
+	if not merchant_fingerprint.is_empty():
+		events["merchant"] = merchant_fingerprint
+	var raid_fingerprint: String = _get_raid_event_fingerprint()
+	if not raid_fingerprint.is_empty():
+		events["raid"] = raid_fingerprint
+	for worker_key: Variant in _worker_notification_fingerprints:
+		events[str(worker_key)] = str(_worker_notification_fingerprints[worker_key])
+	var seen: Dictionary = _get_notification_seen_keys()
+	for seen_key: Variant in seen.keys():
+		if seen_key is String and str(seen_key).begins_with("worker:") and not events.has(str(seen_key)):
+			seen.erase(seen_key)
+	var unread: bool = false
+	for event_key: Variant in events:
+		var key: String = str(event_key)
+		var fingerprint: String = str(events[event_key])
+		if str(seen.get(key, "")) == fingerprint:
+			continue
+		if notifications_popup.visible:
+			seen[key] = fingerprint
+		else:
+			unread = true
+	if notifications_popup.visible:
+		for event_key: Variant in events:
+			seen[str(event_key)] = str(events[event_key])
+	_store_notification_seen_keys(seen)
+	_unread_notification = unread and not notifications_popup.visible
+	var phase: String = str(_status_data.get("phase", ""))
+	var threat_active: bool = phase in ["warning", "attacking", "looting"]
+	_set_notice_emergency(_city_management_available and (threat_active or _unread_notification))
+
+func _get_merchant_event_fingerprint() -> String:
+	if not is_instance_valid(merchant_state) or not merchant_state.has_method("is_present"):
+		return ""
+	var visit_day: int = _get_optional_int_property(merchant_state, "_visit_day", -1)
+	if visit_day < 0:
+		return ""
+	if bool(merchant_state.call("is_present")):
+		return "visit:%d:arrived" % visit_day
+	if not _has_object_property(merchant_state, "config"):
+		return ""
+	var config_value: Variant = merchant_state.get("config")
+	if not config_value is Resource:
+		return ""
+	var departure_hour: int = _get_optional_int_property(config_value as Resource, "departure_hour", -1)
+	if departure_hour < 0:
+		return ""
+	if TimeComponentManager.current_day > visit_day \
+		or (TimeComponentManager.current_day == visit_day and TimeComponentManager.current_hour >= departure_hour):
+		return "visit:%d:departed" % visit_day
+	return ""
+
+func _get_raid_event_fingerprint() -> String:
+	if not is_instance_valid(raid_state):
+		return ""
+	var phase: String = str(_status_data.get("phase", ""))
+	if phase not in ["warning", "attacking", "looting", "recovery"]:
+		return ""
+	var expedition_id: int = _get_optional_int_property(raid_state, "_expedition_sequence", 0)
+	if expedition_id <= 0:
+		var report_sequence: int = _get_optional_int_property(raid_state, "_report_sequence", 0)
+		expedition_id = report_sequence if phase == "recovery" and report_sequence > 0 else report_sequence + 1
+	return "expedition:%d:%s" % [expedition_id, phase]
+
+func _get_optional_int_property(target: Object, property_name: String, fallback: int) -> int:
+	if not is_instance_valid(target):
+		return fallback
+	for property: Dictionary in target.get_property_list():
+		if str(property.get("name", "")) != property_name:
+			continue
+		var property_value: Variant = target.get(property_name)
+		var property_type: int = typeof(property_value)
+		if property_type in [TYPE_INT, TYPE_FLOAT, TYPE_BOOL]:
+			return int(property_value)
+		if property_type in [TYPE_STRING, TYPE_STRING_NAME]:
+			var integer_text: String = str(property_value)
+			return int(integer_text) if integer_text.is_valid_int() else fallback
+		return fallback
+	return fallback
+
+func _has_object_property(target: Object, property_name: String) -> bool:
+	if not is_instance_valid(target):
+		return false
+	for property: Dictionary in target.get_property_list():
+		if str(property.get("name", "")) == property_name:
+			return true
+	return false
+
+func _get_notification_seen_keys() -> Dictionary:
+	if is_instance_valid(raid_state):
+		for property: Dictionary in raid_state.get_property_list():
+			if str(property.get("name", "")) == "notification_seen_keys":
+				var stored_value: Variant = raid_state.get("notification_seen_keys")
+				if stored_value is Dictionary:
+					var merged: Dictionary = stored_value.duplicate()
+					for local_key: Variant in _local_notification_seen_keys:
+						if not merged.has(local_key):
+							merged[local_key] = _local_notification_seen_keys[local_key]
+					return merged
+	return _local_notification_seen_keys.duplicate()
+
+func _store_notification_seen_keys(seen: Dictionary) -> void:
+	_local_notification_seen_keys = seen.duplicate()
+	if not is_instance_valid(raid_state):
+		return
+	for property: Dictionary in raid_state.get_property_list():
+		if str(property.get("name", "")) == "notification_seen_keys":
+			raid_state.set("notification_seen_keys", seen)
+			return
 
 func _render_status() -> void:
 	var status_text: String = str(_status_data.get("status_text", ""))

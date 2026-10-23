@@ -7,6 +7,7 @@ signal closed
 @onready var feedback_label: Label = $Root/Center/Window/Margin/MainVBox/FeedbackLabel
 @onready var hire_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/HireButton
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/CloseButton
+@onready var contract_days_option: OptionButton = $Root/Center/Window/Margin/MainVBox/ContractRow/ContractDaysOption
 
 
 var applicants: Array[CitizenData] = []
@@ -19,9 +20,13 @@ func _ready() -> void:
 	# ItemList has no gameplay-theme variation; set its local font explicitly.
 	applicant_list.add_theme_font_override("font", preload("res://assets/font/pixel_rpg.ttf"))
 	applicant_list.add_theme_font_size_override("font_size", 6)
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		contract_days_option.add_item("%d days" % days, days)
+	contract_days_option.select(0)
 	hire_button.pressed.connect(_on_hire_button_pressed)
 	close_button.pressed.connect(_on_close_button_pressed)
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
+	contract_days_option.item_selected.connect(func(_index: int): _refresh_quote())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
@@ -46,10 +51,9 @@ func _refresh_applicants() -> void:
 	applicants = CitizenManager.get_all_applicants()
 
 	for applicant_data in applicants:
-		var item_index: int = applicant_list.add_item("%s | %s | %s" % [
+		var item_index: int = applicant_list.add_item("%s | %s" % [
 			applicant_data.display_name,
-			_get_profession_name(applicant_data.profession),
-			_rate_text(applicant_data.profession)
+			_get_profession_name(applicant_data.profession)
 		])
 		applicant_list.set_item_tooltip_enabled(item_index, false)
 
@@ -82,15 +86,17 @@ func _on_hire_button_pressed() -> void:
 
 	var applicant_data: CitizenData = applicants[selected_index]
 	var hired_worker: WorkerData = WorkerDatabase.hire_applicant(
-		applicant_data.citizen_id
+		applicant_data.citizen_id,
+		1,
+		_selected_contract_days()
 	)
 
 	if hired_worker == null:
 		_refresh_applicants()
-		feedback_label.text = "Hiring unavailable: check hours, rate and applicant."
+		feedback_label.text = "Hiring failed: check wallet and applicant availability."
 		return
 
-	var success_text: String = "Hired. Starts day %d, 08:00 after payment." % hired_worker.payroll_start_day
+	var success_text: String = "Hired. Paid through Day %d." % hired_worker.payroll_paid_until_day
 
 	_refresh_applicants()
 	feedback_label.text = success_text
@@ -117,23 +123,22 @@ func _get_profession_name(
 		_:
 			return "Unassigned"
 
-func _rate_text(profession: WorkerData.Profession) -> String:
-	var rate: int = WorkerDatabase.get_onboarding_rate(profession)
-	return "%d / 7 days" % rate if rate > 0 else "Rate TBD"
+func _selected_contract_days() -> int:
+	if contract_days_option.item_count == 0:
+		return 3
+	return contract_days_option.get_selected_id()
 
 func _refresh_quote() -> void:
-	var day: int = TimeComponentManager.current_day + 1
-	var quote: Dictionary = WorkerDatabase.get_payroll_quote(day)
 	var selected: PackedInt32Array = applicant_list.get_selected_items()
-	var rate: int = -1
+	var price: int = -1
+	var days: int = _selected_contract_days()
 	if not selected.is_empty() and selected[0] < applicants.size():
-		rate = WorkerDatabase.get_onboarding_rate(applicants[selected[0]].profession)
-		quote.total += maxi(0, rate)
-		quote.count += 1
-		quote.unpriced = quote.unpriced or rate <= 0
-	var treasury: int = CityStockManager.treasury_shekel
-	quote_label.text = "Next 08:00%s: %s | %d workers | Short: %s" % [
-		" (+hire)" if rate > 0 else "", "TBD" if quote.unpriced else str(quote.total), quote.count,
-		"TBD" if quote.unpriced else str(maxi(0, quote.total - treasury))]
-	hire_button.disabled = rate <= 0 or not WorkerDatabase.is_job_board_open()
-	feedback_label.text = "08–17 | Starts tomorrow 08:00" if WorkerDatabase.is_job_board_open() else "Closed | Opens 08:00"
+		price = WorkerDatabase.get_contract_price(applicants[selected[0]].profession, days)
+	if selected.is_empty() or selected[0] >= applicants.size():
+		quote_label.text = "Select an applicant to see the package price."
+	elif price > 0:
+		quote_label.text = "%d-day prepaid: %d Shekel from your wallet" % [days, price]
+	else:
+		quote_label.text = "Package price unavailable for this profession."
+	hire_button.disabled = price <= 0 or not WorkerDatabase.is_job_board_open()
+	feedback_label.text = "Today's remaining time + %d full days starting tomorrow." % days if WorkerDatabase.is_job_board_open() else "Closed | Opens 08:00"

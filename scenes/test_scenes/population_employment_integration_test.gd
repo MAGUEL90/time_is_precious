@@ -19,6 +19,8 @@ func _ready() -> void:
 	# Fixture rates and treasury funds keep the test independent of final game prices.
 	WorkerDatabase.onboarding_period_rates = TEST_ONBOARDING_RATES.duplicate()
 	CityStockManager.treasury_shekel = 0
+	Inventory.items.clear()
+	Inventory.items["shekel"] = 100
 	CitizenManager.citizens_by_id.clear()
 	ImmigrationManager.pending_immigrants.clear()
 
@@ -193,8 +195,8 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"Applicant row must show the citizen name."
 		)
 		_expect(
-			job_board_ui.applicant_list.get_item_text(0).contains("2 / 7 days"),
-			"Applicant row must show the injected initial-period rate instead of a daily wage."
+			job_board_ui.quote_label.text.contains("3-day prepaid: 2 Shekel"),
+			"Job Board quote must show the selected three-day prepaid package price."
 		)
 
 		job_board_ui.hire_button.pressed.emit()
@@ -207,6 +209,10 @@ func _test_applicant_hiring_lifecycle() -> void:
 	_expect(
 		applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
 		"Hired applicant must enter the HIRED employment state."
+	)
+	_expect(
+		Inventory.items.get("shekel", 0) == 98,
+		"Job Board hiring spends the three-day package from the explicit personal wallet fixture."
 	)
 	_expect(
 		WorkerDatabase.get_worker_data(applicant.citizen_id) == hired_worker,
@@ -223,23 +229,34 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"Hired worker must inherit the applicant profession."
 		)
 		_expect(
-			hired_worker.payroll_start_day == TimeComponentManager.current_day + 1
-				and hired_worker.payroll_paid_from_day == -1
-				and hired_worker.payroll_paid_until_day == -1
-				and hired_worker.payroll_period_rate == 0
-				and hired_worker.is_waiting_for_first_payment(),
-			"A new hire starts tomorrow with no paid period recorded yet."
+			hired_worker.payroll_start_day == TimeComponentManager.current_day
+				and hired_worker.payroll_paid_from_day == TimeComponentManager.current_day
+				and hired_worker.payroll_paid_until_day == TimeComponentManager.current_day + 3
+				and hired_worker.payroll_contract_days == 3
+				and hired_worker.payroll_period_rate == 2
+				and hired_worker.payroll_paid_start_minute
+					== TimeComponentManager.current_day * 1440
+						+ TimeComponentManager.current_hour * 60
+						+ TimeComponentManager.current_minute
+				and not hired_worker.is_payroll_blocked(),
+			"A new hire immediately receives today's remaining time plus the prepaid three-day package."
 		)
-		var unpaid_workshop: WorkShop = WorkShop.new()
-		unpaid_workshop.max_assigned_worker_slots = 1
-		var unpaid_assignment: Array[String] = [hired_worker.worker_id]
+		var assignment_workshop: WorkShop = WorkShop.new()
+		assignment_workshop.max_assigned_worker_slots = 1
+		var paid_assignment: Array[String] = [hired_worker.worker_id]
 		_expect(
-			not unpaid_workshop.assign_workers(unpaid_assignment)
-				and unpaid_workshop.get_assigned_worker_ids().is_empty()
-				and applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
-			"A new hire cannot be assigned before the first payment."
+			assignment_workshop.assign_workers(paid_assignment)
+				and assignment_workshop.get_assigned_worker_ids() == paid_assignment
+				and applicant.employment_status == CitizenData.EmploymentStatus.ASSIGNED,
+			"A newly prepaid worker can be assigned immediately."
 		)
-		unpaid_workshop.free()
+		var no_assignment: Array[String] = []
+		_expect(
+			assignment_workshop.assign_workers(no_assignment)
+				and applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
+			"A newly prepaid worker can be released from the fixture workshop."
+		)
+		assignment_workshop.free()
 
 	if job_board_ui != null:
 		_expect(
@@ -279,33 +296,35 @@ func _test_applicant_hiring_lifecycle() -> void:
 	_expect(duplicate_hire == null, "A hired citizen cannot be hired twice.")
 
 	if hired_worker != null:
-		var fixture_rate: int = WorkerDatabase.get_onboarding_rate(hired_worker.profession)
-		_expect(fixture_rate == TEST_ONBOARDING_RATES[WorkerData.Profession.LABORER],
-			"The Laborer uses the explicit integration-test rate.")
-		_expect(CityStockManager.add_shekel(fixture_rate),
-			"The test explicitly funds the city treasury for first payroll.")
-		var first_payroll_day: int = hired_worker.payroll_start_day
-		TimeComponentManager.current_day = first_payroll_day
-		TimeComponentManager.current_hour = 7
-		TimeComponentManager.current_minute = 59
-		_expect(hired_worker.is_waiting_for_first_payment(),
-			"The worker remains pending at 07:59 on the scheduled start day.")
-		TimeComponentManager.advance_minutes(1)
-		_expect(TimeComponentManager.current_day == first_payroll_day
-			and TimeComponentManager.current_hour == 8
-			and not hired_worker.is_waiting_for_first_payment()
+		var fixture_price: int = WorkerDatabase.get_contract_price(hired_worker.profession, 3)
+		_expect(fixture_price == TEST_ONBOARDING_RATES[WorkerData.Profession.LABORER],
+			"The Laborer uses the explicit integration-test package price.")
+		_expect(Inventory.items.get("shekel", 0) == 100 - fixture_price
 			and CityStockManager.treasury_shekel == 0,
-			"Advancing the fixture clock to 08:00 pays the funded first period.")
-		_expect(hired_worker.payroll_paid_from_day == first_payroll_day
-			and hired_worker.payroll_paid_until_day == first_payroll_day + 6
-			and hired_worker.payroll_period_rate == fixture_rate,
-			"First payroll records the injected period rate and seven-day coverage dates.")
-		_expect(WorkerDatabase.assign_worker(hired_worker.worker_id)
-			and applicant.employment_status == CitizenData.EmploymentStatus.ASSIGNED,
-			"The worker can be assigned after first payment.")
-		_expect(WorkerDatabase.unassign_worker(hired_worker.worker_id)
-			and applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
-			"Unassigning the paid worker returns the citizen to HIRED.")
+			"The Job Board package comes from the personal wallet and does not draw city funds.")
+		var wallet_after_purchase: int = Inventory.items.get("shekel", 0)
+		TimeComponentManager.current_day = hired_worker.payroll_paid_until_day
+		TimeComponentManager.current_hour = 7
+		TimeComponentManager.current_minute = 0
+		TimeComponentManager.hour_changed.emit(7)
+		_expect(not hired_worker.is_payroll_blocked()
+			and hired_worker.payroll_paid_until_day == TimeComponentManager.current_day
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"The prepaid end day remains inclusive through 07:00 without an automatic city or wallet charge.")
+		TimeComponentManager.current_day = hired_worker.payroll_paid_until_day + 1
+		TimeComponentManager.current_hour = 7
+		TimeComponentManager.hour_changed.emit(7)
+		_expect(hired_worker.is_payroll_blocked()
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"Coverage expires at 07:00 the day after the inclusive end date without an automatic charge.")
+		TimeComponentManager.current_hour = 8
+		TimeComponentManager.hour_changed.emit(8)
+		_expect(hired_worker.is_payroll_blocked()
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"The later 08:00 refresh does not start an automatic charge or restore expired coverage.")
 
 	WorkerDatabase.workers_by_id.erase(applicant.citizen_id)
 	CitizenManager.citizens_by_id.erase(applicant.citizen_id)

@@ -144,6 +144,10 @@ func _run() -> void:
 	_choose_destination(destination_b)
 	panel.assign_button.pressed.emit()
 	assignment._on_next_pressed()
+	# Keep commute visible after the same-day start: the shift is still ahead.
+	TimeComponentManager.current_hour = 6
+	TimeComponentManager.current_minute = 0
+	fixture.daily.last_tick = fixture.daily.now()
 	inspector.start_button.pressed.emit()
 	_expect(fixture.daily.jobs.has(&"ClaySiteA"), "Start Work commits the UI plan.")
 	if not fixture.daily.jobs.has(&"ClaySiteA"):
@@ -151,7 +155,11 @@ func _run() -> void:
 		return
 	_expect(fixture.hauling.routes[ids[1]].daily_target == 20, "Committed target survives menu cleanup.")
 	var first_start: int = fixture.daily.jobs[&"ClaySiteA"].starts[ids[1]]
-	_expect(first_start / 1440 == TimeComponentManager.current_day + 1, "Assignment still begins on the next day.")
+	_expect(first_start == TimeComponentManager.current_day * 1440 + fixture.daily.SHIFT_START,
+		"Before-shift assignment begins at 07:00 today.")
+	_expect(fixture.hauling.routes[ids[1]].cargo.quantity == 0
+		and fixture.hauling.delivered_on_day(ids[1], TimeComponentManager.current_day) == 0,
+		"Starting a Hauler route creates no backdated cargo or delivery.")
 	# Another Hauler uses a separate destination and target, without a site mapping.
 	fixture.daily.select_hauler(&"ClaySiteB", ids[2], fixture.get_path_to(destination_a), destination_a.display_name, 5)
 	fixture.daily.start(&"ClaySiteB", fixture._drop_daily_output.bind(fixture.get_node("WorksiteMarkers/ClaySiteB")))
@@ -162,6 +170,9 @@ func _run() -> void:
 	await _capture("hauler-commuting-without-cart.png")
 	TimeComponentManager.advance_minutes(first_start - fixture.daily.now())
 	_check_hauler_pose("idle_cart", true, "Arrived and waiting for output")
+	_expect(fixture.hauling.routes[ids[1]].cargo.quantity == 0
+		and fixture.hauling.delivered_on_day(ids[1], TimeComponentManager.current_day) == 0,
+		"Hauler waits at today's shift start until current-day output exists.")
 	fixture._drop_daily_output(50, fixture.get_node("WorksiteMarkers/ClaySiteA"))
 	fixture._drop_daily_output(50, fixture.get_node("WorksiteMarkers/ClaySiteB"))
 	TimeComponentManager.advance_minutes(1)

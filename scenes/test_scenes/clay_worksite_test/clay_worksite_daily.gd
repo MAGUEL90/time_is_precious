@@ -93,6 +93,16 @@ func setup(site_sessions: Dictionary) -> void:
 func now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 
+func _assignment_start_minute() -> int:
+	var current: int = now()
+	var day_start: int = (current / 1440) * 1440
+	var minute: int = current - day_start
+	if minute < SHIFT_START:
+		return day_start + SHIFT_START
+	if minute < SHIFT_END:
+		return current
+	return day_start + 1440 + SHIFT_START
+
 func unavailable(id: String) -> String:
 	if id == "player":
 		return "Hourly only"
@@ -185,7 +195,7 @@ func start(site_id: StringName, drop: Callable) -> bool:
 		if not job.ids.has(id):
 			job.ids.append(id)
 			job.progress[id] = 0
-			job.starts[id] = (TimeComponentManager.current_day + 1) * 1440 + SHIFT_START
+			job.starts[id] = _assignment_start_minute()
 			job.stats[id] = {"days": [], "output": 0}
 			# Busy reserves this standing assignment even outside its daily shift.
 			WorkerDatabase.get_worker_data(id).start_work(job.order, "clay_daily")
@@ -202,7 +212,7 @@ func start_day_text(site_id: StringName) -> String:
 	if jobs.has(site_id):
 		ids.append_array(jobs[site_id].ids)
 	for id: String in ids:
-		var day: int = TimeComponentManager.current_day + 1
+		var day: int = _assignment_start_minute() / 1440
 		if jobs.has(site_id) and jobs[site_id].starts.has(id):
 			day = int(jobs[site_id].starts[id]) / 1440
 		if not days.has(day):

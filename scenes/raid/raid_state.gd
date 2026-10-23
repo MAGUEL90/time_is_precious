@@ -9,6 +9,8 @@ const CONFIG: Script = preload("res://scenes/raid/raid_config.gd")
 @export var config: Resource = preload("res://scenes/raid/raid_config.gd").new()
 var storage: Node
 var phase: String = "unbuilt"
+# Latest acknowledged event per notification category, persisted across Continue.
+var notification_seen_keys: Dictionary = {}
 var wall_hp: int = 0
 var wall_level: int = 0
 var watchtower_built: bool = false

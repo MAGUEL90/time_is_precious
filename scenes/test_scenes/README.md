@@ -10,6 +10,25 @@ Check the engine version first with `godot --version`; pass the full path to the
 4.5.x binary if the default command selects another version. A fresh checkout
 needs `godot --headless --editor --import --path .` before command-line tests.
 
+## Prepaid worker contracts (2026-10-23)
+
+Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and
+`XDG_CACHE_HOME` for these tests. Run only one engine process at a time.
+
+| Scene | Coverage / arguments |
+| --- | --- |
+| `test_scene_prepaid_contracts.tscn` | Fixture: wallet purchase, packages, independent expiry, manual renewal, legacy boundaries, dismissal, transaction guards |
+| `test_scene_contract_assignment.tscn` | Fixture: same-day 07–15 assignment, partial output, daily cap, hauler cargo |
+| `test_scene_contract_notifications.tscn` | Fixture: existing !, acknowledgement, contract/merchant/raid events, long-name scrolling; rendered runs save screenshots |
+| `test_scene_contract_continue.tscn` | Fixture: separate processes with `-- --contract-phase=write`, `read`, `readrenew`, `legacy-read`, `legacy-renew-read`, `assignment-write`, `assignment-read` in that order |
+| `test_scene_contract_journey.tscn` | Normal New Game journey with active needs and earned income: `-- --journey-phase=write`, then `read` in separate processes |
+| `test_scene_contract_ui_review.tscn` | Continue the earned journey checkpoint; `-- --contract-ui-phase=prepare`, `capture` (rendered), `write`, `read`; see driver for checkpoint paths |
+
+Older seven-day city-payroll fixtures/journeys document the superseded rules;
+they are not acceptance tests for wallet contracts. Older next-day commute/
+departure fixtures likewise require updated expectations before reuse.
+See `docs/task_reports/prepaid-worker-contracts-2026-10-23.md` for evidence and limits.
+
 ## Current map and production
 
 | Scene | Coverage |
