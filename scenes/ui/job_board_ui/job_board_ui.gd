@@ -135,10 +135,10 @@ func _refresh_quote() -> void:
 	if not selected.is_empty() and selected[0] < applicants.size():
 		price = WorkerDatabase.get_contract_price(applicants[selected[0]].profession, days)
 	if selected.is_empty() or selected[0] >= applicants.size():
-		quote_label.text = "Select an applicant to see the package price."
+		quote_label.text = "Select an applicant to see the contract price."
 	elif price > 0:
 		quote_label.text = "%d-day prepaid: %d Shekel from your wallet" % [days, price]
 	else:
-		quote_label.text = "Package price unavailable for this profession."
+		quote_label.text = "Contract price unavailable for this profession."
 	hire_button.disabled = price <= 0 or not WorkerDatabase.is_job_board_open()
 	feedback_label.text = "Today's remaining time + %d full days starting tomorrow." % days if WorkerDatabase.is_job_board_open() else "Closed | Opens 08:00"

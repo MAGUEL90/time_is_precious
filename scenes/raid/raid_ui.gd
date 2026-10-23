@@ -587,13 +587,13 @@ func _refresh_worker_notices() -> void:
 		if worker.payroll_paid_from_day < 0 or worker.payroll_paid_until_day < 0:
 			status = "pending"
 			expiry_day = worker.payroll_start_day
-			detail = worker.get_onboarding_status()
+			detail = "Unpaid"
 		elif worker.is_payroll_blocked() and now >= worker.get_paid_end_minute():
 			status = "expired"
-			detail = worker.get_onboarding_status()
+			detail = "Expired"
 		elif current_day >= worker.payroll_paid_until_day - 1:
 			status = "expiring"
-			detail = "Contract nearing expiry; paid through day %d." % worker.payroll_paid_until_day
+			detail = "Paid through Day %d" % worker.payroll_paid_until_day
 		if status.is_empty():
 			continue
 		var worker_id: String = worker.worker_id.strip_edges()

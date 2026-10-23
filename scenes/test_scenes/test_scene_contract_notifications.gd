@@ -192,22 +192,22 @@ func _run() -> void:
 	_close_notifications()
 
 	_set_clock(CONTRACT_UNTIL_DAY + 1, 6, 59, true)
-	_expect(not _worker_notice_text_contains("Contract expired")
-		and _worker_notice_text_contains("New contract worker — Contract nearing expiry")
-		and _worker_notice_text_contains("Legacy contract worker — Contract nearing expiry"),
+	_expect(not _worker_notice_text_contains("Expired")
+		and _worker_notice_text_contains("New contract worker — Paid through Day")
+		and _worker_notice_text_contains("Legacy contract worker — Paid through Day"),
 		"Both contracts show a near-expiry notice before their exact paid-end hour.")
 	_set_clock(CONTRACT_UNTIL_DAY + 1, 7, 0, true)
 	_expect(ui._unread_notification and not _seen_worker_key("notice_new", CONTRACT_UNTIL_DAY, "expired")
 		and not _seen_worker_key("notice_legacy", CONTRACT_UNTIL_DAY, "expired")
-		and _worker_notice_text_contains("New contract worker — Contract expired")
-		and _worker_notice_text_contains("Legacy contract worker — Contract nearing expiry"),
+		and _worker_notice_text_contains("New contract worker — Expired")
+		and _worker_notice_text_contains("Legacy contract worker — Paid through Day"),
 		"A new contract expiry at 07:00 is unread while the legacy contract remains paid through 07:59.")
 	_open_notifications()
 	_expect(not ui._unread_notification and _seen_worker_key("notice_new", CONTRACT_UNTIL_DAY, "expired"),
 		"Opening the popup acknowledges the 07:00 contract expiry.")
 	_set_clock(CONTRACT_UNTIL_DAY + 1, 8, 0, true)
 	_expect(not ui._unread_notification and _seen_worker_key("notice_legacy", CONTRACT_UNTIL_DAY, "expired")
-		and _worker_notice_text_contains("Legacy contract worker — Contract expired"),
+		and _worker_notice_text_contains("Legacy contract worker — Expired"),
 		"A legacy contract expires at 08:00 and the open popup acknowledges it automatically.")
 
 	_expect(WorkerDatabase.dismiss_worker("notice_legacy"), "The legacy fixture worker can be dismissed.")

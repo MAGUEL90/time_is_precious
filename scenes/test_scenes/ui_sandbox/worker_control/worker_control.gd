@@ -110,7 +110,7 @@ func _ready() -> void:
 	for days: int in WorkerDatabase.CONTRACT_DAYS:
 		renew_days_option.add_item("%d days" % days, days)
 	renew_days_option.select(0)
-	renew_days_option.item_selected.connect(func(_index: int): _on_renew_package_changed())
+	renew_days_option.item_selected.connect(func(_index: int): _on_renew_contract_changed())
 	manage_renew_button.pressed.connect(_request_manage_renew)
 	details_close_button.pressed.connect(_close_details)
 	_connect_needs_refresh_signal()
@@ -731,7 +731,7 @@ func _update_manage_controls(row: Dictionary) -> void:
 	)
 
 
-func _on_renew_package_changed() -> void:
+func _on_renew_contract_changed() -> void:
 	_renew_feedback_text = ""
 	if _manage_worker_id.is_empty():
 		return
@@ -1065,7 +1065,7 @@ func _confirm_pending_action() -> void:
 	if current_price != _pending_renew_price:
 		if current_price <= 0:
 			_cancel_remove_confirmation()
-			_renew_feedback_text = "Package price unavailable."
+			_renew_feedback_text = "Contract price unavailable."
 			var current_row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 			if not current_row.is_empty():
 				_update_manage_controls(current_row)

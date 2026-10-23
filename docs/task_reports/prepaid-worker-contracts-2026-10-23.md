@@ -69,3 +69,7 @@ Renderer llvmpipe memperingatkan VSync tidak didukung; pengujian rendered tetap 
 - Balance final belum dinyatakan selesai. Uji manusia: hire paket 3 hari, assign sebelum 15.00, cek biaya/output, renew dan cancel, simpan/Continue, kemudian cek notifikasi mendekati tempo.
 
 Tidak ada merge main, force-push, atau PR baru dalam tugas ini. Tidak ada akses laptop.
+
+## Koreksi teks setelah review
+
+Istilah UI `Package` diganti `Contract`. Notifikasi pekerja dipersingkat menjadi nama dan `Paid through Day N`, `Expired`, atau `Unpaid`; instruksi renew tersedia di Worker Hub. Uji notifikasi rendered Godot 4.5.1 diulang dan PASS. Dua screenshot notifikasi di atas sudah diperbarui; screenshot Job Board sebelumnya masih merekam istilah lama. Perubahan ini hanya teks, tidak mengubah durasi atau transaksi.
