@@ -130,6 +130,57 @@ func hire_applicant(
 
 	return worker_data
 
+func hire_applicants(
+	citizen_ids: PackedStringArray,
+	wage_shekel_per_day: int = 1,
+	contract_days: int = 3
+) -> Array[WorkerData]:
+	var hired: Array[WorkerData] = []
+	if _payroll_settling or not is_job_board_open() or citizen_ids.is_empty():
+		return hired
+	if contract_days not in CONTRACT_DAYS or TimeComponentManager.current_day > MAX_CONTRACT_DAY - contract_days:
+		return hired
+	var citizens: Array[CitizenData] = []
+	var prices: Array[int] = []
+	var seen: Dictionary = {}
+	var total: int = 0
+	# Validate the complete batch before changing workers, citizens or funds.
+	for citizen_id: String in citizen_ids:
+		var clean_id: String = citizen_id.strip_edges()
+		if clean_id.is_empty() or seen.has(clean_id):
+			return hired
+		seen[clean_id] = true
+		var citizen: CitizenData = CitizenManager.get_citizen(clean_id)
+		if citizen == null or not citizen.can_be_hired() or has_worker_data(clean_id):
+			return hired
+		var price: int = get_contract_price(citizen.profession, contract_days)
+		if price <= 0 or total > 9223372036854775807 - price:
+			return hired
+		total += price
+		citizens.append(citizen)
+		prices.append(price)
+	if not Inventory.has_item("shekel", total):
+		return hired
+	_payroll_settling = true
+	for index: int in range(citizens.size()):
+		var citizen: CitizenData = citizens[index]
+		# Rehire uses the same retained worker resource as the single-hire path.
+		var worker: WorkerData = dismissed_workers.get(citizen.citizen_id, WorkerData.new())
+		dismissed_workers.erase(citizen.citizen_id)
+		worker.worker_id = citizen.citizen_id
+		worker.display_name = citizen.display_name
+		worker.profession = citizen.profession
+		worker.wage_shekel_per_day = maxi(0, wage_shekel_per_day)
+		worker.payroll_start_day = TimeComponentManager.current_day
+		_start_contract(worker, contract_days, prices[index])
+		workers_by_id[worker.worker_id] = worker
+		citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+		hired.append(worker)
+	# One debit and one pair of notifications after every membership is published.
+	# The existing guard stays raised through both callbacks, including reentry.
+	_commit_wallet_payment(total)
+	return hired
+
 func dismiss_worker(worker_id: String) -> bool:
 	var worker: WorkerData = get_worker_data(worker_id)
 	if _payroll_settling or worker == null or worker.is_reserved() or worker.current_work_status == WorkerData.WorkStatus.TRAVELLING:
