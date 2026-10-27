@@ -29,3 +29,13 @@ Isolated QA uses exact final source for this stage, native payroll project setti
 - Actual 400x225 and nearest-neighbor 1200x675 rendered initial/selected/insufficient states inspected. These screenshots contain test-fixture candidate names, not production applicant replacements.
 
 Arrival-first accounting and schema8 migration are separate work in progress; these UI results do not establish their correctness or merge readiness. No rate, native single-hire contract rule, world layout, save profile or main/payroll branch changed in this stage.
+## Stage 3: storage and workshop presentation
+
+Ported compact wallet display, live capacity/storage and empty-output icons, WORKING card tint, Back-only nested navigation and persistent deposit menus. Both ItemTransfer callers refresh in place, including empty inventory and failed transactions. City storage still calls the native treasury-enabled transaction; no wallet/treasury rule is replaced.
+
+- `test_scene_content_deposit_ui`: PASSED, exit0 (repeat/failed/empty deposits, callbacks, Back/pause, access loss and treasury cash refresh).
+- `mudbrick_player_flow_test`: PASSED, exit0 (unchanged native recipes, fees and pickup flow).
+- `test_scene_storage_treasury`: PASS, exit0.
+- `workshop_ui_regression_test`: headless PASSED, exit0; final GL PASSED, exit0. The first GL run passed assertions but crashed during teardown. Fixture cleanup now queues UI deletion and drains two frames before exit; assertions and production code were not weakened. The native crash cause is not proven beyond this successful focused repair/control.
+
+All evidence uses isolated profiles/MCP-disabled disposable QA copy. Windows certificate-store warning persists. No manual F6 or production-profile execution is claimed.

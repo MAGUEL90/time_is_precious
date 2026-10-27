@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bymgt3ekm38k4"]
+[gd_scene load_steps=9 format=3 uid="uid://bymgt3ekm38k4"]
 
 [ext_resource type="Script" uid="uid://n4twin7e8inq" path="res://scenes/ui/workshop_storage_menu_ui/workshop_storage_menu_ui.gd" id="1_q38kr"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_ov06s"]
@@ -6,6 +6,8 @@
 [ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="4_j5ub2"]
 
 [ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="5_close"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/storage_icon.png" id="6_storage_icon"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/no_output_icon.png" id="7_no_output"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_7nn86"]
 atlas = ExtResource("3_7nn86")
@@ -43,7 +45,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="TextureWindow" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(296, 196)
+custom_minimum_size = Vector2(296, 176)
 layout_mode = 2
 theme = ExtResource("2_ov06s")
 texture = SubResource("AtlasTexture_7nn86")
@@ -79,17 +81,30 @@ theme_override_font_sizes/font_size = 12
 text = "WORKSHOP STORAGE"
 horizontal_alignment = 1
 
-[node name="CapacityLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+[node name="CapacityRow" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 3
+
+[node name="CapacityIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/CapacityRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+tooltip_text = "Load 0 / 200"
+mouse_filter = 1
+texture_filter = 1
+texture = ExtResource("6_storage_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CapacityLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/CapacityRow"]
 layout_mode = 2
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudLabelShortcut"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 6
-text = "Load 0 / 200"
-horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Body" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 8
@@ -142,6 +157,7 @@ text = "HELD OUTPUT"
 horizontal_alignment = 1
 
 [node name="HeldScroll" type="ScrollContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -153,8 +169,36 @@ theme_override_constants/h_separation = 2
 theme_override_constants/v_separation = 2
 columns = 4
 
+[node name="EmptyHeldOutput" type="CenterContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Content" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn/EmptyHeldOutput"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="NoOutputIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn/EmptyHeldOutput/Content"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "No held output"
+mouse_filter = 1
+texture_filter = 1
+texture = ExtResource("7_no_output")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NoOutputLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn/EmptyHeldOutput/Content"]
+layout_mode = 2
+theme = ExtResource("2_ov06s")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "no output"
+horizontal_alignment = 1
+
 [node name="StatusBox" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 2
 
@@ -168,24 +212,22 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/StatusBox"]
-custom_minimum_size = Vector2(0, 8)
+visible = false
 layout_mode = 2
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Click Held Output to pay its fee."
 horizontal_alignment = 1
 vertical_alignment = 1
 text_overrun_behavior = 3
 
 [node name="NextStepLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 18)
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("2_ov06s")
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Deposit materials via Manage Storage, then Assign Work."
 autowrap_mode = 3
 vertical_alignment = 1
 
@@ -276,6 +318,7 @@ text = "Pay All"
 
 
 [node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("5_close")]
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0

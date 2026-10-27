@@ -89,6 +89,7 @@ size_flags_horizontal = 3
 visible = false
 
 [node name="InstructionRow" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
+visible = false
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 theme_override_constants/separation = 2
@@ -157,6 +158,13 @@ theme_override_font_sizes/font_size = 6
 text = "Ctrl x50"
 vertical_alignment = 1
 
+[node name="FeedbackLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+autowrap_mode = 2
+
 [node name="ScrollContainer" type="ScrollContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -193,6 +201,7 @@ theme_override_font_sizes/font_size = 6
 text = "Deposit"
 
 [node name="CloseButton" parent="Root/Center/Window" instance=ExtResource("4_cxbgh")]
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0

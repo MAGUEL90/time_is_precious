@@ -686,15 +686,19 @@ func _open_workshop_deposit_transfer() -> void:
 
 	get_tree().current_scene.add_child(item_transfer_menu)
 
-	item_transfer_menu.transfer_confirmed.connect(_on_workshop_deposit_confirmed)
+	item_transfer_menu.transfer_confirmed.connect(_on_workshop_deposit_confirmed.bind(item_transfer_menu))
 	item_transfer_menu.transfer_back_requested.connect(_on_workshop_deposit_back_requested)
 	item_transfer_menu.transfer_cancelled.connect(_on_workshop_deposit_cancelled)
 
 	claim_menu_is_open = false
 	item_transfer_menu.open_transfer("Deposit to Workshop", Inventory.items, "Deposit")
 
-func _on_workshop_deposit_confirmed(selected_items: Dictionary) -> void:
+func _on_workshop_deposit_confirmed(selected_items: Dictionary, transfer_menu: ItemTransferUI) -> void:
+	if not is_instance_valid(transfer_menu):
+		return
 	if claim_menu_workshop == null:
+		transfer_menu.refresh_items(Inventory.items, "Workshop is no longer available.")
+		transfer_menu.confirm_button.disabled = true
 		return
 
 	var workshop: WorkShop = claim_menu_workshop
@@ -702,8 +706,7 @@ func _on_workshop_deposit_confirmed(selected_items: Dictionary) -> void:
 	var deposit_success: bool = workshop.deposit_selected_items_from_player(selected_items)
 
 	if not deposit_success:
-		_close_claim_menu()
-		_show_current_interact_label()
+		transfer_menu.refresh_items(Inventory.items, "Could not deposit. Check items and storage capacity.")
 		return
 
 	var index: int = 0
@@ -728,8 +731,7 @@ func _on_workshop_deposit_confirmed(selected_items: Dictionary) -> void:
 
 		index += 1
 
-	_close_claim_menu()
-	_show_current_interact_label()
+	transfer_menu.refresh_items(Inventory.items)
 
 func _on_workshop_deposit_back_requested() -> void:
 	_return_to_workshop_storage_menu()

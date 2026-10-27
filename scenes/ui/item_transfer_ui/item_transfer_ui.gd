@@ -10,6 +10,8 @@ signal transfer_cancelled()
 @onready var back_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/BackButton
 @onready var confirm_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/ConfirmButton
 @onready var close_button: TextureButton = $Root/Center/Window/CloseButton
+@onready var feedback_label: Label = $Root/Center/Window/MarginContainer/MainVBox/FeedbackLabel
+@onready var item_scroll: ScrollContainer = $Root/Center/Window/MarginContainer/MainVBox/ScrollContainer
 
 var selected_items: Dictionary[String, int] = {}
 var source_items: Dictionary = {}
@@ -24,12 +26,19 @@ func _ready() -> void:
 func open_transfer(title: String, items: Dictionary, confirm_text: String) -> void:
 	title_label.text = title
 	confirm_button.text = confirm_text
-	source_items = items
-	selected_items.clear()
 	visible = true
 	get_tree().paused = true
+	refresh_items(items)
+
+func refresh_items(items: Dictionary, message: String = "") -> void:
+	var previous_scroll: int = item_scroll.scroll_vertical
+	source_items = items.duplicate(true)
+	selected_items.clear()
+	feedback_label.text = message
+	feedback_label.visible = not message.is_empty()
 	_refresh_grid()
 	_refresh_summary()
+	item_scroll.set_deferred("scroll_vertical", previous_scroll)
 
 func _on_back_pressed() -> void:
 	visible = false
@@ -44,10 +53,11 @@ func _on_close_pressed() -> void:
 	queue_free()
 
 func _on_confirm_button() -> void:
-	visible = false
-	get_tree().paused = false
+	if confirm_button.disabled or selected_items.is_empty():
+		return
+	# The owner commits the transfer and refreshes this same paused menu.
+	confirm_button.disabled = true
 	transfer_confirmed.emit(selected_items.duplicate(true))
-	queue_free()
 
 func _refresh_grid() -> void:
 	for child in grid_container.get_children():
@@ -56,6 +66,8 @@ func _refresh_grid() -> void:
 
 	for item_id in source_items.keys():
 		var qty: int = int(source_items[item_id])
+		if qty <= 0:
+			continue
 		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
 		if item_data == null:
 			continue
@@ -77,7 +89,7 @@ func _refresh_summary() -> void:
 	for item_id in selected_items.keys():
 		total_selected += int(selected_items[item_id])
 
-	selected_summary_label.text = "Selected: %d" % total_selected
+	selected_summary_label.text = "No items to deposit." if grid_container.get_child_count() == 0 else "Selected: %d" % total_selected
 	confirm_button.disabled = total_selected <= 0
 
 func _on_item_slot_clicked(item_id: String, quantity: int, _slot_ref: ItemSlot) -> void:

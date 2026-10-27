@@ -25,6 +25,7 @@ var player_ref: Player = null
 var nightmare_world_ref: NightmareWorld = null
 var drawer_tween: Tween
 var shekel_label: Label
+var shekel_panel: PanelContainer
 
 # Lifecycle
 
@@ -51,21 +52,27 @@ func _ready() -> void:
 
 func _setup_shekel_display() -> void:
 	var panel := PanelContainer.new()
+	shekel_panel = panel
 	panel.name = "ShekelPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.theme = GAMEPLAY_THEME
-	panel.add_theme_stylebox_override("panel", GAMEPLAY_THEME.get_stylebox("normal", "HudShortcutButton"))
+	var panel_style: StyleBox = GAMEPLAY_THEME.get_stylebox("normal", "HudShortcutButton").duplicate()
+	panel_style.content_margin_left = 3
+	panel_style.content_margin_right = 3
+	panel_style.content_margin_top = 2
+	panel_style.content_margin_bottom = 2
+	panel.add_theme_stylebox_override("panel", panel_style)
 	$Root.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.offset_left = -68
+	panel.offset_left = -54
 	panel.offset_right = -6
-	panel.offset_top = -24
+	panel.offset_top = -20
 	panel.offset_bottom = -6
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 4)
+	row.add_theme_constant_override("separation", 3)
 	panel.add_child(row)
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(8, 8)
@@ -88,6 +95,9 @@ func _setup_shekel_display() -> void:
 
 func _refresh_shekel_display() -> void:
 	shekel_label.text = str(Inventory.items.get("shekel", 0))
+	var text_width: float = ceilf(shekel_label.get_theme_font("font").get_string_size(shekel_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, shekel_label.get_theme_font_size("font_size")).x)
+	# Keep a compact default while allowing long balances to grow toward the left.
+	shekel_panel.offset_left = -6.0 - maxf(48.0, text_width + 17.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(SHOW_STATUS_ACTION):

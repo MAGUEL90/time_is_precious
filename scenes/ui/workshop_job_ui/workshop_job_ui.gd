@@ -68,7 +68,7 @@ func show_start_result(success: bool, message: String) -> void:
 	_set_requirement_feedback(message, not success)
 	job_started = success
 	start_button.disabled = success
-	back_button.disabled = success
+	back_button.disabled = false
 
 	if not success:
 		start_button.disabled = not _get_requirement_message().is_empty()
@@ -81,6 +81,9 @@ func _on_start_pressed() -> void:
 	start_job_requested.emit(current_job, assigned_worker_ids.duplicate(true), work_days)
 
 func _on_back_pressed() -> void:
+	if job_started:
+		_finish_close()
+		return
 	visible = false
 	get_tree().paused = false
 	back_requested.emit(assigned_worker_ids.duplicate(true))

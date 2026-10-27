@@ -277,11 +277,13 @@ func _open_transfer(mode: String) -> void:
 	clear_button.pressed.connect(_clear_transfer.bind(transfer_ui))
 	_refresh_transfer()
 
-func _refresh_transfer() -> void:
+func _refresh_transfer(message: String = "") -> void:
 	var items: Dictionary = {}
 	for row: Dictionary in storage.get_depositable_items():
 		items[str(row.item_id)] = int(row.quantity)
 	transfer_ui.open_transfer("Deposit to City (no return)", items, "Deposit")
+	if not message.is_empty():
+		transfer_ui.refresh_items(items, message)
 
 func _clear_transfer(source: ItemTransferUI) -> void:
 	if not is_instance_valid(transfer_ui) or transfer_ui != source:
@@ -299,10 +301,10 @@ func _confirm_transfer(items: Dictionary, source: ItemTransferUI) -> void:
 	if not _has_access():
 		close()
 		return
-	_return_from_transfer(source)
 	var result: Dictionary = storage.deposit_items_from_inventory(items, true)
 	_feedback_text = "Deposited." if result.ok else str(result.message)
 	_refresh_view()
+	_refresh_transfer("" if bool(result.get("ok", false)) else _feedback_text)
 
 func _return_from_transfer(source: ItemTransferUI) -> void:
 	# The quantity dialog releases its own pause before emitting.

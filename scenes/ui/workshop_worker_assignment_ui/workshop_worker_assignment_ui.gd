@@ -23,6 +23,7 @@ const INFO_ICON: Texture2D = preload(
 
 const MINIMUM_VISIBLE_SLOTS: int = 3
 const SLOT_SIZE: Vector2 = Vector2(24, 24)
+const WORKING_CARD_COLOR: Color = Color(1.0, 0.4, 0.4)
 
 @onready var close_button: BaseButton = (
 	$Root/Center/TextureWindow/CloseButton
@@ -222,6 +223,7 @@ func _add_locked_slot() -> void:
 
 func _add_worker_slot(slot_index: int, worker_id: String) -> void:
 	var slot_button: Button = _make_slot_button()
+	_apply_worker_activity_tint(slot_button, WorkerDatabase.get_worker_data(worker_id))
 	_add_centered_slot_content(
 		slot_button, WORKER_PORTRAIT_ICON, Vector2(11, 15), ""
 	)
@@ -264,6 +266,7 @@ func _add_worker_slot_content(
 	worker_id: String,
 	worker_data: WorkerData
 ) -> void:
+	_apply_worker_activity_tint(slot_button, worker_data)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -316,6 +319,9 @@ func _add_worker_slot_content(
 		_on_worker_info_pressed.bind(worker_id, worker_data)
 	)
 	slot_button.add_child(info_button)
+
+func _apply_worker_activity_tint(card: Button, worker_data: WorkerData) -> void:
+	card.modulate = WORKING_CARD_COLOR if worker_data != null and worker_data.current_work_status == WorkerData.WorkStatus.WORKING else Color.WHITE
 
 func _make_icon_rect(
 	icon_texture: Texture2D,

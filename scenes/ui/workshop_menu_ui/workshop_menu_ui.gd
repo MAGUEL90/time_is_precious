@@ -74,10 +74,8 @@ func _update_status(storage_state: Dictionary) -> void:
 	processing_label.text = "Processing: %s" % (
 		_format_active_processes(active_processes)
 	)
-	next_step_label.text = WORKSHOP_FLOW_HINT.get_hint(
-		storage_state,
-		ProcessManager.get_process_availability("drying_mudbrick")
-	)
+	next_step_label.text = ""
+	next_step_label.hide()
 
 func _format_active_processes(active_processes: Array) -> String:
 	var parts: PackedStringArray = []
