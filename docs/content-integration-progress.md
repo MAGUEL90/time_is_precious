@@ -39,3 +39,29 @@ Ported compact wallet display, live capacity/storage and empty-output icons, WOR
 - `workshop_ui_regression_test`: headless PASSED, exit0; final GL PASSED, exit0. The first GL run passed assertions but crashed during teardown. Fixture cleanup now queues UI deletion and drains two frames before exit; assertions and production code were not weakened. The native crash cause is not proven beyond this successful focused repair/control.
 
 All evidence uses isolated profiles/MCP-disabled disposable QA copy. Windows certificate-store warning persists. No manual F6 or production-profile execution is claimed.
+## Stage 4: physical arrival and schema8
+
+New site and authored workshop assignments synchronously record bounded feet position, target, task/owner, pending/arrived state and arrival minute on WorkerData. Physical motion consumes frame time, follows copied authored solid geometry and preserves WALK animation; a clock jump alone cannot move or credit workers. The daily task includes workday identity. Workshop production and construction intersect paid time with arrival time once, preserving native team denominator/remainder, recipes, contract prices and duration options. Empty approach state deliberately preserves the historical interpretation of valid schema1-7 active work.
+
+The writer is schema8. Strict version1-7 readers/migrations omit the new field; schema8 validates exact types/keys, finite bounded coordinates, authored targets and active task ownership before applying. Older builds are not promised to read schema8. Personal saves are never used. Native home parking retains the route owner; CityStorageArea now binds its existing persistent storage by stable absolute node path so reparenting cannot invalidate the endpoint. A valid next-day assignment made after closing is accepted before midnight.
+
+Final targeted results (Godot4.5.1, isolated profiles, recorded OS exit0 and no timeout):
+
+- Editor import: exit0, no script/resource parse failures.
+- ContentActualArrival GL: PASS, actual WALK frame sequence light_walk_left0,1,2 with11.1328logical-pixel feet movement; pending time jumps, reassignment, paid expiry/resumption, hidden retained processing, before/open/midshift/closing and evening save validation.
+- SiteArrivalContinue: write/read PASS in separate processes for pending and arrived checkpoints; exact feet/task restored and no prearrival output.
+- WorkshopArrivalSchema8: PASS; native uncleared/clear/build/production, route budget, no-frame jumps, paid/arrival union accounting, schema1-7 migration, malformed schema8 rejection and retained home ownership.
+- Workshop separate-process write/read for travelling and arrived city checkpoints: all4pass. Home travelling/arrived write/read: all4pass after stable-storage-binding repair.
+- Managed workshop expiry case: PASS. Real three-day hire and renewal, existing nine-day production option, expiry while pending/arrived, frozen unpaid motion/progress, exact wallet quote once, no treasury change/backfill/duplicate output, and precise paid-minute resumption.
+- Native PrepaidContractsFixtureTest: PASS,0checksfailed; CitySaveValuesTest:PASS; CitySaveFileTest:PASSED; CitySaveTest:PASS (including pickup/palm persistence, historical migrations and corrupt input refusal).
+- ContractContinue real startup sequence write/read/readrenew/legacy-read/legacy-renew-read/assignment-write/assignment-read: all7pass in separate processes. Assignment fixture now physically reaches entry before retaining its original three-minute progress/cash/save assertions.
+
+Fixture corrections were kept separate from production rules: successful workshop output uses native held output_lots, not overflow-only claimable_outputs; body clip names include skin prefix; WALK proof observes frame_changed events rather than an aliased first/last frame. Legacy fixture payloads strip fields absent from their declared version. Historical payroll Continue/cargo/sleep suites retain superseded pre-prepaid expectations and were not treated as passing acceptance; compatibility-only edits do not claim their old semantics are current.
+
+## Review status and limits
+
+This is a selective local integration checkpoint, not a merge/release approval. Main and the content checkpoint refs remain unchanged. The original preview and media remain untouched. Project settings, native startup/save namespace, terrain/map, stockpiles, date palms, treasury policy, recipes and contract rates retain the prepaid baseline. Recording supplies/money, guard, capture/timejump harness, focused map deletion and session-only save adapter are excluded; preview NPC/story/world artwork fitting is not silently applied to the production city.
+
+Navigation uses actual authored solid/tile-physics geometry. Production has no authoritative shoreline/walkability metadata, so focused-preview sand/source IDs were not guessed or ported; shoreline enforcement remains a separate authored-world task. No manual F6, human playthrough or dynamic crowd-avoidance acceptance is claimed. All automated runs use the documented disposable MCP-disabled QA copy, with no screen takeover. The Windows root-certificate diagnostic persists; expected malformed-checkpoint warnings are logged by rejection tests.
+
+Evidence, disposable profiles, exact source hashes, screenshots and original backups are under the sibling preview evidence/integration-implementation-20261027-01 folder. No media/cache/secrets/backups are staged. The historical audit and duplicate backup directory remain untracked for preservation; automatic approval review rejected recursive duplicate-backup cleanup, so it was not bypassed.

@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 7
+const VERSION: int = 8
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -118,6 +118,8 @@ func capture(map: Node) -> Dictionary:
 	raw["worksites"] = _sites.capture(worksite(map))
 	if not _sites.error.is_empty():
 		error = _sites.error
+	if error.is_empty() and not _validate_approaches(raw, map):
+		return {}
 	if not error.is_empty():
 		return {}
 	_without_transient_worker_assignments(raw)
@@ -134,7 +136,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -146,6 +148,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	var values = VALUES.new()
 	values.allow_legacy_worker_fields = version < 5
 	values.allow_legacy_contract_fields = version < 7
+	values.allow_legacy_approach_field = version < 8
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
@@ -181,6 +184,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
+	if not _validate_approaches(raw, map):
+		return false
 	if version >= 4:
 		if not _sources.validate(raw.get("pickup_sources")):
 			return fail("Invalid pickup source state.")
@@ -467,6 +472,59 @@ func _validate_people(raw: Dictionary) -> bool:
 			return fail("Invalid equipment unit.")
 		if unit.tool_id not in ["cart", "basic_glove", "stone_hammer"] or (not unit.worker_id.is_empty() and not workers.has(unit.worker_id)):
 			return fail("Equipment owner missing.")
+	return true
+
+func _validate_approaches(raw: Dictionary, map: Node) -> bool:
+	var now: int = raw.clock.current_day * 1440 + raw.clock.current_hour * 60 + raw.clock.current_minute
+	var native_plots: Dictionary = plots(map)
+	for group: Dictionary in [raw.workers.workers_by_id, raw.workers.dismissed_workers]:
+		for id: String in group:
+			var worker: WorkerData = group[id]
+			var approach: Dictionary = worker.physical_approach
+			if not WorkerData.physical_approach_valid(approach):
+				return fail("Invalid worker physical approach.")
+			if approach.is_empty():
+				continue
+			if not raw.workers.workers_by_id.has(id) or worker.current_order_id.is_empty() or (approach.arrived and approach.arrival_minute > now):
+				return fail("Worker physical approach has no active owner.")
+			if approach.kind == "site":
+				var job: Dictionary = raw.worksites.jobs.get(approach.owner, {})
+				if job.is_empty() or not job.ids.has(id) or worker.current_order_id != job.order or not job.starts.has(id):
+					return fail("Worker physical approach has no site assignment.")
+				var prefix: String = "%s:%d:" % [job.order, int(job.starts[id])]
+				var day_text: String = approach.task.trim_prefix(prefix)
+				var first_task_day: int = int(job.starts[id]) / 1440
+				var latest_task_day: int = maxi(raw.clock.current_day, first_task_day)
+				if not approach.task.begins_with(prefix) or not day_text.is_valid_int() or str(int(day_text)) != day_text or int(day_text) < first_task_day or int(day_text) > latest_task_day:
+					return fail("Worker physical approach has an invalid site task.")
+				# A withdrawn teammate can change the current slot index. Both
+				# existing authored slots remain valid for an established journey.
+				# Validate before restore without consulting live job membership.
+				var marker: Node2D = worksite(map).get_node_or_null("WorksiteMarkers/" + approach.owner) as Node2D
+				if marker == null:
+					return fail("Worker physical approach has no authored site marker.")
+				var left_entry: Vector2 = marker.global_position + Vector2(-10, 8)
+				var right_entry: Vector2 = marker.global_position + Vector2(10, 8)
+				if worksite(map).has_method("site_slot_destination"):
+					left_entry = worksite(map).site_slot_destination(StringName(approach.owner), 0)
+					right_entry = worksite(map).site_slot_destination(StringName(approach.owner), 1)
+				if approach.target.distance_to(left_entry) > 0.1 and approach.target.distance_to(right_entry) > 0.1:
+					return fail("Worker physical approach differs from its authored site.")
+				continue
+			var found: bool = false
+			for plot_id: String in raw.plots:
+				var plot: Dictionary = raw.plots[plot_id]
+				if plot.order_id != approach.owner:
+					continue
+				if approach.target.distance_to(native_plots[plot_id].worker_entry_position) > 0.1:
+					return fail("Worker physical approach differs from its authored plot.")
+				if plot.phase in ["clearing", "building"] and plot.worker_ids.has(id) and worker.current_order_id == plot.order_id and approach.task == plot.order_id + ":" + plot.phase:
+					found = true
+				var order: WorkOrder = raw.work.active_orders.get(approach.task)
+				if order != null and order.worker_id == id and order.worker_kind == WorkOrder.Worker_Type.NPC and order.current_status == WorkOrder.Status.RUNNING and raw.order_plots.get(order.order_id) == plot.order_id and worker.current_order_id == order.order_id:
+					found = true
+			if not found:
+				return fail("Worker physical approach has no matching workshop task.")
 	return true
 
 func _validate_work(raw: Dictionary, map: Node) -> bool:

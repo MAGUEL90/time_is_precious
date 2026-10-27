@@ -19,6 +19,9 @@ var stock_min: int = 72
 var stock_max: int = 72
 var rng := RandomNumberGenerator.new()
 var journey_provider: Callable
+var physical_arrival: Callable
+var assignment_started: Callable
+var assignment_released: Callable
 var hauling = null:
 	set(value):
 		hauling = value
@@ -75,8 +78,11 @@ func departure_time(site_id: StringName, id: String, day: int) -> int:
 		return int(floor(journey_provider.call(site_id, id, day).start))
 	return arrival_time(site_id, id, day)
 
-func arrival_time(_site_id: StringName, _id: String, day: int) -> int:
-	return day * 1440 + SHIFT_START
+func arrival_time(site_id: StringName, id: String, day: int) -> int:
+	var opening: int = day * 1440 + SHIFT_START
+	if not is_hauler(id) and physical_arrival.is_valid():
+		return maxi(opening, int(physical_arrival.call(site_id, id, day)))
+	return opening
 
 func setup(site_sessions: Dictionary) -> void:
 	sites = site_sessions
@@ -191,9 +197,11 @@ func start(site_id: StringName, drop: Callable) -> bool:
 		jobs[site_id] = {"ids": [], "order": "daily_%d_%s" % [get_instance_id(), site_id],
 			"drop": drop, "units": 0, "progress": {}, "starts": {}, "stats": {}}
 	var job: Dictionary = jobs[site_id]
+	var added: Array[String] = []
 	for id: String in ids:
 		if not job.ids.has(id):
 			job.ids.append(id)
+			added.append(id)
 			job.progress[id] = 0
 			job.starts[id] = _assignment_start_minute()
 			job.stats[id] = {"days": [], "output": 0}
@@ -202,6 +210,10 @@ func start(site_id: StringName, drop: Callable) -> bool:
 			if is_hauler(id) and hauling != null:
 				hauling.begin(id, site_id, now(), hauler_setups[id])
 				hauler_setups.erase(id)
+	# Initialize physical presence before either a clock callback or UI can
+	# observe this new reservation as productive.
+	if assignment_started.is_valid() and not added.is_empty():
+		assignment_started.call(site_id, added)
 	_sync_activities()
 	selected[site_id] = []
 	return true
@@ -358,6 +370,8 @@ func _release_worker(job: Dictionary, id: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker != null:
 		worker.finish_work(job.order)
+	if assignment_released.is_valid():
+		assignment_released.call(id)
 	job.progress.erase(id)
 	job.starts.erase(id)
 	job.stats.erase(id)
@@ -373,6 +387,9 @@ func cleanup() -> void:
 	jobs.clear()
 	hauler_setups.clear()
 	journey_provider = Callable()
+	physical_arrival = Callable()
+	assignment_started = Callable()
+	assignment_released = Callable()
 	hauler_ready = Callable()
 	tool_requirement = Callable()
 	if hauling != null:

@@ -243,6 +243,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		visuals.actors.clear()
 		visuals.work_cycles.clear()
 		visuals.roaming.clear()
+		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
 		visuals.plot_presence.initial_sync = true
 		visuals.last_minute = -1

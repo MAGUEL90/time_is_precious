@@ -133,8 +133,9 @@ func _test_legacy_and_corruption(store: Node, city: Node) -> void:
 	var current: Dictionary = store.snapshot.capture(city)
 	var legacy: Dictionary = current.duplicate(true)
 	legacy.schema_version = 4
-	_strip_plot_payroll(legacy)
+	_strip_legacy_owner_fields(legacy)
 	_strip_payroll(legacy.state)
+	_strip_post_v4_worker_fields(legacy.state)
 	check(store.snapshot.prepare(legacy, city), "v4 worker codec explicitly migrates omitted fields")
 	check(store.snapshot.prepared.workers.workers_by_id.initial_workshop_laborer.payroll_start_day == -1, "Legacy workers retain old behavior without retroactive charge")
 	for version: int in [1, 2, 3]:
@@ -153,8 +154,9 @@ func _test_legacy_and_corruption(store: Node, city: Node) -> void:
 		if version == 1:
 			older.erase("location")
 		older.state = legacy_values.encode(legacy_raw)
-		_strip_plot_payroll(older)
+		_strip_legacy_owner_fields(older)
 		_strip_payroll(older.state)
+		_strip_post_v4_worker_fields(older.state)
 		check(store.snapshot.prepare(older, city), "Legacy v%d with original worker schema prepares" % version)
 	var malformed: Dictionary = current.duplicate(true)
 	_strip_payroll(malformed.state)
@@ -166,6 +168,17 @@ func _test_legacy_and_corruption(store: Node, city: Node) -> void:
 	malformed.state = values.encode(raw)
 	check(not store.snapshot.prepare(malformed, city), "Reject corrupt paid duration before applying owners")
 	check(store.snapshot.prepare(current, city), "Current snapshot still valid after rejected corruption")
+
+func _strip_post_v4_worker_fields(value: Variant) -> void:
+	if value is Dictionary:
+		if value.get("$type") == "object" and value.get("class") == "WorkerData":
+			for field: String in VALUES.CONTRACT_FIELDS + ["physical_approach"]:
+				value.fields.erase(field)
+		for child: Variant in value.values():
+			_strip_post_v4_worker_fields(child)
+	elif value is Array:
+		for child: Variant in value:
+			_strip_post_v4_worker_fields(child)
 
 func _strip_payroll(value: Variant) -> void:
 	if value is Dictionary:
@@ -220,9 +233,10 @@ func _sleep_flow(city: Node, player: Player, store: Node) -> void:
 	check(not worker.is_waiting_for_first_payment() and CityStockManager.treasury_shekel == 0, "Sleep pays once from the city")
 	check(store.status == "Saved" and FileAccess.file_exists(checkpoint_path), "Real bed writes paid home checkpoint: " + store.last_error)
 
-func _strip_plot_payroll(document: Dictionary) -> void:
+func _strip_legacy_owner_fields(document: Dictionary) -> void:
 	var values = VALUES.new()
 	var raw: Dictionary = values.decode(document.state)
+	raw.raid.erase("notification_seen_keys")
 	for plot: Dictionary in raw.plots.values():
 		plot.erase("payroll_work_remainder")
 	document.state = values.encode(raw)

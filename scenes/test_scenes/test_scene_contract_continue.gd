@@ -255,9 +255,10 @@ func _continue_legacy_and_renew_pending(city: Node, store: Node) -> void:
 		return
 	var legacy_values = VALUES.new()
 	legacy_values.allow_legacy_contract_fields = true
+	legacy_values.allow_legacy_approach_field = true
 	var expected_raw: Variant = legacy_values.decode(disk.get("state"))
 	_check(legacy_values.error.is_empty() and expected_raw is Dictionary,
-		"The encoded v6 test document decodes with only its missing contract fields enabled.")
+		"The encoded v6 test document decodes with its missing contract and approach fields enabled.")
 	if not legacy_values.error.is_empty() or not expected_raw is Dictionary:
 		return
 	var expected_workers: Variant = expected_raw.get("workers")
@@ -287,14 +288,14 @@ func _continue_legacy_and_renew_pending(city: Node, store: Node) -> void:
 
 	var restored_value: Variant = store.snapshot.capture(city)
 	if not restored_value is Dictionary or not restored_value.has("state"):
-		_check(false, "Continue captures the migrated schema-seven state after the v6 load.")
+		_check(false, "Continue captures the migrated current-schema state after the v6 load.")
 		return
 	# Contract-field omission is permitted only while reading v6 data. Decode the
 	# post-migration capture with a fresh current-schema codec.
 	var current_values = VALUES.new()
 	var restored_raw_value: Variant = current_values.decode(restored_value.get("state"))
 	_check(current_values.error.is_empty() and restored_raw_value is Dictionary,
-		"Continue's migrated schema-seven state decodes with the current codec.")
+		"Continue's migrated current-schema state decodes with the current codec.")
 	if not current_values.error.is_empty() or not restored_raw_value is Dictionary:
 		return
 	var restored_raw: Dictionary = restored_raw_value
@@ -434,6 +435,32 @@ func _write_midshift_assignment(city: Node, store: Node) -> void:
 		"The real Daily scheduler starts the Laborer's standing Wood Site job.")
 	if not started:
 		return
+	var pending_job: Dictionary = runtime.daily.jobs[WOOD_SITE]
+	_check(not worker.physical_approach.is_empty() and not worker.physical_approach.arrived
+		and worker.current_work_status == WorkerData.WorkStatus.TRAVELLING
+		and is_zero_approx(float(pending_job.progress.get(LEGACY_PENDING_ID, -1.0)))
+		and int(runtime.daily.minutes_by_worker.get(LEGACY_PENDING_ID, 0)) == 0,
+		"Starting the paid standing assignment synchronously reserves a pending physical route with zero production.")
+	if worker.physical_approach.is_empty():
+		return
+	var origin: Vector2 = worker.physical_approach.position
+	var target: Vector2 = worker.physical_approach.target
+	var approach_task: String = worker.physical_approach.task
+	var visuals: Node = runtime.get_node("WorkerVisuals")
+	for _frame: int in range(2000):
+		if worker.physical_approach.arrived:
+			break
+		visuals._process(0.05)
+	var reached: bool = worker.physical_approach.arrived
+	_check(reached and worker.physical_approach.position.distance_to(origin) > 0.0
+		and worker.physical_approach.position.distance_to(target) <= 0.1
+		and worker.matches_physical_approach("site", approach_task, str(WOOD_SITE))
+		and int(worker.physical_approach.arrival_minute) == start_minute
+		and _now() == start_minute
+		and worker.current_work_status == WorkerData.WorkStatus.WORKING,
+		"Real physical movement reaches the worksite target before WORKING, without advancing the fixture clock.")
+	if not reached:
+		return
 	TimeComponentManager.advance_minutes(ASSIGNMENT_PROGRESS_MINUTES)
 	var job: Dictionary = runtime.daily.jobs[WOOD_SITE]
 	_check(_now() == start_minute + ASSIGNMENT_PROGRESS_MINUTES
@@ -475,13 +502,20 @@ func _read_midshift_assignment(city: Node, store: Node) -> void:
 		and worker.is_reserved()
 		and worker.current_work_status == WorkerData.WorkStatus.WORKING,
 		"Continue preserves the 10:15 start, three minutes of progress, and reserved standing assignment.")
-	var route_key: String = "%s:%s:%d" % [WOOD_SITE, LEGACY_PENDING_ID, TimeComponentManager.current_day]
-	var saved_route: Dictionary = runtime.worker_journeys.get(route_key, {}).duplicate(true)
-	var resumed_route: Dictionary = runtime.worker_journey(WOOD_SITE, LEGACY_PENDING_ID, TimeComponentManager.current_day)
-	_check(not saved_route.is_empty() and saved_route.start == resumed_route.start
-		and saved_route.arrival == resumed_route.arrival and saved_route.origin == resumed_route.origin
-		and saved_route.target == resumed_route.target,
-		"Continue preserves the in-flight visual route instead of restarting its departure.")
+	var saved_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var values = VALUES.new()
+	var saved_raw: Variant = values.decode(saved_document.state)
+	_check(values.error.is_empty() and saved_raw is Dictionary,
+		"Decode the saved physical-arrival evidence with the current strict codec.")
+	if not values.error.is_empty() or not saved_raw is Dictionary:
+		return
+	var saved_approach: Dictionary = saved_raw.workers.workers_by_id[LEGACY_PENDING_ID].physical_approach
+	var approach_task: String = runtime.site_approach_task(WOOD_SITE, LEGACY_PENDING_ID, TimeComponentManager.current_day)
+	_check(not saved_approach.is_empty() and worker.physical_approach == saved_approach
+		and worker.matches_physical_approach("site", approach_task, str(WOOD_SITE))
+		and worker.physical_approach.arrived
+		and int(worker.physical_approach.arrival_minute) == expected_start,
+		"Continue preserves the exact saved physical pose, target, arrival identity and arrived state.")
 	if failures == 0:
 		phase_completed = true
 
@@ -547,7 +581,7 @@ func _assert_saved_capture(city: Node, store: Node, label: String) -> void:
 
 
 func _make_legacy_v6(current: Dictionary, store: Node) -> Dictionary:
-	_check(not current.is_empty(), "Capture the complete post-renewal schema-seven fixture before downgrade.")
+	_check(not current.is_empty(), "Capture the complete post-renewal current-schema fixture before downgrade.")
 	if current.is_empty():
 		return {}
 	var values = VALUES.new()
@@ -587,17 +621,18 @@ func _make_legacy_v6(current: Dictionary, store: Node) -> Dictionary:
 	raw.raid.erase("notification_seen_keys")
 	var encoded_state: Variant = values.encode(raw)
 	_check(values.error.is_empty() and encoded_state is Dictionary,
-		"Encode the legacy fixture through CitySaveValues before removing schema-seven fields.")
+		"Encode the legacy fixture through CitySaveValues before removing fields absent in schema six.")
 	if values.error != "" or not encoded_state is Dictionary:
 		return {}
 	_strip_contract_fields(encoded_state)
+	_strip_approach_field(encoded_state)
 	var legacy: Dictionary = current.duplicate(true)
 	legacy.schema_version = 6
 	legacy.state = encoded_state
 	_check(store.snapshot.prepare(legacy, get_tree().current_scene),
 		"The generated paid and pending v6 document prepares before it is written.")
 	_check(store.snapshot.prepare(current, get_tree().current_scene),
-		"The original schema-seven snapshot remains valid after checking its v6 copy.")
+		"The original current-schema snapshot remains valid after checking its v6 copy.")
 	return legacy
 
 
@@ -611,6 +646,17 @@ func _strip_contract_fields(value: Variant) -> void:
 	elif value is Array:
 		for child: Variant in value:
 			_strip_contract_fields(child)
+
+
+func _strip_approach_field(value: Variant) -> void:
+	if value is Dictionary:
+		if value.get("$type") == "object" and value.get("class") == "WorkerData":
+			value.fields.erase("physical_approach")
+		for child: Variant in value.values():
+			_strip_approach_field(child)
+	elif value is Array:
+		for child: Variant in value:
+			_strip_approach_field(child)
 
 
 func _set_clock(day: int, hour: int, minute: int) -> void:

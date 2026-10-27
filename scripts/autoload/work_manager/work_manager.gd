@@ -53,7 +53,8 @@ func on_time_changed(day: int, hour: int, minute: int) -> void:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
 		if worker == null:
 			continue
-		var unpaid: int = worker.get_payroll_unpaid_minutes(previous, now_total)
+		var owner: String = str(order.get_meta("visual_plot_id", ""))
+		var unpaid: int = delta - worker.get_arrived_paid_minutes(previous, now_total, "plot", order.order_id, owner)
 		# Shift both endpoints: remaining work and progress ratio stay unchanged.
 		order.start_time_total_minutes += unpaid
 		order.end_time_total_minutes += unpaid
@@ -359,14 +360,15 @@ func get_active_progress_entries() -> Array[Dictionary]:
 
 		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id) if order.worker_kind == WorkOrder.Worker_Type.NPC else null
 		var payroll_paused: bool = worker != null and worker.is_payroll_blocked()
+		var travelling: bool = worker != null and not worker.physical_approach.is_empty() and not worker.physical_approach.get("arrived", false)
 		entries.append({
 			"source": "work",
 			"id": order.order_id,
 			"title": order.job_display_name,
 			"job_icon": order.job_icon,
-			"status_text": "Waiting for city payment" if payroll_paused else "Working",
+			"status_text": "Waiting for city payment" if payroll_paused else ("Travelling" if travelling else "Working"),
 			"worker_id": order.worker_id,
-			"active_worker_count": 0 if payroll_paused else 1,
+			"active_worker_count": 0 if payroll_paused or travelling else 1,
 			"worker_slot_capacity": order.worker_slot_capacity,
 			"progress_ratio": float(elapsed_minutes) / float(duration_minutes),
 			"elapsed_minutes": elapsed_minutes,

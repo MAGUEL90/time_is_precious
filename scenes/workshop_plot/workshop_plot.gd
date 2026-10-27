@@ -24,7 +24,27 @@ var _previous_construction_phase: String = ""
 var _completion_bar_remaining: float = 0.0
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
-	_arrived_worker_tasks[worker_id] = task_key
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	if worker != null and (worker.physical_approach.is_empty() or worker.mark_physical_arrival(task_key)):
+		_arrived_worker_tasks[worker_id] = task_key
+
+func begin_worker_approach(worker_id: String, task_key: String) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	if worker == null:
+		return
+	var runtime: Node = get_parent().get_node_or_null("WorkerRuntime")
+	var visuals: Node = runtime.get_node_or_null("WorkerVisuals") if runtime != null else null
+	var entry: Vector2 = get_worker_entry_position()
+	var origin: Vector2 = entry + Vector2(0, 24)
+	if visuals != null and visuals.actors.has(worker_id):
+		origin = visuals.actors[worker_id].global_position + Vector2(0, 16)
+	elif runtime != null:
+		var departures: Node = runtime.get_node_or_null("WorkerDeparture")
+		if departures != null and departures.get_child_count() > 0:
+			origin = departures.get_child(0).global_position
+	worker.begin_physical_approach("plot", task_key, construction.order_id, origin, entry)
+	if origin.distance_to(entry) <= 0.1:
+		worker.mark_physical_arrival(task_key)
 
 func get_worker_entry_position() -> Vector2:
 	return $WorkerEntrance.global_position
@@ -107,6 +127,7 @@ func _ready() -> void:
 		construction.name = state_name
 		construction.order_id = "construction:" + identity
 		WorkStateRuntime.add_child(construction)
+	construction.worker_entry_position = get_worker_entry_position()
 	construction.changed.connect(_sync_construction)
 	_sync_construction()
 

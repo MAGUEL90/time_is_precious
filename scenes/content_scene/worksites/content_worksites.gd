@@ -9,6 +9,7 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var enable_time_shortcuts: bool = true
 @export var retain_resource_stock: bool = false
 var checkpoint_handoff: bool = false
+var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
@@ -34,7 +35,14 @@ func _ready() -> void:
 		else:
 			push_error("Worksites: set player_path and inventory_ui_path to the map's Player and InventoryUI.")
 		return
+	daily.physical_arrival = _physical_site_arrival
+	daily.assignment_started = _begin_site_assignments
+	daily.assignment_released = _release_site_approach
 	super._ready()
+	var map: Node = self
+	while map.get_parent() != null and map.get_parent() != get_tree().root:
+		map = map.get_parent()
+	worksite_navigation.configure(map)
 	if retain_resource_stock:
 		_restore_resource_stock()
 	# Notes belong to the isolated fixture, not the content HUD.
@@ -57,6 +65,59 @@ func _ready() -> void:
 		worker.display_name = "Belum"
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
+
+# Physical records use feet coordinates; the visual's art origin is 16px above.
+func worker_destination(site_id: StringName, id: String) -> Vector2:
+	return site_slot_destination(site_id, daily.jobs[site_id].ids.find(id))
+
+# Snapshot validation can resolve authored slots before live jobs are restored.
+func site_slot_destination(site_id: StringName, slot: int) -> Vector2:
+	var destination: Vector2 = get_node("WorksiteMarkers/" + str(site_id)).global_position + Vector2(-10 + slot * 20, 8)
+	if worksite_navigation.resource_bottoms.has(str(site_id)):
+		destination.y = maxf(destination.y, float(worksite_navigation.resource_bottoms[str(site_id)]) + worksite_navigation.CLEARANCE + 1.0)
+	return destination
+
+func site_approach_task(site_id: StringName, id: String, day: int) -> String:
+	var job: Dictionary = daily.jobs[site_id]
+	return "%s:%d:%d" % [job.order, int(job.starts[id]), day]
+
+func _begin_site_assignments(site_id: StringName, ids: Array[String]) -> void:
+	for id: String in ids:
+		if not daily.is_hauler(id):
+			begin_site_approach(site_id, id, maxi(int(daily.jobs[site_id].starts[id]) / 1440, TimeComponentManager.current_day))
+
+func begin_site_approach(site_id: StringName, id: String, day: int) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker == null:
+		return
+	var feet: Vector2 = worker_spawn(site_id, id) + Vector2(0, 16)
+	if not worker.physical_approach.is_empty():
+		feet = worker.physical_approach.position
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null and visuals.actors.has(id):
+		feet = visuals.actors[id].global_position + Vector2(0, 16)
+	worker.begin_physical_approach("site", site_approach_task(site_id, id, day), str(site_id), feet, worker_destination(site_id, id))
+	if visuals != null:
+		visuals.work_cycles.erase(id)
+		visuals.roaming.erase(id)
+		visuals.site_paths.erase(id)
+
+func _physical_site_arrival(site_id: StringName, id: String, day: int) -> int:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	# Legacy saves have no approach evidence and retain their established state.
+	if worker == null or worker.physical_approach.is_empty():
+		return day * 1440 + daily.SHIFT_START
+	if worker.matches_physical_approach("site", site_approach_task(site_id, id, day), str(site_id)) and worker.physical_approach.arrived:
+		return int(worker.physical_approach.arrival_minute)
+	return 2147483647
+
+func _release_site_approach(id: String) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker != null and worker.physical_approach.get("kind", "") == "site":
+		worker.physical_approach = {}
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		visuals.site_paths.erase(id)
 
 func _open_content_preview() -> void:
 	var result: Error = get_tree().change_scene_to_file("res://scenes/content_scene/content_scene.tscn")

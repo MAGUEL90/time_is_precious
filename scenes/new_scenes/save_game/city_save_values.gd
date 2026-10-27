@@ -20,7 +20,7 @@ const OBJECT_FIELDS: Dictionary = {
 		"visual_profile", "population_status", "employment_status", "profession",
 	],
 	"WorkerData": [
-		"worker_id", "display_name", "profession", "profession_xp", "current_order_id",
+		"worker_id", "display_name", "profession", "profession_xp", "current_order_id", "physical_approach",
 		"current_job_id", "current_work_status", "profession_star", "efficiency",
 		"payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day", "payroll_contract_days", "payroll_paid_start_minute",
 		"reliability", "wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
@@ -44,6 +44,7 @@ const PAYROLL_FIELDS: Array[String] = ["payroll_start_day", "payroll_paid_from_d
 const CONTRACT_FIELDS: Array[String] = ["payroll_contract_days", "payroll_paid_start_minute"]
 var allow_legacy_contract_fields: bool = false
 var allow_legacy_worker_fields: bool = false
+var allow_legacy_approach_field: bool = false
 var error: String = ""
 
 
@@ -140,6 +141,9 @@ func _encode_object(value: Object, depth: int) -> Variant:
 		return null
 
 	var field_names: Array = OBJECT_FIELDS[approved_name]
+	if approved_name == "WorkerData" and not WorkerData.physical_approach_valid(value.physical_approach):
+		_fail("Invalid WorkerData.physical_approach.")
+		return null
 	var fields: Dictionary = {}
 	for field_name: String in field_names:
 		var field_value: Variant = value.get(field_name)
@@ -297,6 +301,8 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		_fail("Object field map exceeds the %d item limit." % MAX_COLLECTION_SIZE)
 		return null
 	var allowed_fields: Array = OBJECT_FIELDS[type_name].duplicate()
+	if allow_legacy_approach_field and type_name == "WorkerData":
+		allowed_fields.erase("physical_approach")
 	if allow_legacy_worker_fields and type_name == "WorkerData":
 		for field: String in PAYROLL_FIELDS:
 			allowed_fields.erase(field)
@@ -326,6 +332,11 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 
 
 func _prepare_object_field(instance: Object, type_name: String, field_name: String, decoded: Variant) -> Variant:
+	if type_name == "WorkerData" and field_name == "physical_approach":
+		if not decoded is Dictionary or not WorkerData.physical_approach_valid(decoded):
+			_fail("Invalid WorkerData.physical_approach.")
+			return null
+		return decoded
 	# This property is intentionally dynamic in WorkOrder and represents an ID.
 	if type_name == "WorkOrder" and field_name == "tool_used_instance_id":
 		if decoded == null or typeof(decoded) == TYPE_STRING:

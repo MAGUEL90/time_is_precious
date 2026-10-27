@@ -11,6 +11,9 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export var current_order_id: String = ""
 @export var current_job_id: String = ""
 @export var current_work_status: WorkStatus = WorkStatus.IDLE
+# Empty is the deliberate legacy interpretation. Nonempty values contain only
+# bounded data in world FEET coordinates, never scene paths or executable values.
+@export var physical_approach: Dictionary = {}
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
 @export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
@@ -158,6 +161,7 @@ func get_work_activity_text() -> String:
 	return "Idle"
 
 func start_work(order_id: String, job_id: String) -> void:
+	physical_approach.clear()
 	current_order_id = order_id
 	current_job_id = job_id
 	current_work_status = WorkStatus.WORKING
@@ -169,3 +173,63 @@ func finish_work(order_id: String) -> void:
 	current_job_id = ""
 	current_order_id = ""
 	current_work_status = WorkStatus.IDLE
+	physical_approach.clear()
+
+func begin_physical_approach(kind: String, task: String, owner: String, position: Vector2, target: Vector2) -> void:
+	physical_approach = {"kind": kind, "task": task, "owner": owner, "position": position,
+		"target": target, "arrived": false, "arrival_minute": -1}
+	current_work_status = WorkStatus.TRAVELLING
+
+func matches_physical_approach(kind: String, task: String, owner: String) -> bool:
+	return physical_approach_valid(physical_approach) and not physical_approach.is_empty() and physical_approach.kind == kind and physical_approach.task == task and physical_approach.owner == owner
+
+func mark_physical_arrival(task: String) -> bool:
+	if not physical_approach_valid(physical_approach) or physical_approach.is_empty() or physical_approach.task != task or is_payroll_blocked():
+		return false
+	if physical_approach.position.distance_to(physical_approach.target) > 0.1:
+		return false
+	if not physical_approach.arrived:
+		physical_approach.arrived = true
+		physical_approach.arrival_minute = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	current_work_status = WorkStatus.WORKING
+	return true
+
+func get_arrived_paid_minutes(from_minute: int, to_minute: int, kind: String, task: String, owner: String) -> int:
+	var eligible_from: int = from_minute
+	if not physical_approach.is_empty():
+		if not matches_physical_approach(kind, task, owner) or not physical_approach.arrived:
+			return 0
+		eligible_from = maxi(eligible_from, int(physical_approach.arrival_minute))
+	if eligible_from >= to_minute:
+		return 0
+	# Intersect paid and arrived intervals once; overlapping blocks cannot add up.
+	return to_minute - eligible_from - get_payroll_unpaid_minutes(eligible_from, to_minute)
+
+static func physical_approach_valid(value: Dictionary) -> bool:
+	if value.is_empty():
+		return true
+	var spec: Dictionary = {"kind": TYPE_STRING, "task": TYPE_STRING, "owner": TYPE_STRING,
+		"position": TYPE_VECTOR2, "target": TYPE_VECTOR2, "arrived": TYPE_BOOL, "arrival_minute": TYPE_INT}
+	if value.size() != spec.size():
+		return false
+	for key: Variant in value:
+		if typeof(key) != TYPE_STRING or not spec.has(key) or typeof(value[key]) != spec[key]:
+			return false
+	if value.kind not in ["site", "plot"]:
+		return false
+	for key: String in ["task", "owner"]:
+		var text_value: String = value[key]
+		if text_value.is_empty() or text_value.length() > 256:
+			return false
+		for index: int in text_value.length():
+			var code: int = text_value.unicode_at(index)
+			if code < 32 or code > 126 or code in [47, 92]:
+				return false
+	for key: String in ["position", "target"]:
+		var point: Vector2 = value[key]
+		if not is_finite(point.x) or not is_finite(point.y) or point.length() > 1000000.0:
+			return false
+	if value.arrived:
+		# Resource workers retain their native work/idle wander after entering.
+		return value.arrival_minute >= 0 and value.arrival_minute <= 1000000000 and (value.kind == "site" or value.position.distance_to(value.target) <= 0.1)
+	return value.arrival_minute == -1

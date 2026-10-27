@@ -22,6 +22,9 @@ var _latest_time: int = 0
 var _starting: bool = false
 # Fractional team progress, in worker-minutes modulo the assigned team size.
 var payroll_work_remainder: int = 0
+# Authored spatial binding survives the map being replaced by the home interior.
+# Save data validates approach targets against this value; it never supplies it.
+var worker_entry_position: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	TimeComponentManager.time_changed.connect(_on_time_changed)
@@ -116,6 +119,7 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
 	phase = "building"
+	_initialize_approaches()
 	_starting = false
 	changed.emit()
 	return {"success": true, "message": "Construction started."}
@@ -132,7 +136,7 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		for id: String in worker_ids:
 			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 			if worker != null:
-				contribution += elapsed - worker.get_payroll_unpaid_minutes(_latest_time, next_time)
+				contribution += worker.get_arrived_paid_minutes(_latest_time, next_time, "plot", order_id + ":" + phase, order_id)
 		var worked: int = contribution / worker_ids.size()
 		payroll_work_remainder = contribution % worker_ids.size()
 		started_at += elapsed - worked
@@ -207,8 +211,17 @@ func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 	_latest_time = started_at
 	completes_at = started_at + clearing_remaining
 	phase = "clearing"
+	if not use_player:
+		_initialize_approaches()
 	changed.emit()
 	return {"success": true, "message": "Clearing started."}
+
+func _initialize_approaches() -> void:
+	for plot: Node in get_tree().get_nodes_in_group("workshop_plots"):
+		if plot.construction == self:
+			for id: String in worker_ids:
+				plot.begin_worker_approach(id, order_id + ":" + phase)
+			return
 
 func interrupt_player_clearing() -> void:
 	if phase != "clearing" or not clearing_by_player:
