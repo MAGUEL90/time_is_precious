@@ -7,6 +7,8 @@ var fraction: float = 0.0
 var work_cycles: Dictionary = {}
 var roaming: Dictionary = {}
 var site_paths: Dictionary = {}
+var reed_inside: Dictionary = {}
+var reed_splash: CPUParticles2D
 const FEET_OFFSET := Vector2(0, 16)
 const APPROACH_SPEED: float = 24.0
 var rng := RandomNumberGenerator.new()
@@ -22,7 +24,13 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		if reed_splash != null:
+			reed_splash.emitting = false
 		return
+	# Restore only actors hidden by this presentation before native owners run.
+	for id: String in reed_inside:
+		if actors.has(id):
+			actors[id].show()
 	var fixture = get_parent()
 	var schedule = fixture.daily
 	var minute: int = schedule.now()
@@ -102,6 +110,7 @@ func _process(delta: float) -> void:
 			work_cycles.erase(id)
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
+	_update_reed_presence()
 
 func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: float) -> bool:
 	var fixture: Node = get_parent()
@@ -192,6 +201,7 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 		if child is AnimatedSprite2D:
 			child.reparent(foot, true)
 	actor.y_sort_enabled = true
+	_apply_work_identity(actor)
 	actor.hide()
 	actors[id] = actor
 	return actor
@@ -230,6 +240,9 @@ func _play(actor: Node2D, action: String, direction: String) -> void:
 				child.reparent(foot, true)
 
 func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
+	if _reed_working(id):
+		work_cycles.erase(id)
+		return
 	if not work_cycles.has(id):
 		if not get_parent().has_method("site_approach_task"):
 			actor.global_position = center
@@ -275,3 +288,60 @@ func _phase_duration(cycle: Dictionary, actor: Node2D) -> float:
 	if cycle.phase == 4:
 		return maxf(cycle.origin.distance_to(cycle.target) / 10.0, 0.1)
 	return maxf(cycle.idle, 0.1)
+
+func _apply_work_identity(actor: Node2D) -> void:
+	# Missing work overlays stay consistently absent; linked citizen data is intact.
+	if not _has_work_identity(actor, actor.hair_sprite, actor.hair_style):
+		actor.hair_style = "default"
+		actor._hide_layer(actor.hair_sprite)
+	if not _has_work_identity(actor, actor.clothes_sprite, actor.clothes_id):
+		actor.clothes_id = "default"
+		actor._hide_layer(actor.clothes_sprite)
+
+func _has_work_identity(actor: Node2D, layer: AnimatedSprite2D, identity: String) -> bool:
+	return actor._has_playable_animation(layer, "%s_work_left" % identity) and actor._has_playable_animation(layer, "%s_work_right" % identity)
+
+func _reed_working(id: String) -> bool:
+	var fixture: Node = get_parent()
+	if not fixture.has_method("site_approach_task") or not fixture.enable_worker_commute or plot_presence.states.has(id):
+		return false
+	var schedule = fixture.daily
+	if not schedule.jobs.has(&"ReedSite") or not schedule.jobs[&"ReedSite"].ids.has(id):
+		return false
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	var day: int = TimeComponentManager.current_day
+	return worker != null and worker.matches_physical_approach("site", fixture.site_approach_task(&"ReedSite", id, day), "ReedSite") and worker.physical_approach.arrived and schedule.activity(&"ReedSite", id) == WorkerData.WorkStatus.WORKING
+
+func _update_reed_presence() -> void:
+	var next_inside: Dictionary = {}
+	for id: String in actors:
+		if _reed_working(id):
+			actors[id].hide()
+			next_inside[id] = true
+	reed_inside = next_inside
+	var active: bool = not reed_inside.is_empty()
+	if reed_splash == null and active:
+		var icon: Sprite2D = get_parent().get_node_or_null("WorksiteMarkers/ReedSite/ResourceIcon")
+		if icon == null or icon.texture == null:
+			return
+		var used: Rect2i = icon.texture.get_image().get_used_rect()
+		reed_splash = CPUParticles2D.new()
+		reed_splash.name = "ReedWaterSplash"
+		reed_splash.emitting = false
+		reed_splash.amount = 14
+		reed_splash.lifetime = 0.5
+		reed_splash.lifetime_randomness = 0.3
+		reed_splash.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		reed_splash.emission_rect_extents = Vector2(float(used.size.x) * 0.35, 2)
+		reed_splash.direction = Vector2.UP
+		reed_splash.spread = 85.0
+		reed_splash.initial_velocity_min = 12.0
+		reed_splash.initial_velocity_max = 22.0
+		reed_splash.gravity = Vector2(0, 60)
+		reed_splash.color = Color("#7D929E")
+		reed_splash.z_index = 1
+		add_child(reed_splash)
+		var offset: Vector2 = icon.offset - Vector2(icon.texture.get_size()) * 0.5 if icon.centered else icon.offset
+		reed_splash.global_position = icon.to_global(Vector2(used.position) + Vector2(used.size) * 0.5 + offset) + Vector2(0, 3)
+	if reed_splash != null:
+		reed_splash.emitting = active

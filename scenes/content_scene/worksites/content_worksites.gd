@@ -10,6 +10,9 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var retain_resource_stock: bool = false
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
+const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+var navigation_map: WeakRef
+var navigation_phases: Dictionary = {}
 
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
@@ -39,10 +42,9 @@ func _ready() -> void:
 	daily.assignment_started = _begin_site_assignments
 	daily.assignment_released = _release_site_approach
 	super._ready()
-	var map: Node = self
-	while map.get_parent() != null and map.get_parent() != get_tree().root:
-		map = map.get_parent()
-	worksite_navigation.configure(map)
+	for site: Node2D in $WorksiteMarkers.get_children():
+		RESOURCE_PRESENTATION.configure(site)
+	_refresh_navigation()
 	if retain_resource_stock:
 		_restore_resource_stock()
 	# Notes belong to the isolated fixture, not the content HUD.
@@ -65,6 +67,57 @@ func _ready() -> void:
 		worker.display_name = "Belum"
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
+
+func _refresh_navigation() -> void:
+	var map: Node = navigation_map.get_ref() if navigation_map != null else null
+	if navigation_map == null:
+		map = self
+		while map.get_parent() != null and map.get_parent() != get_tree().root:
+			map = map.get_parent()
+		navigation_map = weakref(map)
+	# A parked runtime keeps its value geometry through the home handoff.
+	if map == null or (map != self and not map.is_ancestor_of(self)):
+		return
+	worksite_navigation.configure(map)
+	_watch_navigation_changes(map)
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		visuals.site_paths.clear()
+
+func _watch_navigation_changes(node: Node) -> void:
+	if node.has_method("get_built_footprints") and node.construction != null:
+		var callback := Callable(self, "_queue_navigation_refresh").bind(node)
+		if not node.construction.changed.is_connected(callback):
+			node.construction.changed.connect(callback)
+		navigation_phases[node.get_instance_id()] = node.construction.phase
+	for child: Node in node.get_children():
+		_watch_navigation_changes(child)
+
+func _queue_navigation_refresh(plot: Node) -> void:
+	if navigation_phases.get(plot.get_instance_id(), "") == plot.construction.phase:
+		return
+	navigation_phases[plot.get_instance_id()] = plot.construction.phase
+	# Phase owners defer collider toggles; collect their final active geometry.
+	_refresh_navigation.call_deferred()
+
+func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
+	if site.name != &"ReedSite":
+		return super._drop_daily_output(quantity, site)
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(player):
+		return false
+	var destination: Vector2 = worksite_navigation.reachable_point(player.global_position + Vector2(0, -4), site.global_position + Vector2(0, 24))
+	if not destination.is_finite():
+		return false # The scheduler retains unclaimed units for a later retry.
+	for stack: PickUpItem in $GroundOutput.get_children():
+		if not stack.is_queued_for_deletion() and not stack.is_collecting and stack.get_meta("daily_site", "") == str(site.name):
+			stack.global_position = destination
+			stack.quantity += quantity
+			stack.get_node("QuantityLabel").text = "x%d" % stack.quantity
+			return true
+	if not _drop_output_at(quantity, $GroundOutput.to_local(destination), _drop_daily_output.bind(site), sites[site.name].item_id):
+		return false
+	$GroundOutput.get_child(-1).set_meta("daily_site", str(site.name))
+	return true
 
 # Physical records use feet coordinates; the visual's art origin is 16px above.
 func worker_destination(site_id: StringName, id: String) -> Vector2:

@@ -1,0 +1,37 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_native"]
+[ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper_plot.gd" id="2_keeper"]
+[ext_resource type="Texture2D" path="res://assets/objects/workshop_1.png" id="3_building"]
+[ext_resource type="Texture2D" path="res://assets/objects/vase_type_1.png" id="4_vase"]
+[ext_resource type="Texture2D" path="res://assets/objects/barrel.png" id="5_barrel"]
+[ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper.gd" id="6_actor"]
+
+[node name="WorkshopPlot" instance=ExtResource("1_native")]
+script = ExtResource("2_keeper")
+
+[node name="FinishedBuilding" type="Node2D" parent="."]
+visible = false
+position = Vector2(11, 24)
+
+[node name="Base" type="Sprite2D" parent="FinishedBuilding"]
+position = Vector2(0, -32)
+texture_filter = 1
+texture = ExtResource("3_building")
+
+[node name="Vase" type="Sprite2D" parent="FinishedBuilding"]
+position = Vector2(-12, -54)
+texture_filter = 1
+texture = ExtResource("4_vase")
+
+[node name="Barrel" type="Sprite2D" parent="FinishedBuilding"]
+position = Vector2(1, -53)
+texture_filter = 1
+texture = ExtResource("5_barrel")
+
+[node name="Craftsman" type="Node2D" parent="."]
+position = Vector2(16, 34)
+script = ExtResource("6_actor")
+
+[node name="DoorEntrance" type="Marker2D" parent="."]
+position = Vector2(0, 8)

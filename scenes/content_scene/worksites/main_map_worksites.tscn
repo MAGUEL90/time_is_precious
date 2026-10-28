@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
@@ -11,6 +11,8 @@
 [ext_resource type="Texture2D" path="res://assets/reed_bundle.png" id="icon_Reed"]
 [ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
 [ext_resource type="Texture2D" path="res://assets/items/water_jar.png" id="icon_Water"]
+[ext_resource type="Texture2D" path="res://assets/objects/worksites/clay_site.png" id="site_Clay"]
+[ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site_content.png" id="site_Reed"]
 
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="12_city_storage"]
 
@@ -34,6 +36,7 @@ y_sort_enabled = true
 position = Vector2(-72, -32)
 
 [node name="Footprint" parent="WorksiteMarkers/ClaySiteA" index="0"]
+visible = false
 scale = Vector2(0.6, 0.6)
 
 [node name="Label" parent="WorksiteMarkers/ClaySiteA" index="1"]
@@ -45,7 +48,8 @@ text = "Clay Site"
 
 [node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ClaySiteA"]
 texture_filter = 1
-texture = ExtResource("icon_Clay")
+position = Vector2(0, -7)
+texture = ExtResource("site_Clay")
 
 [node name="WoodSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
 position = Vector2(-72, 0)
@@ -74,6 +78,7 @@ item_id = "reed_bundle"
 minutes_per_unit = 7.5
 
 [node name="Footprint" parent="WorksiteMarkers/ReedSite" index="0"]
+visible = false
 scale = Vector2(0.6, 0.6)
 
 [node name="Label" parent="WorksiteMarkers/ReedSite" index="1"]
@@ -85,7 +90,8 @@ text = "Reed Site"
 
 [node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ReedSite"]
 texture_filter = 1
-texture = ExtResource("icon_Reed")
+position = Vector2(0, -5)
+texture = ExtResource("site_Reed")
 
 [node name="StrawSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
 position = Vector2(72, -32)

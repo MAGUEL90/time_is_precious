@@ -14,5 +14,5 @@ func configure_session(session) -> void:
 
 func _ready() -> void:
 	var item: ItemData = ItemDatabase.get_item_data(item_id)
-	if item != null and has_node("ResourceIcon"):
+	if item != null and has_node("ResourceIcon") and $ResourceIcon.texture == null:
 		$ResourceIcon.texture = item.icon

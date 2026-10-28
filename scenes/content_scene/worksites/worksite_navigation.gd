@@ -66,7 +66,9 @@ func _resource_contact(icon: Sprite2D) -> void:
 	var offset: Vector2 = icon.offset - Vector2(image.get_size()) * 0.5 if icon.centered else icon.offset
 	var contact := PackedVector2Array([Vector2(left, top) + offset, Vector2(right + 1, top) + offset,
 		Vector2(right + 1, used.end.y) + offset, Vector2(left, used.end.y) + offset])
-	_add_polygon(contact, icon.global_transform)
+	# Production sites provide the same polygon as an actual player collider.
+	if not icon.get_parent().has_node("ResourceBase"):
+		_add_polygon(contact, icon.global_transform)
 	var bottom: float = -INF
 	for point: Vector2 in contact:
 		bottom = maxf(bottom, icon.to_global(point).y)
@@ -120,6 +122,22 @@ func segment_clear(from: Vector2, to: Vector2) -> bool:
 		if not is_clear(from.lerp(to, float(i) / steps)):
 			return false
 	return true
+
+func reachable_point(origin: Vector2, desired: Vector2) -> Vector2:
+	# Authored collision proves clearance/reachability only, never dry terrain.
+	if not is_clear(origin):
+		return Vector2.INF
+	var candidates: Array[Vector2] = [desired]
+	for radius: int in range(1, 13):
+		for direction: int in range(16):
+			candidates.append(desired + Vector2.from_angle(TAU * direction / 16.0) * GRID * radius)
+	for point: Vector2 in candidates:
+		if not is_clear(point):
+			continue
+		var points: PackedVector2Array = route(origin, point)
+		if not points.is_empty() and points[-1].distance_to(point) < 0.1:
+			return point
+	return Vector2.INF
 
 func route(from: Vector2, to: Vector2) -> PackedVector2Array:
 	if not is_clear(from) or not is_clear(to):

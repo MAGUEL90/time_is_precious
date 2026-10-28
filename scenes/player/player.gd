@@ -96,6 +96,7 @@ var last_collapse_day: int = -1
 # Lifecycle and time updates
 
 func _ready() -> void:
+	add_child.call_deferred(preload("res://scenes/ui/cursor/gameplay_cursor.gd").new())
 	PlayerRuntimeState.restore(self)
 	if debug_disable_fatigue:
 		fatigue = min_fatigue
