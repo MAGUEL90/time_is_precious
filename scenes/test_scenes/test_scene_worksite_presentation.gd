@@ -140,13 +140,20 @@ func _test_active_prompt_positions() -> void:
 	var previous: Vector2 = player.global_position
 	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
 		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
-		player._set_current_interactable(null)
-		player.global_position = site.global_position + (Vector2(-18, 10) if site_id in ["ClaySiteA", "WoodSite", "ReedSite"] else Vector2(18, 10))
-		runtime._process(0.0)
-		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
-		_check(runtime._highlighted_site == site and prompt.visible, site_id + ": actual nearby worksite owns the visible E")
-		_check_active_player_prompt(prompt, player, site_id, site_id in ["ClaySiteA", "WoodSite", "ReedSite"])
-		await _capture("active-E-" + site_id, player.global_position)
+		var side: float = -1.0 # East-column palms own E when approached from the outside.
+		for pose: Vector2 in [Vector2(side * 18.0, 10.0), Vector2(side * 20.0, -10.0)]:
+			player._set_current_interactable(null)
+			player.global_position = site.global_position + pose
+			if capture_camera != null:
+				capture_camera.global_position = player.global_position
+				await get_tree().process_frame
+			runtime._process(0.0)
+			var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
+			var suffix: String = "-alt" if pose.y < 0.0 else ""
+			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": actual nearby worksite owns the visible E")
+			await _capture("active-E-" + site_id + suffix, player.global_position)
+			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": worksite still owns E after rendering")
+			_check_open_player_prompt(prompt, player, site_id + suffix)
 	var storage: Node = runtime.get_node("CityStorageArea")
 	player.global_position = storage.global_position + Vector2(0, 8)
 	for _frame: int in range(3):
@@ -154,8 +161,10 @@ func _test_active_prompt_positions() -> void:
 	storage._on_body_entered(player)
 	player._refresh_current_interactable()
 	storage._process(0.0)
+	runtime._process(0.0)
 	var storage_prompt: InteractableLabelComponent = storage.interactable_label_component
 	_check(player.current_interactable == storage and storage_prompt.visible, "City Storage access owns the visible E")
+	_check(storage.get_node("Label").visible, "City Storage caption returns when its own access is focused")
 	_check_active_player_prompt(storage_prompt, player, "CityStorage")
 	await _capture("active-E-CityStorage", player.global_position)
 	player.global_position = previous
@@ -173,6 +182,24 @@ func _check_active_player_prompt(prompt: InteractableLabelComponent, player: Pla
 	_check(is_equal_approx(art_screen.get_center().x, box_screen.get_center().x)
 		and is_equal_approx(screen_gap, 4.0 * canvas.get_scale().y), label + ": camera canvas preserves the same E gap")
 	print("ActivePrompt ", JSON.stringify({"owner": label, "player": str(player.global_position), "world_box": str(box), "canvas_box": str(box_screen)}))
+
+func _check_open_player_prompt(prompt: InteractableLabelComponent, player: Player, label: String) -> void:
+	var art: Rect2 = VISIBLE_BOUNDS.measure(player.get_node("PlayerVisual"))
+	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(not box.intersects(art) and box.get_center().distance_to(art.get_center()) <= 55.0,
+		label + ": E stays near the player without covering the character")
+	var blocked: bool = false
+	for obstacle: Rect2 in runtime._prompt_obstacles():
+		if box.intersection(obstacle).has_area():
+			blocked = true
+			break
+	_check(not blocked, label + ": E avoids resource art, captions, buildings and palms")
+	var canvas_box: Rect2 = get_viewport().get_canvas_transform() * box
+	var prompt_canvas_box: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
+	_check(canvas_box.is_equal_approx(prompt_canvas_box), label + ": prompt and viewport agree on the camera transform")
+	if capture_camera != null:
+		_check(get_viewport().get_visible_rect().encloses(canvas_box), label + ": camera keeps the E inside the viewport")
+	print("ActivePrompt ", JSON.stringify({"owner": label, "player": str(player.global_position), "world_box": str(box), "canvas_box": str(canvas_box), "prompt_canvas_box": str(prompt_canvas_box)}))
 
 func _test_transformed_prompt() -> void:
 	var site := Marker2D.new()

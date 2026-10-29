@@ -6,6 +6,7 @@ const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_s
 const FEET: Vector2 = Vector2(0, 16)
 const WALK_SPEED: float = 24.0
 var states: Dictionary = {}
+var tracked: Dictionary = {}
 var initial_sync: bool = true
 
 func update(visuals: Node2D, delta: float) -> Array[String]:
@@ -18,10 +19,10 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 			continue
 		if construction.phase in ["clearing", "building"]:
 			for id: String in construction.worker_ids:
-				active[id] = {"owner": construction.order_id, "key": construction.order_id + ":" + construction.phase, "entry": construction.worker_entry_position}
+				active[id] = {"owner": construction.order_id, "key": construction.order_id + ":" + construction.phase, "entry": construction.worker_entry_position, "construction": true}
 		for order: WorkOrder in WorkManager.active_orders.values():
 			if order.worker_kind == WorkOrder.Worker_Type.NPC and order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id:
-				active[order.worker_id] = {"owner": construction.order_id, "key": order.order_id, "entry": construction.worker_entry_position}
+				active[order.worker_id] = {"owner": construction.order_id, "key": order.order_id, "entry": construction.worker_entry_position, "construction": false}
 	var retained: Array[String] = []
 	for id: String in active:
 		var task: Dictionary = active[id]
@@ -32,6 +33,7 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 		if actor == null:
 			continue
 		retained.append(id)
+		tracked[id] = true
 		visuals.roaming.erase(id)
 		visuals.work_cycles.erase(id)
 		if actor.has_node("CargoLabel"):
@@ -52,8 +54,23 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 		actor.global_position = approach.position - FEET
 		if worker.is_payroll_blocked():
 			worker.current_work_status = WorkerData.WorkStatus.RESTING
-			actor.visible = not approach.arrived and visuals.get_parent().enable_worker_commute
-			visuals._play(actor, "idle", "right")
+			if bool(task.construction):
+				# Keep the saved approach target at the authored plot entrance. An
+				# unpaid builder walks away and must physically return after renewal.
+				if approach.arrived:
+					approach.arrived = false
+					approach.arrival_minute = -1
+				var departure: Vector2 = _departure_position(visuals, task)
+				var previous: Vector2 = approach.position
+				if not visuals.get_tree().paused and not TimeComponentManager.is_paused and not SceneTransition.is_transitioning:
+					_advance_toward(visuals, id, worker, task.key + ":departure", departure, maxf(delta, 0.0))
+				actor.global_position = approach.position - FEET
+				actor.visible = approach.position.distance_to(departure) > 0.1 and visuals.get_parent().enable_worker_commute
+				var direction: String = "left" if approach.position.x < previous.x else "right"
+				visuals._play(actor, "walk" if approach.position.distance_to(previous) > 0.001 else "idle", direction)
+			else:
+				actor.visible = not approach.arrived and visuals.get_parent().enable_worker_commute
+				visuals._play(actor, "idle", "right")
 			continue
 		if approach.arrived:
 			worker.current_work_status = WorkerData.WorkStatus.WORKING
@@ -65,7 +82,7 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 		actor.visible = visuals.get_parent().enable_worker_commute
 		var previous: Vector2 = approach.position
 		if not visuals.get_tree().paused and not TimeComponentManager.is_paused and not SceneTransition.is_transitioning:
-			_advance(visuals, id, worker, task, maxf(delta, 0.0))
+			_advance_toward(visuals, id, worker, task.key, approach.target, maxf(delta, 0.0))
 		actor.global_position = approach.position - FEET
 		var direction: String = "left" if approach.position.x < previous.x else "right"
 		visuals._play(actor, "walk" if approach.position.distance_to(previous) > 0.001 else "idle", direction)
@@ -74,21 +91,26 @@ func update(visuals: Node2D, delta: float) -> Array[String]:
 			if live_plots.has(task.owner):
 				live_plots[task.owner].mark_worker_arrived(id, task.key)
 				live_plots[task.owner].show_worker_dust()
-	for id: String in states.keys():
+	for id: String in tracked.keys():
 		if not active.has(id):
 			if visuals.actors.has(id):
 				visuals.actors[id].visible = visuals.get_parent().enable_worker_commute and WorkerDatabase.has_worker_data(id)
 				visuals.roaming.erase(id)
 			states.erase(id)
+			tracked.erase(id)
 	initial_sync = false
 	return retained
 
-func _advance(visuals: Node2D, id: String, worker: WorkerData, task: Dictionary, delta: float) -> void:
+func _departure_position(visuals: Node2D, task: Dictionary) -> Vector2:
+	var departure: Node2D = visuals.get_parent().get_node_or_null("WorkerDeparture/NearSpawn") as Node2D
+	return departure.global_position if departure != null else task.entry + Vector2(0, 24)
+
+func _advance_toward(visuals: Node2D, id: String, worker: WorkerData, route_key: String, target: Vector2, delta: float) -> void:
 	var approach: Dictionary = worker.physical_approach
 	var navigation: RefCounted = visuals.get_parent().get("worksite_navigation")
-	if not states.has(id) or states[id].key != task.key:
-		var route: PackedVector2Array = navigation.route(approach.position, approach.target) if navigation != null else PackedVector2Array([approach.target])
-		states[id] = {"key": task.key, "route": route, "index": 0}
+	if not states.has(id) or states[id].key != route_key:
+		var route: PackedVector2Array = navigation.route(approach.position, target) if navigation != null else PackedVector2Array([target])
+		states[id] = {"key": route_key, "route": route, "index": 0}
 	var state: Dictionary = states[id]
 	var budget: float = WALK_SPEED * delta
 	while state.index < state.route.size() and budget > 0.0:

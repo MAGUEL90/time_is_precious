@@ -20,6 +20,17 @@ func _dust_count(plot: Node) -> int:
 			count += 1
 	return count
 
+func _drive_plot_arrival(visuals: Node2D, ids: Array[String]) -> void:
+	for _frame: int in range(4000):
+		var all_arrived: bool = true
+		for id: String in ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+			if worker == null or not worker.physical_approach.get("arrived", false):
+				all_arrived = false
+		if all_arrived:
+			return
+		visuals.plot_presence.update(visuals, 0.1)
+
 func _check_completion_pixels() -> void:
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(64, 24)
@@ -99,6 +110,7 @@ func _run() -> void:
 	_expect(_dust_count(plot) == 0 and not plot._has_dust_activity(), "No dust spawns while the worker is still approaching.")
 	var remaining: int = plot.construction.clearing_remaining
 	visuals.plot_presence.update(visuals, 2.0)
+	_drive_plot_arrival(visuals, [ids[0]] as Array[String])
 	_expect(not visuals.actors[ids[0]].visible and _dust_count(plot) == 1,
 		"Worker disappears at the entrance with one cosmetic dust puff.")
 	_expect(plot.construction.clearing_remaining == remaining,
@@ -164,6 +176,7 @@ func _run() -> void:
 	_expect(not plot._has_dust_activity(), "A previous clearing arrival cannot enable dust for a new building task.")
 	plot._process(2.0)
 	visuals.plot_presence.update(visuals, 2.0)
+	_drive_plot_arrival(visuals, ids)
 	visuals._process(0.2)
 	_expect(plot._has_dust_activity(), "Building dust becomes eligible after builders arrive.")
 	for id: String in ids:

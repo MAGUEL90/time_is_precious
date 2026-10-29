@@ -8,6 +8,7 @@ const HAND_ICON: Texture2D = preload("res://assets/ui/ui_icon/hand_job_icon.png"
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
 const BUILT_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_1.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
+const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
@@ -22,11 +23,13 @@ var _worker_dust_rng := RandomNumberGenerator.new()
 var _arrived_worker_tasks: Dictionary = {}
 var _previous_construction_phase: String = ""
 var _completion_bar_remaining: float = 0.0
+var _inactive_bar_material: ShaderMaterial
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
 	if worker != null and (worker.physical_approach.is_empty() or worker.mark_physical_arrival(task_key)):
 		_arrived_worker_tasks[worker_id] = task_key
+		_sync_build_progress()
 
 func begin_worker_approach(worker_id: String, task_key: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -229,8 +232,16 @@ func _sync_build_progress() -> void:
 		_completion_bar_remaining = 0.0
 		var preview: Dictionary = construction.get_clearing_preview([] as Array[String], false) if construction.phase == "clearing" else construction.get_preview([] as Array[String])
 		bar.value = float(preview.progress_ratio) * 100.0
+		if construction.has_active_worker_at_plot():
+			bar.material = null
+		else:
+			if _inactive_bar_material == null:
+				_inactive_bar_material = ShaderMaterial.new()
+				_inactive_bar_material.shader = INACTIVE_BAR_SHADER
+			bar.material = _inactive_bar_material
 	elif completed:
 		bar.value = 100.0
+		bar.material = null
 		_completion_bar_remaining = 1.0
 		var splash = preload("res://scenes/workshop_plot/construction_complete_splash.gd").new()
 		splash.texture = bar.texture_progress

@@ -11,6 +11,7 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+const PROMPT_BOUNDS = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd")
 var navigation_map: WeakRef
 var navigation_phases: Dictionary = {}
 
@@ -194,13 +195,62 @@ func _can_open_worker_hub() -> bool:
 
 func _process(delta: float) -> void:
 	super._process(delta)
+	# The warehouse caption crosses the nearest left-column worksite prompts.
+	# Reveal it again as soon as the player leaves that resource focus.
+	var storage_label: Label = get_node_or_null("CityStorageArea/Label") as Label
+	if storage_label != null:
+		var storage_focused: bool = is_instance_valid(player) and player.current_interactable == $CityStorageArea
+		storage_label.visible = storage_focused or not is_instance_valid(_highlighted_site) or _highlighted_site.name not in [&"ClaySiteA", &"WoodSite", &"ReedSite"]
+	var world: Node = get_parent()
+	var merchant_caption: Label = world.get_node_or_null("TravelingMerchant/Caption") as Label if world != null else null
+	if merchant_caption != null:
+		merchant_caption.visible = not is_instance_valid(_highlighted_site) or _highlighted_site.name not in [&"StrawSite", &"WaterSite"]
 	if is_instance_valid(_highlighted_site):
 		var prompt: InteractableLabelComponent = _highlighted_site.get_node("InteractPrompt")
 		if prompt.visible:
-			if _highlighted_site.name in [&"ClaySiteA", &"WoodSite", &"ReedSite"]:
-				prompt.place_below_player(player)
-			else:
-				prompt.place_above_player(player)
+			prompt.place_near_player(player, _prompt_obstacles())
+
+func _prompt_obstacles() -> Array[Rect2]:
+	var obstacles: Array[Rect2] = []
+	for site: Node in $WorksiteMarkers.get_children():
+		_append_prompt_art(obstacles, site.get_node_or_null("ResourceIcon"))
+		_append_prompt_label(obstacles, site.get_node_or_null("Label"))
+	for storage_name: String in ["ClayStorage", "WoodStorage", "ReedStorage", "StrawStorage", "WaterStorage", "CityStorageArea"]:
+		var storage: Node = get_node_or_null(storage_name)
+		if storage != null:
+			_append_prompt_art(obstacles, storage.get_node_or_null("Sprite2D"))
+			_append_prompt_label(obstacles, storage.get_node_or_null("Label"))
+	var world: Node = get_parent()
+	if world != null:
+		var initial: Node = world.get_node_or_null("InitialWorksites")
+		if initial != null:
+			for child: Node in initial.get_children():
+				_append_prompt_art(obstacles, child)
+		var home: Node = world.get_node_or_null("HomeDoor")
+		if home != null:
+			_append_prompt_art(obstacles, home.get_node_or_null("House"))
+			_append_prompt_label(obstacles, home.get_node_or_null("Label"))
+		var merchant: Node = world.get_node_or_null("TravelingMerchant")
+		if merchant != null:
+			_append_prompt_art(obstacles, merchant.get_node_or_null("StopSign"))
+			_append_prompt_art(obstacles, merchant.get_node_or_null("MerchantVisual"))
+			_append_prompt_label(obstacles, merchant.get_node_or_null("Caption"))
+		for child: Node in world.get_children():
+			if child is Sprite2D and str(child.name).begins_with("DatePalmTree"):
+				_append_prompt_art(obstacles, child)
+	return obstacles
+
+func _append_prompt_art(obstacles: Array[Rect2], node: Node) -> void:
+	if node == null:
+		return
+	var bounds: Rect2 = PROMPT_BOUNDS.measure(node)
+	if bounds.has_area():
+		obstacles.append(bounds)
+
+func _append_prompt_label(obstacles: Array[Rect2], node: Node) -> void:
+	if node is Label and node.is_visible_in_tree():
+		var label: Label = node as Label
+		obstacles.append(label.get_global_transform() * Rect2(Vector2.ZERO, label.size))
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Existing map interactables (workshop, pickups, etc.) retain ownership of E.

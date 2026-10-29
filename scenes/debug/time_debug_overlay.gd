@@ -27,6 +27,7 @@ var step_buttons: Array[Button] = []
 var materials_button: Button
 var shekel_button: Button
 var production_button: Button
+var wet_inputs_button: Button
 var raid_journey_button: Button
 var raid_stage_button: Button
 var raid_journey_label: Label
@@ -159,6 +160,40 @@ func give_production_materials() -> bool:
 		"Production kit ready: 2 recipes + yard upgrades.",
 		"Bag full. Free space for production materials."
 	)
+
+## Supply only the current recipe's missing inputs to the built workshop.
+## The player still assigns a paid worker and starts the job in its normal menu.
+func give_wet_mudbrick_inputs() -> bool:
+	if not OS.is_debug_build() or not can_supply_materials():
+		return false
+	var workshop_ready: bool = false
+	for plot: Node in get_tree().get_nodes_in_group("workshop_plots"):
+		if plot.construction.phase == "built" and plot.has_node("BuiltWorkshop"):
+			workshop_ready = true
+			break
+	if not workshop_ready:
+		materials_status.text = "Build the workshop before supplying wet inputs."
+		return false
+	var missing: Dictionary = {}
+	for item_id_value: Variant in PRODUCTION_JOB.inputs:
+		var item_id: String = str(item_id_value)
+		var required: int = int(PRODUCTION_JOB.inputs[item_id_value])
+		var quantity: int = maxi(0, required - WorkShopStorage.get_free_item_quantity(item_id))
+		if quantity > 0:
+			if not ItemDatabase.has_item_data(item_id) or WorkShopStorage.get_item_total_weight(item_id, quantity) <= 0:
+				materials_status.text = "Wet input item unavailable."
+				return false
+			missing[item_id] = quantity
+	if missing.is_empty():
+		materials_status.text = "Wet mudbrick inputs already in Workshop Storage."
+		return false
+	if not WorkShopStorage.has_capacity_for_bulk(missing):
+		materials_status.text = "Workshop Storage full. Free space for wet inputs."
+		return false
+	WorkShopStorage.add_bulk_item(missing)
+	materials_status.text = "Wet mudbrick inputs in Workshop Storage (debug)."
+	_refresh_controls()
+	return true
 
 func set_worker_guard(enabled: bool) -> void:
 	if not OS.is_debug_build():
@@ -441,6 +476,9 @@ func _create_controls() -> void:
 	production_button.pressed.connect(give_production_materials)
 	production_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	supply_buttons.add_child(production_button)
+	wet_inputs_button = _button("Wet inputs")
+	wet_inputs_button.pressed.connect(give_wet_mudbrick_inputs)
+	column.add_child(wet_inputs_button)
 	shekel_button = _button("100 Shekel")
 	shekel_button.pressed.connect(give_shekel)
 	shekel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -582,6 +620,7 @@ func _refresh_controls() -> void:
 		button.disabled = not available or raid_active
 	materials_button.disabled = not can_supply_materials()
 	production_button.disabled = not can_supply_materials()
+	wet_inputs_button.disabled = not can_supply_materials()
 	shekel_button.disabled = not can_supply_materials()
 	if worker_guard_check_button != null:
 		worker_guard_check_button.set_pressed_no_signal(worker_guard_enabled)

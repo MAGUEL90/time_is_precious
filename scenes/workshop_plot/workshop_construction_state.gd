@@ -160,6 +160,22 @@ func _all_workers_payroll_blocked() -> bool:
 			return false
 	return true
 
+func has_active_worker_at_plot() -> bool:
+	if phase not in ["building", "clearing"]:
+		return false
+	if phase == "clearing" and clearing_by_player:
+		return true
+	var task_key: String = order_id + ":" + phase
+	for id: String in worker_ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker == null or worker.is_payroll_blocked():
+			continue
+		if worker.physical_approach.is_empty():
+			return true # Legacy saves retain their established inside-plot state.
+		if worker.matches_physical_approach("plot", task_key, order_id) and worker.physical_approach.arrived:
+			return true
+	return false
+
 func _refresh_payroll_status() -> void:
 	if phase in ["building", "clearing"]:
 		changed.emit()
