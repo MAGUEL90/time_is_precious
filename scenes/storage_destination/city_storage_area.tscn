@@ -1,13 +1,14 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/storage_destination/city_storage_area.gd" id="1_area"]
 [ext_resource type="PackedScene" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="2_prompt"]
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
 [ext_resource type="Texture2D" path="res://assets/ui/building/warehouse_leveL_1.png" id="4_storage"]
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/storage_destination.tscn" id="5_delivery"]
+[ext_resource type="Texture2D" path="res://assets/objects/object_board_0.png" id="6_board"]
 
 [sub_resource type="RectangleShape2D" id="AccessShape"]
-size = Vector2(32, 24)
+size = Vector2(40, 32)
 
 [sub_resource type="RectangleShape2D" id="BuildingShape"]
 size = Vector2(46, 22)
@@ -18,13 +19,19 @@ collision_mask = 2
 script = ExtResource("1_area")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 8)
+position = Vector2(22, 16)
 shape = SubResource("AccessShape")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture_filter = 1
 position = Vector2(0, -40)
 texture = ExtResource("4_storage")
+
+[node name="Board" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(22, 16)
+texture = ExtResource("6_board")
+offset = Vector2(0, -8)
 
 [node name="BuildingBody" type="StaticBody2D" parent="."]
 collision_layer = 1
@@ -47,7 +54,7 @@ horizontal_alignment = 1
 mouse_filter = 2
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("2_prompt")]
-position_offset = Vector2(-5, 8)
+position_offset = Vector2(34, 0)
 
 [node name="DeliveryPoint" parent="." instance=ExtResource("5_delivery")]
 position = Vector2(0, 12)

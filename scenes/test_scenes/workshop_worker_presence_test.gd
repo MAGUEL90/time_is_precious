@@ -16,7 +16,7 @@ func _expect(ok: bool, message: String) -> void:
 func _dust_count(plot: Node) -> int:
 	var count: int = 0
 	for child: Node in plot.get_children():
-		if child.get_script() == DUST:
+		if child.get_script() == DUST and child.visible and not child.is_queued_for_deletion():
 			count += 1
 	return count
 
@@ -161,7 +161,7 @@ func _run() -> void:
 			cleaning_splashes += 1
 	_expect(cleaning_splashes == 1, "Cleaning completion emits one matching gold splash.")
 	plot._process(2.0)
-	_expect(_dust_count(plot) == 4, "Completing clearing stops new dust immediately.")
+	_expect(_dust_count(plot) == 0, "Completing clearing hides existing dust immediately.")
 	await get_tree().create_timer(1.1).timeout
 	_expect(_dust_count(plot) == 0, "The final activity puffs fade out after completion.")
 	visuals.plot_presence.update(visuals, 0.0)

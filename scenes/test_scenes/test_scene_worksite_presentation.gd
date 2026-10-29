@@ -140,6 +140,7 @@ func _test_active_prompt_positions() -> void:
 	var previous: Vector2 = player.global_position
 	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
 		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
+		var fixed_box: Rect2 = site.get_node("InteractPrompt").get_global_transform() * Rect2(Vector2.ZERO, Vector2(16, 16))
 		var side: float = -1.0 # East-column palms own E when approached from the outside.
 		for pose: Vector2 in [Vector2(side * 18.0, 10.0), Vector2(side * 20.0, -10.0)]:
 			player._set_current_interactable(null)
@@ -153,53 +154,67 @@ func _test_active_prompt_positions() -> void:
 			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": actual nearby worksite owns the visible E")
 			await _capture("active-E-" + site_id + suffix, player.global_position)
 			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": worksite still owns E after rendering")
-			_check_open_player_prompt(prompt, player, site_id + suffix)
+			_check_target_prompt(prompt, site.get_node("ResourceIcon"), fixed_box, site_id + suffix)
+			var before_walk: Vector2 = player.global_position
+			Input.action_press(&"move_down")
+			for _step: int in range(6):
+				await get_tree().physics_frame
+			Input.action_release(&"move_down")
+			await get_tree().process_frame
+			_check(player.global_position.distance_to(before_walk) >= 2.0, site_id + suffix + ": native movement advances the player")
+			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": E remains focused through native movement")
+			_check_target_prompt(prompt, site.get_node("ResourceIcon"), fixed_box, site_id + suffix + "-walked")
+			if suffix.is_empty():
+				await _capture("active-E-" + site_id + "-walked", player.global_position)
 	var storage: Node = runtime.get_node("CityStorageArea")
-	player.global_position = storage.global_position + Vector2(0, 8)
+	player._set_current_interactable(null)
+	player.global_position = storage.get_node("Board").global_position + Vector2(-17, 13)
 	for _frame: int in range(3):
 		await get_tree().physics_frame
-	storage._on_body_entered(player)
 	player._refresh_current_interactable()
-	storage._process(0.0)
 	runtime._process(0.0)
 	var storage_prompt: InteractableLabelComponent = storage.interactable_label_component
-	_check(player.current_interactable == storage and storage_prompt.visible, "City Storage access owns the visible E")
-	_check(storage.get_node("Label").visible, "City Storage caption returns when its own access is focused")
-	_check_active_player_prompt(storage_prompt, player, "CityStorage")
+	_check(player.current_interactable == storage and storage_prompt.visible and storage.has_player_access(), "City Storage board access owns the visible E")
+	_check(storage.get_node("Label").visible, "City Storage caption remains visible while its board is focused")
+	_check_board_prompt(storage_prompt, storage.get_node("Board"))
 	await _capture("active-E-CityStorage", player.global_position)
+	var board_prompt_box: Rect2 = storage_prompt.get_global_transform() * Rect2(Vector2.ZERO, storage_prompt.size)
+	Input.action_press(&"move_right")
+	for _step: int in range(5):
+		await get_tree().physics_frame
+	Input.action_release(&"move_right")
+	await get_tree().process_frame
+	_check(player.current_interactable == storage and storage.has_player_access(), "Normal movement inside the front board access keeps City Storage focused")
+	_check((storage_prompt.get_global_transform() * Rect2(Vector2.ZERO, storage_prompt.size)).is_equal_approx(board_prompt_box), "City Storage E stays on the board while the player moves")
+	await _capture("active-E-CityStorage-walked", player.global_position)
+	storage.on_player_interact(player)
+	_check(is_instance_valid(storage.menu) and storage.menu.visible, "E at the front board opens the normal City Storage menu")
+	storage.close_menu()
 	player.global_position = previous
 	player._set_current_interactable(null)
 
-func _check_active_player_prompt(prompt: InteractableLabelComponent, player: Player, label: String, below: bool = false) -> void:
-	var art: Rect2 = VISIBLE_BOUNDS.measure(player.get_node("PlayerVisual"))
+func _check_board_prompt(prompt: InteractableLabelComponent, board: Node) -> void:
+	var art: Rect2 = VISIBLE_BOUNDS.measure(board)
 	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	var world_gap: float = box.position.y - art.end.y if below else art.position.y - box.end.y
-	_check(is_equal_approx(art.get_center().x, box.get_center().x) and is_equal_approx(world_gap, 4.0), label + ": active E is centered four world pixels from player art")
+	_check(is_equal_approx(box.position.x - art.end.x, 4.0) and is_equal_approx(box.get_center().y, art.get_center().y), "City Storage E sits four world pixels beside its front board")
 	var canvas: Transform2D = get_viewport().get_canvas_transform()
 	var art_screen: Rect2 = canvas * art
 	var box_screen: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
-	var screen_gap: float = box_screen.position.y - art_screen.end.y if below else art_screen.position.y - box_screen.end.y
-	_check(is_equal_approx(art_screen.get_center().x, box_screen.get_center().x)
-		and is_equal_approx(screen_gap, 4.0 * canvas.get_scale().y), label + ": camera canvas preserves the same E gap")
-	print("ActivePrompt ", JSON.stringify({"owner": label, "player": str(player.global_position), "world_box": str(box), "canvas_box": str(box_screen)}))
+	_check(is_equal_approx(box_screen.position.x - art_screen.end.x, 4.0 * canvas.get_scale().x), "City Storage board and E retain their gap through the camera")
+	print("ActivePrompt ", JSON.stringify({"owner": "CityStorageBoard", "world_box": str(box), "canvas_box": str(box_screen)}))
 
-func _check_open_player_prompt(prompt: InteractableLabelComponent, player: Player, label: String) -> void:
-	var art: Rect2 = VISIBLE_BOUNDS.measure(player.get_node("PlayerVisual"))
+func _check_target_prompt(prompt: InteractableLabelComponent, icon: Node, initial_box: Rect2, label: String) -> void:
+	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
 	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(not box.intersects(art) and box.get_center().distance_to(art.get_center()) <= 55.0,
-		label + ": E stays near the player without covering the character")
-	var blocked: bool = false
-	for obstacle: Rect2 in runtime._prompt_obstacles():
-		if box.intersection(obstacle).has_area():
-			blocked = true
-			break
-	_check(not blocked, label + ": E avoids resource art, captions, buildings and palms")
+	_check(box.is_equal_approx(initial_box), label + ": E remains fixed on the selected site while the player changes sides")
+	_check(is_equal_approx(box.position.x - art.end.x, 4.0) and is_equal_approx(box.get_center().y, art.get_center().y),
+		label + ": E stays four world pixels beside its resource icon")
 	var canvas_box: Rect2 = get_viewport().get_canvas_transform() * box
 	var prompt_canvas_box: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
 	_check(canvas_box.is_equal_approx(prompt_canvas_box), label + ": prompt and viewport agree on the camera transform")
 	if capture_camera != null:
 		_check(get_viewport().get_visible_rect().encloses(canvas_box), label + ": camera keeps the E inside the viewport")
-	print("ActivePrompt ", JSON.stringify({"owner": label, "player": str(player.global_position), "world_box": str(box), "canvas_box": str(canvas_box), "prompt_canvas_box": str(prompt_canvas_box)}))
+	print("ActivePrompt ", JSON.stringify({"owner": label, "world_box": str(box), "canvas_box": str(canvas_box), "prompt_canvas_box": str(prompt_canvas_box)}))
 
 func _test_transformed_prompt() -> void:
 	var site := Marker2D.new()
@@ -231,7 +246,7 @@ func _test_transformed_prompt() -> void:
 	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
 	_check(art.is_equal_approx(Rect2(66, -40, 21, 30)), "Prompt bounds use the actual flipped region frame, alpha margins, offset and inherited scale")
 	var bounds: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "Transformed art retains a centered E and four logical pixel gap")
+	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.get_center().y, bounds.get_center().y), "Transformed art retains a side E and four logical pixel gap")
 	var position_before: Vector2 = prompt.position
 	icon.frame_coords = Vector2i(0, 1)
 	icon.flip_h = false
@@ -239,22 +254,22 @@ func _test_transformed_prompt() -> void:
 	PRESENTATION.position_prompt(site, icon)
 	art = VISIBLE_BOUNDS.measure(icon)
 	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(prompt.position != position_before and is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "A different visible frame receives its own correct prompt anchor")
+	_check(prompt.position != position_before and is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.get_center().y, bounds.get_center().y), "A different visible frame receives its own correct prompt anchor")
 	site.rotation_degrees = 33.0
 	PRESENTATION.position_prompt(site, icon)
 	art = VISIBLE_BOUNDS.measure(icon)
 	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "Rotated nonuniformly scaled site keeps the E centered above visible art")
+	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.get_center().y, bounds.get_center().y), "Rotated nonuniformly scaled site keeps E beside visible art")
 	site.name = "ClaySiteA"
 	PRESENTATION.position_prompt(site, icon)
 	art = VISIBLE_BOUNDS.measure(icon)
 	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), "Rotated scaled left-column site keeps E clear of the art")
+	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.get_center().y, bounds.get_center().y), "Rotated scaled left-column site keeps E clear of the art")
 	site.name = "StrawSite"
 	PRESENTATION.position_prompt(site, icon)
 	art = VISIBLE_BOUNDS.measure(icon)
 	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(is_equal_approx(art.position.x - bounds.end.x, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), "Rotated scaled right-column site keeps E clear of the art")
+	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.get_center().y, bounds.get_center().y), "Rotated scaled right-column site keeps E clear of the art")
 	site.free()
 
 func _walk_to_pickup(drop: Node2D, route: PackedVector2Array) -> void:

@@ -28,12 +28,6 @@ func configure(next_player: Player, next_storage: Node, open_gate: Callable) -> 
 func _on_body_entered(body: Node2D) -> void:
 	if body == player:
 		player._on_interactable_activated(self)
-		if player.current_interactable == self:
-			interactable_label_component.place_above_player(player)
-
-func _process(_delta: float) -> void:
-	if is_instance_valid(player) and player.current_interactable == self and interactable_label_component.visible:
-		interactable_label_component.place_above_player(player)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body == player:

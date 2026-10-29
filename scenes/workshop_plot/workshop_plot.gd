@@ -9,6 +9,7 @@ const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
 const BUILT_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_1.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
 const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
+const WORKER_DUST_SCRIPT: Script = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
@@ -19,6 +20,7 @@ const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive
 @export_range(0.1, 5.0, 0.05) var worker_dust_interval_max: float = 1.25
 var _last_worker_dust_msec: int = -1000
 var _worker_dust_remaining: float = 0.0
+var _has_worker_dust: bool = false
 var _worker_dust_rng := RandomNumberGenerator.new()
 var _arrived_worker_tasks: Dictionary = {}
 var _previous_construction_phase: String = ""
@@ -53,23 +55,34 @@ func get_worker_entry_position() -> Vector2:
 	return $WorkerEntrance.global_position
 
 func show_worker_dust() -> void:
-	if not worker_dust_enabled or Time.get_ticks_msec() - _last_worker_dust_msec < 120:
+	if not worker_dust_enabled or not _has_dust_activity() or Time.get_ticks_msec() - _last_worker_dust_msec < 120:
 		return
 	_last_worker_dust_msec = Time.get_ticks_msec()
 	_spawn_worker_dust($WorkerEntrance.position)
 
 func _spawn_worker_dust(local_position: Vector2) -> void:
 	var dust := Node2D.new()
-	dust.set_script(preload("res://scenes/workshop_plot/worker_entry_dust.gd"))
+	dust.set_script(WORKER_DUST_SCRIPT)
 	add_child(dust)
 	dust.position = local_position
+	_has_worker_dust = true
+
+func _stop_worker_dust() -> void:
+	_worker_dust_remaining = 0.0
+	if not _has_worker_dust:
+		return
+	for child: Node in get_children():
+		if child.get_script() == WORKER_DUST_SCRIPT:
+			child.hide()
+			child.queue_free()
+	_has_worker_dust = false
 
 func _update_worker_dust(delta: float) -> void:
 	# This plot processes while menus are open, but cosmetic activity must pause.
 	if get_tree().paused or TimeComponentManager.is_paused:
 		return
 	if not worker_dust_enabled or not _has_dust_activity():
-		_worker_dust_remaining = 0.0
+		_stop_worker_dust()
 		return
 	_worker_dust_remaining -= delta
 	if _worker_dust_remaining > 0.0:
@@ -235,6 +248,7 @@ func _sync_build_progress() -> void:
 		if construction.has_active_worker_at_plot():
 			bar.material = null
 		else:
+			_stop_worker_dust()
 			if _inactive_bar_material == null:
 				_inactive_bar_material = ShaderMaterial.new()
 				_inactive_bar_material.shader = INACTIVE_BAR_SHADER
@@ -242,6 +256,7 @@ func _sync_build_progress() -> void:
 	elif completed:
 		bar.value = 100.0
 		bar.material = null
+		_stop_worker_dust()
 		_completion_bar_remaining = 1.0
 		var splash = preload("res://scenes/workshop_plot/construction_complete_splash.gd").new()
 		splash.texture = bar.texture_progress

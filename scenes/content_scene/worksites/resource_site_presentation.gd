@@ -55,11 +55,6 @@ static func position_prompt(site: Node2D, icon: Sprite2D) -> void:
 		return
 	var current: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
 	var shift: Vector2
-	if site.name in [&"ClaySiteA", &"WoodSite", &"ReedSite"]:
-		shift = Vector2(art.end.x + PROMPT_GAP - current.position.x, art.position.y - PROMPT_GAP - current.end.y)
-	elif site.name in [&"StrawSite", &"WaterSite"]:
-		shift = Vector2(art.position.x - PROMPT_GAP - current.end.x, art.position.y - PROMPT_GAP - current.end.y)
-	else:
-		shift = Vector2(art.get_center().x - current.get_center().x, art.position.y - PROMPT_GAP - current.end.y)
+	shift = Vector2(art.end.x + PROMPT_GAP - current.position.x, art.get_center().y - current.get_center().y)
 	prompt.position += site.global_transform.affine_inverse().basis_xform(shift)
 	prompt.position_offset = prompt.position

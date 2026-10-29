@@ -3,6 +3,7 @@ extends Node
 ## Isolated, headless construction fixture. No user save or shortcut to arrival.
 const MAP = preload("res://scenes/content_scene/content_scene.tscn")
 const SAVE_STATE = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
+const DUST = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
 const WORKER_ID: String = "idle_progress_fixture"
 const SAVE_FILE: String = "user://worker_idle_save_fixture.json"
 var failures: int = 0
@@ -15,6 +16,13 @@ func _check(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
+
+func _visible_dust_count(plot: Node) -> int:
+	var count: int = 0
+	for child: Node in plot.get_children():
+		if child.get_script() == DUST and child.visible and not child.is_queued_for_deletion():
+			count += 1
+	return count
 
 func _capture(stage: String) -> void:
 	var directory: String = OS.get_environment("TIP_MVP_CAPTURE_DIR")
@@ -85,11 +93,14 @@ func _run() -> void:
 	TimeComponentManager.advance_minutes(30)
 	var progress: float = bar.value
 	_check(progress > 0.0, "Paid arrived worker advances construction.")
+	plot._process(2.0)
+	_check(_visible_dust_count(plot) > 0, "Active paid construction shows activity dust.")
 	await _capture("active")
 	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 	TimeComponentManager.advance_minutes(worker.get_paid_end_minute() - now)
 	progress = bar.value
 	_check(worker.is_payroll_blocked() and progress > 0.0 and bar.material != null, "Expiry preserves progress and grays the bar.")
+	_check(_visible_dust_count(plot) == 0, "The gray-bar transition hides all existing activity dust immediately.")
 	var entry: Vector2 = worker.physical_approach.position
 	visuals.plot_presence.update(visuals, 0.1)
 	_check(not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == -1, "Unpaid worker leaves working state and needs a new physical arrival.")
@@ -109,6 +120,8 @@ func _run() -> void:
 		return
 	TimeComponentManager.advance_minutes(180)
 	_check(is_equal_approx(bar.value, progress), "An unpaid worker grants no progress during a +3h jump.")
+	plot._process(2.0)
+	_check(_visible_dust_count(plot) == 0 and not plot._has_dust_activity(), "Expired construction cannot spawn new dust.")
 	var departure: Node2D = visuals.get_parent().get_node("WorkerDeparture/NearSpawn")
 	for _frame: int in range(4000):
 		if worker.physical_approach.position.distance_to(departure.global_position) <= 0.1:
@@ -130,6 +143,8 @@ func _run() -> void:
 	_check(worker.physical_approach.get("arrived", false) and bar.material == null, "Returning worker reaches the plot before progress turns active.")
 	TimeComponentManager.advance_minutes(30)
 	_check(bar.value > progress, "Construction resumes from the preserved value after renewal.")
+	plot._process(2.0)
+	_check(_visible_dust_count(plot) > 0, "Activity dust resumes only after paid physical return.")
 	await _capture("resumed")
 	_finish()
 
@@ -152,6 +167,7 @@ func _read_departure(content: Node, plot: Node, visuals: Node2D) -> void:
 	_check(plot.construction.phase == "building" and worker.is_payroll_blocked() and not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == -1,
 		"Continue retains building, expired contract and the pending departure pose.")
 	_check(progress > 0.0 and bar.material != null, "Continue retains partial progress and gray presentation.")
+	_check(_visible_dust_count(plot) == 0 and not plot._has_dust_activity(), "Continue starts the unpaid builder without activity dust.")
 	visuals.plot_presence.update(visuals, 0.1)
 	_check(worker.physical_approach.position.distance_to(pose) <= 2.401, "Fresh process continues bounded departure movement.")
 	var departure: Node2D = visuals.get_parent().get_node("WorkerDeparture/NearSpawn")
@@ -161,6 +177,8 @@ func _read_departure(content: Node, plot: Node, visuals: Node2D) -> void:
 		visuals.plot_presence.update(visuals, 0.1)
 	TimeComponentManager.advance_minutes(180)
 	_check(is_equal_approx(bar.value, progress), "Continue plus +3h cannot advance expired construction.")
+	plot._process(2.0)
+	_check(_visible_dust_count(plot) == 0, "Continue and +3h keep activity dust stopped.")
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	Inventory.add_item("shekel", price)
 	_check(WorkerDatabase.renew_contract(WORKER_ID, 3), "Normal renewal works after process restart.")
