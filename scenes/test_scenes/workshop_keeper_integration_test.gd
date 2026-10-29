@@ -18,6 +18,19 @@ func load_content() -> void:
 	_expect(plot.has_node("Craftsman") and not other.has_node("Craftsman") and other.get_node("Board").visible, "Only the main workshop replaces its board with the keeper.")
 	_expect(plot.get_worker_entry_position() == plot.global_position + Vector2(0, 24) and plot.construction.worker_entry_position == plot.get_worker_entry_position(), "Native authored schema8 feet target remains unchanged.")
 	var keeper: Node2D = plot.get_node("Craftsman")
+	var original_phase: String = plot.construction.phase
+	var original_inventory: Dictionary = Inventory.items.duplicate(true)
+	# Presentation-only stage probes do not start work or invoke payment actions.
+	for phase: String in ["uncleared", "clearing", "empty", "building"]:
+		plot.construction.phase = phase
+		plot._sync_construction()
+		_expect(not plot.get_node("InteractableLabelComponent/HammerIcon").visible
+			and plot.get_node("InteractableLabelComponent/InteractionKey").visible
+			and plot.get_node("InteractableLabelComponent/InteractionKey").text == "E",
+			"Keeper uses E without hand/hammer in phase " + phase)
+	plot.construction.phase = original_phase
+	plot._sync_construction()
+	_expect(Inventory.items == original_inventory, "Prompt stage refresh never charges inventory or starts work.")
 	var saved_player_position: Vector2 = player.global_position
 	for offset: Vector2 in [Vector2(-20, 9), Vector2(-0.5, 20), Vector2(20, 9), Vector2(0.5, 20)]:
 		player.global_position = keeper.global_position + offset
@@ -119,6 +132,8 @@ func _drive_arrival(worker_id: String = ARRIVAL_WORKER) -> void:
 		_assert_art(vase, "res://assets/objects/vase_type_1.png", Vector2i(16, 16), "e815ef10ae5f197d24d5ccbe64f49a11425404c580065f272cc193c987116a63")
 		_assert_art(barrel, "res://assets/objects/barrel.png", Vector2i(16, 16), "58cd76e7d54d573787df34962d27a691fd66e787cd79dd5eacc2bbf6e926b36e")
 		_expect(arrival_plot.construction.worker_entry_position == arrival_plot.global_position + Vector2(0, 24), "Built production preserves the exact schema8 feet target.")
+		_expect(arrival_plot.get_node("BuiltWorkshop/InteractableLabelComponent/NinePatchRect/Label").text == "E",
+			"Completed workshop preserves its native E prompt.")
 
 func _finish_arrival() -> void:
 	_finish_keeper.call_deferred()

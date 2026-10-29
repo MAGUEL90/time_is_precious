@@ -1,8 +1,15 @@
 extends RefCounted
 
+const VISIBLE_BOUNDS = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd")
+const PROMPT_GAP: float = 4.0
+
 ## Contact geometry follows the authored art, without changing its visible pixels.
 static func configure(site: Node2D) -> void:
 	var icon: Sprite2D = site.get_node_or_null("ResourceIcon")
+	if site.name in [&"ClaySiteA", &"ReedSite"] and site.has_node("Label"):
+		site.get_node("Label").hide()
+	if icon != null and icon.texture != null:
+		position_prompt(site, icon)
 	if icon == null or icon.texture == null or site.has_node("ResourceBase"):
 		return
 	var image: Image = icon.texture.get_image()
@@ -38,3 +45,21 @@ static func configure(site: Node2D) -> void:
 	collision.polygon = points
 	body.add_child(collision)
 	site.add_child(body)
+
+static func position_prompt(site: Node2D, icon: Sprite2D) -> void:
+	var prompt: InteractableLabelComponent = site.get_node_or_null("InteractPrompt")
+	if prompt == null:
+		return
+	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
+	if not art.has_area():
+		return
+	var current: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	var shift: Vector2
+	if site.name in [&"ClaySiteA", &"WoodSite", &"ReedSite"]:
+		shift = Vector2(art.end.x + PROMPT_GAP - current.position.x, art.position.y - PROMPT_GAP - current.end.y)
+	elif site.name in [&"StrawSite", &"WaterSite"]:
+		shift = Vector2(art.position.x - PROMPT_GAP - current.end.x, art.position.y - PROMPT_GAP - current.end.y)
+	else:
+		shift = Vector2(art.get_center().x - current.get_center().x, art.position.y - PROMPT_GAP - current.end.y)
+	prompt.position += site.global_transform.affine_inverse().basis_xform(shift)
+	prompt.position_offset = prompt.position

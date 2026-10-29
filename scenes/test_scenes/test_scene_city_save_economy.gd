@@ -47,11 +47,18 @@ func _run() -> void:
 
 	# Hires and assignments begin during today's shift. Advance the real clock so
 	# the worksite gathers natural output and the real Hauler takes it into cargo.
+	var visuals: Node = runtime.get_node("WorkerVisuals")
 	var deadline: int = (TimeComponentManager.current_day * 1440) + 15 * 60
 	while (not runtime.daily.hauling.routes.has(HAULER_ID)
 		or str(runtime.daily.hauling.routes[HAULER_ID].phase) != "outbound") \
 		and _clock_minute() < deadline:
+		# Output begins only after the authored walk marks physical arrival.
+		for _frame: int in range(20):
+			visuals._process(0.05)
 		TimeComponentManager.advance_minutes(1)
+	var approaching_laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)
+	_expect(approaching_laborer != null and not approaching_laborer.physical_approach.is_empty() and approaching_laborer.physical_approach.arrived,
+		"The resource Laborer reaches the Wood Site before the cargo is gathered.")
 	_expect(runtime.daily.hauling.routes.has(HAULER_ID), "The hired Hauler starts a live trip from the assigned resource site.")
 	if not runtime.daily.hauling.routes.has(HAULER_ID):
 		await _finish()

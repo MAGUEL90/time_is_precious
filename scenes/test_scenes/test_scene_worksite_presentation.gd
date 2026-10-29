@@ -4,6 +4,8 @@ extends Node
 const CONTENT = preload("res://scenes/content_scene/content_scene.tscn")
 const PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
 const NAVIGATION = preload("res://scenes/content_scene/worksites/worksite_navigation.gd")
+const VISIBLE_BOUNDS = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd")
+const PROMPT = preload("res://scenes/components/interactable_label_component/interactable_label_component.tscn")
 const WORKER_ID: String = "worksite_presentation_fixture"
 var failures: int = 0
 var city: Node
@@ -27,6 +29,7 @@ func _run() -> void:
 	TimeComponentManager.current_hour = 11
 	TimeComponentManager.current_minute = 0
 	_test_contact_geometry()
+	_test_transformed_prompt()
 	city = CONTENT.instantiate()
 	add_child(city)
 	runtime = city.get_node("YSortWorld/WorkerRuntime")
@@ -42,6 +45,7 @@ func _run() -> void:
 		capture_camera.make_current()
 	await get_tree().physics_frame
 	_test_player_contacts()
+	_test_cosmetic_views()
 	runtime.daily.tool_requirement = Callable()
 	worker = WorkerData.new()
 	worker.worker_id = WORKER_ID
@@ -83,6 +87,7 @@ func _run() -> void:
 	var route: PackedVector2Array = runtime.worksite_navigation.route(runtime.player.global_position + Vector2(0, -4), drop.global_position)
 	_check(not route.is_empty() and runtime.worksite_navigation.is_clear(drop.global_position), "Reed drop route and endpoint clear authored solids")
 	_check(runtime._drop_daily_output(3, reed) and drop.quantity == 5, "Repeated reed output merges into the existing stack")
+	_check(not drop.get_node("QuantityLabel").visible and drop.get_node("QuantityLabel").text == "x5", "Merged ground count stays hidden while its exact text/data remain")
 	visuals._process(0.05)
 	await _capture("reed-ground-output", reed.global_position)
 	await _walk_to_pickup(drop, route)
@@ -97,6 +102,96 @@ func _run() -> void:
 	WorkerDatabase.workers_by_id.erase(WORKER_ID)
 	print("WorksitePresentation: ", "PASS" if failures == 0 else "FAIL", " failures=", failures)
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _test_cosmetic_views() -> void:
+	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
+		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
+		var label: Label = site.get_node("Label")
+		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
+		var art: Rect2 = VISIBLE_BOUNDS.measure(site.get_node("ResourceIcon"))
+		var bounds: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+		var gap: float = bounds.position.x - art.end.x if site_id in ["ClaySiteA", "WoodSite", "ReedSite"] else art.position.x - bounds.end.x
+		_check(is_equal_approx(gap, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), site_id + ": E sits diagonally above the art without covering the site above")
+		if site_id in ["ClaySiteA", "ReedSite"]:
+			_check(not label.visible and not label.text.is_empty(), site_id + ": world name is hidden and its menu text retained")
+			runtime._open_site_panel(site)
+			_check(runtime.inspector.visible and runtime.inspector.title.text == label.text, site_id + ": native menu retains its title from the hidden world label")
+			runtime._close_inspector()
+		else:
+			_check(label.visible, site_id + ": other world label remains visible")
+	for item_id: String in ["clay_lump", "wood_log", "reed_bundle", "straw_bundle", "water_jar"]:
+		_check(runtime._drop_output_at(7, Vector2(140, 100), Callable(), item_id), item_id + ": content ground output creates normally")
+		var drop: Node = runtime.get_node("GroundOutput").get_child(-1)
+		_check(drop.quantity == 7 and drop.get_node("QuantityLabel").text == "x7" and not drop.get_node("QuantityLabel").visible, item_id + ": only the world count is hidden")
+		drop.free()
+	var key: StringName = runtime.RESOURCE_STOCK_META
+	var had_stock: bool = WorkStateRuntime.has_meta(key)
+	var prior_stock: Variant = WorkStateRuntime.get_meta(key) if had_stock else null
+	WorkStateRuntime.set_meta(key, {"day": TimeComponentManager.current_day, "sites": {}, "storages": {}, "ground": [{"item_id": "wood_log", "quantity": 9, "position": Vector2(140, 100), "site": ""}]})
+	runtime._restore_resource_stock()
+	var restored: Node = runtime.get_node("GroundOutput").get_child(-1)
+	_check(restored.quantity == 9 and restored.get_node("QuantityLabel").text == "x9" and not restored.get_node("QuantityLabel").visible, "Restored content pile preserves its quantity and hides its world count")
+	restored.free()
+	if had_stock:
+		WorkStateRuntime.set_meta(key, prior_stock)
+	else:
+		WorkStateRuntime.remove_meta(key)
+
+func _test_transformed_prompt() -> void:
+	var site := Marker2D.new()
+	site.position = Vector2(37, 11)
+	site.scale = Vector2(2, 1.5)
+	var icon := Sprite2D.new()
+	icon.name = "ResourceIcon"
+	var image := Image.create(48, 32, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	image.fill_rect(Rect2i(35, 18, 7, 10), Color.WHITE)
+	image.fill_rect(Rect2i(19, 18, 10, 5), Color.WHITE)
+	icon.texture = ImageTexture.create_from_image(image)
+	icon.region_enabled = true
+	icon.region_rect = Rect2(16, 0, 32, 32)
+	icon.hframes = 2
+	icon.vframes = 2
+	icon.frame_coords = Vector2i(1, 1)
+	icon.flip_h = true
+	icon.flip_v = true
+	icon.offset = Vector2(5, -3)
+	icon.position = Vector2(10, -20)
+	icon.scale = Vector2(1.5, 2)
+	site.add_child(icon)
+	var prompt: InteractableLabelComponent = PROMPT.instantiate()
+	prompt.name = "InteractPrompt"
+	site.add_child(prompt)
+	add_child(site)
+	PRESENTATION.position_prompt(site, icon)
+	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
+	_check(art.is_equal_approx(Rect2(66, -40, 21, 30)), "Prompt bounds use the actual flipped region frame, alpha margins, offset and inherited scale")
+	var bounds: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "Transformed art retains a centered E and four logical pixel gap")
+	var position_before: Vector2 = prompt.position
+	icon.frame_coords = Vector2i(0, 1)
+	icon.flip_h = false
+	icon.flip_v = false
+	PRESENTATION.position_prompt(site, icon)
+	art = VISIBLE_BOUNDS.measure(icon)
+	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(prompt.position != position_before and is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "A different visible frame receives its own correct prompt anchor")
+	site.rotation_degrees = 33.0
+	PRESENTATION.position_prompt(site, icon)
+	art = VISIBLE_BOUNDS.measure(icon)
+	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(is_equal_approx(art.position.y - bounds.end.y, 4.0) and is_equal_approx(art.get_center().x, bounds.get_center().x), "Rotated nonuniformly scaled site keeps the E centered above visible art")
+	site.name = "ClaySiteA"
+	PRESENTATION.position_prompt(site, icon)
+	art = VISIBLE_BOUNDS.measure(icon)
+	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(is_equal_approx(bounds.position.x - art.end.x, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), "Rotated scaled left-column site keeps E clear of the art")
+	site.name = "StrawSite"
+	PRESENTATION.position_prompt(site, icon)
+	art = VISIBLE_BOUNDS.measure(icon)
+	bounds = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	_check(is_equal_approx(art.position.x - bounds.end.x, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), "Rotated scaled right-column site keeps E clear of the art")
+	site.free()
 
 func _walk_to_pickup(drop: Node2D, route: PackedVector2Array) -> void:
 	var player: Player = runtime.player

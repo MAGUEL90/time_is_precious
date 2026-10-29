@@ -119,6 +119,13 @@ func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	$GroundOutput.get_child(-1).set_meta("daily_site", str(site.name))
 	return true
 
+func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Callable = Callable(), resource_id: String = "clay_lump") -> bool:
+	var dropped: bool = super._drop_output_at(quantity, drop_position, return_remainder, resource_id)
+	if dropped:
+		# Keep the count node/text for merging, pickup feedback and restored piles.
+		$GroundOutput.get_child(-1).get_node("QuantityLabel").hide()
+	return dropped
+
 # Physical records use feet coordinates; the visual's art origin is 16px above.
 func worker_destination(site_id: StringName, id: String) -> Vector2:
 	return site_slot_destination(site_id, daily.jobs[site_id].ids.find(id))

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_native"]
 [ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper_plot.gd" id="2_keeper"]
@@ -6,9 +6,24 @@
 [ext_resource type="Texture2D" path="res://assets/objects/vase_type_1.png" id="4_vase"]
 [ext_resource type="Texture2D" path="res://assets/objects/barrel.png" id="5_barrel"]
 [ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper.gd" id="6_actor"]
+[ext_resource type="Theme" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="7_prompt_theme"]
 
 [node name="WorkshopPlot" instance=ExtResource("1_native")]
 script = ExtResource("2_keeper")
+
+[node name="HammerIcon" parent="InteractableLabelComponent" index="0"]
+visible = false
+
+[node name="InteractionKey" type="Label" parent="InteractableLabelComponent"]
+layout_mode = 0
+offset_right = 16.0
+offset_bottom = 16.0
+mouse_filter = 2
+theme = ExtResource("7_prompt_theme")
+theme_type_variation = &"PanelTextSmall"
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="FinishedBuilding" type="Node2D" parent="."]
 visible = false

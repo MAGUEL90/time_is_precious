@@ -29,9 +29,17 @@ func _run() -> void:
 		_finish_sleep_test()
 		return
 	_settle_needs()
+	var visuals: Node = runtime.get_node("WorkerVisuals")
 	var deadline: int = _clock_minute() + 1800
 	while (not runtime.hauling.routes.has(HAULER_ID) or runtime.hauling.routes[HAULER_ID].phase != "outbound") and _clock_minute() < deadline:
+		# One game minute is one real second: drive the same frame-based walk
+		# that marks physical arrival before advancing the work scheduler.
+		for _frame: int in range(20):
+			visuals._process(0.05)
 		TimeComponentManager.advance_minutes(1)
+	var laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)
+	_expect(laborer != null and not laborer.physical_approach.is_empty() and laborer.physical_approach.arrived,
+		"The assigned Laborer physically reaches the Wood Site before producing.")
 	_expect(runtime.hauling.routes.has(HAULER_ID) and runtime.hauling.routes[HAULER_ID].cargo.quantity == 3, "A real Hauler is carrying three wood logs before the home visit.")
 	city_storage.items["stone"] = 20
 	city_storage.items["wood_log"] = 5
