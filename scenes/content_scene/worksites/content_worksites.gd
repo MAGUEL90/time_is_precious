@@ -86,17 +86,22 @@ func _refresh_navigation() -> void:
 
 func _watch_navigation_changes(node: Node) -> void:
 	if node.has_method("get_built_footprints") and node.construction != null:
-		var callback := Callable(self, "_queue_navigation_refresh").bind(node)
+		# Construction outlives a city plot while the player is at home. Bind its
+		# stable ID so a later signal never carries a freed Node argument.
+		var callback := Callable(self, "_queue_navigation_refresh").bind(node.get_instance_id())
 		if not node.construction.changed.is_connected(callback):
 			node.construction.changed.connect(callback)
 		navigation_phases[node.get_instance_id()] = node.construction.phase
 	for child: Node in node.get_children():
 		_watch_navigation_changes(child)
 
-func _queue_navigation_refresh(plot: Node) -> void:
-	if navigation_phases.get(plot.get_instance_id(), "") == plot.construction.phase:
+func _queue_navigation_refresh(plot_id: int) -> void:
+	var plot: Node = instance_from_id(plot_id) as Node
+	if plot == null or not plot.is_inside_tree():
 		return
-	navigation_phases[plot.get_instance_id()] = plot.construction.phase
+	if navigation_phases.get(plot_id, "") == plot.construction.phase:
+		return
+	navigation_phases[plot_id] = plot.construction.phase
 	# Phase owners defer collider toggles; collect their final active geometry.
 	_refresh_navigation.call_deferred()
 
@@ -186,6 +191,16 @@ func _open_content_preview() -> void:
 
 func _can_open_worker_hub() -> bool:
 	return player.can_move and not player.is_sleeping and not player.is_collapsing and not _working and not inspector.visible and not inventory_ui.visible and not get_tree().paused and not SceneTransition.is_transitioning
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	if is_instance_valid(_highlighted_site):
+		var prompt: InteractableLabelComponent = _highlighted_site.get_node("InteractPrompt")
+		if prompt.visible:
+			if _highlighted_site.name in [&"ClaySiteA", &"WoodSite", &"ReedSite"]:
+				prompt.place_below_player(player)
+			else:
+				prompt.place_above_player(player)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Existing map interactables (workshop, pickups, etc.) retain ownership of E.

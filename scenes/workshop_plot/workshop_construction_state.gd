@@ -77,8 +77,9 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 			message = "Missing materials in Inventory."
 	if phase != "empty":
 		message = "Clear the site first." if phase in ["uncleared", "clearing"] else ("Construction in progress." if phase == "building" else "Workshop ready.")
-	if phase == "building" and _all_workers_payroll_blocked():
-		message = "Waiting for city payment at 08:00."
+	var payroll_blocked: bool = phase == "building" and _all_workers_payroll_blocked()
+	if payroll_blocked:
+		message = "Contract expired - renew in Worker Hub."
 	elif _starting:
 		message = "Starting construction."
 	var duration: int = ceili(float(SOLO_MINUTES) / selected_ids.size()) if not selected_ids.is_empty() else 0
@@ -88,7 +89,7 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		progress = clampf(float(_latest_time - started_at) / maxi(completes_at - started_at, 1), 0.0, 1.0)
 	elif phase == "built":
 		progress = 1.0
-	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size()}
+	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
 
 func start_build(selected_ids: Array[String]) -> Dictionary:
 	var preview: Dictionary = get_preview(selected_ids)
@@ -189,12 +190,13 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 			message = "Assign player or one worker."
 		else:
 			message = _worker_reason(ids[0])
-	if phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked():
-		message = "Waiting for city payment at 08:00."
+	var payroll_blocked: bool = phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked()
+	if payroll_blocked:
+		message = "Contract expired - renew in Worker Hub."
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "clearing" else clearing_remaining
 	var progress: float = 1.0 - float(remaining) / CLEARING_MINUTES
 	return {"can_start": message.is_empty(), "message": message, "duration_minutes": clearing_remaining,
-		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": 1}
+		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": 1, "payroll_blocked": payroll_blocked}
 
 func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 	var preview: Dictionary = get_clearing_preview(ids, use_player)

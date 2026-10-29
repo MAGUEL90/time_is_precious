@@ -212,9 +212,9 @@ func _sync_construction() -> void:
 			add_child(workshop)
 			_show_table_resource(workshop)
 	elif construction.phase == "clearing":
-		$Label.text = "Clearing"
+		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing"
 	elif construction.phase == "building":
-		$Label.text = "Building"
+		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
 	else:
 		$Label.text = "" if construction.phase == "uncleared" else "Workshop Site"
 
@@ -239,7 +239,9 @@ func _sync_build_progress() -> void:
 		add_child(splash)
 		splash.position = bar.position
 	bar.visible = construction.phase in ["clearing", "building"]
-	$Label.visible = not bar.visible and _completion_bar_remaining <= 0.0
+	var blocked: bool = bar.visible and construction._all_workers_payroll_blocked() and not construction.clearing_by_player
+	$Label.position = Vector2(-42, -44) if blocked else Vector2(-42, -34)
+	$Label.visible = blocked or (not bar.visible and _completion_bar_remaining <= 0.0)
 
 func _show_table_resource(workshop: WorkShop) -> void:
 	# Sprite positions/scales belong to the authored scene. Recipes swap only

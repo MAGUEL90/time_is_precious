@@ -46,6 +46,7 @@ func _run() -> void:
 	await get_tree().physics_frame
 	_test_player_contacts()
 	_test_cosmetic_views()
+	await _test_active_prompt_positions()
 	runtime.daily.tool_requirement = Callable()
 	worker = WorkerData.new()
 	worker.worker_id = WORKER_ID
@@ -108,10 +109,7 @@ func _test_cosmetic_views() -> void:
 		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
 		var label: Label = site.get_node("Label")
 		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
-		var art: Rect2 = VISIBLE_BOUNDS.measure(site.get_node("ResourceIcon"))
-		var bounds: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-		var gap: float = bounds.position.x - art.end.x if site_id in ["ClaySiteA", "WoodSite", "ReedSite"] else art.position.x - bounds.end.x
-		_check(is_equal_approx(gap, 4.0) and is_equal_approx(art.position.y - bounds.end.y, 4.0), site_id + ": E sits diagonally above the art without covering the site above")
+		_check(prompt.label.text == "E", site_id + ": prompt keeps the native E action")
 		if site_id in ["ClaySiteA", "ReedSite"]:
 			_check(not label.visible and not label.text.is_empty(), site_id + ": world name is hidden and its menu text retained")
 			runtime._open_site_panel(site)
@@ -136,6 +134,45 @@ func _test_cosmetic_views() -> void:
 		WorkStateRuntime.set_meta(key, prior_stock)
 	else:
 		WorkStateRuntime.remove_meta(key)
+
+func _test_active_prompt_positions() -> void:
+	var player: Player = runtime.player
+	var previous: Vector2 = player.global_position
+	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
+		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
+		player._set_current_interactable(null)
+		player.global_position = site.global_position + (Vector2(-18, 10) if site_id in ["ClaySiteA", "WoodSite", "ReedSite"] else Vector2(18, 10))
+		runtime._process(0.0)
+		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
+		_check(runtime._highlighted_site == site and prompt.visible, site_id + ": actual nearby worksite owns the visible E")
+		_check_active_player_prompt(prompt, player, site_id, site_id in ["ClaySiteA", "WoodSite", "ReedSite"])
+		await _capture("active-E-" + site_id, player.global_position)
+	var storage: Node = runtime.get_node("CityStorageArea")
+	player.global_position = storage.global_position + Vector2(0, 8)
+	for _frame: int in range(3):
+		await get_tree().physics_frame
+	storage._on_body_entered(player)
+	player._refresh_current_interactable()
+	storage._process(0.0)
+	var storage_prompt: InteractableLabelComponent = storage.interactable_label_component
+	_check(player.current_interactable == storage and storage_prompt.visible, "City Storage access owns the visible E")
+	_check_active_player_prompt(storage_prompt, player, "CityStorage")
+	await _capture("active-E-CityStorage", player.global_position)
+	player.global_position = previous
+	player._set_current_interactable(null)
+
+func _check_active_player_prompt(prompt: InteractableLabelComponent, player: Player, label: String, below: bool = false) -> void:
+	var art: Rect2 = VISIBLE_BOUNDS.measure(player.get_node("PlayerVisual"))
+	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
+	var world_gap: float = box.position.y - art.end.y if below else art.position.y - box.end.y
+	_check(is_equal_approx(art.get_center().x, box.get_center().x) and is_equal_approx(world_gap, 4.0), label + ": active E is centered four world pixels from player art")
+	var canvas: Transform2D = get_viewport().get_canvas_transform()
+	var art_screen: Rect2 = canvas * art
+	var box_screen: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
+	var screen_gap: float = box_screen.position.y - art_screen.end.y if below else art_screen.position.y - box_screen.end.y
+	_check(is_equal_approx(art_screen.get_center().x, box_screen.get_center().x)
+		and is_equal_approx(screen_gap, 4.0 * canvas.get_scale().y), label + ": camera canvas preserves the same E gap")
+	print("ActivePrompt ", JSON.stringify({"owner": label, "player": str(player.global_position), "world_box": str(box), "canvas_box": str(box_screen)}))
 
 func _test_transformed_prompt() -> void:
 	var site := Marker2D.new()
