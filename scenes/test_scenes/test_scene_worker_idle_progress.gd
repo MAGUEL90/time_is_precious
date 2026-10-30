@@ -24,6 +24,22 @@ func _visible_dust_count(plot: Node) -> int:
 			count += 1
 	return count
 
+func _check_returning_dust(plot: Node, visuals: Node2D, worker: WorkerData, bar: TextureProgressBar) -> void:
+	var distance: float = worker.physical_approach.position.distance_to(worker.physical_approach.target)
+	var step: float = minf(0.1, distance / (24.0 * 8.0))
+	for _index: int in range(3):
+		_check(not worker.physical_approach.arrived and bar.material != null, "A returning worker keeps the progress bar inactive.")
+		plot._process(2.0)
+		_check(not plot._has_dust_activity() and _visible_dust_count(plot) == 0, "Renewed workers produce no dust while still travelling.")
+		visuals.plot_presence.update(visuals, step)
+
+func _capture_animation_frame(directory: String, index: int) -> void:
+	await RenderingServer.frame_post_draw
+	var frame: Image = get_viewport().get_texture().get_image()
+	_check(frame.get_size() == Vector2i(400, 225), "Dust animation uses the native logical viewport.")
+	if frame.get_size() == Vector2i(400, 225):
+		_check(frame.save_png(directory.path_join("frame-%04d.png" % index)) == OK, "Save dust animation frame.")
+
 func _capture(stage: String) -> void:
 	var directory: String = OS.get_environment("TIP_MVP_CAPTURE_DIR")
 	if directory.is_empty() or DisplayServer.get_name() == "headless":
@@ -134,21 +150,41 @@ func _run() -> void:
 	visuals.plot_presence.update(visuals, 0.0)
 	_check(worker.physical_approach.position.distance_to(departure.global_position) <= 0.1 and not visuals.actors[WORKER_ID].visible, "Unpaid worker exits the plot along the authored route.")
 	await _capture("paused")
+	var animation_dir: String = OS.get_environment("TIP_DUST_ANIMATION_DIR")
+	var recording: bool = not animation_dir.is_empty() and DisplayServer.get_name() != "headless"
+	var animation_frame: int = 0
+	if recording:
+		DirAccess.make_dir_recursive_absolute(animation_dir)
+		for _frame: int in range(5):
+			await _capture_animation_frame(animation_dir, animation_frame)
+			animation_frame += 1
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	Inventory.add_item("shekel", price)
 	_check(WorkerDatabase.renew_contract(WORKER_ID, 3), "The normal paid renewal succeeds.")
 	visuals.plot_presence.update(visuals, 0.1)
 	_check(visuals.actors[WORKER_ID].visible and bar.material != null, "Renewed worker returns visibly while progress remains gray.")
+	_check_returning_dust(plot, visuals, worker, bar)
 	await _capture("returning")
 	for _frame: int in range(4000):
 		if worker.physical_approach.get("arrived", false):
 			break
+		plot._process(0.1)
+		_check(not plot._has_dust_activity() and _visible_dust_count(plot) == 0 and bar.material != null,
+			"Dust stays stopped and progress stays gray throughout the renewed return.")
 		visuals.plot_presence.update(visuals, 0.1)
+		if recording:
+			await _capture_animation_frame(animation_dir, animation_frame)
+			animation_frame += 1
 	_check(worker.physical_approach.get("arrived", false) and bar.material == null, "Returning worker reaches the plot before progress turns active.")
 	TimeComponentManager.advance_minutes(30)
 	_check(bar.value > progress, "Construction resumes from the preserved value after renewal.")
 	plot._process(2.0)
 	_check(_visible_dust_count(plot) > 0, "Activity dust resumes only after paid physical return.")
+	if recording:
+		for _frame: int in range(10):
+			plot._process(0.1)
+			await _capture_animation_frame(animation_dir, animation_frame)
+			animation_frame += 1
 	await _capture("resumed")
 	_finish()
 
@@ -186,9 +222,14 @@ func _read_departure(content: Node, plot: Node, visuals: Node2D) -> void:
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	Inventory.add_item("shekel", price)
 	_check(WorkerDatabase.renew_contract(WORKER_ID, 3), "Normal renewal works after process restart.")
+	visuals.plot_presence.update(visuals, 0.1)
+	_check_returning_dust(plot, visuals, worker, bar)
 	for _frame: int in range(4000):
 		if worker.physical_approach.arrived:
 			break
+		plot._process(0.1)
+		_check(not plot._has_dust_activity() and _visible_dust_count(plot) == 0 and bar.material != null,
+			"After Continue, dust stays stopped and progress stays gray throughout the renewed return.")
 		visuals.plot_presence.update(visuals, 0.1)
 	_check(worker.physical_approach.arrived and bar.material == null, "Renewed worker physically returns after Continue.")
 	TimeComponentManager.advance_minutes(30)
