@@ -25,6 +25,9 @@ Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and
 | `test_scene_contract_continue.tscn` | Fixture: separate processes with `-- --contract-phase=write`, `read`, `readrenew`, `legacy-read`, `legacy-renew-read`, `assignment-write`, `assignment-read` in that order |
 | `test_scene_contract_journey.tscn` | Normal New Game journey with active needs and earned income: `-- --journey-phase=write`, then `read` in separate processes |
 | `test_scene_contract_ui_review.tscn` | Continue the earned journey checkpoint; `-- --contract-ui-phase=prepare`, `capture` (rendered), `write`, `read`; see driver for checkpoint paths |
+| `test_scene_content_prepaid_ui.tscn` | Job Board candidate selection, 3/6/9 confirmation, cancellation, quote changes, focus and atomic batch payment |
+| `test_scene_job_board_closed_feedback.tscn` | Actual-map E interaction at 07:59/08:00/16:59/17:00, feedback animation/restart and unchanged E position; optional rendered frames via `TIP_JOB_BOARD_ANIMATION_DIR` |
+| `test_scene_worker_renew_currency.tscn` | Renewal price icon/layout, confirmation/cancellation, changed-quote reconfirmation and Fire confirmation |
 
 Older seven-day city-payroll fixtures/journeys document the superseded rules;
 they are not acceptance tests for wallet contracts. Older next-day commute/

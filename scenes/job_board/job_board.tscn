@@ -1,10 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://b72ntkdkju1bx"]
+[gd_scene load_steps=8 format=3 uid="uid://b72ntkdkju1bx"]
 
 [ext_resource type="Script" uid="uid://8nudfg4yadui" path="res://scenes/job_board/job_board.gd" id="1_8wvv0"]
 [ext_resource type="Resource" uid="uid://dtwxjv6s04vaa" path="res://resources/job_data/mudbrick_make.tres" id="2_cjf2a"]
 [ext_resource type="PackedScene" uid="uid://cmtj5xw3qf6w3" path="res://scenes/components/interactable_component/interactable_component.tscn" id="2_dpx32"]
 [ext_resource type="Texture2D" uid="uid://b760kxx2baat3" path="res://assets/objects/job_board.png" id="3_0klxr"]
 [ext_resource type="PackedScene" uid="uid://dyf8mdmpl00a" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3_cjf2a"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="4_gtheme"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8wvv0"]
 radius = 18.681541
@@ -25,3 +26,23 @@ offset = Vector2(0, -12)
 shape = SubResource("CircleShape2D_8wvv0")
 
 [node name="InteractableLabelComponent" parent="." instance=ExtResource("3_cjf2a")]
+
+[node name="ClosedFeedbackLabel" type="Label" parent="."]
+visible = false
+z_index = 11
+offset_left = -80.0
+offset_top = -42.0
+offset_right = 80.0
+offset_bottom = -32.0
+theme = ExtResource("4_gtheme")
+theme_type_variation = &"HudLabelSub"
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.2, 0.14, 0.1, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+text = "akses job board jam 08.00 -17.00"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 0
+mouse_filter = 2

@@ -103,6 +103,8 @@ func hire() -> void:
 			panel.applicant_list.select(index)
 			panel.applicant_list.item_selected.emit(index)
 			await press(panel.hire_button)
+			_expect(panel.confirmation_open and Inventory.items.get("shekel", 0) == before, "Opening contract choices does not spend earned funds")
+			await press(panel.confirm_hire_button)
 			break
 	worker = WorkerDatabase.get_worker_data("initial_workshop_laborer")
 	_expect(worker != null and not worker.is_payroll_blocked(), "Normal hire can work immediately")

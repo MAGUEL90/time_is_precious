@@ -40,8 +40,13 @@ func _run() -> void:
 	Inventory.items.clear()
 	_seed("first", WorkerData.Profession.LABORER, 0.62)
 	_seed("second", WorkerData.Profession.HAULER, 0.87)
+	var long_name: String = "A Very Long Worker Name Preserved In The Save"
+	var long_candidate: CitizenData
 	for i: int in range(5):
-		_seed("scroll_%d" % i, WorkerData.Profession.LABORER, 0.5)
+		var candidate: CitizenData = _seed("scroll_%d" % i, WorkerData.Profession.LABORER, 0.5)
+		if i == 0:
+			candidate.display_name = long_name
+			long_candidate = candidate
 	board = BOARD.instantiate()
 	add_child(board)
 	board.open()
@@ -51,27 +56,63 @@ func _run() -> void:
 	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the board does not hire or charge.")
 	_expect(board.cards[0].name_label.text == "Fixture first" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
 	_expect(board.cards[0].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
+	_expect(board.feedback_label.text.is_empty(), "Remaining-time feedback is absent on open.")
+	_expect(not board.wallet_label.text.contains("Shekel") and not board.wallet_label.text.contains("Hours"), "Wallet and hours text do not appear in the menu.")
+	_expect(board.cards[2].name_label.text != long_name and board.cards[2].name_label.tooltip_text == long_name and long_candidate.display_name == long_name, "Only the long displayed name is shortened; identity and tooltip retain the original.")
+	_expect(board.cards[2].name_label.get_global_rect().end.x <= board.cards[2].role_label.get_global_rect().position.x, "Long display name does not overlap the role.")
 	await _capture("job-board-initial")
+	board.hire_button.pressed.emit()
+	_expect(board.confirmation_open and board.confirmation_layer.visible, "Hire opens the duration and confirmation panel.")
+	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the confirmation panel does not hire or charge.")
+	_expect(board.duration_buttons.size() == 3, "Only 3, 6, and 9-day buttons are offered.")
+	await get_tree().process_frame
+	_expect(board.selected_names_container.get_child_count() == 1, "Selected name appears in the confirmation panel.")
+	_expect(board.selected_names_container.get_global_rect().position.x < board.duration_button_container.get_global_rect().position.x, "Names are to the left of duration buttons.")
+	_expect(board.duration_buttons[0].has_focus(), "The selected duration has keyboard focus on opening.")
+	for step: int in range(8):
+		var focus_event := InputEventAction.new()
+		focus_event.action = "ui_focus_next"
+		focus_event.pressed = true
+		get_viewport().push_input(focus_event)
+		focus_event = InputEventAction.new()
+		focus_event.action = "ui_focus_next"
+		get_viewport().push_input(focus_event)
+		await get_tree().process_frame
+		var focus: Control = get_viewport().gui_get_focus_owner()
+		_expect(focus != null and board.confirmation_panel.is_ancestor_of(focus), "Keyboard focus stays within the open confirmation panel.")
+	await _capture("job-board-confirm-single")
 	for option: int in range(3):
-		board.contract_days_option.select(option)
-		board.contract_days_option.item_selected.emit(option)
 		var days: int = WorkerDatabase.CONTRACT_DAYS[option]
-		_expect(board.cards[0].wage_label.text == "%d / %dd" % [2 * (option + 1), days], "Laborer card shows the selected package price.")
-		_expect(board.cards[1].wage_label.text == "%d / %dd" % [3 * (option + 1), days], "Hauler card shows its own profession package price.")
-		_expect(board.quote_label.text.contains("%d-day prepaid: %d" % [days, 2 * (option + 1)]), "Native quote follows 3/6/9 duration selection.")
+		_expect(int(board.duration_buttons[option].get_meta("contract_days")) == days, "A duration button maps to the existing allowed duration.")
+		board.duration_buttons[option].pressed.emit()
+		_expect(board.cards[0].wage_label.text == str(2 * (option + 1)), "Laborer card shows its price without trailing duration text.")
+		_expect(board.cards[1].wage_label.text == str(3 * (option + 1)), "Hauler card shows its own profession price.")
+		_expect(board.confirm_quote_amount_label.text == str(2 * (option + 1)) and board.confirm_quote_icon.visible, "The quoted price and coin are visible before confirmation.")
+		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
+	board.cancel_hire_button.pressed.emit()
+	_expect(not board.confirmation_open and board.visible and WorkerDatabase.workers_by_id.is_empty(), "Cancel returns to the board without a hire.")
 	board.cards[1].selection_button.set_pressed(true)
 	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0, 1]), "Checkboxes select independently.")
-	_expect(board.quote_label.text.contains("2 workers | 9-day prepaid: 15"), "Batch quote totals the selected packages.")
-	await _capture("job-board-selected-nine-day-batch")
-	board.cards[0].selection_button.set_pressed(false)
-	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([1]), "Toggling one preserves the other.")
-	board.cards[1].selection_button.set_pressed(false)
-	_expect(board.applicant_list.get_selected_items().is_empty() and board.hire_button.disabled, "Toggling off clears selection and disables Hire.")
-	board.cards[0].selection_button.set_pressed(true)
-	board.cards[1].selection_button.set_pressed(true)
+	board.hire_button.pressed.emit()
+	_expect(board.confirm_quote_amount_label.text == "15" and board.selected_names_container.get_child_count() == 2, "Nine-day batch quote totals the selected candidates.")
+	await _capture("job-board-confirm-batch")
+	var cancel := InputEventAction.new()
+	cancel.action = "ui_cancel"
+	cancel.pressed = true
+	board._unhandled_input(cancel)
+	_expect(not board.confirmation_open and board.visible and Inventory.items.is_empty(), "Escape backs out of the panel without charging.")
+	board.hire_button.pressed.emit()
+	Inventory.items["shekel"] = 100
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3
+	board.confirm_hire_button.pressed.emit()
+	_expect(board.confirmation_open and board.confirm_quote_amount_label.text == "18" and Inventory.items.get("shekel", 0) == 100 and WorkerDatabase.workers_by_id.is_empty(), "A changed quote requires a fresh confirmation without charging.")
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 2
+	board.confirm_hire_button.pressed.emit()
+	_expect(board.confirmation_open and board.confirm_quote_amount_label.text == "15" and Inventory.items.get("shekel", 0) == 100, "A second changed quote also requires review.")
 	Inventory.items["shekel"] = 14
-	board._on_hire_button_pressed()
-	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.get("shekel", 0) == 14, "Insufficient batch funds hire none and charge nothing.")
+	board.confirm_hire_button.pressed.emit()
+	_expect(board.confirmation_open and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.get("shekel", 0) == 14, "Insufficient batch funds hire none and charge nothing.")
+	_expect(not board.confirmation_feedback_label.text.is_empty(), "An unsuccessful hire supplies contextual feedback.")
 	await _capture("job-board-insufficient-batch")
 	Inventory.items["shekel"] = 15
 	observed_ids = PackedStringArray(["first", "second"])
@@ -79,29 +120,47 @@ func _run() -> void:
 	expected_workers = 2
 	Inventory.items_changed.connect(_observe_batch)
 	WorkerDatabase.payroll_changed.connect(_observe_batch)
-	board._on_hire_button_pressed()
+	board.confirm_hire_button.pressed.emit()
 	Inventory.items_changed.disconnect(_observe_batch)
 	WorkerDatabase.payroll_changed.disconnect(_observe_batch)
 	_expect(callbacks == 2, "UI batch notifies once per signal with reentrant clicks blocked.")
 	var hired: WorkerData = WorkerDatabase.get_worker_data("first")
 	_expect(hired != null and hired.payroll_contract_days == 9 and hired.payroll_paid_until_day == 109, "Exact funds hire the selected nine-day native contract.")
-	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.workers_by_id.size() == 2, "One Hire buys both contracts atomically.")
+	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.workers_by_id.size() == 2, "Final confirmation buys both contracts atomically once.")
 	Inventory.items["shekel"] = 100
-	board._on_hire_button_pressed()
-	_expect(int(Inventory.items.get("shekel", 0)) == 100 and WorkerDatabase.workers_by_id.size() == 2, "Repeated click with fresh funds cannot buy an unselected new batch.")
+	board.confirm_hire_button.pressed.emit()
+	_expect(int(Inventory.items.get("shekel", 0)) == 100 and WorkerDatabase.workers_by_id.size() == 2, "Stale repeated confirmation cannot buy another batch.")
+	board._refresh_applicants(false)
+	await get_tree().process_frame
+	for index: int in range(board.applicants.size()):
+		if board.applicants[index].citizen_id == "scroll_0":
+			board.applicant_list.deselect_all()
+			board.applicant_list.select(index)
+			board.candidate_scroll.ensure_control_visible(board.cards[index])
+			break
+	board._refresh_quote()
+	board.hire_button.pressed.emit()
+	await get_tree().process_frame
+	var displayed_name: Label = board.selected_names_container.get_child(0)
+	_expect(displayed_name.text != long_name and displayed_name.tooltip_text == long_name, "Confirmation shortens long names only for display.")
+	await _capture("job-board-confirm-long-name")
+	board.cancel_hire_button.pressed.emit()
+	var connections: int = board.confirm_hire_button.pressed.get_connections().size()
+	for cycle: int in range(4):
+		board.hire_button.pressed.emit()
+		_expect(board.confirmation_open, "Confirmation reopens on cycle %d." % cycle)
+		board.cancel_hire_button.pressed.emit()
+	_expect(board.confirm_hire_button.pressed.get_connections().size() == connections and Inventory.items.get("shekel", 0) == 100, "Repeated open and cancel neither duplicates signals nor charges.")
 	board.candidate_scroll.scroll_vertical = 80
 	var saved_scroll: int = board.candidate_scroll.scroll_vertical
 	board._poll_applicants()
-	_expect(saved_scroll > 0 and board.candidate_scroll.scroll_vertical == saved_scroll and board.candidate_scroll.clip_contents, "Polling preserves manual scroll and cards remain clipped.")
+	_expect(saved_scroll > 0 and board.candidate_scroll.scroll_vertical == saved_scroll and board.candidate_scroll.clip_contents, "Polling preserves manual scroll and clips cards.")
 	TimeComponentManager.current_hour = 17
 	board._refresh_quote()
-	_expect(board.hire_button.disabled and board.feedback_label.text == "Closed | Opens 08:00", "The native 17:00 closure is visible.")
+	_expect(board.hire_button.disabled and not board.feedback_label.text.contains("08:00"), "Closing time disables hiring without displaying menu hours.")
 	board.close_button.pressed.emit()
 	_expect(not board.visible and not get_tree().paused and board.refresh_timer.is_stopped(), "Top Close closes and resumes gameplay.")
 	board.open()
-	var cancel := InputEventAction.new()
-	cancel.action = "ui_cancel"
-	cancel.pressed = true
 	board._unhandled_input(cancel)
 	_expect(not board.visible and not get_tree().paused, "Escape closes after reopening.")
 	CitizenManager.citizens_by_id.clear()
@@ -151,6 +210,7 @@ func _observe_batch() -> void:
 	_expect(not WorkerDatabase.renew_contract(observed_ids[0], 3), "Reentrant renewal is rejected.")
 	if board._hiring:
 		board._on_hire_button_pressed()
+		board._confirm_hire()
 
 func _test_atomic_backend() -> void:
 	for days: int in WorkerDatabase.CONTRACT_DAYS:

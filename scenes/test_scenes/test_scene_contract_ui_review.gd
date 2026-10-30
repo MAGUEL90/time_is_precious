@@ -46,9 +46,9 @@ func _run() -> void:
 			return
 		var before: int = Inventory.items.get("shekel", 0)
 		var treasury: int = CityStockManager.treasury_shekel
-		panel.contract_days_option.select(1)
-		panel.contract_days_option.item_selected.emit(1)
-		_expect(panel.quote_label.text.contains("2 Shekel"), "Six-day Hauler package shows two Shekel")
+		panel.hire_button.pressed.emit()
+		panel._select_contract_days(6)
+		_expect(panel.confirm_quote_amount_label.text == "2" and panel.confirm_quote_icon.visible, "Six-day Hauler package shows two with the currency icon")
 		await _capture("job-board")
 		await press(panel.close_button)
 		_expect(Inventory.items.get("shekel", 0) == before, "Selecting package alone does not charge")

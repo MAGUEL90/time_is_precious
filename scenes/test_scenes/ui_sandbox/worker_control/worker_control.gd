@@ -50,7 +50,8 @@ var can_open: Callable = Callable()
 @onready var manage_goto_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/GotoButton
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
 @onready var renew_days_option: OptionButton = $Root/ManageWindow/Margin/MainVBox/RenewDaysOption
-@onready var renew_price_label: Label = $Root/ManageWindow/Margin/MainVBox/RenewPriceLabel
+@onready var renew_price_label: Label = $Root/ManageWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
+@onready var renew_price_icon: TextureRect = $Root/ManageWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
 @onready var manage_renew_button: Button = $Root/ManageWindow/Margin/MainVBox/RenewButton
 @onready var details_header_label: Label = $Root/DetailsWindow/Margin/MainVBox/Header/TitleLabel
 @onready var details_scroll: ScrollContainer = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll
@@ -64,6 +65,7 @@ const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visua
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
 const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
+const SHEKEL_ICON: Texture2D = preload("res://assets/ui/ui_icon/small_shekel_8x8.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
 	"Fire this worker?\nTheir assignment will end.\nTools return to City Storage."
@@ -90,6 +92,9 @@ var _confirmation_overlay: Control
 var _confirm_no_button: Button
 var _confirm_yes_button: Button
 var _confirm_label: Label
+var _confirm_cost_row: HBoxContainer
+var _confirm_cost_label: Label
+var _confirm_currency_icon: TextureRect
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
 var _needs_manager: Node
@@ -737,9 +742,13 @@ func _update_manage_controls(row: Dictionary) -> void:
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
 	var price: int = _renewal_price(row)
 	manage_renew_button.disabled = price <= 0
+	var show_currency: bool = _renew_feedback_text.is_empty() and price > 0
+	renew_price_label.autowrap_mode = TextServer.AUTOWRAP_OFF if show_currency else TextServer.AUTOWRAP_WORD_SMART
+	renew_price_label.custom_minimum_size.x = 0.0 if show_currency else 74.0
 	renew_price_label.text = _renew_feedback_text if not _renew_feedback_text.is_empty() else (
-		"Price: %d Shekel" % price if price > 0 else "Price unavailable"
+		"Price: %d" % price if price > 0 else "Price unavailable"
 	)
+	renew_price_icon.visible = show_currency
 
 
 func _on_renew_contract_changed() -> void:
@@ -783,11 +792,13 @@ func _request_manage_renew() -> void:
 	var price: int = _renewal_price(row)
 	if price <= 0:
 		renew_price_label.text = "Price unavailable"
+		renew_price_icon.hide()
 		return
 	_pending_renew_id = _manage_worker_id
 	_pending_renew_days = days
 	_pending_renew_price = price
-	_confirm_label.text = "Renew for %d paid days?\nCost: %d Shekel from your wallet now.\nManual renewal; no auto-renewal or refunds." % [days, price]
+	_confirm_label.text = "Renew for %d paid days?\nPaid from your wallet now.\nManual renewal; no auto-renewal or refunds." % days
+	_set_renew_confirmation_price(price)
 	_confirmation_overlay.show()
 	_confirm_no_button.grab_focus()
 
@@ -1020,6 +1031,7 @@ func _request_remove(row: Dictionary) -> void:
 	_pending_remove_row = row.duplicate()
 	_pending_renew_id = ""
 	_pending_renew_price = 0
+	_confirm_cost_row.hide()
 	_confirm_label.text = _remove_confirmation_message(row)
 	_confirmation_overlay.show()
 	_confirm_no_button.grab_focus()
@@ -1046,13 +1058,42 @@ func _build_confirmation() -> void:
 	_confirm_label = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
 	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_label.add_theme_font_size_override("font_size", 6)
+	var confirm_vbox: VBoxContainer = panel.get_node("ConfirmMargin/ConfirmVBox")
+	_confirm_cost_row = HBoxContainer.new()
+	_confirm_cost_row.name = "RenewalCostRow"
+	_confirm_cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_confirm_cost_row.add_theme_constant_override("separation", 2)
+	_confirm_currency_icon = TextureRect.new()
+	_confirm_currency_icon.name = "ShekelIcon"
+	_confirm_currency_icon.custom_minimum_size = Vector2(8, 8)
+	_confirm_currency_icon.mouse_filter = Control.MOUSE_FILTER_PASS
+	_confirm_currency_icon.texture = SHEKEL_ICON
+	_confirm_currency_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_confirm_currency_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_confirm_currency_icon.accessibility_name = "Shekel"
+	_confirm_currency_icon.tooltip_text = "Shekel"
+	_confirm_cost_label = Label.new()
+	_confirm_cost_label.name = "RenewalCostLabel"
+	_confirm_cost_label.theme_type_variation = &"PanelTextSmall"
+	_confirm_cost_label.add_theme_font_size_override("font_size", 6)
+	_confirm_cost_row.add_child(_confirm_cost_label)
+	_confirm_cost_row.add_child(_confirm_currency_icon)
+	confirm_vbox.add_child(_confirm_cost_row)
+	confirm_vbox.move_child(_confirm_cost_row, 1)
 	_confirm_no_button = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton")
 	_confirm_yes_button = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton")
 	_confirm_no_button.text = "No"
 	_confirm_yes_button.text = "Yes"
 	_confirm_no_button.pressed.connect(_cancel_remove_confirmation)
 	_confirm_yes_button.pressed.connect(_confirm_pending_action)
+	_confirm_cost_row.hide()
 	_confirmation_overlay.hide()
+
+
+func _set_renew_confirmation_price(price: int) -> void:
+	_confirm_cost_label.text = "Cost: %d" % price
+	_confirm_cost_label.accessibility_name = "Cost: %d Shekel" % price
+	_confirm_cost_row.show()
 
 
 func _cancel_remove_confirmation() -> void:
@@ -1062,6 +1103,7 @@ func _cancel_remove_confirmation() -> void:
 	_pending_renew_days = 3
 	_pending_renew_price = 0
 	if _confirmation_overlay != null:
+		_confirm_cost_row.hide()
 		_confirmation_overlay.hide()
 
 
@@ -1082,7 +1124,7 @@ func _confirm_pending_action() -> void:
 				_update_manage_controls(current_row)
 			return
 		_pending_renew_price = current_price
-		_confirm_label.text = "Renew for %d paid days?\nCost: %d Shekel from your wallet now.\nManual renewal; no auto-renewal or refunds." % [days, current_price]
+		_set_renew_confirmation_price(current_price)
 		return
 	var success: bool = WorkerDatabase.renew_contract(worker_id, days)
 	_cancel_remove_confirmation()

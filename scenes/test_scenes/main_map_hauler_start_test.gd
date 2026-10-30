@@ -44,6 +44,7 @@ func _hire(ui: JobBoardUI, citizen_id: String) -> void:
 		if ui.applicants[index].citizen_id == citizen_id:
 			ui.applicant_list.select(index)
 			ui.hire_button.pressed.emit()
+			ui.confirm_hire_button.pressed.emit()
 			return
 	_expect(false, "Expected applicant is missing: " + citizen_id)
 
@@ -79,6 +80,9 @@ func _run() -> void:
 	_expect(applicant_list.get_tooltip(hover_point).is_empty(), "Hovering a Job Board applicant returns no tooltip after the native delay.")
 	await _capture("job-board-hover-no-tooltip.png")
 	get_viewport().warp_mouse(Vector2.ZERO)
+	# This ownership fixture funds exactly the two existing three-day contracts.
+	var hiring_funds: int = WorkerDatabase.get_contract_price(WorkerData.Profession.HAULER, 3) + WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3)
+	Inventory.add_item("shekel", hiring_funds)
 	_hire(board.job_board_ui, STARTUP.HAULER_APPLICANT_ID)
 	var hauler: WorkerData = WorkerDatabase.get_worker_data(STARTUP.HAULER_APPLICANT_ID)
 	_expect(hauler != null and hauler.profession == WorkerData.Profession.HAULER and hauler.get_linked_citizen() == hauler_citizen, "Job Board hires the real Hauler with its existing citizen identity.")

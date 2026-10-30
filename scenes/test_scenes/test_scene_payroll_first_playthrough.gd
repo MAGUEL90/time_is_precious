@@ -109,6 +109,7 @@ func hire() -> void:
 			panel.applicant_list.select(index)
 			panel.applicant_list.item_selected.emit(index)
 			await press(panel.hire_button)
+			await press(panel.confirm_hire_button)
 			break
 	worker = WorkerDatabase.get_worker_data("initial_workshop_laborer")
 	_expect(worker != null and worker.is_waiting_for_first_payment(), "Normal hire remains pending")

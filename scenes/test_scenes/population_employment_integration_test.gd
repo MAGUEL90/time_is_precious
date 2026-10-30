@@ -195,11 +195,14 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"Applicant row must show the citizen name."
 		)
 		_expect(
-			job_board_ui.quote_label.text.contains("3-day prepaid: 2 Shekel"),
-			"Job Board quote must show the selected three-day prepaid package price."
+			job_board_ui.quote_amount_label.text == "2" and job_board_ui.quote_icon.visible,
+			"Job Board quote must show the selected three-day contract price with its currency icon."
 		)
 
 		job_board_ui.hire_button.pressed.emit()
+		_expect(WorkerDatabase.get_worker_data(applicant.citizen_id) == null and Inventory.items.get("shekel", 0) == 100,
+			"Opening the contract selection does not hire or debit the wallet.")
+		job_board_ui.confirm_hire_button.pressed.emit()
 		hired_worker = WorkerDatabase.get_worker_data(
 			applicant.citizen_id
 		)

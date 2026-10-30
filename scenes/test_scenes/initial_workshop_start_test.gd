@@ -64,21 +64,21 @@ func _run() -> void:
 	if contract_index < 0 or contract_price <= 0:
 		_finish()
 		return
-	board.job_board_ui.contract_days_option.select(contract_index)
-	board.job_board_ui.contract_days_option.item_selected.emit(contract_index)
-	_expect(board.job_board_ui.applicant_list.get_selected_items() == PackedInt32Array([0])
-		and board.job_board_ui.quote_label.text.contains("%d-day prepaid: %d" % [contract_days, contract_price]),
-		"The native Job Board selects the Laborer and quotes the full prepaid package.")
 	board.job_board_ui.hire_button.pressed.emit()
+	board.job_board_ui._select_contract_days(contract_days)
+	_expect(board.job_board_ui.applicant_list.get_selected_items() == PackedInt32Array([0])
+		and board.job_board_ui.confirm_quote_amount_label.text == str(contract_price),
+		"The native Job Board selects the Laborer and quotes the full contract before confirmation.")
+	board.job_board_ui.confirm_hire_button.pressed.emit()
 	_expect(WorkerDatabase.get_worker_data(start.APPLICANT_ID) == null and Inventory.items.is_empty(),
 		"An empty wallet cannot hire the applicant or create unpaid work.")
 	# This fixture supplies only the exact hiring price; materials still come from worksite actions below.
 	Inventory.add_item("shekel", contract_price)
-	board.job_board_ui.contract_days_option.item_selected.emit(contract_index)
-	_expect(not board.job_board_ui.hire_button.disabled and board.job_board_ui.wallet_label.text.contains("Wallet: %d Shekel" % contract_price),
-		"The funded prepaid Hire action is available through the real Job Board.")
+	board.job_board_ui._refresh_quote()
+	_expect(not board.job_board_ui.confirm_hire_button.disabled and board.job_board_ui.wallet_label.text == str(contract_price),
+		"The funded final Hire action is available through the real Job Board.")
 	var hire_day: int = TimeComponentManager.current_day
-	board.job_board_ui.hire_button.pressed.emit()
+	board.job_board_ui.confirm_hire_button.pressed.emit()
 	var worker: WorkerData = WorkerDatabase.get_worker_data(start.APPLICANT_ID)
 	_expect(worker != null and worker.profession == WorkerData.Profession.LABORER, "Hire produces an actual Laborer.")
 	if worker == null:

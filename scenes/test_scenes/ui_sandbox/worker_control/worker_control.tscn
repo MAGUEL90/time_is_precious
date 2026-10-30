@@ -481,14 +481,31 @@ layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 
-[node name="RenewPriceLabel" type="Label" parent="Root/ManageWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(84, 8)
+[node name="RenewPriceRow" type="HBoxContainer" parent="Root/ManageWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="RenewPriceLabel" type="Label" parent="Root/ManageWindow/Margin/MainVBox/RenewPriceRow"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
 text = "Price: -"
 horizontal_alignment = 1
-autowrap_mode = 3
+autowrap_mode = 0
+
+[node name="ShekelIcon" type="TextureRect" parent="Root/ManageWindow/Margin/MainVBox/RenewPriceRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+mouse_filter = 1
+accessibility_name = "Shekel"
+tooltip_text = "Shekel"
+texture = ExtResource("detail_coin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="RenewButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(82, 16)

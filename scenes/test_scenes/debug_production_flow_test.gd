@@ -44,6 +44,7 @@ func _run() -> void:
 		if board.job_board_ui.applicants[index].profession == WorkerData.Profession.LABORER:
 			board.job_board_ui.applicant_list.select(index)
 			board.job_board_ui.hire_button.pressed.emit()
+			board.job_board_ui.confirm_hire_button.pressed.emit()
 			break
 	worker = WorkerDatabase.get_worker_data("initial_workshop_laborer")
 	board.job_board_ui.close_button.pressed.emit()

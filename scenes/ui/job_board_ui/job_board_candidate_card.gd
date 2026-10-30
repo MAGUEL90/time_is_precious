@@ -5,6 +5,7 @@ signal selection_toggled(checked: bool)
 const HAULER_ICON: Texture2D = preload("res://assets/ui/ui_icon/hauler_icon.png")
 const LABORER_ICON: Texture2D = preload("res://assets/ui/ui_icon/laborer_icon.png")
 const WORKER_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
+const MAX_NAME_DISPLAY_LENGTH: int = 20
 
 @onready var details: Control = $Details
 @onready var portrait: TextureRect = $Details/PortraitFrame/Portrait
@@ -21,6 +22,7 @@ const WORKER_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_
 @onready var check_icon: TextureRect = $Details/SelectionButton/CheckIcon
 
 var citizen_id: String = ""
+var _full_display_name: String = ""
 var _snapshot: Array = []
 
 func _ready() -> void:
@@ -33,7 +35,9 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 	if snapshot == _snapshot:
 		return
 	_snapshot = snapshot
-	name_label.text = citizen.display_name
+	_full_display_name = citizen.display_name
+	name_label.text = _short_display_name(_full_display_name)
+	name_label.tooltip_text = _full_display_name
 	role_label.text = "Job: " + profession_name
 	duty_label.text = "Hauls worksite goods to assigned storage." if citizen.profession == WorkerData.Profession.HAULER else ""
 	if citizen.profession == WorkerData.Profession.LABORER:
@@ -51,8 +55,14 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 	satisfaction_label.text = "%d%%" % roundi(citizen.satisfaction * 100.0)
 	# The baseline has no mood-to-icon thresholds; keep the existing neutral art.
 	mood_icon.tooltip_text = "Satisfaction: %d%%. Neutral icon is illustrative." % roundi(citizen.satisfaction * 100.0)
-	wage_label.text = "%d / %dd" % [package_price, contract_days] if package_price > 0 else "Unavailable"
+	wage_label.text = str(package_price) if package_price > 0 else "Unavailable"
+	wage_label.tooltip_text = "Contract hire cost: %d Shekel for %d days, paid from your wallet." % [package_price, contract_days] if package_price > 0 else "Contract price unavailable."
 	_layout_card_rows()
+
+func _short_display_name(full_name: String) -> String:
+	if full_name.length() <= MAX_NAME_DISPLAY_LENGTH:
+		return full_name
+	return full_name.left(MAX_NAME_DISPLAY_LENGTH - 3) + "..."
 
 func _layout_card_rows() -> void:
 	# Align the role to the checkbox; long names use the remaining measured space.
@@ -87,7 +97,7 @@ func _layout_status_row() -> void:
 func set_selected(checked: bool) -> void:
 	selection_button.set_pressed_no_signal(checked)
 	check_icon.visible = checked
-	selection_button.tooltip_text = ("Deselect " if checked else "Select ") + name_label.text
+	selection_button.tooltip_text = ("Deselect " if checked else "Select ") + _full_display_name
 
 func _on_toggled(checked: bool) -> void:
 	selection_toggled.emit(checked)
