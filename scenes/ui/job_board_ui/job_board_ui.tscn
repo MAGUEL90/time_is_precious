@@ -105,16 +105,6 @@ text = "CHOOSE CONTRACT"
 horizontal_alignment = 1
 mouse_filter = 2
 
-[node name="CloseConfirmationButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 264.0
-offset_top = 7.0
-offset_right = 282.0
-offset_bottom = 23.0
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "X"
-tooltip_text = "Close contract choices"
-
 [node name="SelectedHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 14.0
 offset_top = 26.0
@@ -228,7 +218,7 @@ custom_minimum_size = Vector2(104, 17)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
-text = "Confirm Hire"
+text = "Confirm"
 
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
 custom_minimum_size = Vector2(368, 221)

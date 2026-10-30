@@ -69,6 +69,11 @@ func _run() -> void:
 	_expect(board.selected_names_container.get_child_count() == 1, "Selected name appears in the confirmation panel.")
 	_expect(board.selected_names_container.get_global_rect().position.x < board.duration_button_container.get_global_rect().position.x, "Names are to the left of duration buttons.")
 	_expect(board.duration_buttons[0].has_focus(), "The selected duration has keyboard focus on opening.")
+	_expect(board.confirmation_panel.get_node_or_null("CloseConfirmationButton") == null, "Back is the only visible cancellation button in the confirmation panel.")
+	_expect(board.cancel_hire_button.text == "Back" and board.confirm_hire_button.text == "Confirm", "Confirmation actions use the requested labels.")
+	for button: Button in board.duration_buttons:
+		_expect(button.get_tooltip(button.size / 2.0).is_empty(), "Contract duration choices show no native tooltip.")
+	var visited_focus: Array[Control] = [board.duration_buttons[0]]
 	for step: int in range(8):
 		var focus_event := InputEventAction.new()
 		focus_event.action = "ui_focus_next"
@@ -80,6 +85,10 @@ func _run() -> void:
 		await get_tree().process_frame
 		var focus: Control = get_viewport().gui_get_focus_owner()
 		_expect(focus != null and board.confirmation_panel.is_ancestor_of(focus), "Keyboard focus stays within the open confirmation panel.")
+		if focus != null and not visited_focus.has(focus):
+			visited_focus.append(focus)
+	for control: Control in [board.duration_buttons[0], board.duration_buttons[1], board.duration_buttons[2], board.cancel_hire_button, board.confirm_hire_button]:
+		_expect(visited_focus.has(control), "Every duration and remaining action is reachable by keyboard focus.")
 	await _capture("job-board-confirm-single")
 	for option: int in range(3):
 		var days: int = WorkerDatabase.CONTRACT_DAYS[option]
@@ -90,7 +99,7 @@ func _run() -> void:
 		_expect(board.confirm_quote_amount_label.text == str(2 * (option + 1)) and board.confirm_quote_icon.visible, "The quoted price and coin are visible before confirmation.")
 		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
 	board.cancel_hire_button.pressed.emit()
-	_expect(not board.confirmation_open and board.visible and WorkerDatabase.workers_by_id.is_empty(), "Cancel returns to the board without a hire.")
+	_expect(not board.confirmation_open and board.visible and board.hire_button.has_focus() and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Back returns focus to the board without hiring or charging.")
 	board.cards[1].selection_button.set_pressed(true)
 	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0, 1]), "Checkboxes select independently.")
 	board.hire_button.pressed.emit()

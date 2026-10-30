@@ -30,7 +30,6 @@ const MAX_CONFIRM_NAME_LENGTH: int = 22
 @onready var confirmation_feedback_label: Label = $Root/HireConfirmLayer/ConfirmationPanel/ConfirmationFeedbackLabel
 @onready var confirm_hire_button: Button = $Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions/ConfirmHireButton
 @onready var cancel_hire_button: Button = $Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions/CancelHireButton
-@onready var close_confirmation_button: Button = $Root/HireConfirmLayer/ConfirmationPanel/CloseConfirmationButton
 @onready var hire_button: Button = $Root/Center/Window/Margin/MainVBox/Actions/HireButton
 @onready var close_button: TextureButton = $Root/Center/Window/CloseButton
 @onready var refresh_timer: Timer = $RefreshTimer
@@ -56,7 +55,6 @@ func _ready() -> void:
 	close_button.pressed.connect(_on_close_button_pressed)
 	confirm_hire_button.pressed.connect(_confirm_hire)
 	cancel_hire_button.pressed.connect(func(): _cancel_confirmation())
-	close_confirmation_button.pressed.connect(func(): _cancel_confirmation())
 	close_button.texture_focused = close_button.texture_hover
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
 	refresh_timer.timeout.connect(_poll_applicants)
@@ -73,7 +71,6 @@ func _build_duration_buttons() -> void:
 		var button := Button.new()
 		button.name = "ContractDays%dButton" % days
 		button.text = "%d days" % days
-		button.tooltip_text = "Choose a %d-day contract." % days
 		button.toggle_mode = true
 		button.button_group = _duration_button_group
 		button.custom_minimum_size = Vector2(96, 17)
@@ -97,7 +94,7 @@ func _build_duration_buttons() -> void:
 func _configure_confirmation_focus() -> void:
 	var controls: Array[Control] = []
 	controls.append_array(duration_buttons)
-	controls.append_array([cancel_hire_button, confirm_hire_button, close_confirmation_button])
+	controls.append_array([cancel_hire_button, confirm_hire_button])
 	for index: int in range(controls.size()):
 		var control: Control = controls[index]
 		var previous: NodePath = control.get_path_to(controls[(index - 1 + controls.size()) % controls.size()])
