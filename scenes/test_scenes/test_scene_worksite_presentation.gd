@@ -213,6 +213,9 @@ func _check_target_prompt(prompt: InteractableLabelComponent, icon: Node, initia
 	for neighbor: Marker2D in runtime.get_node("WorksiteMarkers").get_children():
 		if neighbor.get_node("ResourceIcon") != icon:
 			_check(not box.intersects(VISIBLE_BOUNDS.measure(neighbor.get_node("ResourceIcon"))), label + ": E avoids " + str(neighbor.name) + " artwork")
+	if label == "ClaySiteA":
+		var job_board_art: Rect2 = VISIBLE_BOUNDS.measure(city.get_node("YSortWorld/InitialWorksites/JobBoard/Sprite2D"))
+		_check(not box.intersects(job_board_art), label + ": E avoids the neighboring Job Board artwork")
 	var canvas_box: Rect2 = get_viewport().get_canvas_transform() * box
 	var prompt_canvas_box: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
 	_check(canvas_box.is_equal_approx(prompt_canvas_box), label + ": prompt and viewport agree on the camera transform")
