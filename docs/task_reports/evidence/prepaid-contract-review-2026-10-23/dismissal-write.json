@@ -1,0 +1,120 @@
+{
+	"failures": 0,
+	"measurements": [
+		{
+			"archived": false,
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hired": true,
+			"hunger": 0.436000000000003,
+			"inventory": {
+				"date_cluster": 3,
+				"shekel": 3,
+				"wood_log": 5
+			},
+			"minute": 3796,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_write",
+			"walked_pixels": 0.0,
+			"worker_reliability": 0.9,
+			"worker_satisfaction": 0.4,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"archived": true,
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "empty",
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.0025,
+			"focus": 0.99875,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hired": false,
+			"hunger": 0.439000000000003,
+			"inventory": {
+				"date_cluster": 3,
+				"shekel": 3,
+				"wood_log": 5
+			},
+			"minute": 3799,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "dismissed_without_refund",
+			"walked_pixels": 76.66665995121,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"archived": true,
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 18,
+			"fatigue": 0.001,
+			"focus": 0.9992655,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 15,
+			"held": [],
+			"hired": false,
+			"hunger": 0.668000000000003,
+			"inventory": {
+				"shekel": 3,
+				"wood_log": 5
+			},
+			"minute": 4748,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 1,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 1558.33351480961,
+			"workshop_stock": {
+
+			}
+		}
+	],
+	"phase": "write",
+	"status": "PASS"
+}

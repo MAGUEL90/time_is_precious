@@ -79,7 +79,9 @@ func _run() -> void:
 	legacy.erase("location")
 	var legacy_raw: Dictionary = saved_raw.duplicate(true)
 	legacy_raw.erase("pickup_sources")
+	_strip_post_v3_owner_fields(legacy_raw)
 	legacy.state = codec.encode(legacy_raw)
+	_strip_post_v3_worker_fields(legacy.state)
 	_assert_legacy_validation_only(legacy)
 	var legacy_file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
@@ -90,7 +92,9 @@ func _run() -> void:
 	legacy.schema_version = 2
 	legacy_raw = saved_raw.duplicate(true)
 	legacy_raw.erase("pickup_sources")
+	_strip_post_v3_owner_fields(legacy_raw)
 	legacy.state = codec.encode(legacy_raw)
+	_strip_post_v3_worker_fields(legacy.state)
 	legacy_file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
 	legacy_file.close()
@@ -113,7 +117,9 @@ func _run() -> void:
 	legacy_raw = saved_raw.duplicate(true)
 	legacy_raw.erase("pickup_sources")
 	legacy_raw["date_palms"] = legacy_palms
+	_strip_post_v3_owner_fields(legacy_raw)
 	legacy.state = codec.encode(legacy_raw)
+	_strip_post_v3_worker_fields(legacy.state)
 	legacy_rng = _set_palm_rng_sentinels()
 	_assert_legacy_validation_only(legacy)
 	legacy_file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
@@ -122,7 +128,7 @@ func _run() -> void:
 	_expect(store.load_checkpoint(), "A version-3 palm checkpoint restores through the migration path.")
 	await _assert_v3_palms_restored(legacy_palms, legacy_rng)
 	_expect(store.save_checkpoint(), "The next explicit save writes the current location-aware version.")
-	_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 4, "A successful save explicitly upgrades the legacy header.")
+	_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == CODEC.VERSION, "A successful save explicitly upgrades the legacy header to the current version.")
 	# A malformed document must fail before any live mutation, and block Save.
 	valid_bytes = FileAccess.get_file_as_string(CHECKPOINT_PATH)
 	var file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
@@ -430,6 +436,17 @@ func _assert_legacy_validation_only(document: Dictionary) -> void:
 	_expect(store.snapshot.prepare(document, content), "Legacy data validates before applying fallback.")
 	_expect(store.snapshot.capture(content) == baseline, "Legacy validation alone leaves all owners, slots, timers and RNG untouched.")
 
+func _strip_post_v3_worker_fields(value: Variant) -> void:
+	if value is Dictionary:
+		if value.get("$type") == "object" and value.get("class") == "WorkerData":
+			for field: String in VALUES.PAYROLL_FIELDS + VALUES.CONTRACT_FIELDS + ["physical_approach"]:
+				value.fields.erase(field)
+		for child: Variant in value.values():
+			_strip_post_v3_worker_fields(child)
+	elif value is Array:
+		for child: Variant in value:
+			_strip_post_v3_worker_fields(child)
+
 func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 	var staged: Dictionary = raw.duplicate(true)
 	var index: int = 0
@@ -468,3 +485,9 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 	_write_text(CHECKPOINT_PATH, JSON.stringify(document, "", true, true))
 	_expect(store.load_checkpoint(), "The original checkpoint restores after the countdown test.")
 	await _assert_seed(raw.pickup_sources)
+
+func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
+	# Pseudo-legacy documents omit owner fields absent in those schemas.
+	raw.raid.erase("notification_seen_keys")
+	for plot: Dictionary in raw.plots.values():
+		plot.erase("payroll_work_remainder")

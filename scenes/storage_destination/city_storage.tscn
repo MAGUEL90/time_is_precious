@@ -90,6 +90,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="Close" parent="." instance=ExtResource("5_close")]
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0

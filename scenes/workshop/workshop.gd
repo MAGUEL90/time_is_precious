@@ -300,6 +300,7 @@ func start_mudbrick_job_from_storage() -> bool:
 	if order_id.is_empty():
 		print(WorkManager.get_last_start_job_error())
 		return false
+	_bind_plot_approach(order_id, worker_id)
 
 	print("Started mudbrick job: ", order_id)
 	return true
@@ -364,10 +365,14 @@ func start_job_from_storage(
 	last_start_job_error = ""
 	# Presentation-only identity survives a map reload with the runtime order.
 	# Production ownership, timing and outputs remain with WorkManager.
+	_bind_plot_approach(order_id, worker_id)
+	return true
+
+func _bind_plot_approach(order_id: String, worker_id: String) -> void:
 	var plot: Node = get_parent()
 	if plot.is_in_group("workshop_plots"):
 		WorkManager.active_orders[order_id].set_meta("visual_plot_id", plot.construction.order_id)
-	return true
+		plot.begin_worker_approach(worker_id, order_id)
 
 func _get_first_available_worker_for_job(worker_ids: Array[String], job: JobData) -> String:
 	for worker_id in worker_ids:

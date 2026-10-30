@@ -13,6 +13,7 @@ var _previous_can_move: bool = true
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	interactable_label_component.place_above_art($Board)
 	add_to_group("city_storage_areas")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
@@ -23,7 +24,7 @@ func configure(next_player: Player, next_storage: Node, open_gate: Callable) -> 
 	can_open = open_gate
 	delivery_point.storage_path = NodePath("")
 	if is_instance_valid(next_storage) and is_inside_tree() and next_storage.is_inside_tree():
-		delivery_point.storage_path = delivery_point.get_path_to(next_storage)
+		delivery_point.storage_path = next_storage.get_path()
 
 func _on_body_entered(body: Node2D) -> void:
 	if body == player:

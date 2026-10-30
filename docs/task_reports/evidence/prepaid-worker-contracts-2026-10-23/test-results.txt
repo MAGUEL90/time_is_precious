@@ -1,0 +1,26 @@
+continue-assignment-read.log: ContractContinue assignment-read: PASS
+continue-assignment-write.log: ContractContinue assignment-write: PASS
+continue-legacy-read.log: ContractContinue legacy-read: PASS
+continue-legacy-renew-read.log: ContractContinue legacy-renew-read: PASS
+continue-read.log: ContractContinue read: PASS
+continue-readrenew.log: ContractContinue readrenew: PASS
+continue-write.log: ContractContinue write: PASS
+hauler-setup.log: HaulerDeliverySetupTest PASSED
+normal-read.log: ContractJourney read: PASS
+normal-write.log: ContractJourney write: PASS
+notifications-render.log: ContractNotificationsTest: PASS
+population_employment_integration_test.log: PopulationEmploymentIntegrationTest PASSED
+test_scene_city_save_economy.log: CitySaveEconomyTest: PASS
+test_scene_city_save_file.log: CitySaveFileTest PASSED
+test_scene_city_save_values.log: CitySaveValuesTest: PASS
+test_scene_clay_worksite_team.log: ClayWorksiteDailyTest PASSED
+test_scene_content_worksites.log: ContentWorksitesIntegrationTest PASSED
+test_scene_contract_assignment.log: ContractAssignmentTest PASSED
+test_scene_contract_notifications.log: ContractNotificationsTest: PASS
+test_scene_prepaid_contracts.log: PrepaidContractsFixtureTest: PASS (0 checks failed)
+test_scene_raid_ui.log: RaidUITest: PASS
+test_scene_worker_rehire_regression.log: WorkerRehireRegressionTest: PASS
+ui-capture.log: ContractUIReview capture: PASS
+ui-prepare.log: ContractUIReview prepare: PASS
+ui-read.log: ContractUIReview read: PASS
+ui-write.log: ContractUIReview write: PASS

@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=24 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://04lfa0355no7" path="res://scenes/ui/bottom_hud/bottom_hud.tscn" id="11_v5dai"]
 [ext_resource type="PackedScene" uid="uid://dt406ppk2d04o" path="res://scenes/ui/work_progress_ui/work_progress_ui.tscn" id="15_s8nia"]
 [ext_resource type="PackedScene" uid="uid://yx4rvbmo0me4" path="res://scenes/workshop_plot/workshop_plot.tscn" id="17_workshop_plot"]
+[ext_resource type="PackedScene" path="res://scenes/workshop_plot/keeper/workshop_keeper_plot.tscn" id="17_keeper_plot"]
 [ext_resource type="PackedScene" uid="uid://d0mllxwbcq263" path="res://scenes/content_scene/startup/initial_worksites.tscn" id="18_initial"]
 [ext_resource type="PackedScene" path="res://scenes/debug/time_debug_overlay.tscn" id="19_debug_time"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/main_map_worksites.tscn" id="20_worksites"]
@@ -76,7 +77,7 @@ position = Vector2(-286, -412)
 [node name="HomeEntryPoint" type="Marker2D" parent="YSortWorld/SpawnPoints"]
 position = Vector2(-256, -409)
 
-[node name="WorkshopPlot" parent="YSortWorld" instance=ExtResource("17_workshop_plot")]
+[node name="WorkshopPlot" parent="YSortWorld" instance=ExtResource("17_keeper_plot")]
 position = Vector2(-312, -482)
 plot_id = "main_workshop"
 

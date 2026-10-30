@@ -1,0 +1,964 @@
+[
+  {
+    "run": 1,
+    "accepted": false,
+    "reason": "Driver iterated a freed pickup view",
+    "errors": [
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance.",
+      "SCRIPT ERROR: Cannot call method 'get_script' on a previously freed instance."
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 0,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 11,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 11,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      }
+    ]
+  },
+  {
+    "run": 2,
+    "accepted": false,
+    "reason": "Driver deposited surplus beyond storage capacity",
+    "errors": [
+      "ERROR: Enabled visible UI action",
+      "ERROR: Expected UI missing: res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd",
+      "SCRIPT ERROR: Invalid access to property or key 'build_button' on a base object of type 'Nil'.",
+      "ERROR: Expected UI missing: res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd",
+      "SCRIPT ERROR: Invalid access to property or key 'assign_button' on a base object of type 'Nil'.",
+      "ERROR: Expected UI missing: res://scenes/ui/workshop_menu_ui/workshop_menu_ui.gd",
+      "SCRIPT ERROR: Invalid access to property or key 'manage_button' on a base object of type 'Nil'."
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 0,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 12,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 12,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 0,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 13,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 13,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 4
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 13,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 13,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 7
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 2,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 10,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 19,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 19,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 10
+      }
+    ]
+  },
+  {
+    "run": 3,
+    "accepted": false,
+    "reason": "Driver cached navigation before workshop collision changed",
+    "errors": [
+      "ERROR: Route blocked/collapsed at (-55.83398, -283.0498) toward (-56.0, -280.0)"
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 4,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 4,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 15,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 15,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 6,
+            "item_id": "wood_log",
+            "player_qty": 13,
+            "requested": 6,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 17,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 17,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 4
+      }
+    ]
+  },
+  {
+    "run": 4,
+    "accepted": false,
+    "reason": "Driver withdrawal filled bag, blocking food pickup",
+    "errors": [
+      "ERROR: Pickup earns one date"
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 13,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 13,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 4,
+            "item_id": "wood_log",
+            "player_qty": 12,
+            "requested": 4,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 14,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 14,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 4
+      }
+    ]
+  },
+  {
+    "run": 5,
+    "accepted": false,
+    "reason": "Driver tried more shaping before freeing workshop output capacity",
+    "errors": [
+      "ERROR: Normal production starts"
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 0,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 12,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 17,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 17,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 4
+      }
+    ]
+  },
+  {
+    "run": 6,
+    "accepted": false,
+    "reason": "Production goals reached but detached merchant emitted runtime errors; not PASS",
+    "errors": [
+      "ERROR: Parameter \"data.tree\" is null.",
+      "SCRIPT ERROR: Cannot call method 'get_first_node_in_group' on a null value."
+    ],
+    "visits": [
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 0,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 19,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 19,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 1
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 4,
+            "item_id": "wood_log",
+            "player_qty": 8,
+            "requested": 4,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 15,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 15,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 4
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 1,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 10,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 10,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 0,
+            "requested": 10,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 7
+      },
+      {
+        "catalog": [
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "clay_lump",
+            "player_qty": 3,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "straw_bundle",
+            "player_qty": 5,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 2,
+            "demand": 0,
+            "item_id": "water_jar",
+            "player_qty": 8,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 12
+          },
+          {
+            "buy_price": 4,
+            "demand": 5,
+            "item_id": "wood_log",
+            "player_qty": 10,
+            "requested": 5,
+            "sell_price": 2,
+            "stock": 8
+          },
+          {
+            "buy_price": 15,
+            "demand": 0,
+            "item_id": "stone_hammer",
+            "player_qty": 0,
+            "requested": 0,
+            "sell_price": 0,
+            "stock": 2
+          },
+          {
+            "buy_price": 6,
+            "demand": 19,
+            "item_id": "sun_dried_mudbrick",
+            "player_qty": 5,
+            "requested": 19,
+            "sell_price": 3,
+            "stock": 0
+          }
+        ],
+        "day": 10
+      }
+    ]
+  }
+]

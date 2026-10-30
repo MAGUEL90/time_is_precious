@@ -9,6 +9,10 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var enable_time_shortcuts: bool = true
 @export var retain_resource_stock: bool = false
 var checkpoint_handoff: bool = false
+var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
+const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+var navigation_map: WeakRef
+var navigation_phases: Dictionary = {}
 
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
@@ -34,7 +38,13 @@ func _ready() -> void:
 		else:
 			push_error("Worksites: set player_path and inventory_ui_path to the map's Player and InventoryUI.")
 		return
+	daily.physical_arrival = _physical_site_arrival
+	daily.assignment_started = _begin_site_assignments
+	daily.assignment_released = _release_site_approach
 	super._ready()
+	for site: Node2D in $WorksiteMarkers.get_children():
+		RESOURCE_PRESENTATION.configure(site)
+	_refresh_navigation()
 	if retain_resource_stock:
 		_restore_resource_stock()
 	# Notes belong to the isolated fixture, not the content HUD.
@@ -57,6 +67,122 @@ func _ready() -> void:
 		worker.display_name = "Belum"
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
+
+func _refresh_navigation() -> void:
+	var map: Node = navigation_map.get_ref() if navigation_map != null else null
+	if navigation_map == null:
+		map = self
+		while map.get_parent() != null and map.get_parent() != get_tree().root:
+			map = map.get_parent()
+		navigation_map = weakref(map)
+	# A parked runtime keeps its value geometry through the home handoff.
+	if map == null or (map != self and not map.is_ancestor_of(self)):
+		return
+	worksite_navigation.configure(map)
+	_watch_navigation_changes(map)
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		visuals.site_paths.clear()
+
+func _watch_navigation_changes(node: Node) -> void:
+	if node.has_method("get_built_footprints") and node.construction != null:
+		# Construction outlives a city plot while the player is at home. Bind its
+		# stable ID so a later signal never carries a freed Node argument.
+		var callback := Callable(self, "_queue_navigation_refresh").bind(node.get_instance_id())
+		if not node.construction.changed.is_connected(callback):
+			node.construction.changed.connect(callback)
+		navigation_phases[node.get_instance_id()] = node.construction.phase
+	for child: Node in node.get_children():
+		_watch_navigation_changes(child)
+
+func _queue_navigation_refresh(plot_id: int) -> void:
+	var plot: Node = instance_from_id(plot_id) as Node
+	if plot == null or not plot.is_inside_tree():
+		return
+	if navigation_phases.get(plot_id, "") == plot.construction.phase:
+		return
+	navigation_phases[plot_id] = plot.construction.phase
+	# Phase owners defer collider toggles; collect their final active geometry.
+	_refresh_navigation.call_deferred()
+
+func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
+	if site.name != &"ReedSite":
+		return super._drop_daily_output(quantity, site)
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(player):
+		return false
+	var destination: Vector2 = worksite_navigation.reachable_point(player.global_position + Vector2(0, -4), site.global_position + Vector2(0, 24))
+	if not destination.is_finite():
+		return false # The scheduler retains unclaimed units for a later retry.
+	for stack: PickUpItem in $GroundOutput.get_children():
+		if not stack.is_queued_for_deletion() and not stack.is_collecting and stack.get_meta("daily_site", "") == str(site.name):
+			stack.global_position = destination
+			stack.quantity += quantity
+			stack.get_node("QuantityLabel").text = "x%d" % stack.quantity
+			return true
+	if not _drop_output_at(quantity, $GroundOutput.to_local(destination), _drop_daily_output.bind(site), sites[site.name].item_id):
+		return false
+	$GroundOutput.get_child(-1).set_meta("daily_site", str(site.name))
+	return true
+
+func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Callable = Callable(), resource_id: String = "clay_lump") -> bool:
+	var dropped: bool = super._drop_output_at(quantity, drop_position, return_remainder, resource_id)
+	if dropped:
+		# Keep the count node/text for merging, pickup feedback and restored piles.
+		$GroundOutput.get_child(-1).get_node("QuantityLabel").hide()
+	return dropped
+
+# Physical records use feet coordinates; the visual's art origin is 16px above.
+func worker_destination(site_id: StringName, id: String) -> Vector2:
+	return site_slot_destination(site_id, daily.jobs[site_id].ids.find(id))
+
+# Snapshot validation can resolve authored slots before live jobs are restored.
+func site_slot_destination(site_id: StringName, slot: int) -> Vector2:
+	var destination: Vector2 = get_node("WorksiteMarkers/" + str(site_id)).global_position + Vector2(-10 + slot * 20, 8)
+	if worksite_navigation.resource_bottoms.has(str(site_id)):
+		destination.y = maxf(destination.y, float(worksite_navigation.resource_bottoms[str(site_id)]) + worksite_navigation.CLEARANCE + 1.0)
+	return destination
+
+func site_approach_task(site_id: StringName, id: String, day: int) -> String:
+	var job: Dictionary = daily.jobs[site_id]
+	return "%s:%d:%d" % [job.order, int(job.starts[id]), day]
+
+func _begin_site_assignments(site_id: StringName, ids: Array[String]) -> void:
+	for id: String in ids:
+		if not daily.is_hauler(id):
+			begin_site_approach(site_id, id, maxi(int(daily.jobs[site_id].starts[id]) / 1440, TimeComponentManager.current_day))
+
+func begin_site_approach(site_id: StringName, id: String, day: int) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker == null:
+		return
+	var feet: Vector2 = worker_spawn(site_id, id) + Vector2(0, 16)
+	if not worker.physical_approach.is_empty():
+		feet = worker.physical_approach.position
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null and visuals.actors.has(id):
+		feet = visuals.actors[id].global_position + Vector2(0, 16)
+	worker.begin_physical_approach("site", site_approach_task(site_id, id, day), str(site_id), feet, worker_destination(site_id, id))
+	if visuals != null:
+		visuals.work_cycles.erase(id)
+		visuals.roaming.erase(id)
+		visuals.site_paths.erase(id)
+
+func _physical_site_arrival(site_id: StringName, id: String, day: int) -> int:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	# Legacy saves have no approach evidence and retain their established state.
+	if worker == null or worker.physical_approach.is_empty():
+		return day * 1440 + daily.SHIFT_START
+	if worker.matches_physical_approach("site", site_approach_task(site_id, id, day), str(site_id)) and worker.physical_approach.arrived:
+		return int(worker.physical_approach.arrival_minute)
+	return 2147483647
+
+func _release_site_approach(id: String) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker != null and worker.physical_approach.get("kind", "") == "site":
+		worker.physical_approach = {}
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		visuals.site_paths.erase(id)
 
 func _open_content_preview() -> void:
 	var result: Error = get_tree().change_scene_to_file("res://scenes/content_scene/content_scene.tscn")

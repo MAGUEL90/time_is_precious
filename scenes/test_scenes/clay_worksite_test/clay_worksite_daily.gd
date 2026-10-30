@@ -19,9 +19,24 @@ var stock_min: int = 72
 var stock_max: int = 72
 var rng := RandomNumberGenerator.new()
 var journey_provider: Callable
-var hauling
+var physical_arrival: Callable
+var assignment_started: Callable
+var assignment_released: Callable
+var hauling = null:
+	set(value):
+		hauling = value
+		if hauling != null:
+			hauling.payroll_unpaid_minutes_provider = _payroll_unpaid_minutes
 var hauler_ready: Callable
 var tool_requirement: Callable
+
+func _payroll_unpaid_minutes(id: String, from_minute: int, to_minute: int) -> int:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	return worker.get_payroll_unpaid_minutes(from_minute, to_minute) if worker != null else 0
+
+func _payroll_blocked(id: String) -> bool:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	return worker != null and worker.is_payroll_blocked()
 
 func is_hauler(id: String) -> bool:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
@@ -40,7 +55,13 @@ func start_reason(site_id: StringName) -> String:
 		return str(hauler_ready.call(site_id, count))
 	return ""
 
-func _hauler_eligible(id: String) -> bool:
+func _hauler_eligible(id: String, from_minute: int = -1, to_minute: int = -1) -> bool:
+	# Flush an already-active trip through its previous paid interval, but do
+	# not start a new load at the renewal boundary before payroll has settled.
+	if _payroll_blocked(id):
+		return false
+	if to_minute > from_minute and _payroll_unpaid_minutes(id, from_minute, to_minute) > 0:
+		return false
 	if hauling != null and hauling.target_reached(id, now() / 1440):
 		return false
 	for site_id in jobs:
@@ -57,8 +78,11 @@ func departure_time(site_id: StringName, id: String, day: int) -> int:
 		return int(floor(journey_provider.call(site_id, id, day).start))
 	return arrival_time(site_id, id, day)
 
-func arrival_time(_site_id: StringName, _id: String, day: int) -> int:
-	return day * 1440 + SHIFT_START
+func arrival_time(site_id: StringName, id: String, day: int) -> int:
+	var opening: int = day * 1440 + SHIFT_START
+	if not is_hauler(id) and physical_arrival.is_valid():
+		return maxi(opening, int(physical_arrival.call(site_id, id, day)))
+	return opening
 
 func setup(site_sessions: Dictionary) -> void:
 	sites = site_sessions
@@ -67,9 +91,23 @@ func setup(site_sessions: Dictionary) -> void:
 	rng.randomize()
 	for key in sites:
 		selected[key] = []
+	if WorkerDatabase.has_signal("payroll_settling") and not WorkerDatabase.is_connected("payroll_settling", tick):
+		WorkerDatabase.connect("payroll_settling", tick)
+	if not WorkerDatabase.payroll_changed.is_connected(_sync_activities):
+		WorkerDatabase.payroll_changed.connect(_sync_activities)
 
 func now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+
+func _assignment_start_minute() -> int:
+	var current: int = now()
+	var day_start: int = (current / 1440) * 1440
+	var minute: int = current - day_start
+	if minute < SHIFT_START:
+		return day_start + SHIFT_START
+	if minute < SHIFT_END:
+		return current
+	return day_start + 1440 + SHIFT_START
 
 func unavailable(id: String) -> String:
 	if id == "player":
@@ -80,6 +118,8 @@ func unavailable(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Unavailable"
+	if worker.is_payroll_blocked():
+		return worker.get_onboarding_status()
 	if worker.is_reserved():
 		return "Working"
 	if tool_requirement.is_valid():
@@ -157,17 +197,23 @@ func start(site_id: StringName, drop: Callable) -> bool:
 		jobs[site_id] = {"ids": [], "order": "daily_%d_%s" % [get_instance_id(), site_id],
 			"drop": drop, "units": 0, "progress": {}, "starts": {}, "stats": {}}
 	var job: Dictionary = jobs[site_id]
+	var added: Array[String] = []
 	for id: String in ids:
 		if not job.ids.has(id):
 			job.ids.append(id)
+			added.append(id)
 			job.progress[id] = 0
-			job.starts[id] = (TimeComponentManager.current_day + 1) * 1440 + SHIFT_START
+			job.starts[id] = _assignment_start_minute()
 			job.stats[id] = {"days": [], "output": 0}
 			# Busy reserves this standing assignment even outside its daily shift.
 			WorkerDatabase.get_worker_data(id).start_work(job.order, "clay_daily")
 			if is_hauler(id) and hauling != null:
 				hauling.begin(id, site_id, now(), hauler_setups[id])
 				hauler_setups.erase(id)
+	# Initialize physical presence before either a clock callback or UI can
+	# observe this new reservation as productive.
+	if assignment_started.is_valid() and not added.is_empty():
+		assignment_started.call(site_id, added)
 	_sync_activities()
 	selected[site_id] = []
 	return true
@@ -178,7 +224,7 @@ func start_day_text(site_id: StringName) -> String:
 	if jobs.has(site_id):
 		ids.append_array(jobs[site_id].ids)
 	for id: String in ids:
-		var day: int = TimeComponentManager.current_day + 1
+		var day: int = _assignment_start_minute() / 1440
 		if jobs.has(site_id) and jobs[site_id].starts.has(id):
 			day = int(jobs[site_id].starts[id]) / 1440
 		if not days.has(day):
@@ -199,13 +245,15 @@ func active_count(site_id: StringName) -> int:
 	var count: int = 0
 	if jobs.has(site_id):
 		for id: String in jobs[site_id].ids:
-			if not is_hauler(id) and activity(site_id, id) == WorkerData.WorkStatus.WORKING:
+			if not _payroll_blocked(id) and not is_hauler(id) and activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				count += 1
 	return count
 
 func activity(site_id: StringName, id: String) -> WorkerData.WorkStatus:
 	if not jobs.has(site_id) or not jobs[site_id].ids.has(id):
 		return WorkerData.WorkStatus.IDLE
+	if _payroll_blocked(id):
+		return WorkerData.WorkStatus.RESTING
 	if is_hauler(id) and hauling != null and hauling.routes.has(id):
 		var visual: Dictionary = hauling.get_visual(id, float(now()))
 		if visual.get("moving", false):
@@ -258,6 +306,7 @@ func tick() -> void:
 	var current: int = now()
 	if current <= last_tick:
 		return
+	var previous: int = last_tick
 	# The clock emits every elapsed minute, including explicit time skips.
 	var interval: int = current - 1
 	var day: int = interval / 1440
@@ -272,6 +321,8 @@ func tick() -> void:
 			var session = sites[site_id]
 			for id: String in job.ids:
 				if is_hauler(id):
+					continue
+				if _payroll_unpaid_minutes(id, interval, interval + 1) > 0:
 					continue
 				if interval < int(job.starts[id]):
 					continue
@@ -292,7 +343,9 @@ func tick() -> void:
 					_settle(site_id)
 			if session.stock <= 0 or minute == SHIFT_END - 1:
 				_settle(site_id)
-				job.progress.clear()
+				for id: String in job.ids:
+					if _payroll_unpaid_minutes(id, interval, interval + 1) == 0:
+						job.progress.erase(id)
 	# Replace only unharvested natural stock; ground output is never rerolled.
 	var current_day: int = current / 1440
 	if current_day != last_stock_day:
@@ -300,7 +353,7 @@ func tick() -> void:
 			session.stock = rng.randi_range(session.daily_stock_min if session.daily_stock_min >= 0 else stock_min, session.daily_stock_max if session.daily_stock_max >= 0 else stock_max)
 		last_stock_day = current_day
 	if hauling != null:
-		hauling.tick(current, _hauler_eligible, _site_depleted)
+		hauling.tick(current, _hauler_eligible.bind(previous, current), _site_depleted, previous, current)
 		for site_id in jobs.keys():
 			for id: String in jobs[site_id].ids.duplicate():
 				if is_hauler(id) and hauling.finished(id):
@@ -317,19 +370,29 @@ func _release_worker(job: Dictionary, id: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker != null:
 		worker.finish_work(job.order)
+	if assignment_released.is_valid():
+		assignment_released.call(id)
 	job.progress.erase(id)
 	job.starts.erase(id)
 	job.stats.erase(id)
 
 func cleanup() -> void:
+	if WorkerDatabase.has_signal("payroll_settling") and WorkerDatabase.is_connected("payroll_settling", tick):
+		WorkerDatabase.disconnect("payroll_settling", tick)
+	if WorkerDatabase.payroll_changed.is_connected(_sync_activities):
+		WorkerDatabase.payroll_changed.disconnect(_sync_activities)
 	for job: Dictionary in jobs.values():
 		for id: String in job.ids:
 			_release_worker(job, id)
 	jobs.clear()
 	hauler_setups.clear()
 	journey_provider = Callable()
+	physical_arrival = Callable()
+	assignment_started = Callable()
+	assignment_released = Callable()
 	hauler_ready = Callable()
 	tool_requirement = Callable()
 	if hauling != null:
 		hauling.routes.clear()
+		hauling.payroll_unpaid_minutes_provider = Callable()
 		hauling = null

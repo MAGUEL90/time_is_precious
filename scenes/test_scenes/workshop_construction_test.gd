@@ -241,14 +241,31 @@ func _test_map_reload_and_built_workshop_access() -> void:
 		await _free_content()
 		return
 	_expect(plot.construction == _fixture_state, "The real plot must use the WorkStateRuntime construction node.")
+	var visuals: Node2D = _content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
+	visuals.set_process(false)
 	var selected: Array[String] = [TEST_WORKER_IDS[0], TEST_WORKER_IDS[1]]
-	_fixture_state.start_clearing([TEST_WORKER_IDS[0]] as Array[String], false)
+	var clearing: Dictionary = _fixture_state.start_clearing([TEST_WORKER_IDS[0]] as Array[String], false)
+	_expect(bool(clearing.success), "The real plot must start clearing with its fixture worker.")
+	if not bool(clearing.success):
+		await _free_content()
+		return
+	var clearing_worker: WorkerData = WorkerDatabase.get_worker_data(TEST_WORKER_IDS[0])
+	_expect(clearing_worker.matches_physical_approach("plot", _fixture_state.order_id + ":clearing", _fixture_state.order_id)
+		and not clearing_worker.physical_approach.arrived, "Clearing starts with a pending physical route to the plot.")
+	_drive_plot_arrivals(visuals, [TEST_WORKER_IDS[0]] as Array[String], "clearing", _fixture_state.order_id)
 	_advance_state_to(_fixture_state, _fixture_state.completes_at)
+	_expect(_fixture_state.phase == "empty" and not clearing_worker.is_reserved(),
+		"Arrived clearing finishes and releases its worker before construction.")
 	var result: Dictionary = _fixture_state.start_build(selected)
 	_expect(bool(result.success), "The real plot's runtime state must accept the fixture construction team.")
 	if not bool(result.success):
 		await _free_content()
 		return
+	var second_worker: WorkerData = WorkerDatabase.get_worker_data(TEST_WORKER_IDS[1])
+	_expect(second_worker.matches_physical_approach("plot", _fixture_state.order_id + ":building", _fixture_state.order_id)
+		and not second_worker.physical_approach.arrived,
+		"The newly assigned second builder must travel to the plot before contributing.")
+	_drive_plot_arrivals(visuals, selected, "building", _fixture_state.order_id)
 	_advance_state_to(_fixture_state, _fixture_state.started_at + 900)
 	var retained_state: Variant = _fixture_state
 	var retained_remaining: int = int(_fixture_state.get_preview([] as Array[String]).remaining_minutes)
@@ -302,6 +319,27 @@ func _advance_state_to(state: Variant, total_minutes: int) -> void:
 	var day: int = int(total_minutes / 1440)
 	var within_day: int = total_minutes % 1440
 	state.call("_on_time_changed", day, int(within_day / 60), within_day % 60, "clear")
+
+func _drive_plot_arrivals(visuals: Node2D, worker_ids: Array[String], phase: String, order_id: String) -> void:
+	var was_paused: bool = TimeComponentManager.is_paused
+	TimeComponentManager.is_paused = false
+	var task_key: String = order_id + ":" + phase
+	for _frame: int in range(4000):
+		var all_arrived: bool = true
+		for worker_id: String in worker_ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+			if worker == null or not worker.matches_physical_approach("plot", task_key, order_id) or not worker.physical_approach.get("arrived", false):
+				all_arrived = false
+				break
+		if all_arrived:
+			break
+		visuals.plot_presence.update(visuals, 0.1)
+	TimeComponentManager.is_paused = was_paused
+	for worker_id: String in worker_ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+		_expect(worker != null and worker.matches_physical_approach("plot", task_key, order_id)
+			and worker.physical_approach.get("arrived", false),
+			"Builder " + worker_id + " physically reaches the plot before " + phase + " time counts.")
 
 func _attempt_reentrant_start() -> void:
 	if not _reentrant_watch or _reentrant_attempted:

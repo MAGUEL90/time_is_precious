@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://d3n5g5b2cr8ws" path="res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite_payroll.gd" id="1_test"]
+
+[node name="ClayWorksitePayrollTest" type="Node"]
+script = ExtResource("1_test")

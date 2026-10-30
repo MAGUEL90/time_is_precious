@@ -1,0 +1,49 @@
+{
+  "engine": "4.5.1.stable.official.f62fdbde1",
+  "platform": "Linux headless",
+  "baseline": "d6ea244cf1a5be4a791977daa57e2806bdbdb134",
+  "needs": "production defaults active",
+  "merchant_rng": "unseeded natural visits; no reroll",
+  "runs": [
+    {
+      "sample": 7,
+      "phase": "write",
+      "exit_code": 0,
+      "result": "PASS",
+      "unexpected_errors": 0,
+      "leak_diagnostics": 0,
+      "log": "journey7-write.log",
+      "sha256": "7730a912fd81fc7a5df29efde574419fc2e9a752bf963cee11dbdf77e6588dae"
+    },
+    {
+      "sample": 7,
+      "phase": "read",
+      "exit_code": 0,
+      "result": "PASS",
+      "unexpected_errors": 0,
+      "leak_diagnostics": 0,
+      "log": "journey7-read.log",
+      "sha256": "fc7e6f0727ce8fc964094e85cf2d2c2c546be695af3b9e83ea754c79346e1b82"
+    },
+    {
+      "sample": 8,
+      "phase": "write",
+      "exit_code": 0,
+      "result": "PASS",
+      "unexpected_errors": 0,
+      "leak_diagnostics": 0,
+      "log": "journey8-write.log",
+      "sha256": "4f1f7cd72de5c426332a23fb6846584b27ed052152bd031bcdec803c9247c02c"
+    },
+    {
+      "sample": 8,
+      "phase": "read",
+      "exit_code": 0,
+      "result": "PASS",
+      "unexpected_errors": 0,
+      "leak_diagnostics": 0,
+      "log": "journey8-read.log",
+      "sha256": "9324048bfac08e5185744d386f01f2071ae8e7801e75bee5d25559bf6857f020"
+    }
+  ]
+}

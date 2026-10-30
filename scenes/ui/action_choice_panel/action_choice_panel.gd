@@ -24,7 +24,7 @@ func setup(
 	message_label.text = message
 	primary_button.text = primary_text
 	secondary_button.text = secondary_text
-	close_button.visible = show_close
+	close_button.visible = show_close and primary_text.strip_edges().to_lower() != "back" and secondary_text.strip_edges().to_lower() != "back"
 
 func _on_primary_pressed() -> void:
 	primary_selected.emit()

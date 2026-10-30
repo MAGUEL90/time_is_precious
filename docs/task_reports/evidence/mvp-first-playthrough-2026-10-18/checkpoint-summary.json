@@ -1,0 +1,786 @@
+[
+  {
+    "run": 7,
+    "schema_version": 4,
+    "location": "home",
+    "player": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "global_position",
+          {
+            "$type": "vector2",
+            "x": 28.33333969116211,
+            "y": -50.49997329711914
+          }
+        ],
+        [
+          "fatigue",
+          0.001
+        ],
+        [
+          "hunger",
+          0.43500000000000905
+        ],
+        [
+          "focus",
+          0.9995
+        ],
+        [
+          "current_experience",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "last_sleep_day",
+          {
+            "$type": "int",
+            "value": "8"
+          }
+        ],
+        [
+          "last_collapse_day",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "total_collapse_count",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    },
+    "stock": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "food_supply",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "clothing_supply",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "treasury_shekel",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "shelter_capacity",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    },
+    "facilities": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "facility_levels",
+          {
+            "$type": "dictionary",
+            "entries": [
+              [
+                "drying_yard",
+                {
+                  "$type": "int",
+                  "value": "2"
+                }
+              ]
+            ]
+          }
+        ]
+      ]
+    },
+    "raid": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "phase",
+          "unbuilt"
+        ],
+        [
+          "wall_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "wall_level",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "watchtower_built",
+          false
+        ],
+        [
+          "_work_base_max_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_latest_minute",
+          {
+            "$type": "int",
+            "value": "11995"
+          }
+        ],
+        [
+          "_attack_at",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "_departure_at",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "_party",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_expedition_sequence",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_composition_stage",
+          {
+            "$type": "string_name",
+            "value": "early"
+          }
+        ],
+        [
+          "_elapsed",
+          0.0
+        ],
+        [
+          "_hits",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_start_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_attack_strength",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_report",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_report_sequence",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_kind",
+          ""
+        ],
+        [
+          "_work_remaining",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_total",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_restore_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_paid",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "last_work_message",
+          ""
+        ],
+        [
+          "_breach_at",
+          -1.0
+        ],
+        [
+          "_next_loot_at",
+          0.0
+        ],
+        [
+          "_loot_weight",
+          0.0
+        ],
+        [
+          "_stolen",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_retreat_reason",
+          ""
+        ],
+        [
+          "_breach_losses",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ]
+      ]
+    },
+    "city": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "level",
+          {
+            "$type": "int",
+            "value": "1"
+          }
+        ],
+        [
+          "progress",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "last_daily",
+          {
+            "$type": "dictionary",
+            "entries": [
+              [
+                "day",
+                {
+                  "$type": "int",
+                  "value": "8"
+                }
+              ],
+              [
+                "food",
+                {
+                  "$type": "int",
+                  "value": "5"
+                }
+              ],
+              [
+                "clothing",
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                "satisfaction",
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                "wall",
+                {
+                  "$type": "int",
+                  "value": "-5"
+                }
+              ],
+              [
+                {
+                  "$type": "string_name",
+                  "value": "total"
+                },
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                {
+                  "$type": "string_name",
+                  "value": "applied"
+                },
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ]
+            ]
+          }
+        ],
+        [
+          "last_event",
+          ""
+        ],
+        [
+          "last_awarded_day",
+          {
+            "$type": "int",
+            "value": "8"
+          }
+        ],
+        [
+          "_last_breach_id",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "run": 8,
+    "schema_version": 4,
+    "location": "home",
+    "player": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "global_position",
+          {
+            "$type": "vector2",
+            "x": 28.33333969116211,
+            "y": -50.49997329711914
+          }
+        ],
+        [
+          "fatigue",
+          0.001
+        ],
+        [
+          "hunger",
+          0.46500000000001623
+        ],
+        [
+          "focus",
+          0.9995
+        ],
+        [
+          "current_experience",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "last_sleep_day",
+          {
+            "$type": "int",
+            "value": "14"
+          }
+        ],
+        [
+          "last_collapse_day",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "total_collapse_count",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    },
+    "stock": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "food_supply",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "clothing_supply",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "treasury_shekel",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "shelter_capacity",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    },
+    "facilities": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "facility_levels",
+          {
+            "$type": "dictionary",
+            "entries": [
+              [
+                "drying_yard",
+                {
+                  "$type": "int",
+                  "value": "2"
+                }
+              ]
+            ]
+          }
+        ]
+      ]
+    },
+    "raid": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "phase",
+          "unbuilt"
+        ],
+        [
+          "wall_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "wall_level",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "watchtower_built",
+          false
+        ],
+        [
+          "_work_base_max_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_latest_minute",
+          {
+            "$type": "int",
+            "value": "20668"
+          }
+        ],
+        [
+          "_attack_at",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "_departure_at",
+          {
+            "$type": "int",
+            "value": "-1"
+          }
+        ],
+        [
+          "_party",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_expedition_sequence",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_composition_stage",
+          {
+            "$type": "string_name",
+            "value": "early"
+          }
+        ],
+        [
+          "_elapsed",
+          0.0
+        ],
+        [
+          "_hits",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_start_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_attack_strength",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_report",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_report_sequence",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_kind",
+          ""
+        ],
+        [
+          "_work_remaining",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_total",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_restore_hp",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "_work_paid",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "last_work_message",
+          ""
+        ],
+        [
+          "_breach_at",
+          -1.0
+        ],
+        [
+          "_next_loot_at",
+          0.0
+        ],
+        [
+          "_loot_weight",
+          0.0
+        ],
+        [
+          "_stolen",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ],
+        [
+          "_retreat_reason",
+          ""
+        ],
+        [
+          "_breach_losses",
+          {
+            "$type": "dictionary",
+            "entries": []
+          }
+        ]
+      ]
+    },
+    "city": {
+      "$type": "dictionary",
+      "entries": [
+        [
+          "level",
+          {
+            "$type": "int",
+            "value": "1"
+          }
+        ],
+        [
+          "progress",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ],
+        [
+          "last_daily",
+          {
+            "$type": "dictionary",
+            "entries": [
+              [
+                "day",
+                {
+                  "$type": "int",
+                  "value": "14"
+                }
+              ],
+              [
+                "food",
+                {
+                  "$type": "int",
+                  "value": "5"
+                }
+              ],
+              [
+                "clothing",
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                "satisfaction",
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                "wall",
+                {
+                  "$type": "int",
+                  "value": "-5"
+                }
+              ],
+              [
+                {
+                  "$type": "string_name",
+                  "value": "total"
+                },
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ],
+              [
+                {
+                  "$type": "string_name",
+                  "value": "applied"
+                },
+                {
+                  "$type": "int",
+                  "value": "0"
+                }
+              ]
+            ]
+          }
+        ],
+        [
+          "last_event",
+          ""
+        ],
+        [
+          "last_awarded_day",
+          {
+            "$type": "int",
+            "value": "14"
+          }
+        ],
+        [
+          "_last_breach_id",
+          {
+            "$type": "int",
+            "value": "0"
+          }
+        ]
+      ]
+    }
+  }
+]

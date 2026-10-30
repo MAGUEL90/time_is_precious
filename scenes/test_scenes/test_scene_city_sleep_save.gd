@@ -1,6 +1,8 @@
 extends "res://scenes/test_scenes/test_scene_city_save_economy.gd"
 
 const SLEEP_SAVE_PATH: String = "user://city_sleep_save_test/checkpoint.json"
+const SAVE_STATE: Script = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
+const SAVE_VALUES: Script = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 var mode: String = "roundtrip"
 
 func _run() -> void:
@@ -27,9 +29,17 @@ func _run() -> void:
 		_finish_sleep_test()
 		return
 	_settle_needs()
+	var visuals: Node = runtime.get_node("WorkerVisuals")
 	var deadline: int = _clock_minute() + 1800
 	while (not runtime.hauling.routes.has(HAULER_ID) or runtime.hauling.routes[HAULER_ID].phase != "outbound") and _clock_minute() < deadline:
+		# One game minute is one real second: drive the same frame-based walk
+		# that marks physical arrival before advancing the work scheduler.
+		for _frame: int in range(20):
+			visuals._process(0.05)
 		TimeComponentManager.advance_minutes(1)
+	var laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)
+	_expect(laborer != null and not laborer.physical_approach.is_empty() and laborer.physical_approach.arrived,
+		"The assigned Laborer physically reaches the Wood Site before producing.")
 	_expect(runtime.hauling.routes.has(HAULER_ID) and runtime.hauling.routes[HAULER_ID].cargo.quantity == 3, "A real Hauler is carrying three wood logs before the home visit.")
 	city_storage.items["stone"] = 20
 	city_storage.items["wood_log"] = 5
@@ -81,7 +91,7 @@ func _run() -> void:
 	_expect(original_runtime._daily_output_count(WOOD_SITE) > 0, "Assigned workers continue producing during the real sleep time skip.")
 	var saved: String = FileAccess.get_file_as_string(SLEEP_SAVE_PATH)
 	var parsed: Dictionary = JSON.parse_string(saved)
-	_expect(parsed.schema_version == 4 and parsed.location == "home", "Sleep checkpoints record the current schema and home location explicitly.")
+	_expect(parsed.schema_version == SAVE_STATE.VERSION and parsed.location == "home", "Sleep checkpoints record the current schema and home location explicitly.")
 	var raw: Dictionary = store.snapshot.prepared
 	var current_sources: Dictionary = raw.pickup_sources
 	for id: String in sources_before_sleep:
@@ -125,7 +135,9 @@ func _run() -> void:
 	v3_raw.erase("pickup_sources")
 	v3_raw.date_palms = v3_palms
 	v3.schema_version = 3
+	_strip_post_v3_owner_fields(v3_raw)
 	v3.state = v3_codec.encode(v3_raw)
+	_strip_post_v3_worker_fields(v3.state)
 	var v3_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
 	v3_file.store_string(JSON.stringify(v3, "", true, true))
 	v3_file.close()
@@ -142,7 +154,9 @@ func _run() -> void:
 	var legacy_raw: Dictionary = codec.decode(legacy.state)
 	legacy_raw.erase("pickup_sources")
 	legacy.schema_version = 2
+	_strip_post_v3_owner_fields(legacy_raw)
 	legacy.state = codec.encode(legacy_raw)
+	_strip_post_v3_worker_fields(legacy.state)
 	var legacy_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
 	legacy_file.close()
@@ -161,6 +175,17 @@ func _run() -> void:
 	file.close()
 	_expect(not store.save_checkpoint() and FileAccess.get_file_as_string(SLEEP_SAVE_PATH) == "{broken", "Autosave shares the existing corrupt-file preservation boundary.")
 	_finish_sleep_test()
+
+func _strip_post_v3_worker_fields(value: Variant) -> void:
+	if value is Dictionary:
+		if value.get("$type") == "object" and value.get("class") == "WorkerData":
+			for field: String in SAVE_VALUES.PAYROLL_FIELDS + SAVE_VALUES.CONTRACT_FIELDS + ["physical_approach"]:
+				value.fields.erase(field)
+		for child: Variant in value.values():
+			_strip_post_v3_worker_fields(child)
+	elif value is Array:
+		for child: Variant in value:
+			_strip_post_v3_worker_fields(child)
 
 func _load_root_city() -> void:
 	content = CONTENT_SCENE.instantiate()
@@ -249,3 +274,9 @@ func _finish_sleep_test() -> void:
 		_clean_files()
 	print("CitySleepSaveTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
+	# Pseudo-legacy documents omit owner fields absent in those schemas.
+	raw.raid.erase("notification_seen_keys")
+	for plot: Dictionary in raw.plots.values():
+		plot.erase("payroll_work_remainder")

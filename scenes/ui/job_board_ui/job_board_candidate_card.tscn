@@ -1,0 +1,242 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/job_board_ui/job_board_candidate_card.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_card"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/hauler_icon.png" id="3_hauler"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/satisfaction_normal_small_icon.png" id="4_mood"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="5_coin"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/empty_bar.png" id="6_empty"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/filled_bar.png" id="7_fill"]
+[ext_resource type="FontFile" path="res://assets/font/pixel_rpg.ttf" id="8_font"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/checklist_icon.png" id="9_check"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="10_panel"]
+
+[sub_resource type="AtlasTexture" id="Card"]
+atlas = ExtResource("2_card")
+region = Rect2(199, 51, 138, 44)
+
+[sub_resource type="AtlasTexture" id="Portrait"]
+atlas = ExtResource("2_card")
+region = Rect2(1, 1, 34, 34)
+
+[sub_resource type="AtlasTexture" id="Check"]
+atlas = ExtResource("10_panel")
+region = Rect2(1, 1, 16, 16)
+
+[sub_resource type="AtlasTexture" id="Check_focus"]
+atlas = ExtResource("10_panel")
+region = Rect2(18, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="Check_style"]
+texture = SubResource("Check")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxTexture" id="Focus_style"]
+texture = SubResource("Check_focus")
+draw_center = false
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[node name="CandidateCard" type="NinePatchRect"]
+custom_minimum_size = Vector2(312, 60)
+offset_right = 312.0
+offset_bottom = 60.0
+size_flags_horizontal = 0
+texture_filter = 1
+mouse_filter = 2
+texture = SubResource("Card")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+script = ExtResource("1_script")
+
+[node name="Details" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PortraitFrame" type="NinePatchRect" parent="Details"]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 42.0
+offset_bottom = 42.0
+texture = SubResource("Portrait")
+patch_margin_left = 1
+patch_margin_top = 1
+patch_margin_right = 1
+patch_margin_bottom = 1
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="Details/PortraitFrame"]
+offset_left = 3.0
+offset_top = -3.0
+offset_right = 35.0
+offset_bottom = 29.0
+texture = ExtResource("3_hauler")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 2
+
+[node name="SelectionButton" type="Button" parent="Details"]
+offset_left = 290.0
+offset_top = 6.0
+offset_right = 306.0
+offset_bottom = 22.0
+toggle_mode = true
+theme_override_styles/normal = SubResource("Check_style")
+theme_override_styles/hover = SubResource("Check_style")
+theme_override_styles/pressed = SubResource("Check_style")
+theme_override_styles/disabled = SubResource("Check_style")
+theme_override_styles/focus = SubResource("Focus_style")
+
+[node name="CheckIcon" type="TextureRect" parent="Details/SelectionButton"]
+visible = false
+offset_right = 16.0
+offset_bottom = 16.0
+texture = ExtResource("9_check")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="Details"]
+offset_left = 48.0
+offset_top = 6.0
+offset_right = 206.0
+offset_bottom = 20.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+clip_text = true
+text_overrun_behavior = 3
+vertical_alignment = 1
+
+[node name="RoleLabel" type="Label" parent="Details"]
+offset_left = 48.0
+offset_top = 8.0
+offset_right = 306.0
+offset_bottom = 18.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+vertical_alignment = 1
+clip_text = true
+
+[node name="DutyLabel" type="Label" parent="Details"]
+offset_left = 48.0
+offset_top = 26.0
+offset_right = 306.0
+offset_bottom = 36.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+clip_text = true
+
+[node name="SatisfactionHeading" type="Label" parent="Details"]
+offset_left = 10.0
+offset_top = 45.0
+offset_right = 60.0
+offset_bottom = 57.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = "Satisfaction"
+mouse_filter = 2
+
+[node name="WageHeading" type="Label" parent="Details"]
+offset_left = 127.0
+offset_top = 45.0
+offset_right = 155.0
+offset_bottom = 57.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = "Prepaid"
+mouse_filter = 2
+
+[node name="WageValue" type="Label" parent="Details"]
+offset_left = 171.0
+offset_top = 45.0
+offset_right = 218.0
+offset_bottom = 57.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+tooltip_text = "Full package price for the selected contract duration, paid from your wallet."
+
+[node name="SatisfactionLabel" type="Label" parent="Details"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1.0
+offset_bottom = 1.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+visible = false
+
+[node name="PreviewLabel" type="Label" parent="Details"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1.0
+offset_bottom = 1.0
+theme_override_fonts/font = ExtResource("8_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = ""
+mouse_filter = 2
+visible = false
+
+[node name="MoodIcon" type="TextureRect" parent="Details"]
+offset_left = 43.0
+offset_top = 40.0
+offset_right = 59.0
+offset_bottom = 56.0
+texture = ExtResource("4_mood")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 1
+
+[node name="SatisfactionBar" type="TextureProgressBar" parent="Details"]
+offset_left = 63.0
+offset_top = 44.0
+offset_right = 115.0
+offset_bottom = 52.0
+texture_under = ExtResource("6_empty")
+texture_progress = ExtResource("7_fill")
+nine_patch_stretch = true
+stretch_margin_left = 3
+stretch_margin_top = 3
+stretch_margin_right = 3
+stretch_margin_bottom = 3
+mouse_filter = 2
+
+[node name="ShekelIcon" type="TextureRect" parent="Details"]
+offset_left = 159.0
+offset_top = 44.0
+offset_right = 167.0
+offset_bottom = 52.0
+texture = ExtResource("5_coin")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 2

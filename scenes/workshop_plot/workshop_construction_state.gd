@@ -20,9 +20,16 @@ var started_at: int = 0
 var completes_at: int = 0
 var _latest_time: int = 0
 var _starting: bool = false
+# Fractional team progress, in worker-minutes modulo the assigned team size.
+var payroll_work_remainder: int = 0
+# Authored spatial binding survives the map being replaced by the home interior.
+# Save data validates approach targets against this value; it never supplies it.
+var worker_entry_position: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	TimeComponentManager.time_changed.connect(_on_time_changed)
+	WorkerDatabase.payroll_settling.connect(_flush_payroll_boundary)
+	WorkerDatabase.payroll_changed.connect(_refresh_payroll_status)
 	_latest_time = _now()
 
 func get_requirements() -> Dictionary:
@@ -35,6 +42,8 @@ func _worker_reason(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Worker unavailable."
+	if worker.is_payroll_blocked():
+		return worker.get_onboarding_status()
 	if worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
 		return "Worker is busy."
 	var citizen: CitizenData = worker.get_linked_citizen()
@@ -68,6 +77,9 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 			message = "Missing materials in Inventory."
 	if phase != "empty":
 		message = "Clear the site first." if phase in ["uncleared", "clearing"] else ("Construction in progress." if phase == "building" else "Workshop ready.")
+	var payroll_blocked: bool = phase == "building" and _all_workers_payroll_blocked()
+	if payroll_blocked:
+		message = "Contract expired - renew in Worker Hub."
 	elif _starting:
 		message = "Starting construction."
 	var duration: int = ceili(float(SOLO_MINUTES) / selected_ids.size()) if not selected_ids.is_empty() else 0
@@ -77,7 +89,7 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		progress = clampf(float(_latest_time - started_at) / maxi(completes_at - started_at, 1), 0.0, 1.0)
 	elif phase == "built":
 		progress = 1.0
-	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size()}
+	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
 
 func start_build(selected_ids: Array[String]) -> Dictionary:
 	var preview: Dictionary = get_preview(selected_ids)
@@ -103,10 +115,12 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 			return {"success": false, "message": "Materials changed; construction was not started."}
 		consumed[id] = quantity
 	worker_ids = reserved
+	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
 	phase = "building"
+	_initialize_approaches()
 	_starting = false
 	changed.emit()
 	return {"success": true, "message": "Construction started."}
@@ -117,13 +131,57 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	var next_time: int = day * 1440 + hour * 60 + minute
 	if next_time <= _latest_time:
 		return
+	var elapsed: int = next_time - _latest_time
+	if not clearing_by_player and not worker_ids.is_empty():
+		var contribution: int = payroll_work_remainder
+		for id: String in worker_ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+			if worker != null:
+				contribution += worker.get_arrived_paid_minutes(_latest_time, next_time, "plot", order_id + ":" + phase, order_id)
+		var worked: int = contribution / worker_ids.size()
+		payroll_work_remainder = contribution % worker_ids.size()
+		started_at += elapsed - worked
+		completes_at += elapsed - worked
 	_latest_time = next_time
 	if _latest_time >= completes_at:
 		phase = "empty" if phase == "clearing" else "built"
+		payroll_work_remainder = 0
 		clearing_remaining = 0
 		clearing_by_player = false
 		_release_workers(worker_ids)
 	changed.emit()
+
+func _all_workers_payroll_blocked() -> bool:
+	if worker_ids.is_empty():
+		return false
+	for id: String in worker_ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker != null and not worker.is_payroll_blocked():
+			return false
+	return true
+
+func has_active_worker_at_plot() -> bool:
+	if phase not in ["building", "clearing"]:
+		return false
+	if phase == "clearing" and clearing_by_player:
+		return true
+	var task_key: String = order_id + ":" + phase
+	for id: String in worker_ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker == null or worker.is_payroll_blocked():
+			continue
+		if worker.physical_approach.is_empty():
+			return true # Legacy saves retain their established inside-plot state.
+		if worker.matches_physical_approach("plot", task_key, order_id) and worker.physical_approach.arrived:
+			return true
+	return false
+
+func _refresh_payroll_status() -> void:
+	if phase in ["building", "clearing"]:
+		changed.emit()
+
+func _flush_payroll_boundary() -> void:
+	_on_time_changed(TimeComponentManager.current_day, TimeComponentManager.current_hour, TimeComponentManager.current_minute, TimeComponentManager.current_weather)
 
 func _release_workers(ids: Array[String]) -> void:
 	for id: String in ids:
@@ -148,10 +206,13 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 			message = "Assign player or one worker."
 		else:
 			message = _worker_reason(ids[0])
+	var payroll_blocked: bool = phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked()
+	if payroll_blocked:
+		message = "Contract expired - renew in Worker Hub."
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "clearing" else clearing_remaining
 	var progress: float = 1.0 - float(remaining) / CLEARING_MINUTES
 	return {"can_start": message.is_empty(), "message": message, "duration_minutes": clearing_remaining,
-		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": 1}
+		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": 1, "payroll_blocked": payroll_blocked}
 
 func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 	var preview: Dictionary = get_clearing_preview(ids, use_player)
@@ -163,12 +224,22 @@ func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 		WorkerDatabase.get_worker_data(ids[0]).start_work(order_id, "Clear Workshop Site")
 	worker_ids = ids.duplicate()
 	clearing_by_player = use_player
+	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + clearing_remaining
 	phase = "clearing"
+	if not use_player:
+		_initialize_approaches()
 	changed.emit()
 	return {"success": true, "message": "Clearing started."}
+
+func _initialize_approaches() -> void:
+	for plot: Node in get_tree().get_nodes_in_group("workshop_plots"):
+		if plot.construction == self:
+			for id: String in worker_ids:
+				plot.begin_worker_approach(id, order_id + ":" + phase)
+			return
 
 func interrupt_player_clearing() -> void:
 	if phase != "clearing" or not clearing_by_player:

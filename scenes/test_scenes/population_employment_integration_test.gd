@@ -1,10 +1,26 @@
 extends Node
 
+const TEST_ONBOARDING_RATES: Dictionary = {
+	WorkerData.Profession.LABORER: 2,
+	WorkerData.Profession.CRAFTER: 3,
+	WorkerData.Profession.HAULER: 4
+}
+
 var test_failed: bool = false
 
 # Test runner
 
 func _ready() -> void:
+	TimeComponentManager.set_process(false)
+	TimeComponentManager.is_paused = false
+	TimeComponentManager.current_day = 0
+	TimeComponentManager.current_hour = 10
+	TimeComponentManager.current_minute = 0
+	# Fixture rates and treasury funds keep the test independent of final game prices.
+	WorkerDatabase.onboarding_period_rates = TEST_ONBOARDING_RATES.duplicate()
+	CityStockManager.treasury_shekel = 0
+	Inventory.items.clear()
+	Inventory.items["shekel"] = 100
 	CitizenManager.citizens_by_id.clear()
 	ImmigrationManager.pending_immigrants.clear()
 
@@ -147,7 +163,6 @@ func _test_applicant_hiring_lifecycle() -> void:
 	)
 	var job_board: JobBoard = job_board_scene.instantiate()
 	add_child(job_board)
-	job_board.default_daily_wage = 2
 
 	job_board.on_player_interact(null)
 
@@ -179,6 +194,10 @@ func _test_applicant_hiring_lifecycle() -> void:
 			),
 			"Applicant row must show the citizen name."
 		)
+		_expect(
+			job_board_ui.quote_label.text.contains("3-day prepaid: 2 Shekel"),
+			"Job Board quote must show the selected three-day prepaid package price."
+		)
 
 		job_board_ui.hire_button.pressed.emit()
 		hired_worker = WorkerDatabase.get_worker_data(
@@ -190,6 +209,10 @@ func _test_applicant_hiring_lifecycle() -> void:
 	_expect(
 		applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
 		"Hired applicant must enter the HIRED employment state."
+	)
+	_expect(
+		Inventory.items.get("shekel", 0) == 98,
+		"Job Board hiring spends the three-day package from the explicit personal wallet fixture."
 	)
 	_expect(
 		WorkerDatabase.get_worker_data(applicant.citizen_id) == hired_worker,
@@ -206,9 +229,34 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"Hired worker must inherit the applicant profession."
 		)
 		_expect(
-			hired_worker.wage_shekel_per_day == 2,
-			"Hired worker must receive the agreed wage."
+			hired_worker.payroll_start_day == TimeComponentManager.current_day
+				and hired_worker.payroll_paid_from_day == TimeComponentManager.current_day
+				and hired_worker.payroll_paid_until_day == TimeComponentManager.current_day + 3
+				and hired_worker.payroll_contract_days == 3
+				and hired_worker.payroll_period_rate == 2
+				and hired_worker.payroll_paid_start_minute
+					== TimeComponentManager.current_day * 1440
+						+ TimeComponentManager.current_hour * 60
+						+ TimeComponentManager.current_minute
+				and not hired_worker.is_payroll_blocked(),
+			"A new hire immediately receives today's remaining time plus the prepaid three-day package."
 		)
+		var assignment_workshop: WorkShop = WorkShop.new()
+		assignment_workshop.max_assigned_worker_slots = 1
+		var paid_assignment: Array[String] = [hired_worker.worker_id]
+		_expect(
+			assignment_workshop.assign_workers(paid_assignment)
+				and assignment_workshop.get_assigned_worker_ids() == paid_assignment
+				and applicant.employment_status == CitizenData.EmploymentStatus.ASSIGNED,
+			"A newly prepaid worker can be assigned immediately."
+		)
+		var no_assignment: Array[String] = []
+		_expect(
+			assignment_workshop.assign_workers(no_assignment)
+				and applicant.employment_status == CitizenData.EmploymentStatus.HIRED,
+			"A newly prepaid worker can be released from the fixture workshop."
+		)
+		assignment_workshop.free()
 
 	if job_board_ui != null:
 		_expect(
@@ -246,6 +294,37 @@ func _test_applicant_hiring_lifecycle() -> void:
 		2
 	)
 	_expect(duplicate_hire == null, "A hired citizen cannot be hired twice.")
+
+	if hired_worker != null:
+		var fixture_price: int = WorkerDatabase.get_contract_price(hired_worker.profession, 3)
+		_expect(fixture_price == TEST_ONBOARDING_RATES[WorkerData.Profession.LABORER],
+			"The Laborer uses the explicit integration-test package price.")
+		_expect(Inventory.items.get("shekel", 0) == 100 - fixture_price
+			and CityStockManager.treasury_shekel == 0,
+			"The Job Board package comes from the personal wallet and does not draw city funds.")
+		var wallet_after_purchase: int = Inventory.items.get("shekel", 0)
+		TimeComponentManager.current_day = hired_worker.payroll_paid_until_day
+		TimeComponentManager.current_hour = 7
+		TimeComponentManager.current_minute = 0
+		TimeComponentManager.hour_changed.emit(7)
+		_expect(not hired_worker.is_payroll_blocked()
+			and hired_worker.payroll_paid_until_day == TimeComponentManager.current_day
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"The prepaid end day remains inclusive through 07:00 without an automatic city or wallet charge.")
+		TimeComponentManager.current_day = hired_worker.payroll_paid_until_day + 1
+		TimeComponentManager.current_hour = 7
+		TimeComponentManager.hour_changed.emit(7)
+		_expect(hired_worker.is_payroll_blocked()
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"Coverage expires at 07:00 the day after the inclusive end date without an automatic charge.")
+		TimeComponentManager.current_hour = 8
+		TimeComponentManager.hour_changed.emit(8)
+		_expect(hired_worker.is_payroll_blocked()
+			and Inventory.items.get("shekel", 0) == wallet_after_purchase
+			and CityStockManager.treasury_shekel == 0,
+			"The later 08:00 refresh does not start an automatic charge or restore expired coverage.")
 
 	WorkerDatabase.workers_by_id.erase(applicant.citizen_id)
 	CitizenManager.citizens_by_id.erase(applicant.citizen_id)

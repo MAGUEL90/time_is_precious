@@ -1,0 +1,5 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MVP_MEASURE {"clothing_missing":2,"construction":"empty","dried":0,"earned":0,"eaten":0,"fatigue":0.0025,"focus":0.99875,"food":{"consumer_count":2,"daily_need":2,"days_remaining":1,"points":2,"portion_points":0},"harvested":0,"held":[],"hunger":0.439000000000003,"inventory":{"date_cluster":3,"shekel":3,"wood_log":5},"minute":3799,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"contract_ui_read","walked_pixels":76.66665995121,"worker_reliability":0.9,"worker_satisfaction":0.4,"workshop_stock":{}}
+ContractUIReview read: PASS

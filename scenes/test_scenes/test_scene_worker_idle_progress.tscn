@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/test_scene_worker_idle_progress.gd" id="1"]
+
+[node name="WorkerIdleProgressTest" type="Node"]
+script = ExtResource("1")

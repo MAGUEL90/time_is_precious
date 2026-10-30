@@ -1,0 +1,21 @@
+{
+  "baseline": "965a814",
+  "engine": "4.5.1.stable.official.f62fdbde1",
+  "passed_game_processes": 32,
+  "output_fixture_cases": 20,
+  "normal_new_game_journeys": 3,
+  "normal_continue_processes": 3,
+  "initial_test_failures": [
+    {
+      "log": "dismissal-write.log",
+      "cause": "stale text assertion; corrected and two phases passed"
+    },
+    {
+      "log": "output-sample-initial.log",
+      "cause": "fixture failed to resolve Clay stock fallback; corrected;20cases passed"
+    }
+  ],
+  "editor_import_exit": 0,
+  "runtime_changes": false,
+  "human_review": "pending"
+}

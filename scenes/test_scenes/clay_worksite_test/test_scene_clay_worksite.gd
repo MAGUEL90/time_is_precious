@@ -255,7 +255,8 @@ func worker_journey(site_id: StringName, id: String, day: int) -> Dictionary:
 		worker_journeys.clear()
 		journey_cache_day = TimeComponentManager.current_day
 	var key: String = "%s:%s:%d" % [site_id, id, day]
-	if worker_journeys.has(key) and daily.now() >= int(floor(worker_journeys[key].start)):
+	var assignment: Variant = daily.jobs.get(site_id, {}).get("stats", {}).get(id)
+	if worker_journeys.has(key) and is_same(worker_journeys[key].get("assignment"), assignment) and daily.now() >= int(floor(worker_journeys[key].start)):
 		return worker_journeys[key]
 	var origin: Vector2 = worker_spawn(site_id, id)
 	var visuals = get_node_or_null("WorkerVisuals")
@@ -264,8 +265,15 @@ func worker_journey(site_id: StringName, id: String, day: int) -> Dictionary:
 	var destination: Vector2 = worker_destination(site_id, id) + Vector2(0, -16)
 	var arrival: int = day * 1440 + DailySchedule.SHIFT_START
 	var duration: float = origin.distance_to(destination) / worker_walk_pixels_per_game_minute if enable_worker_commute else 0.0
-	var route: Dictionary = {"origin": origin, "target": destination, "start": arrival - duration, "arrival": arrival}
-	worker_journeys[key] = route
+	# A newly assigned/loaded actor cannot have travelled before this route exists.
+	# Only the visual journey moves; DailySchedule keeps its approved work timing.
+	var departure: float = maxf(arrival - duration, daily.now()) if day == TimeComponentManager.current_day else arrival - duration
+	var route: Dictionary = {"origin": origin, "target": destination, "start": departure,
+		"arrival": ceili(departure + duration), "assignment": assignment}
+	# First-departure checks may query an older assignment day. The persistent
+	# commute cache belongs only to the current day; historical queries are transient.
+	if day == journey_cache_day:
+		worker_journeys[key] = route
 	return route
 
 func _reset_worker_draft() -> void:
@@ -509,12 +517,16 @@ func _process(_delta: float) -> void:
 		_site_highlight.select(nearest)
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").visible = site == nearest
+		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+			site.get_node("Label").visible = site != nearest
 
 func _hide_prompts() -> void:
 	_site_highlight.clear()
 	_highlighted_site = null
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").hide()
+		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+			site.get_node("Label").show()
 
 func _draw() -> void:
 	var ground := Rect2(-320, -180, 640, 360)

@@ -1,0 +1,608 @@
+{
+	"assignment_observed": true,
+	"deposited": 1,
+	"failures": 0,
+	"first_payment_observed": true,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 0,
+			"construction": "uncleared",
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.5,
+			"focus": 1.0,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 0,
+				"points": 0,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.0,
+			"inventory": {
+
+			},
+			"minute": 600,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "new_game",
+			"walked_pixels": 0.0,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 0,
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 1,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 18,
+			"held": [],
+			"hunger": 0.449,
+			"inventory": {
+				"date_cluster": 13
+			},
+			"minute": 1089,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 1,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 2252.50532531738,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 0,
+			"construction": "uncleared",
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 17,
+			"fatigue": 0.0540000000000001,
+			"focus": 0.946750000000006,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 27,
+			"held": [],
+			"hunger": 0.0200000000000006,
+			"inventory": {
+				"date_cluster": 6,
+				"wood_log": 8
+			},
+			"minute": 1300,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 1,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "gather_WoodSite",
+			"walked_pixels": 3212.50569498539,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 58,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 75,
+			"held": [],
+			"hunger": 0.454000000000002,
+			"inventory": {
+				"date_cluster": 9,
+				"wood_log": 8
+			},
+			"minute": 3375,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 2,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 8319.16949808598,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 0,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 115,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 132,
+			"held": [],
+			"hunger": 0.465000000000004,
+			"inventory": {
+				"date_cluster": 7,
+				"wood_log": 8
+			},
+			"minute": 5667,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 3,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 14752.5004189014,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "uncleared",
+			"deposited": 0,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 142,
+			"fatigue": 0.1385,
+			"focus": 0.841250000000017,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 162,
+			"held": [],
+			"hunger": 0.0180000000000047,
+			"inventory": {
+				"date_cluster": 8,
+				"shekel": 12,
+				"wood_log": 2
+			},
+			"minute": 6300,
+			"paid": 0,
+			"shaped": 0,
+			"sleeps": 3,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "sale",
+			"walked_pixels": 17784.1633557081,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 1,
+			"clothing_missing": 2,
+			"construction": "uncleared",
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 142,
+			"fatigue": 0.144,
+			"focus": 0.838500000000018,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 162,
+			"held": [],
+			"hunger": 0.0290000000000047,
+			"inventory": {
+				"date_cluster": 8,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 6311,
+			"paid": 0,
+			"paid_from": -1,
+			"paid_until": -1,
+			"payroll_start": 5,
+			"period_rate": 0,
+			"shaped": 0,
+			"sleeps": 3,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "pending_hire",
+			"walked_pixels": 18289.9954785109,
+			"worker_reliability": 0.8,
+			"worker_satisfaction": 0.3,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 173,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 201,
+			"held": [],
+			"hunger": 0.451000000000006,
+			"inventory": {
+				"date_cluster": 14,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 7973,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 4,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 22768.3233288527,
+			"worker_reliability": 0.75,
+			"worker_satisfaction": 0.25,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "uncleared",
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 184,
+			"fatigue": 0.0,
+			"focus": 0.99875,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 201,
+			"held": [],
+			"hunger": 0.0140000000000061,
+			"inventory": {
+				"date_cluster": 3,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 7976,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 4,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "first_payment",
+			"walked_pixels": 22844.9899888039,
+			"worker_reliability": 0.75,
+			"worker_satisfaction": 0.25,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "clearing",
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 184,
+			"fatigue": 0.001,
+			"focus": 0.99825,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 201,
+			"held": [],
+			"hunger": 0.0160000000000061,
+			"inventory": {
+				"date_cluster": 3,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 7978,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 4,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "construction_clearing",
+			"walked_pixels": 22939.1557908058,
+			"worker_reliability": 0.75,
+			"worker_satisfaction": 0.25,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "empty",
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 188,
+			"fatigue": 0.0545000000000001,
+			"focus": 0.951500000000005,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 213,
+			"held": [],
+			"hunger": 0.0430000000000063,
+			"inventory": {
+				"date_cluster": 11,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 8165,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 4,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "cleared",
+			"walked_pixels": 24144.988676548,
+			"worker_reliability": 0.75,
+			"worker_satisfaction": 0.25,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"deposited": 1,
+			"dried": 0,
+			"earned": 12,
+			"eaten": 201,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 228,
+			"held": [],
+			"hunger": 0.466000000000007,
+			"inventory": {
+				"date_cluster": 13,
+				"shekel": 11,
+				"wood_log": 2
+			},
+			"minute": 9108,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 11,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 5,
+			"sold_bricks": 0,
+			"sold_wood": 6,
+			"stage": "sleep_checkpoint",
+			"walked_pixels": 25419.1549973488,
+			"worker_reliability": 0.7,
+			"worker_satisfaction": 0.2,
+			"workshop_stock": {
+
+			}
+		}
+	],
+	"normal_income": 12,
+	"phase": "write",
+	"settlements": [
+		{
+			"amount": 1,
+			"city_cash": 0,
+			"from_day": 5,
+			"minute": 7680,
+			"until_day": 11
+		}
+	],
+	"status": "PASS",
+	"visits": [
+		{
+			"catalog": [
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "clay_lump",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "straw_bundle",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "water_jar",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 4,
+					"demand": 0,
+					"item_id": "wood_log",
+					"player_qty": 8,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 8
+				},
+				{
+					"buy_price": 15,
+					"demand": 0,
+					"item_id": "stone_hammer",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 2
+				},
+				{
+					"buy_price": 6,
+					"demand": 11,
+					"item_id": "sun_dried_mudbrick",
+					"player_qty": 0,
+					"requested": 11,
+					"sell_price": 3,
+					"stock": 0
+				}
+			],
+			"day": 1
+		},
+		{
+			"catalog": [
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "clay_lump",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "straw_bundle",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 2,
+					"demand": 0,
+					"item_id": "water_jar",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 12
+				},
+				{
+					"buy_price": 4,
+					"demand": 6,
+					"item_id": "wood_log",
+					"player_qty": 8,
+					"requested": 6,
+					"sell_price": 2,
+					"stock": 8
+				},
+				{
+					"buy_price": 15,
+					"demand": 0,
+					"item_id": "stone_hammer",
+					"player_qty": 0,
+					"requested": 0,
+					"sell_price": 0,
+					"stock": 2
+				},
+				{
+					"buy_price": 6,
+					"demand": 15,
+					"item_id": "sun_dried_mudbrick",
+					"player_qty": 0,
+					"requested": 15,
+					"sell_price": 3,
+					"stock": 0
+				}
+			],
+			"day": 4
+		}
+	]
+}

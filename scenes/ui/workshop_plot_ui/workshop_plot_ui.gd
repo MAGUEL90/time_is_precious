@@ -494,6 +494,8 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 	]
 	if phase == "clearing":
 		team_label.text = "Player clearing the site" if _construction.clearing_by_player else "1 worker clearing the site"
+	if bool(preview.get("payroll_blocked", false)):
+		team_label.text = str(preview.get("message", "Contract expired - renew in Worker Hub."))
 
 
 func _format_duration(total_minutes: int, include_zero_units: bool) -> String:

@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 4
+const VERSION: int = 8
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -25,10 +25,10 @@ const GROUPS: Dictionary = {
 	"process": ["stations", "current_weather_key", "_last_total_minutes", "_auto_pull_batch_size"],
 	"facilities": ["facility_levels"],
 	"city": ["level", "progress", "last_daily", "last_event", "last_awarded_day", "_last_breach_id"],
-	"raid": ["phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
+	"raid": ["notification_seen_keys", "phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
 	"merchant": ["_stock", "_offers", "_demand", "_budget", "_visit_day", "_latest_minute", "_present"]
 }
-const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time"]
+const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "started_at", "completes_at", "_latest_time", "payroll_work_remainder"]
 var error: String = ""
 var prepared: Dictionary = {}
 var prepared_location: String = "city"
@@ -84,6 +84,8 @@ func busy_reason(map: Node) -> String:
 		return "Finish gathering first."
 	if nodes.city_storage._transfer_in_progress or nodes.merchant._trading or nodes.raid._advancing or nodes.raid._resolving or nodes.raid._starting_work or nodes.raid._refund_pending:
 		return "Wait for the current transaction."
+	if WorkerDatabase._payroll_settling:
+		return "Wait for payroll settlement."
 	if CitizenNeedsManager._processing_daily_needs or CitizenNeedsManager._processing_food or CitizenNeedsManager._processing_clothing:
 		return "Wait for daily settlement."
 	for plot: Node in plots(map).values():
@@ -116,8 +118,11 @@ func capture(map: Node) -> Dictionary:
 	raw["worksites"] = _sites.capture(worksite(map))
 	if not _sites.error.is_empty():
 		error = _sites.error
+	if error.is_empty() and not _validate_approaches(raw, map):
+		return {}
 	if not error.is_empty():
 		return {}
+	_without_transient_worker_assignments(raw)
 	var values = VALUES.new()
 	var payload: Variant = values.encode(raw)
 	if not values.error.is_empty():
@@ -131,7 +136,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -141,18 +146,31 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail("Invalid checkpoint location.")
 		prepared_location = document.location
 	var values = VALUES.new()
+	values.allow_legacy_worker_fields = version < 5
+	values.allow_legacy_contract_fields = version < 7
+	values.allow_legacy_approach_field = version < 8
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
 	var nodes: Dictionary = owners(map)
 	if raw.size() != GROUPS.size() + (9 if version >= 3 else 8):
 		return fail("Incomplete checkpoint.")
+	if version < 7:
+		if not raw.get("raid") is Dictionary or raw.raid.has("notification_seen_keys"):
+			return fail("Invalid legacy notification state.")
+		raw.raid["notification_seen_keys"] = {}
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
 			return fail("Invalid " + key + " state.")
 	for key: String in ["rng", "plots", "work_sources", "work_outputs", "order_plots", "worksites"]:
 		if not raw.get(key) is Dictionary:
 			return fail("Missing " + key + ".")
+	if version < 6:
+		# Earlier plots did not accumulate partial paid-team minutes.
+		for plot: Variant in raw.plots.values():
+			if not plot is Dictionary or plot.has("payroll_work_remainder"):
+				return fail("Invalid legacy workshop plot.")
+			plot["payroll_work_remainder"] = 0
 	if not raw.get("city_drops") is Array:
 		return fail("Missing dropped inventory items.")
 	for drop: Variant in raw.city_drops:
@@ -166,7 +184,9 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
-	if version == VERSION:
+	if not _validate_approaches(raw, map):
+		return false
+	if version >= 4:
 		if not _sources.validate(raw.get("pickup_sources")):
 			return fail("Invalid pickup source state.")
 	else:
@@ -183,8 +203,27 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		# Legacy files cannot describe newly registered sources. Initialize only
 		# those missing histories on apply; never infer depletion from Inventory.
 		raw["pickup_sources"] = migrated
+	_without_transient_worker_assignments(raw)
 	prepared = raw
 	return true
+
+func _without_transient_worker_assignments(raw: Dictionary) -> void:
+	# Workshop selector drafts have no persistent owner. Keep actual reservations,
+	# but do not restore an idle citizen as ASSIGNED to a selection that was not saved.
+	# Copy the affected resources: capture/validation must never release a live draft.
+	var people: Dictionary = raw.citizens.citizens_by_id.duplicate()
+	for id: String in raw.workers.workers_by_id:
+		var worker: WorkerData = raw.workers.workers_by_id[id]
+		var citizen: CitizenData = people.get(id)
+		if citizen == null or citizen.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+			continue
+		if worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
+			continue
+		var restored_citizen: CitizenData = citizen.duplicate()
+		restored_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
+		people[id] = restored_citizen
+	raw.citizens = raw.citizens.duplicate()
+	raw.citizens.citizens_by_id = people
 
 func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	# No yields, gameplay commands, or signals until every owner is restored.
@@ -365,6 +404,10 @@ func _validate_core(raw: Dictionary, map: Node) -> bool:
 		if not r is Dictionary or r.size() != 2 or not r.get("seed") is int or not r.get("state") is int:
 			return fail("Invalid random state.")
 	var raid: Dictionary = raw.raid
+	for key: Variant in raid.notification_seen_keys:
+		var value: Variant = raid.notification_seen_keys[key]
+		if not key is String or not value is String or key.length() > 256 or value.length() > 256:
+			return fail("Invalid notification acknowledgement.")
 	if raid.phase not in ["unbuilt", "safe", "warning", "attacking", "looting", "recovery"] or raid.wall_level < 0 or raid.wall_level > 2 or raid.wall_hp < 0 or raid.wall_hp > (80 if raid.wall_level == 2 else 50):
 		return fail("Invalid wall state.")
 	if raid._work_kind not in ["", "build", "rebuild", "repair", "upgrade", "watchtower"] or raid._work_remaining < 0 or raid._work_remaining > raid._work_total or raid._elapsed < 0 or raid._elapsed > 60.0 or raid._loot_weight < 0 or raid._loot_weight > 10.0 or raid._hits < 0 or raid._report_sequence < 0:
@@ -421,12 +464,67 @@ func _validate_people(raw: Dictionary) -> bool:
 			var worker: WorkerData = group[id]
 			if worker.worker_id != id or worker.current_work_status < 0 or worker.current_work_status > 4 or worker.profession_xp < 0:
 				return fail("Invalid worker.")
+			if not _valid_onboarding(worker):
+				return fail("Invalid worker payroll state.")
 	for id: Variant in raw.city_storage.units:
 		var unit: Variant = raw.city_storage.units[id]
 		if not id is String or not unit is Dictionary or not unit.get("tool_id") is String or not unit.get("worker_id") is String or not unit.get("name") is String:
 			return fail("Invalid equipment unit.")
 		if unit.tool_id not in ["cart", "basic_glove", "stone_hammer"] or (not unit.worker_id.is_empty() and not workers.has(unit.worker_id)):
 			return fail("Equipment owner missing.")
+	return true
+
+func _validate_approaches(raw: Dictionary, map: Node) -> bool:
+	var now: int = raw.clock.current_day * 1440 + raw.clock.current_hour * 60 + raw.clock.current_minute
+	var native_plots: Dictionary = plots(map)
+	for group: Dictionary in [raw.workers.workers_by_id, raw.workers.dismissed_workers]:
+		for id: String in group:
+			var worker: WorkerData = group[id]
+			var approach: Dictionary = worker.physical_approach
+			if not WorkerData.physical_approach_valid(approach):
+				return fail("Invalid worker physical approach.")
+			if approach.is_empty():
+				continue
+			if not raw.workers.workers_by_id.has(id) or worker.current_order_id.is_empty() or (approach.arrived and approach.arrival_minute > now):
+				return fail("Worker physical approach has no active owner.")
+			if approach.kind == "site":
+				var job: Dictionary = raw.worksites.jobs.get(approach.owner, {})
+				if job.is_empty() or not job.ids.has(id) or worker.current_order_id != job.order or not job.starts.has(id):
+					return fail("Worker physical approach has no site assignment.")
+				var prefix: String = "%s:%d:" % [job.order, int(job.starts[id])]
+				var day_text: String = approach.task.trim_prefix(prefix)
+				var first_task_day: int = int(job.starts[id]) / 1440
+				var latest_task_day: int = maxi(raw.clock.current_day, first_task_day)
+				if not approach.task.begins_with(prefix) or not day_text.is_valid_int() or str(int(day_text)) != day_text or int(day_text) < first_task_day or int(day_text) > latest_task_day:
+					return fail("Worker physical approach has an invalid site task.")
+				# A withdrawn teammate can change the current slot index. Both
+				# existing authored slots remain valid for an established journey.
+				# Validate before restore without consulting live job membership.
+				var marker: Node2D = worksite(map).get_node_or_null("WorksiteMarkers/" + approach.owner) as Node2D
+				if marker == null:
+					return fail("Worker physical approach has no authored site marker.")
+				var left_entry: Vector2 = marker.global_position + Vector2(-10, 8)
+				var right_entry: Vector2 = marker.global_position + Vector2(10, 8)
+				if worksite(map).has_method("site_slot_destination"):
+					left_entry = worksite(map).site_slot_destination(StringName(approach.owner), 0)
+					right_entry = worksite(map).site_slot_destination(StringName(approach.owner), 1)
+				if approach.target.distance_to(left_entry) > 0.1 and approach.target.distance_to(right_entry) > 0.1:
+					return fail("Worker physical approach differs from its authored site.")
+				continue
+			var found: bool = false
+			for plot_id: String in raw.plots:
+				var plot: Dictionary = raw.plots[plot_id]
+				if plot.order_id != approach.owner:
+					continue
+				if approach.target.distance_to(native_plots[plot_id].worker_entry_position) > 0.1:
+					return fail("Worker physical approach differs from its authored plot.")
+				if plot.phase in ["clearing", "building"] and plot.worker_ids.has(id) and worker.current_order_id == plot.order_id and approach.task == plot.order_id + ":" + plot.phase:
+					found = true
+				var order: WorkOrder = raw.work.active_orders.get(approach.task)
+				if order != null and order.worker_id == id and order.worker_kind == WorkOrder.Worker_Type.NPC and order.current_status == WorkOrder.Status.RUNNING and raw.order_plots.get(order.order_id) == plot.order_id and worker.current_order_id == order.order_id:
+					found = true
+			if not found:
+				return fail("Worker physical approach has no matching workshop task.")
 	return true
 
 func _validate_work(raw: Dictionary, map: Node) -> bool:
@@ -440,9 +538,14 @@ func _validate_work(raw: Dictionary, map: Node) -> bool:
 		var p: Dictionary = raw.plots[id]
 		if p.order_id != plot_nodes[id].order_id or p.phase not in ["uncleared", "clearing", "empty", "building", "built"] or p.clearing_by_player or p.clearing_remaining < 0:
 			return fail("Invalid construction state.")
+		if p.payroll_work_remainder < 0 or p.payroll_work_remainder >= maxi(1, p.worker_ids.size()):
+			return fail("Invalid construction payroll progress.")
 		plot_ids.append(p.order_id)
 		for worker: Variant in p.worker_ids:
-			if not worker is String or not raw.workers.workers_by_id.has(worker):
+			# Finished plots retain historical team IDs after employment ends.
+			# Active construction still requires a member of the hired roster.
+			var archived: bool = p.phase in ["empty", "built"] and raw.workers.dismissed_workers.has(worker)
+			if not worker is String or (not raw.workers.workers_by_id.has(worker) and not archived):
 				return fail("Construction worker missing.")
 	var orders: Dictionary = raw.work.active_orders
 	if raw.order_plots.size() != orders.size():
@@ -568,3 +671,23 @@ func _restore_city_drops(drops: Array, map: Node) -> void:
 		pickup.quantity = data.quantity
 		pickup.position = data.position
 		parent.add_child(pickup)
+
+func _valid_onboarding(worker: WorkerData) -> bool:
+	var legacy: bool = worker.payroll_contract_days == 0 and worker.payroll_paid_start_minute == -1
+	if worker.payroll_start_day == -1:
+		return legacy and worker.payroll_paid_from_day == -1 and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and worker.payroll_last_attempt_day == -1
+	if worker.payroll_start_day < 0 or worker.payroll_last_attempt_day < -1:
+		return false
+	if worker.payroll_last_attempt_day != -1 and worker.payroll_last_attempt_day < worker.payroll_start_day:
+		return false
+	if worker.payroll_paid_from_day == -1:
+		return legacy and worker.payroll_paid_until_day == -1 and worker.payroll_period_rate == 0 and not worker.is_reserved()
+	if worker.payroll_paid_from_day < worker.payroll_start_day or worker.payroll_period_rate <= 0 or worker.payroll_last_attempt_day < worker.payroll_paid_from_day:
+		return false
+	if legacy:
+		return worker.payroll_paid_until_day == worker.payroll_paid_from_day + 6
+	return worker.payroll_contract_days in WorkerDatabase.CONTRACT_DAYS \
+		and worker.payroll_paid_until_day >= worker.payroll_paid_from_day + worker.payroll_contract_days \
+		and worker.payroll_paid_until_day <= WorkerDatabase.MAX_CONTRACT_DAY \
+		and worker.payroll_paid_start_minute >= worker.payroll_paid_from_day * 1440 \
+		and worker.payroll_paid_start_minute < (worker.payroll_paid_from_day + 1) * 1440

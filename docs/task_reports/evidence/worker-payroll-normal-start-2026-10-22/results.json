@@ -1,0 +1,48 @@
+[
+  {
+    "name": "write",
+    "passed": true,
+    "exit_code": 0,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--fixed-fps",
+      "60",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_first_playthrough.tscn",
+      "--",
+      "--journey-phase=write"
+    ]
+  },
+  {
+    "name": "read",
+    "passed": true,
+    "exit_code": 0,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--fixed-fps",
+      "60",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_payroll_first_playthrough.tscn",
+      "--",
+      "--journey-phase=read"
+    ]
+  },
+  {
+    "name": "fixture",
+    "passed": true,
+    "exit_code": 0,
+    "command": [
+      "/tmp/tip-godot451/Godot_v4.5.1-stable_linux.x86_64",
+      "--headless",
+      "--fixed-fps",
+      "60",
+      "--path",
+      ".",
+      "scenes/test_scenes/test_scene_worker_payroll.tscn"
+    ]
+  }
+]

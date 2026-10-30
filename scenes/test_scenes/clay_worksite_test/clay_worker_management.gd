@@ -153,7 +153,7 @@ func rows() -> Array[Dictionary]:
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,
 				"hair_style": profile.hair_style, "accessory": profile.accessory},
 			"can_goto": working and not site_id.is_empty(),
-			"wage": "%d Shekel / day" % worker.wage_shekel_per_day})
+			"wage": _wage_text(worker), "dismissal_payroll_warning": _dismissal_payroll_warning(worker)})
 	result.sort_custom(func(a: Dictionary, b: Dictionary):
 		if a.assigned != b.assigned:
 			return a.assigned
@@ -162,3 +162,26 @@ func rows() -> Array[Dictionary]:
 		return str(a.name) < str(b.name)
 	)
 	return result
+
+func _dismissal_payroll_warning(worker: WorkerData) -> String:
+	if worker.payroll_start_day < 0:
+		return ""
+	if worker.payroll_paid_from_day < 0:
+		return "No payment made yet."
+	var expires: int = worker.get_paid_end_minute()
+	var remaining: int = maxi(0, expires - schedule.now())
+	if remaining == 0:
+		return "Contract expired after Day %d. Unused payment is not refunded." % worker.payroll_paid_until_day
+	return "Paid through Day %d.\n%d d %02d h %02d m remain.\nUnused payment is not refunded." % [worker.payroll_paid_until_day,
+		remaining / 1440, (remaining % 1440) / 60, remaining % 60]
+
+func _wage_text(worker: WorkerData) -> String:
+	if worker.payroll_start_day < 0:
+		return "%d Shekel / day (legacy)" % worker.wage_shekel_per_day
+	if worker.is_waiting_for_first_payment():
+		return "No paid time; renew manually"
+	var contract_days: int = worker.payroll_contract_days if worker.payroll_contract_days > 0 else WorkerDatabase.PAYROLL_PERIOD_DAYS
+	var package_text: String = "%d Shekel / %d days" % [worker.payroll_period_rate, contract_days]
+	if worker.is_payroll_blocked():
+		return "Contract expired; paid through Day %d. Renew manually." % worker.payroll_paid_until_day
+	return "%s; paid through Day %d. Renew manually." % [package_text, worker.payroll_paid_until_day]

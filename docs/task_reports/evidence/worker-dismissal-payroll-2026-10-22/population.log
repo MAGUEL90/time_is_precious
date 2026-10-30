@@ -1,0 +1,10 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+No eligible worker assigned.
+Assigned workers: ["assignment_test_first"]
+Assigned workers: ["assignment_test_second"]
+Assigned workers: []
+Assigned workers: ["role_test_crafter", "role_test_laborer"]
+Assigned workers: ["role_test_crafter"]
+PopulationEmploymentIntegrationTest PASSED

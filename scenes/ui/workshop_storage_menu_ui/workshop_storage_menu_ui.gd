@@ -23,14 +23,20 @@ const GAMEPLAY_THEME: Theme = preload(
 	"res://resources/ui_gameplay_theme/ui_gameplay_theme.tres"
 )
 
+@onready var capacity_icon: TextureRect = (
+	$Root/Center/TextureWindow/Margin/MainVBox/CapacityRow/CapacityIcon
+)
 @onready var capacity_label: Label = (
-	$Root/Center/TextureWindow/Margin/MainVBox/CapacityLabel
+	$Root/Center/TextureWindow/Margin/MainVBox/CapacityRow/CapacityLabel
 )
 @onready var free_grid: GridContainer = (
 	$Root/Center/TextureWindow/Margin/MainVBox/Body/FreeColumn/FreeScroll/FreeGrid
 )
 @onready var held_grid: GridContainer = (
 	$Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn/HeldScroll/HeldGrid
+)
+@onready var empty_held_output: CenterContainer = (
+	$Root/Center/TextureWindow/Margin/MainVBox/Body/HeldColumn/EmptyHeldOutput
 )
 @onready var pending_label: Label = (
 	$Root/Center/TextureWindow/Margin/MainVBox/StatusBox/PendingLabel
@@ -100,6 +106,7 @@ func show_payment_result(
 ) -> void:
 	refresh_storage(next_storage_state)
 	feedback_label.text = message
+	feedback_label.visible = not message.is_empty()
 	feedback_label.remove_theme_color_override("font_color")
 	if not success:
 		feedback_label.add_theme_color_override(
@@ -160,6 +167,9 @@ func _rebuild_held_output() -> void:
 				_on_held_slot_clicked.bind(lot_id)
 			)
 			_add_lock_badge(slot)
+	# Empty presentation only; lot contents, fees and claim actions stay unchanged.
+	empty_held_output.visible = held_grid.get_child_count() == 0
+	held_grid.get_parent().visible = not empty_held_output.visible
 
 func _apply_workshop_slot_style(
 	slot: ItemSlot,
@@ -198,7 +208,8 @@ func _refresh_status() -> void:
 		[]
 	)
 
-	capacity_label.text = "Load %.0f / %.0f" % [used_capacity, max_capacity]
+	capacity_icon.tooltip_text = "Load %.0f / %.0f" % [used_capacity, max_capacity]
+	capacity_label.text = "%.0f/%.0f" % [used_capacity, max_capacity]
 	pending_label.text = (
 		"Pending Delivery: %d - free storage space" % pending_count
 		if pending_count > 0
@@ -209,12 +220,11 @@ func _refresh_status() -> void:
 	feedback_label.text = (
 		_format_active_processes(active_processes)
 		if not active_processes.is_empty()
-		else "Click Held Output to pay its fee."
+		else ""
 	)
-	next_step_label.text = WORKSHOP_FLOW_HINT.get_hint(
-		storage_state,
-		ProcessManager.get_process_availability("drying_mudbrick")
-	)
+	feedback_label.visible = not feedback_label.text.is_empty()
+	next_step_label.text = ""
+	next_step_label.hide()
 
 func _format_active_processes(active_processes: Array) -> String:
 	var parts: PackedStringArray = []
@@ -275,6 +285,7 @@ func _on_free_slot_clicked(
 		available_quantity
 	)
 	if max_withdrawable <= 0:
+		feedback_label.show()
 		feedback_label.text = "Inventory has no room for %s." % (
 			item_data.display_name
 		)
@@ -374,6 +385,7 @@ func _refresh_withdraw_controls() -> void:
 	if has_selection:
 		feedback_label.remove_theme_color_override("font_color")
 		feedback_label.text = ""
+		feedback_label.hide()
 
 func _clear_withdraw_selection() -> void:
 	for item_id in free_slots_by_item_id.keys():

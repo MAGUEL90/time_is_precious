@@ -16,9 +16,20 @@ func _expect(ok: bool, message: String) -> void:
 func _dust_count(plot: Node) -> int:
 	var count: int = 0
 	for child: Node in plot.get_children():
-		if child.get_script() == DUST:
+		if child.get_script() == DUST and child.visible and not child.is_queued_for_deletion():
 			count += 1
 	return count
+
+func _drive_plot_arrival(visuals: Node2D, ids: Array[String]) -> void:
+	for _frame: int in range(4000):
+		var all_arrived: bool = true
+		for id: String in ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+			if worker == null or not worker.physical_approach.get("arrived", false):
+				all_arrived = false
+		if all_arrived:
+			return
+		visuals.plot_presence.update(visuals, 0.1)
 
 func _check_completion_pixels() -> void:
 	var viewport := SubViewport.new()
@@ -99,6 +110,7 @@ func _run() -> void:
 	_expect(_dust_count(plot) == 0 and not plot._has_dust_activity(), "No dust spawns while the worker is still approaching.")
 	var remaining: int = plot.construction.clearing_remaining
 	visuals.plot_presence.update(visuals, 2.0)
+	_drive_plot_arrival(visuals, [ids[0]] as Array[String])
 	_expect(not visuals.actors[ids[0]].visible and _dust_count(plot) == 1,
 		"Worker disappears at the entrance with one cosmetic dust puff.")
 	_expect(plot.construction.clearing_remaining == remaining,
@@ -149,7 +161,7 @@ func _run() -> void:
 			cleaning_splashes += 1
 	_expect(cleaning_splashes == 1, "Cleaning completion emits one matching gold splash.")
 	plot._process(2.0)
-	_expect(_dust_count(plot) == 4, "Completing clearing stops new dust immediately.")
+	_expect(_dust_count(plot) == 0, "Completing clearing hides existing dust immediately.")
 	await get_tree().create_timer(1.1).timeout
 	_expect(_dust_count(plot) == 0, "The final activity puffs fade out after completion.")
 	visuals.plot_presence.update(visuals, 0.0)
@@ -164,6 +176,7 @@ func _run() -> void:
 	_expect(not plot._has_dust_activity(), "A previous clearing arrival cannot enable dust for a new building task.")
 	plot._process(2.0)
 	visuals.plot_presence.update(visuals, 2.0)
+	_drive_plot_arrival(visuals, ids)
 	visuals._process(0.2)
 	_expect(plot._has_dust_activity(), "Building dust becomes eligible after builders arrive.")
 	for id: String in ids:

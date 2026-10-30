@@ -1,6 +1,6 @@
 # ARCHITECTURE - Time is Precious
 
-Last updated: 2026-09-05
+Last updated: 2026-10-18
 
 ## Purpose
 
@@ -19,6 +19,18 @@ Time is Precious is a 2D top-down management RPG focused on:
 - Player home / settlement progression.
 - Variable progression between players.
 - Long-term AI-assisted unique NPCs that stay controlled by game systems.
+
+## Status reconciliation — 2026-10-18
+
+The city/home checkpoint, startup menu, raid/progression and shared pickup-source
+sections at the end of this document describe the current merged PR #114/#115
+boundary. Earlier “future persistence”, “session-only”, fixed merchant request
+quantities and unfinished drying statements describe earlier checkpoints, not
+missing current implementations. The active writer is schema v4 with explicit
+v1/v2/v3 compatibility paths. Merchant gameplay rolls 1–2 requests per visit
+(wood 3–6 and/or dry bricks 10–20); fixed quantities belong to accounting fixtures.
+The production chain and output uses exist; normal first-playthrough validation
+is tracked separately in `ROADMAP.md`. This clarification changes no architecture.
 
 ## Current Architectural Priority
 

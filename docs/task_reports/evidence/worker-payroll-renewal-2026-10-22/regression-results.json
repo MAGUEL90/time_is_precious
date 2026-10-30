@@ -1,0 +1,154 @@
+[
+  {
+    "test": "core",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkerPayrollRenewalFixtureTest: PASS (0 checks failed)"
+    ]
+  },
+  {
+    "test": "worksite",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "ClayWorksitePayrollTest PASSED"
+    ]
+  },
+  {
+    "test": "renewal-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue write: PASS"
+    ]
+  },
+  {
+    "test": "renewal-expire",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue expire: PASS"
+    ]
+  },
+  {
+    "test": "renewal-resume",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue resume: PASS"
+    ]
+  },
+  {
+    "test": "renewal-finish",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "RenewalContinue finish: PASS"
+    ]
+  },
+  {
+    "test": "first-payment",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkerPayrollFixtureTest: PASS (0 checks failed)"
+    ]
+  },
+  {
+    "test": "first-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue write: PASS"
+    ]
+  },
+  {
+    "test": "first-pending",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue pending: PASS"
+    ]
+  },
+  {
+    "test": "first-waiting",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue waiting: PASS"
+    ]
+  },
+  {
+    "test": "first-paid",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue paid: PASS"
+    ]
+  },
+  {
+    "test": "first-sleep-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue sleep-write: PASS"
+    ]
+  },
+  {
+    "test": "first-sleep-read",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PayrollContinue sleep-read: PASS"
+    ]
+  },
+  {
+    "test": "production-write",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue write: PASS"
+    ]
+  },
+  {
+    "test": "production-continue-shape",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue continue-shape: PASS"
+    ]
+  },
+  {
+    "test": "production-continue-dry",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PaidProductionContinue continue-dry: PASS"
+    ]
+  },
+  {
+    "test": "population",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "PopulationEmploymentIntegrationTest PASSED"
+    ]
+  },
+  {
+    "test": "clock",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "ClockStateBroadcastTest: PASS"
+    ]
+  },
+  {
+    "test": "construction",
+    "exit": 0,
+    "errors": [],
+    "pass_lines": [
+      "WorkshopConstructionTest: PASS"
+    ]
+  }
+]

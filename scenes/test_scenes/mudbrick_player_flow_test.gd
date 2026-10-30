@@ -193,7 +193,11 @@ func _deposit_materials(menu: WorkshopMenuUI) -> void:
 	await _press(transfer.confirm_button)
 	_expect(WorkShopStorage.items == initial_materials,
 		"The player's selected raw materials reach Workshop Free Stock through Deposit.")
-	# Deposit returns to world; the remaining flow starts from the normal menu.
+	await _press(transfer.back_button)
+	storage_ui = _ui(WorkshopStorageMenuUI) as WorkshopStorageMenuUI
+	await _press(storage_ui.back_button)
+	menu = _ui(WorkshopMenuUI) as WorkshopMenuUI
+	await _press(menu.close_button)
 
 
 func _shape_wet_bricks() -> void:
@@ -212,7 +216,7 @@ func _shape_wet_bricks() -> void:
 	await _capture("mvp-job-review-before-start.png")
 	await _press(job_ui.start_button)
 	_expect(job_ui.job_started and worker.is_working(), "Starting Shape creates the actual WorkManager order.")
-	await _press(job_ui.close_button)
+	await _press(job_ui.back_button)
 	if not OS.get_environment("TIP_MVP_CAPTURE_DIR").is_empty():
 		var progress = preload("res://scenes/ui/work_progress_ui/work_progress_ui.tscn").instantiate()
 		add_child(progress)
@@ -275,7 +279,10 @@ func _build_or_upgrade_yard(target_level: int) -> void:
 	_expect(WorkshopFacilityManager.get_facility_level("drying_yard") == target_level,
 		"Confirming consumes the existing requirements and visibly advances the yard.")
 	await _capture("mvp-yard-level-%d.png" % target_level)
-	await _press(build.close_button)
+	await _press(build.details_back_button)
+	await _press(build.selection_back_button)
+	menu = _ui(WorkshopMenuUI) as WorkshopMenuUI
+	await _press(menu.close_button)
 
 
 func _dry_wet_bricks() -> void:
@@ -363,21 +370,14 @@ func _choose_order(production: WorkshopProductionUI, order_id: String) -> void:
 	_expect(false, "Missing production card: " + order_id)
 
 
-func _check_hint(menu: CanvasLayer, expected: Array[String]) -> void:
+func _check_hint(menu: CanvasLayer, _expected: Array[String]) -> void:
 	var label: Label = menu.find_child("NextStepLabel", true, false) as Label
-	_expect(label != null and label.is_visible_in_tree(), "Workshop displays its next-step guidance.")
-	if label == null:
-		return
-	for part: String in expected:
-		_expect(label.text.to_lower().contains(part.to_lower()), "Guidance includes: " + part)
+	_expect(label != null and not label.is_visible_in_tree() and label.text.is_empty(), "Workshop helper guidance stays removed across states.")
 	var window: Control = menu.find_child("Window", true, false) as Control
 	if window == null:
 		window = menu.find_child("TextureWindow", true, false) as Control
 	_expect(get_viewport_rect().encloses(window.get_global_rect()),
 		"The complete menu remains inside the 400x225 logical viewport.")
-	_expect(window.get_global_rect().encloses(label.get_global_rect())
-		and label.get_visible_line_count() == label.get_line_count(),
-		"The next step is fully readable without clipped lines.")
 	for button_name: String in ["ManageButton", "AssignButton", "BuildButton", "DepositButton", "PayAllButton", "BackButton"]:
 		var action: Control = window.find_child(button_name, true, false) as Control
 		if action != null and action.is_visible_in_tree():

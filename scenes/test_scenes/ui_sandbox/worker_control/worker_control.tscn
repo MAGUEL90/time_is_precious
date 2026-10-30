@@ -422,7 +422,7 @@ layout_mode = 2
 
 [node name="ManageWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(56, 64)
+custom_minimum_size = Vector2(104, 112)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -455,25 +455,47 @@ size_flags_vertical = 3
 theme_override_constants/separation = 2
 
 [node name="FireButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(82, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Fire"
 
 [node name="GotoButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(82, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Go to"
 
 [node name="DetailsButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(82, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Details"
+
+[node name="RenewDaysOption" type="OptionButton" parent="Root/ManageWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(82, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+
+[node name="RenewPriceLabel" type="Label" parent="Root/ManageWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(84, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Price: -"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="RenewButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(82, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Renew"
 
 [node name="DetailsWindow" type="NinePatchRect" parent="Root"]
 custom_minimum_size = Vector2(208, 208)
@@ -521,6 +543,7 @@ text_overrun_behavior = 3
 [node name="DetailsScroll" type="ScrollContainer" parent="Root/DetailsWindow/Margin/MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
 [node name="DetailsLabel" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll"]
 visible = false
@@ -572,9 +595,11 @@ stretch_mode = 5
 
 [node name="Wage" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals/Overview/WageRow"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "0 / day"
+autowrap_mode = 3
 
 [node name="Location" type="Label" parent="Root/DetailsWindow/Margin/MainVBox/DetailsScroll/Visuals"]
 layout_mode = 2

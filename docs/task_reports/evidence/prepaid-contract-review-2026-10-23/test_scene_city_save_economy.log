@@ -1,0 +1,12 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+Registered Workshop fee: fee_1
+Start_Batch qty = 20, slot = 0, Batch_Status =  1
+Created Workshop output lot: lot_1 | Items: { "sun_dried_mudbrick": 20 } | Fees: ["fee_1"]
+Created Workshop output lot: lot_1 | Items: { "sun_dried_mudbrick": 20 } | Fees: ["fee_1"]
+Registered Workshop fee: fee_2
+Created Workshop output lot: lot_2 | Items: { "wet_mudbrick": 20 } | Fees: ["fee_2"]
+Registered Workshop fee: fee_2
+Created Workshop output lot: lot_2 | Items: { "wet_mudbrick": 20 } | Fees: ["fee_2"]
+CitySaveEconomyTest: PASS

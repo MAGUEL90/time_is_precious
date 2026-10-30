@@ -356,7 +356,7 @@ func deposit_from_inventory(item_id: String, quantity: int = 1) -> Dictionary:
 			result.message = "Stored %d %s." % [quantity, item_data.display_name]
 	return result
 
-func deposit_items_from_inventory(selected_items: Dictionary) -> Dictionary:
+func deposit_items_from_inventory(selected_items: Dictionary, shekel_to_treasury: bool = false) -> Dictionary:
 	if _transfer_in_progress:
 		return _transfer_result(false, "A City Storage transfer is already in progress.")
 	var selection: Dictionary = _validate_selection(selected_items)
@@ -364,6 +364,11 @@ func deposit_items_from_inventory(selected_items: Dictionary) -> Dictionary:
 		return _transfer_result(false, str(selection.message))
 	var quantities: Dictionary = selection.quantities
 	var item_ids: Array[String] = selection.item_ids
+	# Physical player deposits can fund payroll. Legacy counted stacks and cargo
+	# remain physical stock; do not silently convert existing save contents.
+	var city_deposit: int = int(quantities.get("shekel", 0)) if shekel_to_treasury else 0
+	if city_deposit > CityStockManager.MAX_SHEKEL - CityStockManager.treasury_shekel:
+		return _transfer_result(false, "City treasury is full.")
 	for item_id: String in item_ids:
 		var inventory_quantity: Variant = Inventory.items.get(item_id, 0)
 		if not inventory_quantity is int:
@@ -383,6 +388,8 @@ func deposit_items_from_inventory(selected_items: Dictionary) -> Dictionary:
 			next_inventory.erase(item_id)
 		else:
 			next_inventory[item_id] = inventory_quantity
+		if shekel_to_treasury and item_id == "shekel":
+			continue
 		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
 		if not SUPPORTED_ITEM_IDS.has(item_id):
 			var stored_quantity: Variant = next_items.get(item_id, 0)
@@ -399,6 +406,8 @@ func deposit_items_from_inventory(selected_items: Dictionary) -> Dictionary:
 			var unit_id: String = str(generated.unit_id)
 			next_units[unit_id] = {"tool_id": item_id, "name": item_data.display_name, "worker_id": ""}
 			unit_ids.append(unit_id)
+	# All validation has succeeded. Publish every balance before transfer signals.
+	CityStockManager.treasury_shekel += city_deposit
 	_commit_transfer(next_inventory, next_units, next_items, next_sequence)
 	return _transfer_result(true, _format_transfer_message("Deposited", quantities, item_ids), unit_ids)
 

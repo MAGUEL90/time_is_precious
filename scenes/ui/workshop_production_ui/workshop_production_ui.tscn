@@ -143,6 +143,7 @@ disabled = true
 text = "Next"
 
 [node name="CloseButton" parent="Root/Center/TextureWindow" instance=ExtResource("4_422uc")]
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0

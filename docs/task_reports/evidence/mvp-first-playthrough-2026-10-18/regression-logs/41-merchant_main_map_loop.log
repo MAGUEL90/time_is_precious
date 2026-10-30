@@ -1,0 +1,12 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MAIN_LOOP {"day":0,"energy":0.5,"focus":1.0,"hour":10,"hunger":0.0,"inventory":{},"minute":0,"stage":"start"}
+MAIN_LOOP {"day":0,"energy":0.41000000000001,"focus":0.946855000000001,"hour":13,"hunger":0.18,"inventory":{"wood_log":4},"minute":0,"stage":"wood_batch_1"}
+MAIN_LOOP {"day":0,"energy":0.32000000000002,"focus":0.877510000000004,"hour":16,"hunger":0.36,"inventory":{"wood_log":7},"minute":0,"stage":"wood_batch_2"}
+MAIN_LOOP {"day":0,"energy":0.79450000000002,"focus":1.0,"hour":23,"hunger":0.780000000000001,"inventory":{"wood_log":7},"minute":0,"stage":"after_sleep"}
+MAIN_LOOP {"day":1,"energy":0.52450000000002,"focus":0.692862999999986,"hour":8,"hunger":1.0,"inventory":{"wood_log":7},"minute":0,"stage":"first_arrival"}
+MAIN_LOOP {"day":1,"energy":0.52450000000002,"focus":0.692862999999986,"hour":8,"hunger":1.0,"inventory":{"shekel":12,"wood_log":1},"minute":0,"stage":"first_sale"}
+MAIN_LOOP {"day":1,"energy":0.52450000000002,"focus":0.692862999999986,"hour":8,"hunger":1.0,"inventory":{"clay_lump":2,"shekel":8,"wood_log":1},"minute":0,"stage":"purchase_clay"}
+MAIN_LOOP {"day":1,"energy":0.52450000000002,"focus":0.692862999999986,"hour":8,"hunger":1.0,"inventory":{"clay_lump":2,"shekel":4,"wood_log":2},"minute":0,"stage":"buyback_quota_exhausted"}
+MerchantMainMapLoopTest: PASS

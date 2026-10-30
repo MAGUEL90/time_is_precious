@@ -8,6 +8,8 @@ const HAND_ICON: Texture2D = preload("res://assets/ui/ui_icon/hand_job_icon.png"
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
 const BUILT_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_1.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
+const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
+const WORKER_DUST_SCRIPT: Script = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
@@ -18,35 +20,69 @@ const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png"
 @export_range(0.1, 5.0, 0.05) var worker_dust_interval_max: float = 1.25
 var _last_worker_dust_msec: int = -1000
 var _worker_dust_remaining: float = 0.0
+var _has_worker_dust: bool = false
 var _worker_dust_rng := RandomNumberGenerator.new()
 var _arrived_worker_tasks: Dictionary = {}
 var _previous_construction_phase: String = ""
 var _completion_bar_remaining: float = 0.0
+var _inactive_bar_material: ShaderMaterial
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
-	_arrived_worker_tasks[worker_id] = task_key
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	if worker != null and (worker.physical_approach.is_empty() or worker.mark_physical_arrival(task_key)):
+		_arrived_worker_tasks[worker_id] = task_key
+		_sync_build_progress()
+
+func begin_worker_approach(worker_id: String, task_key: String) -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	if worker == null:
+		return
+	var runtime: Node = get_parent().get_node_or_null("WorkerRuntime")
+	var visuals: Node = runtime.get_node_or_null("WorkerVisuals") if runtime != null else null
+	var entry: Vector2 = get_worker_entry_position()
+	var origin: Vector2 = entry + Vector2(0, 24)
+	if visuals != null and visuals.actors.has(worker_id):
+		origin = visuals.actors[worker_id].global_position + Vector2(0, 16)
+	elif runtime != null:
+		var departures: Node = runtime.get_node_or_null("WorkerDeparture")
+		if departures != null and departures.get_child_count() > 0:
+			origin = departures.get_child(0).global_position
+	worker.begin_physical_approach("plot", task_key, construction.order_id, origin, entry)
+	if origin.distance_to(entry) <= 0.1:
+		worker.mark_physical_arrival(task_key)
 
 func get_worker_entry_position() -> Vector2:
 	return $WorkerEntrance.global_position
 
 func show_worker_dust() -> void:
-	if not worker_dust_enabled or Time.get_ticks_msec() - _last_worker_dust_msec < 120:
+	if not worker_dust_enabled or not _has_dust_activity() or Time.get_ticks_msec() - _last_worker_dust_msec < 120:
 		return
 	_last_worker_dust_msec = Time.get_ticks_msec()
 	_spawn_worker_dust($WorkerEntrance.position)
 
 func _spawn_worker_dust(local_position: Vector2) -> void:
 	var dust := Node2D.new()
-	dust.set_script(preload("res://scenes/workshop_plot/worker_entry_dust.gd"))
+	dust.set_script(WORKER_DUST_SCRIPT)
 	add_child(dust)
 	dust.position = local_position
+	_has_worker_dust = true
+
+func _stop_worker_dust() -> void:
+	_worker_dust_remaining = 0.0
+	if not _has_worker_dust:
+		return
+	for child: Node in get_children():
+		if child.get_script() == WORKER_DUST_SCRIPT:
+			child.hide()
+			child.queue_free()
+	_has_worker_dust = false
 
 func _update_worker_dust(delta: float) -> void:
 	# This plot processes while menus are open, but cosmetic activity must pause.
 	if get_tree().paused or TimeComponentManager.is_paused:
 		return
 	if not worker_dust_enabled or not _has_dust_activity():
-		_worker_dust_remaining = 0.0
+		_stop_worker_dust()
 		return
 	_worker_dust_remaining -= delta
 	if _worker_dust_remaining > 0.0:
@@ -66,9 +102,13 @@ func _has_dust_activity() -> bool:
 	if construction.phase in ["clearing", "building"]:
 		var task_key: String = construction.order_id + ":" + construction.phase
 		for worker_id: String in construction.worker_ids:
-			if str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+			if worker != null and not worker.is_payroll_blocked() and str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
 				return true
 	for order: WorkOrder in WorkManager.active_orders.values():
+		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
+		if worker != null and worker.is_payroll_blocked():
+			continue
 		if order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id and str(_arrived_worker_tasks.get(order.worker_id, "")) == order.order_id:
 			return true
 	return false
@@ -103,6 +143,7 @@ func _ready() -> void:
 		construction.name = state_name
 		construction.order_id = "construction:" + identity
 		WorkStateRuntime.add_child(construction)
+	construction.worker_entry_position = get_worker_entry_position()
 	construction.changed.connect(_sync_construction)
 	_sync_construction()
 
@@ -187,9 +228,9 @@ func _sync_construction() -> void:
 			add_child(workshop)
 			_show_table_resource(workshop)
 	elif construction.phase == "clearing":
-		$Label.text = "Clearing"
+		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing"
 	elif construction.phase == "building":
-		$Label.text = "Building"
+		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
 	else:
 		$Label.text = "" if construction.phase == "uncleared" else "Workshop Site"
 
@@ -204,8 +245,18 @@ func _sync_build_progress() -> void:
 		_completion_bar_remaining = 0.0
 		var preview: Dictionary = construction.get_clearing_preview([] as Array[String], false) if construction.phase == "clearing" else construction.get_preview([] as Array[String])
 		bar.value = float(preview.progress_ratio) * 100.0
+		if construction.has_active_worker_at_plot():
+			bar.material = null
+		else:
+			_stop_worker_dust()
+			if _inactive_bar_material == null:
+				_inactive_bar_material = ShaderMaterial.new()
+				_inactive_bar_material.shader = INACTIVE_BAR_SHADER
+			bar.material = _inactive_bar_material
 	elif completed:
 		bar.value = 100.0
+		bar.material = null
+		_stop_worker_dust()
 		_completion_bar_remaining = 1.0
 		var splash = preload("res://scenes/workshop_plot/construction_complete_splash.gd").new()
 		splash.texture = bar.texture_progress
@@ -214,7 +265,9 @@ func _sync_build_progress() -> void:
 		add_child(splash)
 		splash.position = bar.position
 	bar.visible = construction.phase in ["clearing", "building"]
-	$Label.visible = not bar.visible and _completion_bar_remaining <= 0.0
+	var blocked: bool = bar.visible and construction._all_workers_payroll_blocked() and not construction.clearing_by_player
+	$Label.position = Vector2(-42, -44) if blocked else Vector2(-42, -34)
+	$Label.visible = blocked or (not bar.visible and _completion_bar_remaining <= 0.0)
 
 func _show_table_resource(workshop: WorkShop) -> void:
 	# Sprite positions/scales belong to the authored scene. Recipes swap only

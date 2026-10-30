@@ -207,7 +207,7 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
 		slot.interaction_locked = true
-	stock_summary.text = "[center]Available: %d [img=2x6]res://assets/ui/ui_icon/separator_icon_2.png[/img] Equipped: %d[/center]" % [quantity, equipped]
+	stock_summary.text = "[center]City cash: %d\nAvailable: %d | Equipped: %d[/center]" % [CityStockManager.treasury_shekel, quantity, equipped]
 	feedback.text = _feedback_text
 	if feedback.text.is_empty() and grid.get_child_count() == 0:
 		if items.is_empty() and int(food_supply_summary.get("portion_points", 0)) > 0:
@@ -219,8 +219,6 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_empty()
 	deposit_button.disabled = storage.get_depositable_items().is_empty()
-	if feedback.text.is_empty():
-		feedback.text = "Food, clothes, Shekel, tools."
 
 func _refresh_food_summary() -> Dictionary:
 	if not is_instance_valid(food_summary):
@@ -279,11 +277,13 @@ func _open_transfer(mode: String) -> void:
 	clear_button.pressed.connect(_clear_transfer.bind(transfer_ui))
 	_refresh_transfer()
 
-func _refresh_transfer() -> void:
+func _refresh_transfer(message: String = "") -> void:
 	var items: Dictionary = {}
 	for row: Dictionary in storage.get_depositable_items():
 		items[str(row.item_id)] = int(row.quantity)
 	transfer_ui.open_transfer("Deposit to City (no return)", items, "Deposit")
+	if not message.is_empty():
+		transfer_ui.refresh_items(items, message)
 
 func _clear_transfer(source: ItemTransferUI) -> void:
 	if not is_instance_valid(transfer_ui) or transfer_ui != source:
@@ -301,10 +301,10 @@ func _confirm_transfer(items: Dictionary, source: ItemTransferUI) -> void:
 	if not _has_access():
 		close()
 		return
-	_return_from_transfer(source)
-	var result: Dictionary = storage.deposit_items_from_inventory(items)
-	_feedback_text = str(result.message)
+	var result: Dictionary = storage.deposit_items_from_inventory(items, true)
+	_feedback_text = "Deposited." if result.ok else str(result.message)
 	_refresh_view()
+	_refresh_transfer("" if bool(result.get("ok", false)) else _feedback_text)
 
 func _return_from_transfer(source: ItemTransferUI) -> void:
 	# The quantity dialog releases its own pause before emitting.
