@@ -36,6 +36,8 @@ func _run() -> void:
 	runtime = city.get_node("YSortWorld/WorkerRuntime")
 	visuals = runtime.get_node("WorkerVisuals")
 	visuals.set_process(false)
+	# Let Player's deferred cursor attach before this fixture frees the city.
+	await get_tree().process_frame
 	if phase == "write":
 		_write()
 	else:

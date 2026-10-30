@@ -41,6 +41,10 @@ func _run() -> void:
 	TimeComponentManager.current_minute = 0
 	var content: Node = MAP.instantiate()
 	add_child(content)
+	# Long construction time jumps should not start an unrelated Player collapse.
+	var player: Player = content.get_node("YSortWorld/Player")
+	player.debug_disable_player_needs = true
+	player.debug_disable_fatigue = true
 	var plot: Node = content.get_node("YSortWorld/WorkshopPlot")
 	if not OS.get_environment("TIP_MVP_CAPTURE_DIR").is_empty() and DisplayServer.get_name() != "headless":
 		get_window().content_scale_size = Vector2i(400, 225)
