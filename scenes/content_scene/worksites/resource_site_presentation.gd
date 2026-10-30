@@ -1,8 +1,5 @@
 extends RefCounted
 
-const VISIBLE_BOUNDS = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd")
-const PROMPT_GAP: float = 4.0
-
 ## Contact geometry follows the authored art, without changing its visible pixels.
 static func configure(site: Node2D) -> void:
 	var icon: Sprite2D = site.get_node_or_null("ResourceIcon")
@@ -50,11 +47,4 @@ static func position_prompt(site: Node2D, icon: Sprite2D) -> void:
 	var prompt: InteractableLabelComponent = site.get_node_or_null("InteractPrompt")
 	if prompt == null:
 		return
-	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
-	if not art.has_area():
-		return
-	var current: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	var shift: Vector2
-	shift = Vector2(art.end.x + PROMPT_GAP - current.position.x, art.get_center().y - current.get_center().y)
-	prompt.position += site.global_transform.affine_inverse().basis_xform(shift)
-	prompt.position_offset = prompt.position
+	prompt.place_above_art(icon)

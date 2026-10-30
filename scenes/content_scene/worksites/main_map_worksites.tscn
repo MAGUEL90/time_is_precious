@@ -61,14 +61,15 @@ minutes_per_unit = 20.0
 scale = Vector2(0.6, 0.6)
 
 [node name="Label" parent="WorksiteMarkers/WoodSite" index="1"]
-offset_left = -24.0
+offset_left = -4.0
 offset_top = -24.0
-offset_right = 24.0
+offset_right = 44.0
 offset_bottom = -16.0
 text = "Wood Site"
 
 [node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSite"]
 texture_filter = 1
+position = Vector2(20, 0)
 texture = ExtResource("icon_Wood")
 
 [node name="ReedSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]

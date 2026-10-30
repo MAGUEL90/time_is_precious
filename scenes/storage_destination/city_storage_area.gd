@@ -13,6 +13,7 @@ var _previous_can_move: bool = true
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	interactable_label_component.place_above_art($Board)
 	add_to_group("city_storage_areas")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)

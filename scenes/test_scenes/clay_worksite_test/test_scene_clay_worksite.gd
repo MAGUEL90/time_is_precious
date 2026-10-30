@@ -517,12 +517,16 @@ func _process(_delta: float) -> void:
 		_site_highlight.select(nearest)
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").visible = site == nearest
+		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+			site.get_node("Label").visible = site != nearest
 
 func _hide_prompts() -> void:
 	_site_highlight.clear()
 	_highlighted_site = null
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").hide()
+		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+			site.get_node("Label").show()
 
 func _draw() -> void:
 	var ground := Rect2(-320, -180, 640, 360)
