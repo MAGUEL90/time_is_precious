@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://d2m4ct6uaigm0"]
+[gd_scene load_steps=14 format=3 uid="uid://d2m4ct6uaigm0"]
 
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_theme"]
 [ext_resource type="Script" path="res://scenes/ui/job_board_ui/job_board_ui.gd" id="2_script"]
@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" path="res://assets/font/pixel_rpg.ttf" id="5_font"]
 [ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="6_close"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/separator_icon_2.png" id="7_focus"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_panel/brown_panel_16x16.png" id="8_panel"]
 
 [sub_resource type="AtlasTexture" id="Window"]
 atlas = ExtResource("3_frame")
@@ -23,6 +24,18 @@ texture_margin_left = 1.0
 texture_margin_top = 1.0
 texture_margin_right = 1.0
 texture_margin_bottom = 1.0
+
+[sub_resource type="AtlasTexture" id="ContractFocusTexture"]
+atlas = ExtResource("8_panel")
+region = Rect2(18, 1, 16, 16)
+
+[sub_resource type="StyleBoxTexture" id="ContractFocus"]
+texture = SubResource("ContractFocusTexture")
+draw_center = false
+texture_margin_left = 2.0
+texture_margin_top = 2.0
+texture_margin_right = 2.0
+texture_margin_bottom = 2.0
 
 [node name="JobBoardUI" type="CanvasLayer"]
 layer = 10
@@ -184,6 +197,7 @@ custom_minimum_size = Vector2(72, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
+theme_override_styles/focus = SubResource("ContractFocus")
 
 [node name="QuoteLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
 offset_top = 147.0

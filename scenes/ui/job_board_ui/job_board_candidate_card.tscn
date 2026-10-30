@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/job_board_ui/job_board_candidate_card.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_card"]
@@ -38,13 +38,24 @@ content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
 
-[sub_resource type="StyleBoxTexture" id="Focus_style"]
+[sub_resource type="StyleBoxTexture" id="Check_hover_style"]
 texture = SubResource("Check_focus")
-draw_center = false
 texture_margin_left = 1.0
 texture_margin_top = 1.0
 texture_margin_right = 1.0
 texture_margin_bottom = 1.0
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxTexture" id="Focus_style"]
+texture = SubResource("Check_focus")
+draw_center = false
+texture_margin_left = 2.0
+texture_margin_top = 2.0
+texture_margin_right = 2.0
+texture_margin_bottom = 2.0
 
 [node name="CandidateCard" type="NinePatchRect"]
 custom_minimum_size = Vector2(312, 60)
@@ -96,7 +107,8 @@ offset_right = 306.0
 offset_bottom = 22.0
 toggle_mode = true
 theme_override_styles/normal = SubResource("Check_style")
-theme_override_styles/hover = SubResource("Check_style")
+theme_override_styles/hover = SubResource("Check_hover_style")
+theme_override_styles/hover_pressed = SubResource("Check_hover_style")
 theme_override_styles/pressed = SubResource("Check_style")
 theme_override_styles/disabled = SubResource("Check_style")
 theme_override_styles/focus = SubResource("Focus_style")
