@@ -62,7 +62,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 20
+theme_override_constants/margin_top = 13
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 16
 
@@ -70,7 +70,7 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 2
+theme_override_constants/separation = 1
 
 [node name="TitleHeader" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 12)
@@ -96,7 +96,7 @@ clip_text = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 2
+theme_override_constants/separation = 1
 
 [node name="MaterialsTitle" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
 custom_minimum_size = Vector2(0, 8)
@@ -109,7 +109,7 @@ vertical_alignment = 1
 [node name="MaterialsList" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 1
+theme_override_constants/separation = 0
 
 [node name="BuilderHeader" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
 custom_minimum_size = Vector2(0, 16)
@@ -169,7 +169,7 @@ text = "—"
 vertical_alignment = 1
 
 [node name="StatusLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
