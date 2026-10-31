@@ -65,6 +65,25 @@ func _run() -> void:
 	_expect(not board.quote_label.is_visible_in_tree(), "The persistent summary is hidden on the Job Board.")
 	var scroll_rect: Rect2 = board.candidate_scroll.get_global_rect()
 	var wallet_row: Control = board.wallet_label.get_parent()
+	var wallet_icon: TextureRect = wallet_row.get_node("WalletIcon")
+	_expect(wallet_icon.texture != null and wallet_icon.texture.resource_path == "res://assets/ui/ui_icon/city_wallet_icon.png"
+		and wallet_icon.size == Vector2(16, 16) and wallet_icon.stretch_mode == TextureRect.STRETCH_KEEP_CENTERED,
+		"The supplied wallet icon is displayed at its native size without stretching.")
+	if wallet_icon.texture != null:
+		var icon_image: Image = wallet_icon.texture.get_image()
+		_expect(icon_image.get_size() == Vector2i(16, 16) and is_zero_approx(icon_image.get_pixel(0, 0).a),
+			"The imported wallet icon keeps its dimensions and transparent background.")
+		var original_icon := Image.new()
+		var png_status: Error = original_icon.load_png_from_buffer(FileAccess.get_file_as_bytes("res://assets/ui/ui_icon/city_wallet_icon.png"))
+		var pixels_match: bool = png_status == OK and original_icon.get_size() == icon_image.get_size()
+		if pixels_match:
+			for y: int in range(16):
+				for x: int in range(16):
+					var source_pixel: Color = original_icon.get_pixel(x, y)
+					var imported_pixel: Color = icon_image.get_pixel(x, y)
+					if not is_equal_approx(source_pixel.a, imported_pixel.a) or (source_pixel.a > 0.0 and not source_pixel.is_equal_approx(imported_pixel)):
+						pixels_match = false
+		_expect(pixels_match, "Import preserves all visible icon pixels and their alpha.")
 	_expect(board.cards[1].get_global_rect().end.y <= scroll_rect.end.y + 0.1, "Two candidate cards fit fully in the expanded viewport.")
 	_expect(not board.feedback_label.get_global_rect().intersects(scroll_rect), "Contextual feedback does not overlap the candidate viewport.")
 	_expect(wallet_row.get_global_rect().position.x > board.hire_button.get_global_rect().end.x and wallet_row.get_global_rect().position.y >= scroll_rect.end.y,
@@ -77,7 +96,8 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(board.wallet_label.get_global_rect().end.x <= wallet_row.get_global_rect().end.x + 0.1
-		and board.wallet_label.get_global_rect().position.x >= board.hire_button.get_global_rect().end.x,
+		and wallet_icon.get_global_rect().position.x >= board.hire_button.get_global_rect().end.x
+		and wallet_row.get_global_rect().end.x <= board.get_node("Root/Center/Window").get_global_rect().end.x - 8.0,
 		"The largest supported wallet amount remains inside its lower-right space.")
 	await _capture("job-board-large-wallet")
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3074457345618258602
