@@ -202,7 +202,7 @@ alignment = 1
 theme_override_constants/separation = 6
 
 [node name="CancelHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
-custom_minimum_size = Vector2(72, 17)
+custom_minimum_size = Vector2(42, 17)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
@@ -210,7 +210,7 @@ text = "Back"
 tooltip_text = "Return to candidates without hiring"
 
 [node name="ConfirmHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
-custom_minimum_size = Vector2(38, 17)
+custom_minimum_size = Vector2(42, 17)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6

@@ -132,9 +132,11 @@ func _run() -> void:
 	_expect(confirmation_names_scroll.get_global_rect().position.x >= panel_rect.position.x + 18.0
 		and confirmation_names_scroll.get_global_rect().end.x <= board.duration_buttons[0].get_global_rect().position.x - 8.0,
 		"Candidate names keep clear margins beside the panel and duration choices.")
-	_expect(board.confirm_hire_button.size.x < board.cancel_hire_button.size.x
-		and board.confirm_hire_button.size.x >= board.confirm_hire_button.get_combined_minimum_size().x,
-		"Confirm is compact while retaining enough room for its label.")
+	var confirm_text_width: float = board.confirm_hire_button.get_theme_font("font").get_string_size(
+		board.confirm_hire_button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, board.confirm_hire_button.get_theme_font_size("font_size")).x
+	_expect(board.confirm_hire_button.size == board.cancel_hire_button.size
+		and board.confirm_hire_button.size.x < 72.0 and board.confirm_hire_button.size.x >= confirm_text_width + 8.0,
+		"Back and Confirm have equal compact dimensions and room for the longer label.")
 	for duration_button: Button in board.duration_buttons:
 		_expect(duration_button.size.x < 72.0 and duration_button.size.x >= duration_button.get_combined_minimum_size().x,
 			"Each duration button fits its contents without the old wide panel.")
