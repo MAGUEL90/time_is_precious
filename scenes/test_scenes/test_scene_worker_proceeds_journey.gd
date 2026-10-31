@@ -183,21 +183,26 @@ func _open_manage() -> WorkerControlUI:
 	if stopped:
 		return hub
 	await press(hub._find_manage_button(WORKER_ID))
-	_expect(hub.renew_days_option.get_selected_id() == 3, "The UI offers its standard three-day renewal.")
+	_expect(hub.manage_window.visible and hub._manage_worker_id == WORKER_ID,
+		"Manage opens for the saved worker from the Worker Hub roster.")
 	return hub
 
 
 func _check_unfunded_renew() -> void:
 	var old_until: int = worker.payroll_paid_until_day
 	var hub: WorkerControlUI = await _open_manage()
+	await press(hub.manage_contract_button)
+	await press(hub.contract_days_3_button)
+	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
+	_expect(hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % price
+		and hub.renew_price_icon.visible, "The unfunded quote still shows the exact three-day price.")
 	await press(hub.manage_renew_button)
-	await press(hub._confirm_yes_button)
 	insufficient_checked = int(Inventory.items.get("shekel", 0)) == 0 \
 		and CityStockManager.treasury_shekel == city_cash_after_isolation \
 		and worker.payroll_paid_until_day == old_until \
-		and hub.renew_price_label.text == "Renewal failed; check wallet."
+		and hub.contract_feedback_label.text == "Not enough funds."
 	_expect(insufficient_checked, "Renew rejects an empty wallet despite city cash, without changing the contract.")
-	await _capture_proceeds("insufficient-wallet")
+	await _capture_proceeds("worker-insufficient-wallet")
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Close Worker Hub after the failed renewal.")
 
@@ -281,23 +286,32 @@ func _renew_from_proceeds(price: int) -> void:
 	var was_active: bool = not worker.is_payroll_blocked()
 	var expected_until: int = (old_until if was_active else TimeComponentManager.current_day) + 3
 	var hub: WorkerControlUI = await _open_manage()
+	await press(hub.manage_contract_button)
+	await press(hub.contract_days_3_button)
+	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+		"Contract displays the exact three-day price earned from the worker's sale.")
+	await press(hub.contract_back_button)
+	_expect(int(Inventory.items.get("shekel", 0)) == wallet_before
+		and worker.payroll_paid_until_day == old_until and hub.manage_window.visible
+		and not hub.contract_window.visible,
+		"Back cancels the funded renewal without spending or extending its term.")
+	await press(hub.manage_contract_button)
+	await press(hub.contract_days_3_button)
+	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+		"Reopened Contract retains the exact three-day quote before purchase.")
+	await _capture_proceeds("worker-contract")
 	await press(hub.manage_renew_button)
-	await press(hub._confirm_no_button)
-	_expect(int(Inventory.items.get("shekel", 0)) == wallet_before and worker.payroll_paid_until_day == old_until,
-		"Canceling the funded renewal changes neither wallet nor contract.")
-	await press(hub.manage_renew_button)
-	await _capture_proceeds("renew-confirm")
-	await press(hub._confirm_yes_button)
 	wallet_after_renew = int(Inventory.items.get("shekel", 0))
 	renewed_until = worker.payroll_paid_until_day
 	_expect(wallet_before == worker_sale_income and wallet_after_renew == wallet_before - price
 		and CityStockManager.treasury_shekel == cash_before and renewed_until == expected_until
 		and not worker.is_payroll_blocked(),
-		"Confirmation pays the three-day renewal once from worker-sale proceeds, not city cash.")
-	hub._confirm_yes_button.pressed.emit()
+		"Renew pays the three-day term once from worker-sale proceeds, not city cash.")
+	_expect(hub.manage_renew_button.disabled, "A completed renewal selection cannot be purchased twice.")
+	hub.manage_renew_button.pressed.emit()
 	await _frames()
 	_expect(int(Inventory.items.get("shekel", 0)) == wallet_after_renew and worker.payroll_paid_until_day == renewed_until,
-		"A stale repeat confirmation cannot charge the renewal twice.")
+		"A repeated stale Renew input cannot charge or extend the contract twice.")
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Close Worker Hub after renewal.")
 	measure("worker_proceeds_renewed")

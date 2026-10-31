@@ -229,10 +229,17 @@ func _run() -> void:
 	await _capture("worker-hub-manage.png")
 	_expect(fixture.worker_control.window.visible and fixture.worker_control.manage_window.visible, "Manage is a popup over the Status list.")
 	var manage_rect: Rect2 = fixture.worker_control.manage_window.get_global_rect()
+	var manage_actions: VBoxContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin/MainVBox/Actions")
+	var action_names: Array[String] = []
+	for action: Node in manage_actions.get_children():
+		action_names.append(action.name)
 	_expect(get_viewport().get_visible_rect().encloses(manage_rect)
 		and manage_rect.encloses(fixture.worker_control.manage_fire_button.get_global_rect())
-		and manage_rect.encloses(fixture.worker_control.manage_renew_button.get_global_rect()),
-		"Manage and its Fire/Renew controls fit inside the popup and viewport.")
+		and manage_rect.encloses(fixture.worker_control.manage_contract_button.get_global_rect())
+		and action_names == ["FireButton", "GotoButton", "DetailsButton", "ContractButton"]
+		and fixture.worker_control.manage_goto_button.text == "Go To"
+		and not fixture.worker_control.contract_window.visible,
+		"Manage contains Fire, Go To, Details, Contract in order and stays within the viewport.")
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true

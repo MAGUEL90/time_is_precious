@@ -296,23 +296,48 @@ func _renew_through_hub(hub: WorkerControlUI, worker_id: String, ui: RaidUI, mer
 	await get_tree().process_frame
 	_check(hub.manage_window.visible and hub._manage_worker_id == worker_id,
 		"Manage opens for %s through the roster button." % worker_id)
-	_check(hub.renew_days_option.get_selected_id() == CONTRACT_DAYS,
-		"The normal Worker Hub renewal choice is three days.")
-	_check(not hub.manage_renew_button.disabled, "The funded renewal control is enabled.")
-	hub.manage_renew_button.pressed.emit()
-	await get_tree().process_frame
-	_check(hub._confirmation_overlay.visible, "Renew opens its normal confirmation panel.")
-	if not hub._confirmation_overlay.visible:
+	_check(is_instance_valid(hub.manage_contract_button), "Manage exposes the Contract action for %s." % worker_id)
+	if not is_instance_valid(hub.manage_contract_button):
 		return
-	_check(ui.notifications_popup.visible == false, "Renewal leaves the notification popup closed.")
-	hub._confirm_yes_button.pressed.emit()
+	hub.manage_contract_button.pressed.emit()
+	await get_tree().process_frame
+	_check(hub.contract_window.visible and not hub.manage_window.visible,
+		"Contract opens from Manage for %s." % worker_id)
+	hub.contract_days_3_button.pressed.emit()
+	var expected_price: int = WorkerDatabase.get_contract_price(worker.profession, CONTRACT_DAYS)
+	_check(hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
+		"The three-day quote for %s matches WorkerDatabase exactly." % worker_id)
+	_check(not hub.manage_renew_button.disabled, "The funded renewal control is enabled.")
+	hub.contract_back_button.pressed.emit()
+	await get_tree().process_frame
+	_check(not hub.contract_window.visible and hub.manage_window.visible
+		and int(Inventory.items.get("shekel", 0)) == wallet_before
+		and worker.payroll_paid_until_day == expiry_before,
+		"Back cancels %s renewal without spending wallet funds or changing expiry." % worker_id)
+	_check(ui._unread_notification and ui._notice_emergency and _is_red(ui.notification_button.modulate)
+		and _has_worker_fingerprint(ui, worker_id, "expired"),
+		"Cancel leaves %s expiry unread and red." % worker_id)
+	hub.manage_contract_button.pressed.emit()
+	await get_tree().process_frame
+	hub.contract_days_3_button.pressed.emit()
+	_check(hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
+		"Reopened Contract keeps the exact three-day quote for %s." % worker_id)
+	_check(not hub.manage_renew_button.disabled, "The confirmed renewal action is available after selecting its duration.")
+	hub.manage_renew_button.pressed.emit()
 	worker = WorkerDatabase.get_worker_data(worker_id)
 	_check(worker != null and worker.payroll_paid_from_day == TimeComponentManager.current_day
 		and worker.payroll_paid_until_day == TimeComponentManager.current_day + CONTRACT_DAYS
 		and worker.payroll_paid_until_day != expiry_before,
-		"The confirmation action renews %s through the real Worker Hub path." % worker_id)
-	_check(int(Inventory.items.get("shekel", 0)) == wallet_before - TEST_RATE,
-		"The confirmed renewal charges exactly one wallet shekel.")
+		"The final Renew action renews %s through the real Worker Hub path." % worker_id)
+	_check(int(Inventory.items.get("shekel", 0)) == wallet_before - expected_price,
+		"The confirmed renewal charges exactly the displayed price from the wallet.")
+	_check(hub.manage_renew_button.disabled, "A successful renewal cannot be applied twice for the same duration.")
+	hub.manage_renew_button.pressed.emit()
+	worker = WorkerDatabase.get_worker_data(worker_id)
+	_check(int(Inventory.items.get("shekel", 0)) == wallet_before - expected_price
+		and worker != null and worker.payroll_paid_until_day == TimeComponentManager.current_day + CONTRACT_DAYS,
+		"Repeated stale Renew input cannot charge or extend %s twice." % worker_id)
+	_check(ui.notifications_popup.visible == false, "Renewal leaves the notification popup closed.")
 	_record(label + "-immediate", ui, merchant, raid_state)
 	if mode == "multi" and worker_id == worker_ids[0]:
 		_check(ui._unread_notification and ui._notice_emergency

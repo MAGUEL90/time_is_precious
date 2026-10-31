@@ -8,11 +8,14 @@ const HAULER_ID: String = "fire_hover_hauler"
 const RESERVED_ID: String = "fire_hover_reserved"
 const WORKSHOP_ID: String = "fire_hover_workshop"
 const IDLE_ID: String = "fire_hover_idle"
+const REVIEW_LABORER_NAME: String = "Naram"
+const REVIEW_HAULER_NAME: String = "Lugal"
 
 var failures: int = 0
 var fire_review_dir: String = ""
 var fire_hover_enter_events: int = 0
 var fire_hover_exit_events: int = 0
+var review_worker_id: String = WORKING_ID
 var fixture
 var worker_control
 
@@ -44,16 +47,19 @@ func _run() -> void:
 	worker_control._fire_hover_detector.mouse_exited.connect(_on_fire_hover_probe_exited)
 	_expect(get_viewport().get_visible_rect().size == Vector2(400, 225), "Test uses the approved 400 x 225 logical viewport.")
 	_expect(get_window().size == Vector2i(1200, 675), "Test uses the 1200 x 675 development window.")
+	_expect(CitizenGenerator.display_name_container.has(REVIEW_LABORER_NAME)
+		and CitizenGenerator.display_name_container.has(REVIEW_HAULER_NAME), "Review names come from the game's citizen name pool.")
 	print("Worker Fire hover sizes: logical=%s window=%s" % [get_viewport().get_visible_rect().size, get_window().size])
 
 	_add_worker(WORKING_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.WORKING, "working_order")
 	_add_worker(TRAVELLING_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.TRAVELLING, "travel_order")
 	_add_worker(HAULER_ID, WorkerData.Profession.HAULER, WorkerData.WorkStatus.IDLE)
-	_add_worker(RESERVED_ID, WorkerData.Profession.CRAFTER, WorkerData.WorkStatus.RESTING, "reserved_order")
-	_add_worker(WORKSHOP_ID, WorkerData.Profession.CRAFTER, WorkerData.WorkStatus.IDLE)
+	_add_worker(RESERVED_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.RESTING, "reserved_order")
+	_add_worker(WORKSHOP_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.IDLE)
 	_add_worker(IDLE_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.IDLE)
 	_add_assigned_citizen(WORKSHOP_ID)
 	fixture.hauling.routes[HAULER_ID] = {"phase": "outbound", "removing": false}
+	worker_control.rows_provider = _review_rows
 	worker_control.open()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -80,7 +86,7 @@ func _run() -> void:
 func _add_worker(worker_id: String, profession: WorkerData.Profession, status: WorkerData.WorkStatus, order_id: String = "") -> WorkerData:
 	var worker := WorkerData.new()
 	worker.worker_id = worker_id
-	worker.display_name = worker_id
+	worker.display_name = REVIEW_HAULER_NAME if profession == WorkerData.Profession.HAULER else REVIEW_LABORER_NAME
 	worker.profession = profession
 	worker.current_work_status = status
 	worker.current_order_id = order_id
@@ -91,10 +97,25 @@ func _add_worker(worker_id: String, profession: WorkerData.Profession, status: W
 func _add_assigned_citizen(worker_id: String) -> void:
 	var citizen := CitizenData.new()
 	citizen.citizen_id = worker_id
-	citizen.display_name = worker_id
+	citizen.display_name = REVIEW_LABORER_NAME
 	citizen.population_status = CitizenData.PopulationStatus.RESIDENT
 	citizen.employment_status = CitizenData.EmploymentStatus.ASSIGNED
 	CitizenManager.add_citizen(citizen)
+
+
+func _review_rows() -> Array[Dictionary]:
+	# Keep screenshots representative of the current game's actual candidates.
+	var rows: Array[Dictionary] = []
+	for row: Dictionary in fixture.worker_management.rows():
+		if str(row.get("id", "")) == review_worker_id:
+			rows.append(row)
+	return rows
+
+
+func _show_review_manage(worker_id: String) -> void:
+	review_worker_id = worker_id
+	worker_control.refresh()
+	worker_control._show_manage(worker_id)
 
 
 func _row_for(worker_id: String) -> Dictionary:
@@ -109,7 +130,10 @@ func _move_mouse_to(logical_position: Vector2) -> void:
 	var window_size: Vector2 = get_window().size
 	var scale: Vector2 = window_size / viewport_size
 	Input.warp_mouse((logical_position * scale).round())
-	await get_tree().create_timer(0.08, true).timeout
+	# Fixed-FPS test runs can advance game timers faster than X11 processes a warp.
+	var deadline: int = Time.get_ticks_msec() + 120
+	while Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -139,7 +163,7 @@ func _click_at(logical_position: Vector2) -> void:
 
 
 func _check_disabled_hover(worker_id: String, reason: String, capture_name: String) -> void:
-	worker_control._show_manage(worker_id)
+	_show_review_manage(worker_id)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var row: Dictionary = _row_for(worker_id)
@@ -154,6 +178,17 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 	_expect(fire_hover_enter_events > enters_before, "%s real mouse motion produces a hover-enter event." % capture_name)
 	_expect(worker_control._fire_block_feedback.visible, "%s actual mouse hover displays rendered feedback." % capture_name)
 	_expect(worker_control._fire_block_feedback.text == reason, "%s feedback matches the current cause." % capture_name)
+	_expect(worker_control._fire_block_feedback.get_theme_font("font") == worker_control.manage_fire_button.get_theme_font("font")
+		and worker_control._fire_block_feedback.get_theme_font_size("font_size") == 6,
+		"%s feedback uses the same UI font at size 6." % capture_name)
+	var feedback_color: Color = worker_control._fire_block_feedback.get_theme_color("font_color")
+	_expect(feedback_color.r > feedback_color.g and feedback_color.r > feedback_color.b,
+		"%s feedback uses a red font." % capture_name)
+	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
+	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
+	_expect(popup_rect.encloses(feedback_rect) and feedback_rect.position.y >= popup_rect.position.y + 2.0
+		and feedback_rect.end.y <= fire_rect.position.y,
+		"%s feedback is above Fire with clearance from the popup border." % capture_name)
 	await _capture(capture_name + ".png")
 	var exits_before: int = fire_hover_exit_events
 	await _move_mouse_to(Vector2(3, 3))
@@ -175,7 +210,7 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 
 func _check_generic_fallback() -> void:
 	worker_control.rows_provider = func() -> Array[Dictionary]:
-		return [{"id": "generic", "name": "Generic", "profession": "Laborer", "working": false,
+		return [{"id": "generic", "name": REVIEW_LABORER_NAME, "profession": "Laborer", "working": false,
 			"can_fire": false, "can_goto": false}]
 	worker_control._show_manage("generic")
 	await get_tree().process_frame
@@ -187,14 +222,14 @@ func _check_generic_fallback() -> void:
 		"Unknown disabled cause uses a short honest fallback.")
 	await _capture("generic-fallback.png")
 	worker_control._close_manage()
-	worker_control.rows_provider = fixture.worker_management.rows
+	worker_control.rows_provider = _review_rows
 	await get_tree().process_frame
 
 
 func _check_stale_state_refresh() -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(TRAVELLING_ID)
 	worker.current_work_status = WorkerData.WorkStatus.TRAVELLING
-	worker_control._show_manage(TRAVELLING_ID)
+	_show_review_manage(TRAVELLING_ID)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
@@ -238,7 +273,7 @@ func _check_stale_state_refresh() -> void:
 
 
 func _check_edge_clamping() -> void:
-	worker_control._show_manage(WORKING_ID)
+	_show_review_manage(WORKING_ID)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
@@ -276,7 +311,7 @@ func _check_edge_clamping() -> void:
 
 
 func _check_enabled_fire_confirmation() -> void:
-	worker_control._show_manage(IDLE_ID)
+	_show_review_manage(IDLE_ID)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(not worker_control.manage_fire_button.disabled, "Idle worker keeps the normal enabled Fire action.")

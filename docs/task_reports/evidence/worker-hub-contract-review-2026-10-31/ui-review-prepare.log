@@ -1,0 +1,8 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+   at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MVP_MEASURE {"clothing_missing":2,"construction":"uncleared","dried":0,"earned":0,"eaten":12,"fatigue":0.0255,"focus":0.981000000000002,"food":{"consumer_count":2,"daily_need":2,"days_remaining":2,"points":4,"portion_points":0},"harvested":12,"held":[],"hunger":0.0520000000000071,"inventory":{"date_cluster":11,"shekel":6,"wood_log":4},"minute":9172,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"contract_ui_prepare","walked_pixels":1434.99963724613,"worker_reliability":0.7,"worker_satisfaction":0.2,"workshop_stock":{}}
+ContractUIReview prepare: PASS

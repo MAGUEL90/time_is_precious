@@ -22,6 +22,7 @@ var can_open: Callable = Callable()
 @onready var city_context_label: Label = $Root/Center/CityStorage/Margin/Content/ContextLabel
 @onready var city_storage_list: GridContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var manage_window: NinePatchRect = $Root/ManageWindow
+@onready var contract_window: NinePatchRect = $Root/ContractWindow
 @onready var details_window: NinePatchRect = $Root/DetailsWindow
 @onready var close_button: TextureButton = $Root/Center/Window/CloseButton
 @onready var status_tab_button: Button = $Root/Center/Window/Margin/MainVBox/Tabs/StatusTab
@@ -49,10 +50,16 @@ var can_open: Callable = Callable()
 @onready var manage_fire_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/FireButton
 @onready var manage_goto_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/GotoButton
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
-@onready var renew_days_option: OptionButton = $Root/ManageWindow/Margin/MainVBox/RenewDaysOption
-@onready var renew_price_label: Label = $Root/ManageWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
-@onready var renew_price_icon: TextureRect = $Root/ManageWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
-@onready var manage_renew_button: Button = $Root/ManageWindow/Margin/MainVBox/RenewButton
+@onready var manage_contract_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/ContractButton
+@onready var contract_current_label: Label = $Root/ContractWindow/Margin/MainVBox/CurrentContractLabel
+@onready var contract_days_3_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days3Button
+@onready var contract_days_6_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days6Button
+@onready var contract_days_9_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days9Button
+@onready var renew_price_label: Label = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
+@onready var renew_price_icon: TextureRect = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
+@onready var contract_feedback_label: Label = $Root/ContractWindow/Margin/MainVBox/FeedbackLabel
+@onready var contract_back_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractActions/BackButton
+@onready var manage_renew_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractActions/RenewButton
 @onready var details_header_label: Label = $Root/DetailsWindow/Margin/MainVBox/Header/TitleLabel
 @onready var details_scroll: ScrollContainer = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll
 @onready var details_label: Label = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll/DetailsLabel
@@ -65,7 +72,7 @@ const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visua
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
 const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
-const SHEKEL_ICON: Texture2D = preload("res://assets/ui/ui_icon/small_shekel_8x8.png")
+const CONTRACT_CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
 	"Fire this worker?\nTheir assignment will end.\nTools return to City Storage."
@@ -75,10 +82,12 @@ var _active_tab: String = "status"
 var _selected_worker_id: String = ""
 var _pending_remove_id: String = ""
 var _pending_remove_row: Dictionary = {}
-var _pending_renew_id: String = ""
-var _pending_renew_days: int = 3
-var _pending_renew_price: int = 0
 var _renew_feedback_text: String = ""
+var _selected_contract_days: int = 3
+var _displayed_contract_price: int = 0
+var _renew_completed_for_selection: bool = false
+var _renew_request_active: bool = false
+var _contract_days_group: ButtonGroup = ButtonGroup.new()
 var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
@@ -92,9 +101,6 @@ var _confirmation_overlay: Control
 var _confirm_no_button: Button
 var _confirm_yes_button: Button
 var _confirm_label: Label
-var _confirm_cost_row: HBoxContainer
-var _confirm_cost_label: Label
-var _confirm_currency_icon: TextureRect
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
 var _needs_manager: Node
@@ -118,10 +124,16 @@ func _ready() -> void:
 	manage_fire_button.pressed.connect(_request_manage_fire)
 	manage_goto_button.pressed.connect(_request_manage_goto)
 	manage_details_button.pressed.connect(_show_manage_details)
-	for days: int in WorkerDatabase.CONTRACT_DAYS:
-		renew_days_option.add_item("%d days" % days, days)
-	renew_days_option.select(0)
-	renew_days_option.item_selected.connect(func(_index: int): _on_renew_contract_changed())
+	manage_contract_button.pressed.connect(_show_manage_contract)
+	contract_days_3_button.pressed.connect(_on_contract_days_selected.bind(3))
+	contract_days_6_button.pressed.connect(_on_contract_days_selected.bind(6))
+	contract_days_9_button.pressed.connect(_on_contract_days_selected.bind(9))
+	_contract_days_group.allow_unpress = false
+	for day_button: Button in [contract_days_3_button, contract_days_6_button, contract_days_9_button]:
+		day_button.toggle_mode = true
+		day_button.button_group = _contract_days_group
+		day_button.add_theme_constant_override("icon_max_width", 8)
+	contract_back_button.pressed.connect(_close_contract)
 	manage_renew_button.pressed.connect(_request_manage_renew)
 	details_close_button.pressed.connect(_close_details)
 	_connect_needs_refresh_signal()
@@ -138,6 +150,7 @@ func _ready() -> void:
 	city_storage_view.get_node("Margin/Content/Header/Categories").category_changed.connect(func(_category): _render_tools_units(_get_worker_rows()))
 	_configure_scrollbars()
 	manage_window.hide()
+	contract_window.hide()
 	details_window.hide()
 	tools_picker_window.hide()
 	_set_active_tab("status")
@@ -197,14 +210,20 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
 			get_viewport().set_input_as_handled()
 		return
-	if manage_window.visible or details_window.visible:
+	if manage_window.visible or contract_window.visible or details_window.visible:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var active_popup: Control = details_window if details_window.visible else manage_window
+			var active_popup: Control = details_window if details_window.visible else contract_window if contract_window.visible else manage_window
 			if not active_popup.get_global_rect().has_point(event.position):
-				_close_manage()
+				if contract_window.visible:
+					_close_contract()
+				else:
+					_close_manage()
 			return
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
-			_close_manage()
+			if contract_window.visible:
+				_close_contract()
+			else:
+				_close_manage()
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
@@ -244,8 +263,9 @@ func close() -> void:
 		_cancel_remove_confirmation()
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
-	_pending_renew_id = ""
 	_renew_feedback_text = ""
+	_renew_completed_for_selection = false
+	_renew_request_active = false
 	_manage_worker_id = ""
 	_close_manage()
 	_close_tools_picker()
@@ -273,6 +293,9 @@ func refresh() -> void:
 			_update_manage_controls(managed_row)
 			if manage_window.visible:
 				_reposition_manage_after_layout()
+			elif contract_window.visible:
+				_update_contract_controls(managed_row)
+				_reposition_contract_after_layout()
 			elif details_window.visible:
 				_render_details(managed_row)
 				_position_popup(details_window, _manage_source_button)
@@ -285,6 +308,14 @@ func _reposition_manage_after_layout() -> void:
 		return
 	_manage_source_button = _find_manage_button(_manage_worker_id)
 	_position_popup(manage_window, _manage_source_button)
+
+
+func _reposition_contract_after_layout() -> void:
+	await get_tree().process_frame
+	if not visible or not contract_window.visible or _manage_worker_id.is_empty():
+		return
+	_manage_source_button = _find_manage_button(_manage_worker_id)
+	_position_popup(contract_window, _manage_source_button)
 
 
 func set_feedback(text: String) -> void:
@@ -736,6 +767,7 @@ func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	_manage_worker_id = worker_id
 	_manage_source_button = source_button if is_instance_valid(source_button) else _find_manage_button(worker_id)
 	_update_manage_controls(row)
+	contract_window.hide()
 	details_window.hide()
 	manage_window.size = manage_window.get_combined_minimum_size()
 	_position_popup(manage_window, _manage_source_button)
@@ -754,29 +786,84 @@ func _update_manage_controls(row: Dictionary) -> void:
 	manage_fire_button.disabled = fire_disabled
 	_sync_fire_hover_detector()
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
-	var price: int = _renewal_price(row)
-	manage_renew_button.disabled = price <= 0
-	var show_currency: bool = _renew_feedback_text.is_empty() and price > 0
-	renew_price_label.autowrap_mode = TextServer.AUTOWRAP_OFF if show_currency else TextServer.AUTOWRAP_WORD_SMART
-	renew_price_label.custom_minimum_size.x = 0.0 if show_currency else 74.0
-	renew_price_label.text = _renew_feedback_text if not _renew_feedback_text.is_empty() else (
-		"Price: %d" % price if price > 0 else "Price unavailable"
-	)
-	renew_price_icon.visible = show_currency
-
-
-func _on_renew_contract_changed() -> void:
-	_renew_feedback_text = ""
+func _show_manage_contract() -> void:
 	if _manage_worker_id.is_empty():
 		return
 	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if row.is_empty():
+		_close_manage()
+		return
+	_hide_fire_block_feedback()
+	_selected_contract_days = WorkerDatabase.CONTRACT_DAYS[0] if not WorkerDatabase.CONTRACT_DAYS.is_empty() else 3
+	_renew_feedback_text = ""
+	_displayed_contract_price = 0
+	_renew_completed_for_selection = false
+	_renew_request_active = false
+	_update_contract_day_buttons()
+	_update_contract_controls(row)
+	manage_window.hide()
+	details_window.hide()
+	contract_window.size = contract_window.get_combined_minimum_size()
+	_position_popup(contract_window, _manage_source_button)
+	contract_window.show()
+	_position_popup.call_deferred(contract_window, _manage_source_button)
+	_sync_fire_hover_detector()
+	contract_days_3_button.grab_focus()
+
+
+func _update_contract_day_buttons() -> void:
+	for day_button: Button in [contract_days_3_button, contract_days_6_button, contract_days_9_button]:
+		var selected: bool = day_button.text == "%d days" % _selected_contract_days
+		day_button.set_pressed_no_signal(selected)
+		day_button.icon = CONTRACT_CHECK_ICON if selected else null
+
+
+func _on_contract_days_selected(days: int) -> void:
+	if days not in WorkerDatabase.CONTRACT_DAYS or _manage_worker_id.is_empty():
+		return
+	if days != _selected_contract_days:
+		_renew_completed_for_selection = false
+		_renew_feedback_text = ""
+	_selected_contract_days = days
+	_update_contract_day_buttons()
+	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if not row.is_empty():
-		_update_manage_controls(row)
+		_update_contract_controls(row)
 
 
-func _renewal_price(row: Dictionary) -> int:
-	var days: int = renew_days_option.get_selected_id() if renew_days_option.item_count > 0 else 3
-	var profession: WorkerData.Profession = _profession_from_row(row)
+func _update_contract_controls(row: Dictionary) -> void:
+	var price: int = _renewal_price(row, _selected_contract_days)
+	_displayed_contract_price = price
+	var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
+	contract_current_label.text = _current_contract_text(worker)
+	renew_price_label.text = "Price: %d" % price if price > 0 else "Price unavailable"
+	renew_price_icon.visible = price > 0
+	contract_feedback_label.text = _renew_feedback_text
+	contract_feedback_label.visible = not _renew_feedback_text.is_empty()
+	manage_renew_button.disabled = price <= 0 or _renew_completed_for_selection or _renew_request_active
+	if contract_window.visible:
+		contract_window.size = contract_window.get_combined_minimum_size()
+		_position_popup(contract_window, _manage_source_button)
+
+
+func _current_contract_text(worker: WorkerData) -> String:
+	if worker == null or worker.payroll_start_day < 0:
+		return "No active contract"
+	var status: String
+	if worker.is_waiting_for_first_payment():
+		status = "Contract unpaid"
+	elif worker.is_payroll_blocked():
+		status = "Expired after Day %d" % worker.payroll_paid_until_day
+	else:
+		status = "Paid through Day %d" % worker.payroll_paid_until_day
+	if worker.payroll_contract_days > 0:
+		status += "\nCurrent term: %d days" % worker.payroll_contract_days
+	return status
+
+
+func _renewal_price(row: Dictionary, days: int) -> int:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
+	var profession: WorkerData.Profession = worker.profession if worker != null else _profession_from_row(row)
 	return WorkerDatabase.get_contract_price(profession, days)
 
 
@@ -797,26 +884,34 @@ func _profession_from_row(row: Dictionary) -> WorkerData.Profession:
 
 
 func _request_manage_renew() -> void:
-	if _manage_worker_id.is_empty() or (_confirmation_overlay != null and _confirmation_overlay.visible):
+	if not contract_window.visible or _manage_worker_id.is_empty() or _renew_request_active or _renew_completed_for_selection:
 		return
 	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if row.is_empty():
 		return
-	var days: int = renew_days_option.get_selected_id()
-	var price: int = _renewal_price(row)
+	var days: int = _selected_contract_days
+	var price: int = _renewal_price(row, days)
 	if price <= 0:
-		renew_price_label.text = "Price unavailable"
-		renew_price_icon.hide()
+		_renew_feedback_text = "Contract price unavailable."
+		_update_contract_controls(row)
 		return
-	_pending_renew_id = _manage_worker_id
-	_pending_renew_days = days
-	_pending_renew_price = price
-	_confirm_label.text = "Renew for %d paid days?\nPaid from your wallet now.\nManual renewal; no auto-renewal or refunds." % days
-	_set_renew_confirmation_price(price)
-	_hide_fire_block_feedback()
-	_confirmation_overlay.show()
-	_sync_fire_hover_detector()
-	_confirm_no_button.grab_focus()
+	if price != _displayed_contract_price:
+		_renew_feedback_text = "Price updated; review and renew."
+		_update_contract_controls(row)
+		return
+	_renew_request_active = true
+	_update_contract_controls(row)
+	var success: bool = WorkerDatabase.renew_contract(_manage_worker_id, days)
+	_renew_request_active = false
+	if success:
+		_renew_completed_for_selection = true
+		var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
+		_renew_feedback_text = "Renewed through Day %d." % worker.payroll_paid_until_day if worker != null else "Renewal paid."
+	else:
+		_renew_feedback_text = "Not enough funds." if not Inventory.has_item("shekel", price) else "Renewal failed; check contract."
+	row = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if not row.is_empty():
+		_update_contract_controls(row)
 
 
 func _show_manage_details() -> void:
@@ -834,6 +929,7 @@ func _show_details(worker_id: String, return_tab: String = "") -> void:
 	_render_details(row, true)
 	_hide_fire_block_feedback()
 	manage_window.hide()
+	contract_window.hide()
 	_sync_fire_hover_detector()
 	details_window.size = details_window.get_combined_minimum_size()
 	_position_popup(details_window, _manage_source_button)
@@ -967,9 +1063,30 @@ func _close_details() -> void:
 func _close_manage() -> void:
 	_hide_fire_block_feedback()
 	details_window.hide()
+	contract_window.hide()
 	manage_window.hide()
 	_sync_fire_hover_detector()
 	_manage_source_button = null
+
+
+func _close_contract() -> void:
+	if not contract_window.visible:
+		return
+	contract_window.hide()
+	if _manage_worker_id.is_empty():
+		_close_manage()
+		return
+	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if row.is_empty():
+		_close_manage()
+		return
+	_update_manage_controls(row)
+	manage_window.size = manage_window.get_combined_minimum_size()
+	_position_popup(manage_window, _manage_source_button)
+	manage_window.show()
+	_position_popup.call_deferred(manage_window, _manage_source_button)
+	_sync_fire_hover_detector()
+	manage_contract_button.grab_focus()
 
 
 func _request_manage_fire() -> void:
@@ -1049,9 +1166,6 @@ func _request_remove(row: Dictionary) -> void:
 		return
 	_pending_remove_id = worker_id
 	_pending_remove_row = row.duplicate()
-	_pending_renew_id = ""
-	_pending_renew_price = 0
-	_confirm_cost_row.hide()
 	_confirm_label.text = _remove_confirmation_message(row)
 	_hide_fire_block_feedback()
 	_confirmation_overlay.show()
@@ -1080,34 +1194,12 @@ func _build_confirmation() -> void:
 	_confirm_label = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
 	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_label.add_theme_font_size_override("font_size", 6)
-	var confirm_vbox: VBoxContainer = panel.get_node("ConfirmMargin/ConfirmVBox")
-	_confirm_cost_row = HBoxContainer.new()
-	_confirm_cost_row.name = "RenewalCostRow"
-	_confirm_cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_confirm_cost_row.add_theme_constant_override("separation", 2)
-	_confirm_currency_icon = TextureRect.new()
-	_confirm_currency_icon.name = "ShekelIcon"
-	_confirm_currency_icon.custom_minimum_size = Vector2(8, 8)
-	_confirm_currency_icon.mouse_filter = Control.MOUSE_FILTER_PASS
-	_confirm_currency_icon.texture = SHEKEL_ICON
-	_confirm_currency_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_confirm_currency_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_confirm_currency_icon.accessibility_name = "Shekel"
-	_confirm_cost_label = Label.new()
-	_confirm_cost_label.name = "RenewalCostLabel"
-	_confirm_cost_label.theme_type_variation = &"PanelTextSmall"
-	_confirm_cost_label.add_theme_font_size_override("font_size", 6)
-	_confirm_cost_row.add_child(_confirm_cost_label)
-	_confirm_cost_row.add_child(_confirm_currency_icon)
-	confirm_vbox.add_child(_confirm_cost_row)
-	confirm_vbox.move_child(_confirm_cost_row, 1)
 	_confirm_no_button = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmButtons/KeepButton")
 	_confirm_yes_button = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmButtons/DiscardButton")
 	_confirm_no_button.text = "No"
 	_confirm_yes_button.text = "Yes"
 	_confirm_no_button.pressed.connect(_cancel_remove_confirmation)
 	_confirm_yes_button.pressed.connect(_confirm_pending_action)
-	_confirm_cost_row.hide()
 	_confirmation_overlay.hide()
 
 
@@ -1128,6 +1220,7 @@ func _build_fire_block_feedback() -> void:
 	_fire_block_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fire_block_feedback.focus_mode = Control.FOCUS_NONE
 	_fire_block_feedback.z_index = 21
+	_fire_block_feedback.theme_type_variation = &"HudLabelShortcut"
 	_fire_block_feedback.add_theme_font_size_override("font_size", 6)
 	_fire_block_feedback.add_theme_color_override("font_color", Color(1.0, 0.35, 0.31, 1.0))
 	_fire_block_feedback.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 0.95))
@@ -1246,54 +1339,16 @@ func _on_fire_hover_exited() -> void:
 		_fire_block_feedback.hide()
 
 
-func _set_renew_confirmation_price(price: int) -> void:
-	_confirm_cost_label.text = "Cost: %d" % price
-	_confirm_cost_label.accessibility_name = "Cost: %d Shekel" % price
-	_confirm_cost_row.show()
-
-
 func _cancel_remove_confirmation() -> void:
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
-	_pending_renew_id = ""
-	_pending_renew_days = 3
-	_pending_renew_price = 0
 	if _confirmation_overlay != null:
-		_confirm_cost_row.hide()
 		_confirmation_overlay.hide()
 	_sync_fire_hover_detector()
 
 
 func _confirm_pending_action() -> void:
-	if _pending_renew_id.is_empty():
-		_confirm_remove()
-		return
-	var worker_id: String = _pending_renew_id
-	var days: int = _pending_renew_days
-	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-	var current_price: int = WorkerDatabase.get_contract_price(worker.profession, days) if worker != null else -1
-	if current_price != _pending_renew_price:
-		if current_price <= 0:
-			_cancel_remove_confirmation()
-			_renew_feedback_text = "Contract price unavailable."
-			var current_row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
-			if not current_row.is_empty():
-				_update_manage_controls(current_row)
-			return
-		_pending_renew_price = current_price
-		_set_renew_confirmation_price(current_price)
-		return
-	var success: bool = WorkerDatabase.renew_contract(worker_id, days)
-	_cancel_remove_confirmation()
-	if success:
-		worker = WorkerDatabase.get_worker_data(worker_id)
-		_renew_feedback_text = "Paid through Day %d" % worker.payroll_paid_until_day if worker != null else "Renewal paid"
-	else:
-		_renew_feedback_text = "Renewal failed; check wallet."
-	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
-	if not row.is_empty():
-		_update_manage_controls(row)
-		_reposition_manage_after_layout()
+	_confirm_remove()
 
 
 func _confirm_remove() -> void:

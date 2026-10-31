@@ -326,22 +326,48 @@ func renew_expired() -> void:
 	if stopped:
 		return
 	await press(hub._find_manage_button(worker.worker_id))
-	_expect(hub.renew_days_option.get_selected_id() == 3, "Renewal offers the normal three-day choice")
+	_expect(hub.manage_window.visible and hub._manage_worker_id == worker.worker_id,
+		"Manage opens for the hired worker through its roster button")
+	if stopped:
+		return
+	await press(hub.manage_contract_button)
+	_expect(hub.contract_window.visible and not hub.manage_window.visible,
+		"Manage opens the worker's Contract popup")
+	if stopped:
+		return
+	await press(hub.contract_days_3_button)
 	var wallet_before: int = int(Inventory.items.get("shekel", 0))
 	var cash_before: int = CityStockManager.treasury_shekel
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	var signals_before: int = settlements.size()
+	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+		"The three-day renewal displays the exact wallet quote")
+	await _capture("worker-contract")
+	await press(hub.contract_back_button)
+	_expect(not hub.contract_window.visible and hub.manage_window.visible
+		and int(Inventory.items.get("shekel", 0)) == wallet_before
+		and worker.is_payroll_blocked() and settlements.size() == signals_before,
+		"Back cancels renewal without spending or extending the expired contract")
+	await press(hub.manage_contract_button)
+	await press(hub.contract_days_3_button)
+	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+		"Reopening Contract retains the correct three-day renewal quote")
 	await press(hub.manage_renew_button)
-	await _capture("renew-confirm")
-	await press(hub._confirm_no_button)
-	_expect(int(Inventory.items.get("shekel", 0)) == wallet_before and worker.is_payroll_blocked(), "Canceling renewal spends nothing and leaves the contract expired")
-	await press(hub.manage_renew_button)
-	await press(hub._confirm_yes_button)
 	renewal_observed = int(Inventory.items.get("shekel", 0)) == wallet_before - price \
 		and CityStockManager.treasury_shekel == cash_before and not worker.is_payroll_blocked() \
 		and worker.payroll_contract_days == 3 and worker.payroll_paid_until_day == TimeComponentManager.current_day + 3 \
 		and settlements.size() == signals_before + 1
-	_expect(renewal_observed, "Confirming renewal charges the wallet once and starts a new three-day period")
+	_expect(renewal_observed, "Renew charges the wallet once and starts a new three-day period")
+	var wallet_after_renew: int = int(Inventory.items.get("shekel", 0))
+	var renewed_until: int = worker.payroll_paid_until_day
+	_expect(hub.manage_renew_button.disabled, "A completed selection cannot be renewed a second time")
+	hub.manage_renew_button.pressed.emit()
+	await _frames()
+	_expect(int(Inventory.items.get("shekel", 0)) == wallet_after_renew
+		and worker.payroll_paid_until_day == renewed_until
+		and settlements.size() == signals_before + 1,
+		"Repeated stale Renew input cannot charge or extend the contract twice")
+	await _capture("worker-renewed")
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Closing Worker Hub returns to the live world")
 	measure("renewed")

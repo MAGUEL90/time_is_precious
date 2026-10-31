@@ -1,6 +1,10 @@
-extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
-## UI review from an earned contract_journey checkpoint. No grants or clock edits.
+extends "res://scenes/test_scenes/test_scene_contract_journey.gd"
+## UI review from an earned checkpoint. No grants or clock edits; capture/write
+## use existing citizen-pool names in the isolated review profile only.
+## Reuse the journey's physical front-board City Storage helper.
 const SAVE_PATH := "user://contract_ui/checkpoint.json"
+const REVIEW_LABORER_NAME := "Naram"
+const REVIEW_HAULER_NAME := "Lugal"
 
 func _run() -> void:
 	checkpoint_path = SAVE_PATH
@@ -26,6 +30,16 @@ func _run() -> void:
 	bind_map()
 	_expect(same(expected, restored_snapshot), "Continue restores every earned owner and acknowledged notice")
 	_expect(not player.debug_disable_player_needs and not player.debug_disable_fatigue, "Needs stay active")
+	if phase in ["capture", "write"]:
+		_expect(CitizenGenerator.display_name_container.has(REVIEW_LABORER_NAME)
+			and CitizenGenerator.display_name_container.has(REVIEW_HAULER_NAME), "Review names belong to the game's citizen name pool")
+		var review_laborer: CitizenData = CitizenManager.get_citizen("initial_workshop_laborer")
+		var review_hauler: CitizenData = CitizenManager.get_citizen("initial_worksite_hauler")
+		_expect(review_laborer != null and review_hauler != null, "The isolated review checkpoint contains both candidates")
+		if stopped:
+			return
+		review_laborer.display_name = REVIEW_LABORER_NAME
+		review_hauler.display_name = REVIEW_HAULER_NAME
 	if content.name == "PlayerHomeInterior":
 		await leave_home()
 	if phase == "prepare":
@@ -46,34 +60,62 @@ func _run() -> void:
 			return
 		var before: int = Inventory.items.get("shekel", 0)
 		var treasury: int = CityStockManager.treasury_shekel
+		var hauler_index: int = -1
+		for index: int in range(panel.applicants.size()):
+			if panel.applicants[index].citizen_id == "initial_worksite_hauler":
+				hauler_index = index
+				break
+		_expect(hauler_index >= 0, "Job Board presents the review hauler candidate Lugal")
+		if hauler_index < 0:
+			return
+		panel.applicant_list.select(hauler_index)
+		panel.applicant_list.item_selected.emit(hauler_index)
 		panel.hire_button.pressed.emit()
 		panel._select_contract_days(6)
 		_expect(panel.confirm_quote_amount_label.text == "2" and panel.confirm_quote_icon.visible, "Six-day Hauler package shows two with the currency icon")
-		await _capture("job-board")
+		await _capture("lugal-job-board")
 		await press(panel.close_button)
 		_expect(Inventory.items.get("shekel", 0) == before, "Selecting package alone does not charge")
 		var hub = runtime.worker_control
 		hub.open()
-		hub._show_manage(worker.worker_id)
-		hub.renew_days_option.select(1)
-		hub.renew_days_option.item_selected.emit(1)
-		await _capture("worker-renew")
-		var manage_position: Vector2 = hub.manage_window.position
+		var manage_button: Button = hub._find_manage_button(worker.worker_id)
+		_expect(is_instance_valid(manage_button), "Worker Hub lists the review worker Naram")
+		if not is_instance_valid(manage_button):
+			return
+		await press(manage_button)
+		await press(hub.manage_contract_button)
+		await press(hub.contract_days_6_button)
+		var renewal_price: int = WorkerDatabase.get_contract_price(worker.profession, 6)
+		_expect(hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % renewal_price
+			and hub.renew_price_icon.visible, "Naram's six-day Contract shows the exact renewal price")
+		await _capture("naram-contract")
+		var contract_position: Vector2 = hub.contract_window.position
+		var old_until: int = worker.payroll_paid_until_day
+		await press(hub.contract_back_button)
+		_expect(not hub.contract_window.visible and hub.manage_window.visible
+			and Inventory.items.get("shekel", 0) == before and worker.payroll_paid_until_day == old_until
+			and CityStockManager.treasury_shekel == treasury,
+			"Back cancels Naram's renewal without spending or extending it")
+		await press(hub.manage_contract_button)
+		await press(hub.contract_days_6_button)
+		_expect(hub.renew_price_label.text == "Price: %d" % renewal_price and hub.renew_price_icon.visible,
+			"Reopened Contract still quotes the exact six-day price")
 		await press(hub.manage_renew_button)
-		await _capture("renew-confirmation")
-		await press(hub._confirm_no_button)
-		_expect(Inventory.items.get("shekel", 0) == before, "Cancel renewal preserves wallet")
-		var prior_end: int = worker.payroll_paid_until_day
-		await press(hub.manage_renew_button)
-		await press(hub._confirm_yes_button)
-		_expect(Inventory.items.get("shekel", 0) == before - 2 and CityStockManager.treasury_shekel == treasury, "Only wallet pays manual six-day renewal")
-		_expect(worker.payroll_paid_until_day == prior_end + 6, "Early renewal preserves all remaining paid time")
-		# Stale duplicate confirmation has no pending purchase to apply.
-		hub._confirm_yes_button.pressed.emit()
-		_expect(Inventory.items.get("shekel", 0) == before - 2, "Repeated stale confirmation never pays twice")
-		await _capture("renewed")
-		_expect(hub.manage_window.position.is_equal_approx(manage_position), "Renewal refresh keeps the Manage popup anchored to its laid-out roster button")
-		_expect(hub.manage_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Renew button stays inside the resized Manage frame")
+		var wallet_after_renew: int = int(Inventory.items.get("shekel", 0))
+		var renewed_until: int = worker.payroll_paid_until_day
+		_expect(wallet_after_renew == before - renewal_price and CityStockManager.treasury_shekel == treasury,
+			"Only the player wallet pays the exact manual six-day renewal price")
+		_expect(renewed_until == old_until + 6 and worker.payroll_contract_days == 6,
+			"Early renewal preserves Naram's remaining time and adds exactly six days")
+		_expect(hub.manage_renew_button.disabled, "A completed Contract selection cannot be renewed a second time")
+		hub.manage_renew_button.pressed.emit()
+		await _frames()
+		_expect(Inventory.items.get("shekel", 0) == wallet_after_renew
+			and worker.payroll_paid_until_day == renewed_until,
+			"Repeated stale Renew input never charges or extends the six-day contract twice")
+		await _capture("naram-renewed")
+		_expect(hub.contract_window.position.is_equal_approx(contract_position), "Contract popup remains anchored to the selected roster row after renewal")
+		_expect(hub.contract_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Renew button stays inside the resized Contract frame")
 		hub.close()
 		if phase == "write":
 			while not player.can_sleep() and not stopped:
