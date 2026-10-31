@@ -52,7 +52,7 @@ var can_open: Callable = Callable()
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
 @onready var manage_contract_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/ContractButton
 @onready var contract_current_label: Label = $Root/ContractWindow/Margin/MainVBox/CurrentContractLabel
-@onready var contract_days_option: OptionButton = $Root/ContractWindow/Margin/MainVBox/ContractDays/DaysOption
+@onready var contract_days_container: HBoxContainer = $Root/ContractWindow/Margin/MainVBox/ContractDays
 @onready var renew_price_label: Label = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
 @onready var renew_price_icon: TextureRect = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
 @onready var contract_feedback_label: Label = $Root/ContractWindow/Margin/MainVBox/FeedbackLabel
@@ -70,8 +70,6 @@ const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visua
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
 const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
-const CONTRACT_ARROW_ICON: Texture2D = preload("res://assets/ui/ui_icon/right_arrow_icon.png")
-const CONTRACT_CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
 	"Fire this worker?\nTheir assignment will end.\nTools return to City Storage."
@@ -87,6 +85,8 @@ var _pending_remove_id: String = ""
 var _pending_remove_row: Dictionary = {}
 var _renew_feedback_text: String = ""
 var _selected_contract_days: int = 3
+var contract_day_buttons: Array[Button] = []
+var _contract_day_button_group: ButtonGroup
 var _displayed_contract_price: int = 0
 var _renew_completed_for_selection: bool = false
 var _renew_request_active: bool = false
@@ -200,14 +200,6 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 			_cancel_remove_confirmation()
-			get_viewport().set_input_as_handled()
-		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
-			get_viewport().set_input_as_handled()
-		return
-	if contract_window.visible and contract_days_option.get_popup().visible:
-		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
-			contract_days_option.get_popup().hide()
-			contract_days_option.grab_focus()
 			get_viewport().set_input_as_handled()
 		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
 			get_viewport().set_input_as_handled()
@@ -809,48 +801,35 @@ func _update_manage_controls(row: Dictionary) -> void:
 
 
 func _configure_contract_days() -> void:
-	contract_days_option.focus_previous = contract_days_option.get_path_to(contract_close_button)
-	manage_renew_button.focus_previous = manage_renew_button.get_path_to(contract_days_option)
-	manage_renew_button.focus_next = manage_renew_button.get_path_to(contract_close_button)
-	contract_close_button.focus_next = contract_close_button.get_path_to(contract_days_option)
-	var theme: Theme = $Root.theme
-	for state: String in ["normal", "hover", "pressed", "disabled", "focus"]:
-		contract_days_option.add_theme_stylebox_override(state, theme.get_stylebox(state, "HudShortcutButton"))
-	var popup_theme: Theme = theme.duplicate()
-	popup_theme.default_font = theme.get_font("font", "HudShortcutButton")
-	popup_theme.default_font_size = 6
-	popup_theme.set_font("font", "PopupMenu", popup_theme.default_font)
-	popup_theme.set_font_size("font_size", "PopupMenu", 6)
-	var dropdown_text_color: Color = theme.get_color("font_color", "HudShortcutButton")
-	popup_theme.set_color("font_color", "PopupMenu", dropdown_text_color)
-	popup_theme.set_color("font_hover_color", "PopupMenu", dropdown_text_color)
-	popup_theme.set_stylebox(
-		"panel",
-		"PopupMenu",
-		theme.get_stylebox("normal", "WorkshopSquareButton24").duplicate()
-	)
-	var highlight := StyleBoxFlat.new()
-	var highlight_color: Color = theme.get_color("font_color", "HudShortcutButton")
-	highlight_color.a = 0.15
-	highlight.bg_color = highlight_color
-	popup_theme.set_stylebox("hover", "PopupMenu", highlight)
-	popup_theme.set_constant("h_separation", "PopupMenu", 2)
-	popup_theme.set_constant("v_separation", "PopupMenu", 2)
-	var blank_check: Image = Image.create(8, 8, false, Image.FORMAT_RGBA8)
-	blank_check.fill(Color.TRANSPARENT)
-	popup_theme.set_icon("radio_checked", "PopupMenu", CONTRACT_CHECK_ICON)
-	popup_theme.set_icon("radio_unchecked", "PopupMenu", ImageTexture.create_from_image(blank_check))
-	contract_days_option.get_popup().theme = popup_theme
-	var arrow: Image = CONTRACT_ARROW_ICON.get_image()
-	arrow.rotate_90(CLOCKWISE)
-	contract_days_option.add_theme_icon_override("arrow", ImageTexture.create_from_image(arrow))
+	_contract_day_button_group = ButtonGroup.new()
+	_contract_day_button_group.allow_unpress = false
+	contract_day_buttons.clear()
 	for days: int in WorkerDatabase.CONTRACT_DAYS:
-		contract_days_option.add_item("%dD" % days, days)
-	contract_days_option.item_selected.connect(_on_contract_day_index_selected)
+		var button: Button = contract_days_container.get_node("Days%dButton" % days)
+		button.set_meta("contract_days", days)
+		button.toggle_mode = true
+		button.button_group = _contract_day_button_group
+		button.pressed.connect(_on_contract_days_selected.bind(days))
+		contract_day_buttons.append(button)
+	_configure_contract_focus()
 
 
-func _on_contract_day_index_selected(index: int) -> void:
-	_on_contract_days_selected(contract_days_option.get_item_id(index))
+func _configure_contract_focus() -> void:
+	var controls: Array[Control] = []
+	controls.append_array(contract_day_buttons)
+	if not manage_renew_button.disabled:
+		controls.append(manage_renew_button)
+	controls.append(contract_close_button)
+	for index: int in range(controls.size()):
+		var control: Control = controls[index]
+		var previous: NodePath = control.get_path_to(controls[(index - 1 + controls.size()) % controls.size()])
+		var next: NodePath = control.get_path_to(controls[(index + 1) % controls.size()])
+		control.focus_previous = previous
+		control.focus_next = next
+		control.focus_neighbor_top = previous
+		control.focus_neighbor_left = previous
+		control.focus_neighbor_bottom = next
+		control.focus_neighbor_right = next
 
 
 func _show_manage_contract() -> void:
@@ -875,13 +854,14 @@ func _show_manage_contract() -> void:
 	contract_window.show()
 	_reposition_contract_after_layout()
 	_sync_fire_block_detector()
-	contract_days_option.grab_focus()
+	if not contract_day_buttons.is_empty():
+		contract_day_buttons[0].grab_focus()
 
 
 func _update_contract_day_selection() -> void:
-	var index: int = contract_days_option.get_item_index(_selected_contract_days)
-	if index >= 0:
-		contract_days_option.select(index)
+	for button: Button in contract_day_buttons:
+		var selected: bool = int(button.get_meta("contract_days", -1)) == _selected_contract_days
+		button.set_pressed_no_signal(selected)
 
 
 func _on_contract_days_selected(days: int) -> void:
@@ -906,11 +886,11 @@ func _update_contract_controls(row: Dictionary) -> void:
 	renew_price_icon.visible = price > 0
 	contract_feedback_label.text = _renew_feedback_text
 	contract_feedback_label.visible = not _renew_feedback_text.is_empty()
+	var renew_had_focus: bool = manage_renew_button.has_focus()
 	manage_renew_button.disabled = price <= 0 or _renew_completed_for_selection or _renew_request_active
-	var next_focus: Control = contract_close_button if manage_renew_button.disabled else manage_renew_button
-	contract_days_option.focus_next = contract_days_option.get_path_to(next_focus)
-	var previous_focus: Control = contract_days_option if manage_renew_button.disabled else manage_renew_button
-	contract_close_button.focus_previous = contract_close_button.get_path_to(previous_focus)
+	_configure_contract_focus()
+	if manage_renew_button.disabled and renew_had_focus and not contract_day_buttons.is_empty():
+		contract_day_buttons.back().grab_focus()
 	if contract_window.visible:
 		_reposition_contract_after_layout()
 
@@ -1126,7 +1106,6 @@ func _close_details() -> void:
 
 func _close_manage() -> void:
 	_hide_fire_block_feedback()
-	contract_days_option.get_popup().hide()
 	details_window.hide()
 	contract_window.hide()
 	manage_window.hide()
@@ -1137,7 +1116,6 @@ func _close_manage() -> void:
 func _close_contract() -> void:
 	if not contract_window.visible:
 		return
-	contract_days_option.get_popup().hide()
 	contract_window.hide()
 	if _manage_worker_id.is_empty():
 		_close_manage()

@@ -521,17 +521,40 @@ text = "Contract"
 horizontal_alignment = 1
 
 [node name="ContractDays" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
-layout_mode = 2
-alignment = 1
-
-[node name="DaysOption" type="OptionButton" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
-texture_filter = 1
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
-accessibility_name = "Contract length"
-theme_type_variation = &"HudShortcutButton"
+alignment = 1
+theme_override_constants/separation = 2
+
+[node name="Days3Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(24, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton24"
 theme_override_font_sizes/font_size = 6
-theme_override_constants/arrow_margin = 2
+text = "3D"
+toggle_mode = true
+metadata/contract_days = 3
+
+[node name="Days6Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(24, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton24"
+theme_override_font_sizes/font_size = 6
+text = "6D"
+toggle_mode = true
+metadata/contract_days = 6
+
+[node name="Days9Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(24, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton24"
+theme_override_font_sizes/font_size = 6
+text = "9D"
+toggle_mode = true
+metadata/contract_days = 9
 
 [node name="RenewPriceRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 8)

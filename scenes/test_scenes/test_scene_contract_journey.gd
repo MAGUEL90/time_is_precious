@@ -374,13 +374,13 @@ func renew_expired() -> void:
 	measure("renewed")
 
 func _select_worker_contract_days(hub: WorkerControlUI, days: int) -> int:
-	var option: OptionButton = hub.contract_days_option
-	var index: int = option.get_item_index(days)
-	if index < 0:
-		return -1
-	option.select(index)
-	option.item_selected.emit(index)
-	return option.get_selected_id()
+	for button: Button in hub.contract_day_buttons:
+		var button_days: int = int(button.get_meta("contract_days", -1))
+		if button_days != days:
+			continue
+		button.pressed.emit()
+		return hub._selected_contract_days if button.button_pressed else -1
+	return -1
 
 func hire() -> void:
 	while not stopped:

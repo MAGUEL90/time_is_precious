@@ -45,15 +45,33 @@ func _expect_contract_popup_fits(state_name: String) -> void:
 		"%s feedback and Renew remain inside Contract and the viewport." % state_name)
 
 func _expect_duration_selection(days: int) -> void:
-	_expect(hub.contract_days_option.get_selected_id() == days, "%d days is selected in the dropdown." % days)
+	_expect(hub._selected_contract_days == days, "%d days is the selected contract duration." % days)
+	for button: Button in hub.contract_day_buttons:
+		_expect(button.button_pressed == (int(button.get_meta("contract_days", -1)) == days),
+			"Only the %d-day duration button is selected." % days)
 
 func _select_duration(days: int) -> void:
-	var option: OptionButton = hub.contract_days_option
-	var index: int = option.get_item_index(days)
-	_expect(index >= 0, "%d days is available in the dropdown." % days)
-	if index >= 0:
-		option.select(index)
-		option.item_selected.emit(index)
+	for button: Button in hub.contract_day_buttons:
+		if int(button.get_meta("contract_days", -1)) == days:
+			button.pressed.emit()
+			return
+	_expect(false, "%d days has a duration button." % days)
+
+func _capture_duration_geometry() -> Array[Rect2]:
+	var bounds: Array[Rect2] = [hub.contract_window.get_global_rect(), hub.renew_price_label.get_global_rect()]
+	for button: Button in hub.contract_day_buttons:
+		bounds.append(button.get_global_rect())
+	return bounds
+
+func _expect_duration_geometry(expected: Array[Rect2], days: int) -> void:
+	var actual: Array[Rect2] = _capture_duration_geometry()
+	_expect(actual.size() == expected.size(), "%d-day choice keeps the same controls." % days)
+	if actual.size() != expected.size():
+		return
+	for index: int in range(actual.size()):
+		_expect(actual[index].position.is_equal_approx(expected[index].position)
+			and actual[index].size.is_equal_approx(expected[index].size),
+			"%d-day choice keeps the Contract panel, price and button geometry stable (control %d)." % [days, index])
 
 func _press_tab() -> void:
 	var tab := InputEventKey.new()
@@ -109,7 +127,12 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(not hub.manage_window.visible and hub.contract_window.visible, "Contract opens in its own panel.")
-	_expect(hub.contract_days_option.has_focus(), "Opening Contract gives keyboard focus to the duration dropdown.")
+	_expect(hub.contract_day_buttons.size() == 3, "Contract has exactly three visible duration buttons.")
+	if hub.contract_day_buttons.size() != 3:
+		get_tree().quit(1)
+		return
+	var buttons: Array[Button] = hub.contract_day_buttons
+	_expect(buttons[0].has_focus(), "Opening Contract gives keyboard focus to the first duration button.")
 	_expect(hub.renew_price_label.text == "Price: 2" and hub.renew_price_icon.visible, "Contract displays the official three-day price and coin icon.")
 	_expect(hub.contract_current_label.text == "Current contract ends:\nDay 104, 07:00",
 		"Contract shows the actual new-contract expiry, including its hour.")
@@ -119,86 +142,77 @@ func _run() -> void:
 	_expect(contract_title.get_theme_color("font_color") == hub.renew_price_label.get_theme_color("font_color")
 		and hub.contract_current_label.get_theme_color("font_color") == hub.renew_price_label.get_theme_color("font_color"),
 		"Contract title and details use the same brown text color as the price.")
-	var option: OptionButton = hub.contract_days_option
-	_expect(option.item_count == 3 and option.get_item_id(0) == 3 and option.get_item_id(1) == 6 and option.get_item_id(2) == 9,
-		"The dropdown offers exactly three, six, and nine days.")
-	var duration_labels: Array[String] = []
-	for index: int in range(option.item_count):
-		duration_labels.append(option.get_item_text(index))
-	_expect(duration_labels == ["3D", "6D", "9D"], "The dropdown uses compact three-, six-, and nine-day labels.")
-	var duration_text_width: float = option.get_theme_font("font").get_string_size("3D", HORIZONTAL_ALIGNMENT_LEFT, -1, option.get_theme_font_size("font_size")).x
-	_expect(option.size.x < 64 and option.size.x >= duration_text_width + 8.0
-		and option.size.x <= duration_text_width + 22.0,
-		"The duration selector is compact while leaving room for its arrow.")
-	_expect(hub.contract_window.size.x <= 110.0,
-		"The Contract frame uses the available space after narrowing the selector.")
-	var popup_theme: Theme = option.get_popup().theme
-	var list_panel: StyleBox = popup_theme.get_stylebox("panel", "PopupMenu")
-	var list_panel_texture: AtlasTexture = null
-	if list_panel is StyleBoxTexture:
-		list_panel_texture = (list_panel as StyleBoxTexture).texture as AtlasTexture
-	_expect(list_panel_texture != null
-		and list_panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_24x24.png")
-		and list_panel_texture.region == Rect2(1, 1, 24, 24),
-		"The dropdown list reuses the existing normal brown 24x24 panel style.")
-	var dropdown_text_color: Color = hub.get_node("Root").theme.get_color("font_color", "HudShortcutButton")
-	_expect(dropdown_text_color == Color.WHITE
-		and popup_theme.get_color("font_color", "PopupMenu") == dropdown_text_color
-		and popup_theme.get_color("font_hover_color", "PopupMenu") == dropdown_text_color,
-		"Dropdown items remain white in normal and hover states.")
-	var expected_arrow: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
-	expected_arrow.rotate_90(CLOCKWISE)
-	_expect(option.get_theme_icon("arrow") != null, "The dropdown has an arrow icon.")
-	if DisplayServer.get_name() != "headless":
-		_expect(option.get_theme_icon("arrow").get_image().get_data() == expected_arrow.get_data(),
-			"The dropdown arrow uses the existing rotated right-arrow asset.")
+	var day_values: Array[int] = [3, 6, 9]
+	var duration_labels: Array[String] = ["3D", "6D", "9D"]
+	var title_rect: Rect2 = contract_title.get_global_rect()
+	var quote_rect: Rect2 = hub.renew_price_label.get_global_rect()
+	var first_button_rect: Rect2 = buttons[0].get_global_rect()
+	for index: int in range(buttons.size()):
+		var button: Button = buttons[index]
+		var button_rect: Rect2 = button.get_global_rect()
+		_expect(button.visible and button.text == duration_labels[index]
+			and int(button.get_meta("contract_days", -1)) == day_values[index],
+			"Duration %d is always visible with the correct label and value." % day_values[index])
+		_expect(button_rect.size.is_equal_approx(first_button_rect.size) and button_rect.size.x <= 40.0
+			and button_rect.size.x >= 16.0 and button_rect.position.y >= title_rect.end.y
+			and button_rect.end.y <= quote_rect.position.y,
+			"Duration %d is compact, equal-sized, and between the title and price." % day_values[index])
+		if index > 0:
+			var previous_rect: Rect2 = buttons[index - 1].get_global_rect()
+			_expect(button_rect.position.x >= previous_rect.end.x
+				and is_equal_approx(button_rect.position.y, previous_rect.position.y),
+				"Duration buttons form one non-overlapping horizontal row.")
+		_expect(button.get_theme_font_size("font_size") == 6
+			and button.get_theme_color("font_color").is_equal_approx(Color.WHITE)
+			and button.get_theme_color("font_pressed_color").is_equal_approx(Color.WHITE),
+			"Duration %d uses the white size-6 UI font." % day_values[index])
+		var panel_style: StyleBox = button.get_theme_stylebox("normal")
+		var panel_texture: AtlasTexture = (panel_style as StyleBoxTexture).texture as AtlasTexture if panel_style is StyleBoxTexture else null
+		_expect(panel_texture != null
+			and panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_24x24.png"),
+			"Duration %d reuses the existing brown 24x24 panel asset." % day_values[index])
+	_expect(hub.contract_window.find_children("*", "OptionButton", true, false).is_empty(),
+		"Contract no longer has a duration dropdown.")
+	_expect(hub.contract_window.find_children("*", "PopupMenu", true, false).is_empty(),
+		"Choosing a duration requires no popup menu.")
+	_expect(get_viewport().get_visible_rect().encloses(hub.contract_window.get_global_rect()),
+		"Contract and the duration row fit inside the viewport.")
 	hub.contract_close_button.grab_focus()
 	_expect(hub.contract_close_button.has_focus(), "The Close icon is reachable by keyboard focus.")
-	option.grab_focus()
+	buttons[0].grab_focus()
 	await _press_tab()
-	_expect(hub.manage_renew_button.has_focus(), "Tab moves from the dropdown to Renew.")
+	_expect(buttons[1].has_focus(), "Tab moves from 3D to 6D.")
+	await _press_tab()
+	_expect(buttons[2].has_focus(), "Tab moves from 6D to 9D.")
+	await _press_tab()
+	_expect(hub.manage_renew_button.has_focus(), "Tab moves from 9D to Renew.")
 	await _press_tab()
 	_expect(hub.contract_close_button.has_focus(), "Tab moves from Renew to Close.")
 	await _press_tab()
-	_expect(option.has_focus(), "Tab remains within Contract and returns to the dropdown.")
+	_expect(buttons[0].has_focus(), "Tab remains within Contract and returns to 3D.")
 	_expect_duration_selection(3)
+	var original_geometry: Array[Rect2] = _capture_duration_geometry()
 	await _capture("worker-contract-day-3")
-	option.show_popup()
+	buttons[1].grab_focus()
+	var accept := InputEventKey.new()
+	accept.keycode = KEY_ENTER
+	accept.pressed = true
+	Input.parse_input_event(accept)
 	await get_tree().process_frame
-	_expect(option.get_popup().visible and Inventory.items.get("shekel", 0) == wallet_before_contract,
-		"Opening the duration dropdown makes no transaction.")
-	var dropdown_rect := Rect2(Vector2(option.get_popup().position), Vector2(option.get_popup().size))
-	_expect(get_viewport().get_visible_rect().encloses(dropdown_rect), "The open dropdown fits inside the viewport.")
-	await _capture("worker-contract-dropdown")
-	var dropdown_cancel := InputEventAction.new()
-	dropdown_cancel.action = "ui_cancel"
-	dropdown_cancel.pressed = true
-	get_viewport().push_input(dropdown_cancel)
+	accept = accept.duplicate()
+	accept.pressed = false
+	Input.parse_input_event(accept)
 	await get_tree().process_frame
-	_expect(not option.get_popup().visible and hub.contract_window.visible,
-		"Cancel closes the dropdown before closing Contract.")
-	option.show_popup()
-	await get_tree().process_frame
-	option.get_popup().set_focused_item(1)
-	var dropdown_accept := InputEventKey.new()
-	dropdown_accept.keycode = KEY_ENTER
-	dropdown_accept.pressed = true
-	Input.parse_input_event(dropdown_accept)
-	await get_tree().process_frame
-	_expect(option.get_selected_id() == 6 and not option.get_popup().visible,
-		"Keyboard selection chooses six days and closes the dropdown.")
+	_expect_duration_selection(6)
 	_expect(hub.renew_price_label.text == "Price: 4" and hub.renew_price_icon.visible, "Six days shows the official six-day price and coin icon.")
 	_expect(Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == 103,
 		"Changing contract length does not charge the wallet or alter the current contract.")
-	_expect_duration_selection(6)
+	_expect_duration_geometry(original_geometry, 6)
 	await _capture("worker-contract-day-6")
 	if DisplayServer.get_name() == "headless":
 		_select_duration(9)
 	else:
-		option.show_popup()
-		await get_tree().process_frame
-		var popup: PopupMenu = option.get_popup()
-		var target: Vector2 = Vector2(popup.position) + Vector2(popup.size.x * 0.5, popup.size.y * 0.84)
+		var target: Vector2 = buttons[2].get_global_rect().get_center()
 		var motion := InputEventMouseMotion.new()
 		motion.position = target
 		motion.global_position = target
@@ -213,22 +227,25 @@ func _run() -> void:
 		click.pressed = false
 		get_viewport().push_input(click, true)
 		await get_tree().process_frame
-		_expect(option.get_selected_id() == 9 and not popup.visible,
-			"Mouse selection chooses nine days and closes the dropdown.")
+		click = click.duplicate()
+		click.pressed = true
+		get_viewport().push_input(click, true)
+		click = click.duplicate()
+		click.pressed = false
+		get_viewport().push_input(click, true)
+		await get_tree().process_frame
 	_expect(hub.renew_price_label.text == "Price: 6" and Inventory.items.get("shekel", 0) == wallet_before_contract
-		and worker.payroll_paid_until_day == 103, "Nine-day quote is accurate and changing duration remains free.")
+		and worker.payroll_paid_until_day == 103, "Nine-day selection, including a repeated click, remains free and shows the correct quote.")
 	_expect_duration_selection(9)
+	_expect_duration_geometry(original_geometry, 9)
 	await _capture("worker-contract-day-9")
 	var original_panel_position: Vector2 = hub.contract_window.position
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	hub.contract_window.position = viewport_size - hub.contract_window.size - Vector2(2, 2)
 	await get_tree().process_frame
-	option.show_popup()
-	await get_tree().process_frame
-	dropdown_rect = Rect2(Vector2(option.get_popup().position), Vector2(option.get_popup().size))
-	_expect(get_viewport().get_visible_rect().encloses(dropdown_rect),
-		"The dropdown stays inside the viewport when Contract is at the bottom-right edge.")
-	option.get_popup().hide()
+	for button: Button in buttons:
+		_expect(get_viewport().get_visible_rect().encloses(button.get_global_rect()),
+			"Every duration button stays inside the viewport at the bottom-right edge.")
 	hub.contract_window.position = original_panel_position
 	await get_tree().process_frame
 	_select_duration(6)
@@ -299,6 +316,12 @@ func _run() -> void:
 	_expect(not hub.contract_window.visible and hub.manage_window.visible and Inventory.items.get("shekel", 0) == wallet_before_contract
 		and worker.payroll_paid_until_day == original_end, "Close dismisses the contract panel without changing wallet or contract.")
 	hub.manage_contract_button.pressed.emit()
+	await get_tree().process_frame
+	_expect_duration_selection(3)
+	for button: Button in buttons:
+		_expect(button.visible, "Every duration button remains visible after reopening Contract.")
+	_expect(Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == original_end,
+		"Reopening Contract does not charge or change the existing contract.")
 	var cancel_event := InputEventAction.new()
 	cancel_event.action = "ui_cancel"
 	cancel_event.pressed = true
@@ -328,9 +351,9 @@ func _run() -> void:
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
 	_expect(hub.manage_renew_button.disabled, "A completed renewal disables Renew.")
-	option.grab_focus()
+	buttons[2].grab_focus()
 	await _press_tab()
-	_expect(hub.contract_close_button.has_focus(), "Tab skips disabled Renew and reaches Close.")
+	_expect(hub.contract_close_button.has_focus(), "Tab moves from 9D past disabled Renew to Close.")
 	hub.manage_renew_button.pressed.emit()
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"A repeated Renew click cannot charge or extend the same selection twice.")
