@@ -71,6 +71,8 @@ func _run() -> void:
 	await _check_disabled_hover(WORKSHOP_ID, "Workshop assigned", "workshop-assigned")
 	await _check_generic_fallback()
 	await _check_stale_state_refresh()
+	await _check_context_changes()
+	await _check_dense_roster()
 	await _check_edge_clamping()
 	await _check_enabled_fire_confirmation()
 
@@ -192,15 +194,18 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 		"%s feedback has no added text outline." % capture_name)
 	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
-	_expect(feedback_rect.position.y >= popup_rect.end.y + 1.0
-		and is_equal_approx(feedback_rect.get_center().x, popup_rect.get_center().x)
-		and feedback_rect.position.x >= 2.0
-		and feedback_rect.end.x <= get_viewport().get_visible_rect().size.x - 2.0
-		and feedback_rect.end.y <= get_viewport().get_visible_rect().size.y - 2.0
+	var hub_rect: Rect2 = worker_control.window.get_global_rect()
+	var status_scroll_rect: Rect2 = worker_control.status_list.get_parent().get_global_rect()
+	_expect(absf(feedback_rect.get_center().x - hub_rect.get_center().x) <= 0.5
+		and feedback_rect.position.x >= hub_rect.position.x + 16.0
+		and feedback_rect.end.x <= hub_rect.end.x - 16.0
+		and feedback_rect.position.y >= status_scroll_rect.end.y + 1.0
+		and feedback_rect.end.y <= hub_rect.end.y - 7.0
+		and not feedback_rect.intersects(status_scroll_rect)
 		and not feedback_rect.intersects(popup_rect)
 		and not feedback_rect.intersects(fire_rect)
 		and worker_control._fire_block_feedback.mouse_filter == Control.MOUSE_FILTER_IGNORE,
-		"%s feedback is centered just below Manage, inside the viewport, and ignores pointer input." % capture_name)
+		"%s feedback is centered inside the bottom of Worker Hub, below the roster, and ignores pointer input." % capture_name)
 	for node: Node in worker_control.find_children("*", "BaseButton", true, false):
 		var interactive_button: Control = node as Control
 		if is_instance_valid(interactive_button) and interactive_button.is_visible_in_tree():
@@ -289,6 +294,83 @@ func _check_stale_state_refresh() -> void:
 	await get_tree().process_frame
 
 
+func _check_context_changes() -> void:
+	_show_review_manage(WORKING_ID)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _move_mouse_to(Vector2(3, 3))
+	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	_expect(worker_control._fire_block_feedback.visible, "Feedback is visible before changing worker.")
+	_show_review_manage(RESERVED_ID)
+	_expect(not worker_control._fire_block_feedback.visible, "Changing worker hides the previous feedback.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _move_mouse_to(Vector2(3, 3))
+	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == "Job reserved",
+		"Hover after changing worker shows that worker's reason.")
+	worker_control._show_tools_tab()
+	_expect(not worker_control._fire_block_feedback.visible and not worker_control.manage_window.visible,
+		"Changing tabs closes Manage and hides its feedback.")
+	worker_control._show_status_tab()
+	_show_review_manage(WORKING_ID)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _move_mouse_to(Vector2(3, 3))
+	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	_expect(worker_control._fire_block_feedback.visible, "Feedback can reappear after returning to Status.")
+	worker_control.close()
+	_expect(not worker_control._fire_block_feedback.visible and not worker_control.visible,
+		"Closing Worker Hub hides the feedback.")
+	worker_control.open()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(not worker_control._fire_block_feedback.visible, "Reopening Worker Hub does not restore stale feedback.")
+
+
+func _check_dense_roster() -> void:
+	review_worker_id = WORKING_ID
+	var source_row: Dictionary = _row_for(WORKING_ID)
+	var rows: Array[Dictionary] = []
+	for index: int in range(14):
+		var row: Dictionary = source_row.duplicate()
+		row["id"] = WORKING_ID if index == 0 else "review_roster_%d" % index
+		rows.append(row)
+	worker_control.rows_provider = func() -> Array[Dictionary]: return rows
+	worker_control.refresh()
+	worker_control._show_manage(WORKING_ID)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _move_mouse_to(Vector2(3, 3))
+	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
+	var scroll: ScrollContainer = worker_control.status_list.get_parent()
+	_expect(worker_control._fire_block_feedback.visible and scroll.get_v_scroll_bar().max_value > scroll.size.y,
+		"Dense roster scrolls while the Fire feedback is visible.")
+	_expect(not feedback_rect.intersects(scroll.get_global_rect()),
+		"Fire feedback does not cover the scrolling worker list.")
+	await _capture("dense-roster.png")
+	worker_control._close_manage()
+	scroll.scroll_vertical = int(scroll.get_v_scroll_bar().max_value)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	worker_control._show_manage("review_roster_13")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _move_mouse_to(Vector2(3, 3))
+	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	feedback_rect = worker_control._fire_block_feedback.get_global_rect()
+	_expect(worker_control._fire_block_feedback.visible
+		and not feedback_rect.intersects(scroll.get_global_rect())
+		and not feedback_rect.intersects(worker_control.manage_window.get_global_rect()),
+		"A worker at the bottom of a scrolled roster keeps the feedback clear of the list and Manage.")
+	await _capture("dense-roster-bottom.png")
+	worker_control._close_manage()
+	worker_control.rows_provider = _review_rows
+	worker_control.refresh()
+	await get_tree().process_frame
+
+
 func _check_edge_clamping() -> void:
 	_show_review_manage(WORKING_ID)
 	await get_tree().process_frame
@@ -306,9 +388,12 @@ func _check_edge_clamping() -> void:
 	_expect(worker_control._fire_block_feedback.visible, "Edge placement still shows actual hover feedback.")
 	var label_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
-	_expect(label_rect.position.x >= 0 and label_rect.position.y >= popup_rect.end.y + 1.0
-		and label_rect.end.x <= viewport_size.x and label_rect.end.y <= viewport_size.y,
-		"Top-left feedback stays below Manage and inside the logical viewport.")
+	var hub_rect: Rect2 = worker_control.window.get_global_rect()
+	_expect(absf(label_rect.get_center().x - hub_rect.get_center().x) <= 0.5
+		and label_rect.end.y <= hub_rect.end.y - 7.0
+		and label_rect.position.y >= hub_rect.position.y
+		and not label_rect.intersects(popup_rect),
+		"Top-left Manage leaves feedback centered inside Worker Hub.")
 	await _capture("edge-top-left.png")
 	var bottom_source_button := Button.new()
 	bottom_source_button.position = Vector2(viewport_size.x - 44.0, viewport_size.y - 17.0)
@@ -324,11 +409,11 @@ func _check_edge_clamping() -> void:
 	_expect(worker_control._fire_block_feedback.visible, "Bottom-right edge placement still shows actual hover feedback.")
 	label_rect = worker_control._fire_block_feedback.get_global_rect()
 	popup_rect = worker_control.manage_window.get_global_rect()
-	_expect(label_rect.position.x >= 0 and label_rect.position.y >= popup_rect.end.y + 1.0
-		and label_rect.end.x <= viewport_size.x and label_rect.end.y <= viewport_size.y - 2.0
-		and popup_rect.end.y < bottom_source_button.get_global_rect().position.y
+	_expect(absf(label_rect.get_center().x - hub_rect.get_center().x) <= 0.5
+		and label_rect.end.y <= hub_rect.end.y - 7.0
+		and not label_rect.intersects(popup_rect)
 		and not label_rect.intersects(bottom_source_button.get_global_rect()),
-		"Bottom-edge Manage moves up to keep its centered feedback below it and clear of the source button.")
+		"Bottom-edge Manage leaves feedback centered inside Worker Hub and clear of the source button.")
 	await _capture("edge-bottom-right.png")
 	bottom_source_button.queue_free()
 	worker_control._close_manage()

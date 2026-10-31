@@ -79,6 +79,7 @@ const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
 const FIRE_FEEDBACK_LABEL_HEIGHT: float = 16.0
 const FIRE_FEEDBACK_PANEL_GAP: float = 1.0
 const FIRE_FEEDBACK_VIEWPORT_MARGIN: float = 2.0
+const FIRE_FEEDBACK_HUB_LABEL_HEIGHT: float = 8.0
 
 var _active_tab: String = "status"
 var _selected_worker_id: String = ""
@@ -106,6 +107,7 @@ var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
 var _needs_manager: Node
 var _fire_hover_detector: Control
+var _fire_feedback_footer: Control
 var _fire_block_feedback: Label
 var _fire_block_reason: String = ""
 var _fire_hover_pointer_inside: bool = false
@@ -700,7 +702,10 @@ func _make_star_rating(stars: int) -> HBoxContainer:
 
 
 func _set_active_tab(tab: String) -> void:
-	_active_tab = tab if tab in ["status", "tools", "level"] else "status"
+	var next_tab: String = tab if tab in ["status", "tools", "level"] else "status"
+	if next_tab != _active_tab and manage_window.visible:
+		_close_manage()
+	_active_tab = next_tab
 	status_tab_button.set_pressed_no_signal(_active_tab == "status")
 	tools_tab_button.set_pressed_no_signal(_active_tab == "tools")
 	level_tab_button.set_pressed_no_signal(_active_tab == "level")
@@ -1274,6 +1279,14 @@ func _build_fire_block_feedback() -> void:
 	_fire_hover_detector.mouse_entered.connect(_on_fire_hover_entered)
 	_fire_hover_detector.mouse_exited.connect(_on_fire_hover_exited)
 
+	_fire_feedback_footer = Control.new()
+	_fire_feedback_footer.name = "FireFeedbackFooter"
+	_fire_feedback_footer.custom_minimum_size.y = FIRE_FEEDBACK_HUB_LABEL_HEIGHT
+	_fire_feedback_footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fire_feedback_footer.hide()
+	status_page.add_child(_fire_feedback_footer)
+	_fire_feedback_footer.resized.connect(_on_fire_feedback_footer_resized)
+
 	_fire_block_feedback = Label.new()
 	_fire_block_feedback.name = "FireBlockFeedback"
 	_fire_block_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1284,10 +1297,10 @@ func _build_fire_block_feedback() -> void:
 	_fire_block_feedback.add_theme_color_override("font_color", tools_cart_required_label.get_theme_color("font_color"))
 	_fire_block_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_fire_block_feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_fire_block_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_fire_block_feedback.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_fire_block_feedback.clip_text = false
 	_fire_block_feedback.hide()
-	$Root.add_child(_fire_block_feedback)
+	_fire_feedback_footer.add_child(_fire_block_feedback)
 
 
 func _fire_feedback_for_row(row: Dictionary, disabled: bool) -> String:
@@ -1324,6 +1337,7 @@ func _sync_fire_hover_detector() -> void:
 	var should_track: bool = manage_window.visible and not details_window.visible \
 		and not (_confirmation_overlay != null and _confirmation_overlay.visible) \
 		and manage_fire_button.disabled
+	_fire_feedback_footer.visible = should_track
 	if not should_track:
 		_fire_hover_detector.hide()
 		_hide_fire_block_feedback()
@@ -1335,16 +1349,17 @@ func _sync_fire_hover_detector() -> void:
 
 
 func _position_fire_block_feedback() -> void:
-	if not is_instance_valid(_fire_block_feedback):
+	if not is_instance_valid(_fire_block_feedback) or _fire_feedback_footer.size.x <= FIRE_FEEDBACK_VIEWPORT_MARGIN * 2.0:
 		return
-	var popup_rect: Rect2 = manage_window.get_global_rect()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var label_size := Vector2(_fire_feedback_label_width(popup_rect.size.x, viewport_size.x), FIRE_FEEDBACK_LABEL_HEIGHT)
-	var label_x: float = popup_rect.get_center().x - label_size.x * 0.5
-	label_x = clampf(label_x, FIRE_FEEDBACK_VIEWPORT_MARGIN, viewport_size.x - label_size.x - FIRE_FEEDBACK_VIEWPORT_MARGIN)
-	_fire_block_feedback.position = Vector2(label_x, popup_rect.end.y + FIRE_FEEDBACK_PANEL_GAP).round()
-	_fire_block_feedback.size = label_size
 	_fire_block_feedback.text = _fire_block_reason
+	var label_width: float = _fire_feedback_label_width(0.0, _fire_feedback_footer.size.x)
+	_fire_block_feedback.size = Vector2(label_width, FIRE_FEEDBACK_HUB_LABEL_HEIGHT)
+	_fire_block_feedback.position = Vector2((_fire_feedback_footer.size.x - label_width) * 0.5, 0.0).round()
+
+
+func _on_fire_feedback_footer_resized() -> void:
+	if is_instance_valid(_fire_block_feedback) and _fire_block_feedback.visible:
+		_position_fire_block_feedback()
 
 
 func _fire_feedback_label_width(panel_width: float, viewport_width: float) -> float:
