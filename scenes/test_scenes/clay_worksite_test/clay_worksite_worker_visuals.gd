@@ -18,11 +18,18 @@ var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence
 
 func _ready() -> void:
 	rng.randomize()
+	if not WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
+		WorkerDatabase.payroll_changed.connect(_on_worker_roster_changed)
 	# CitySave disables the parked parent, while this retained physical owner
 	# continues hidden approaches using the same real elapsed frame time.
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 
+func _exit_tree() -> void:
+	if WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
+		WorkerDatabase.payroll_changed.disconnect(_on_worker_roster_changed)
+
 func _process(delta: float) -> void:
+	_retire_unhired_actors()
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		if reed_splash != null:
 			reed_splash.emitting = false
@@ -111,6 +118,34 @@ func _process(delta: float) -> void:
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
 	_update_reed_presence()
+
+func _on_worker_roster_changed() -> void:
+	_retire_unhired_actors()
+	_update_reed_presence()
+
+func _retire_unhired_actors() -> void:
+	for id: String in actors.keys():
+		var actor: Variant = actors.get(id)
+		if not is_instance_valid(actor):
+			actors.erase(id)
+			_clear_worker_presentation(id)
+			continue
+		if not actor is Node2D or str(actor.get_meta("worker_id", "")) != id:
+			continue
+		if WorkerDatabase.has_worker_data(id):
+			continue
+		actor.hide()
+		actor.queue_free()
+		actors.erase(id)
+		_clear_worker_presentation(id)
+
+func _clear_worker_presentation(id: String) -> void:
+	work_cycles.erase(id)
+	roaming.erase(id)
+	site_paths.erase(id)
+	reed_inside.erase(id)
+	plot_presence.states.erase(id)
+	plot_presence.tracked.erase(id)
 
 func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: float) -> bool:
 	var fixture: Node = get_parent()

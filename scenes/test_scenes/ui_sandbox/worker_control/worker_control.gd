@@ -98,6 +98,11 @@ var _confirm_currency_icon: TextureRect
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
 var _needs_manager: Node
+var _fire_hover_detector: Control
+var _fire_block_feedback: Label
+var _fire_block_reason: String = ""
+var _fire_hover_pointer_inside: bool = false
+var _fire_hover_ignore_until_exit: bool = false
 
 
 func _ready() -> void:
@@ -109,6 +114,7 @@ func _ready() -> void:
 	tools_tab_button.pressed.connect(_show_tools_tab)
 	level_tab_button.pressed.connect(_show_level_tab)
 	_build_confirmation()
+	_build_fire_block_feedback()
 	manage_fire_button.pressed.connect(_request_manage_fire)
 	manage_goto_button.pressed.connect(_request_manage_goto)
 	manage_details_button.pressed.connect(_show_manage_details)
@@ -717,12 +723,15 @@ func _position_popup(popup: Control, source_button: Button) -> void:
 	position.x = clampf(position.x, 2.0, max_position.x)
 	position.y = clampf(position.y, 2.0, max_position.y)
 	popup.position = position
+	if popup == manage_window:
+		_sync_fire_hover_detector()
 
 
 func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
+	_hide_fire_block_feedback()
 	_renew_feedback_text = ""
 	_manage_worker_id = worker_id
 	_manage_source_button = source_button if is_instance_valid(source_button) else _find_manage_button(worker_id)
@@ -732,13 +741,18 @@ func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	_position_popup(manage_window, _manage_source_button)
 	manage_window.show()
 	_position_popup.call_deferred(manage_window, _manage_source_button)
+	_sync_fire_hover_detector()
 	manage_fire_button.grab_focus()
 
 
 func _update_manage_controls(row: Dictionary) -> void:
+	_hide_fire_block_feedback(true)
 	var working := bool(row.get("working", false))
 	var can_fire := bool(row.get("can_fire", row.get("can_remove", false)))
-	manage_fire_button.disabled = working or not can_fire
+	var fire_disabled: bool = working or not can_fire
+	_fire_block_reason = _fire_feedback_for_row(row, fire_disabled)
+	manage_fire_button.disabled = fire_disabled
+	_sync_fire_hover_detector()
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
 	var price: int = _renewal_price(row)
 	manage_renew_button.disabled = price <= 0
@@ -799,7 +813,9 @@ func _request_manage_renew() -> void:
 	_pending_renew_price = price
 	_confirm_label.text = "Renew for %d paid days?\nPaid from your wallet now.\nManual renewal; no auto-renewal or refunds." % days
 	_set_renew_confirmation_price(price)
+	_hide_fire_block_feedback()
 	_confirmation_overlay.show()
+	_sync_fire_hover_detector()
 	_confirm_no_button.grab_focus()
 
 
@@ -816,7 +832,9 @@ func _show_details(worker_id: String, return_tab: String = "") -> void:
 	if _details_return_tab == "tools":
 		_close_tools_picker()
 	_render_details(row, true)
+	_hide_fire_block_feedback()
 	manage_window.hide()
+	_sync_fire_hover_detector()
 	details_window.size = details_window.get_combined_minimum_size()
 	_position_popup(details_window, _manage_source_button)
 	details_window.show()
@@ -947,8 +965,10 @@ func _close_details() -> void:
 
 
 func _close_manage() -> void:
+	_hide_fire_block_feedback()
 	details_window.hide()
 	manage_window.hide()
+	_sync_fire_hover_detector()
 	_manage_source_button = null
 
 
@@ -1033,7 +1053,9 @@ func _request_remove(row: Dictionary) -> void:
 	_pending_renew_price = 0
 	_confirm_cost_row.hide()
 	_confirm_label.text = _remove_confirmation_message(row)
+	_hide_fire_block_feedback()
 	_confirmation_overlay.show()
+	_sync_fire_hover_detector()
 	_confirm_no_button.grab_focus()
 
 
@@ -1089,6 +1111,141 @@ func _build_confirmation() -> void:
 	_confirmation_overlay.hide()
 
 
+func _build_fire_block_feedback() -> void:
+	_fire_hover_detector = Control.new()
+	_fire_hover_detector.name = "FireHoverDetector"
+	_fire_hover_detector.mouse_filter = Control.MOUSE_FILTER_STOP
+	_fire_hover_detector.focus_mode = Control.FOCUS_NONE
+	_fire_hover_detector.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	_fire_hover_detector.z_index = 20
+	_fire_hover_detector.hide()
+	$Root.add_child(_fire_hover_detector)
+	_fire_hover_detector.mouse_entered.connect(_on_fire_hover_entered)
+	_fire_hover_detector.mouse_exited.connect(_on_fire_hover_exited)
+
+	_fire_block_feedback = Label.new()
+	_fire_block_feedback.name = "FireBlockFeedback"
+	_fire_block_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fire_block_feedback.focus_mode = Control.FOCUS_NONE
+	_fire_block_feedback.z_index = 21
+	_fire_block_feedback.add_theme_font_size_override("font_size", 6)
+	_fire_block_feedback.add_theme_color_override("font_color", Color(1.0, 0.35, 0.31, 1.0))
+	_fire_block_feedback.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 0.95))
+	_fire_block_feedback.add_theme_constant_override("outline_size", 1)
+	_fire_block_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_fire_block_feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_fire_block_feedback.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_fire_block_feedback.clip_text = false
+	_fire_block_feedback.hide()
+	$Root.add_child(_fire_block_feedback)
+
+
+func _fire_feedback_for_row(row: Dictionary, disabled: bool) -> String:
+	if not disabled:
+		return ""
+	var reason: String = str(row.get("fire_block_reason", "")).strip_edges()
+	if not reason.is_empty():
+		return reason
+	if bool(row.get("working", false)):
+		return "Working"
+	return "Cannot fire"
+
+
+func _hide_fire_block_feedback(wait_for_pointer_exit: bool = false) -> void:
+	if is_instance_valid(_fire_block_feedback):
+		_fire_block_feedback.hide()
+	if not is_instance_valid(_fire_hover_detector):
+		_fire_hover_pointer_inside = false
+		_fire_hover_ignore_until_exit = false
+		return
+	if wait_for_pointer_exit and manage_window.visible:
+		var fire_rect: Rect2 = manage_fire_button.get_global_rect()
+		var pointer_inside: bool = _fire_hover_pointer_inside or fire_rect.has_point(get_viewport().get_mouse_position())
+		_fire_hover_ignore_until_exit = pointer_inside
+		_fire_hover_pointer_inside = pointer_inside
+	else:
+		_fire_hover_pointer_inside = false
+		_fire_hover_ignore_until_exit = false
+
+
+func _sync_fire_hover_detector() -> void:
+	if not is_instance_valid(_fire_hover_detector):
+		return
+	var should_track: bool = manage_window.visible and not details_window.visible \
+		and not (_confirmation_overlay != null and _confirmation_overlay.visible) \
+		and manage_fire_button.disabled
+	if not should_track:
+		_fire_hover_detector.hide()
+		_hide_fire_block_feedback()
+		return
+	_ensure_fire_feedback_clearance()
+	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
+	_fire_hover_detector.position = fire_rect.position
+	_fire_hover_detector.size = fire_rect.size
+	_fire_hover_detector.show()
+
+
+func _ensure_fire_feedback_clearance() -> void:
+	_fire_block_feedback.text = _fire_block_reason
+	_fire_block_feedback.reset_size()
+	var label_height: float = _fire_block_feedback.get_combined_minimum_size().y
+	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
+	var missing_space: float = 2.0 - (fire_rect.position.y - label_height - 1.0)
+	if missing_space <= 0.0:
+		return
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var max_y: float = maxf(viewport_size.y - manage_window.size.y - 2.0, 2.0)
+	manage_window.position.y = clampf(manage_window.position.y + missing_space, 2.0, max_y)
+
+
+func _position_fire_block_feedback() -> void:
+	if not is_instance_valid(_fire_block_feedback):
+		return
+	_fire_block_feedback.text = _fire_block_reason
+	_fire_block_feedback.reset_size()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var label_size: Vector2 = _fire_block_feedback.get_combined_minimum_size()
+	_fire_block_feedback.size = label_size
+	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
+	var x: float = fire_rect.position.x + (fire_rect.size.x - label_size.x) * 0.5
+	var max_x: float = maxf(viewport_size.x - label_size.x - 2.0, 2.0)
+	var max_y: float = maxf(viewport_size.y - label_size.y - 2.0, 2.0)
+	_fire_block_feedback.position = Vector2(
+		clampf(x, 2.0, max_x),
+		clampf(fire_rect.position.y - label_size.y - 1.0, 2.0, max_y)
+	).round()
+
+
+func _on_fire_hover_entered() -> void:
+	_fire_hover_pointer_inside = true
+	if _fire_hover_ignore_until_exit or not manage_window.visible:
+		return
+	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	if row.is_empty():
+		_close_manage()
+		return
+	var latest_working: bool = bool(row.get("working", false))
+	var latest_can_fire: bool = bool(row.get("can_fire", row.get("can_remove", false)))
+	var latest_disabled: bool = latest_working or not latest_can_fire
+	var latest_reason: String = _fire_feedback_for_row(row, latest_disabled)
+	if latest_disabled != manage_fire_button.disabled or latest_reason != _fire_block_reason:
+		_update_manage_controls(row)
+		return
+	if not latest_disabled:
+		_hide_fire_block_feedback()
+		return
+	_fire_block_feedback.text = latest_reason
+	_position_fire_block_feedback()
+	_fire_block_feedback.show()
+
+
+func _on_fire_hover_exited() -> void:
+	_fire_hover_pointer_inside = false
+	_fire_hover_ignore_until_exit = false
+	if is_instance_valid(_fire_block_feedback):
+		_fire_block_feedback.hide()
+
+
 func _set_renew_confirmation_price(price: int) -> void:
 	_confirm_cost_label.text = "Cost: %d" % price
 	_confirm_cost_label.accessibility_name = "Cost: %d Shekel" % price
@@ -1104,6 +1261,7 @@ func _cancel_remove_confirmation() -> void:
 	if _confirmation_overlay != null:
 		_confirm_cost_row.hide()
 		_confirmation_overlay.hide()
+	_sync_fire_hover_detector()
 
 
 func _confirm_pending_action() -> void:

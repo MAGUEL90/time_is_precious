@@ -228,7 +228,11 @@ func _run() -> void:
 	_expect(not fixture.worker_control.manage_fire_button.disabled and fixture.worker_control.manage_goto_button.disabled, "Idle enables Fire and disables Go to.")
 	await _capture("worker-hub-manage.png")
 	_expect(fixture.worker_control.window.visible and fixture.worker_control.manage_window.visible, "Manage is a popup over the Status list.")
-	_expect(fixture.worker_control.manage_window.size.x <= 100 and fixture.worker_control.manage_window.size.y <= 90, "Manage fits three compact actions.")
+	var manage_rect: Rect2 = fixture.worker_control.manage_window.get_global_rect()
+	_expect(get_viewport().get_visible_rect().encloses(manage_rect)
+		and manage_rect.encloses(fixture.worker_control.manage_fire_button.get_global_rect())
+		and manage_rect.encloses(fixture.worker_control.manage_renew_button.get_global_rect()),
+		"Manage and its Fire/Renew controls fit inside the popup and viewport.")
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true
@@ -238,7 +242,7 @@ func _run() -> void:
 	fixture.worker_control._show_manage(ids[1])
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	_expect(fixture.worker_control._confirmation_overlay.visible and WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "Fire asks before dismissing worker.")
-	_expect(fixture.worker_control._confirm_label.text.contains("Unused pay is not refunded.")
+	_expect(fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
 		and fixture.worker_control._confirm_label.text.contains("remain."), "Fire explains prepaid time forfeiture before Yes.")
 	await _capture("worker-hub-remove.png")
 	fixture.worker_control._confirm_no_button.pressed.emit()
@@ -272,8 +276,13 @@ func _run() -> void:
 	citizen.employment_status = CitizenData.EmploymentStatus.APPLICANT
 	citizen.profession = WorkerData.Profession.LABORER
 	CitizenManager.add_citizen(citizen)
+	var contract_price: int = WorkerDatabase.get_contract_price(citizen.profession, 3)
+	_expect(contract_price > 0, "The linked-citizen fixture has an available prepaid contract.")
+	Inventory.add_item("shekel", contract_price * 2) # Fixture funding for hire and rehire.
+	var wallet_before_hire: int = int(Inventory.items.get("shekel", 0))
 	var hired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id, 2)
-	_expect(hired != null, "Linked applicant can be hired during Job Board hours.")
+	_expect(hired != null and int(Inventory.items.get("shekel", 0)) == wallet_before_hire - contract_price,
+		"Linked applicant is hired during Job Board hours with one prepaid wallet debit.")
 	if hired == null:
 		get_tree().quit(1)
 		return
@@ -284,8 +293,11 @@ func _run() -> void:
 	hired.finish_work("test_busy")
 	_expect(WorkerDatabase.dismiss_worker(hired.worker_id) and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED, "Dismissal updates linked citizen employment.")
 	citizen.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	var wallet_before_rehire: int = int(Inventory.items.get("shekel", 0))
 	var rehired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id, 3)
-	_expect(rehired == hired and rehired.profession_xp == 9 and rehired.profession_star == 2 and rehired.wage_shekel_per_day == 3, "Rehire preserves progression and accepts the new wage.")
+	_expect(rehired == hired and rehired.profession_xp == 9 and rehired.profession_star == 2
+		and rehired.wage_shekel_per_day == 3 and int(Inventory.items.get("shekel", 0)) == wallet_before_rehire - contract_price,
+		"Rehire preserves progression and charges its new prepaid contract once.")
 	WorkerDatabase.workers_by_id.erase(citizen.citizen_id)
 	WorkerDatabase.dismissed_workers.erase(citizen.citizen_id)
 	CitizenManager.citizens_by_id.erase(citizen.citizen_id)

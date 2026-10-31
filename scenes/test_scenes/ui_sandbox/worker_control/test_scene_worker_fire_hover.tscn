@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/ui_sandbox/worker_control/test_scene_worker_fire_hover.gd" id="1_test"]
+
+[node name="TestSceneWorkerFireHover" type="Node"]
+script = ExtResource("1_test")

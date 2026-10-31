@@ -1,0 +1,18 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+Worker Fire hover screenshots: /tmp/fire-hover-godot-profile/data/godot/app_userdata/time_is_precious/fire-hover-review
+Worker Fire hover sizes: logical=(400.0, 225.0) window=(1200, 675)
+Captured working.png at (400, 225)
+Captured travelling.png at (400, 225)
+Captured hauler-trip.png at (400, 225)
+Captured reserved.png at (400, 225)
+Captured workshop-assigned.png at (400, 225)
+Captured generic-fallback.png at (400, 225)
+Captured edge-top-left.png at (400, 225)
+Captured edge-bottom-right.png at (400, 225)
+Captured enabled-confirmed.png at (400, 225)
+Worker Fire hover review passed.
