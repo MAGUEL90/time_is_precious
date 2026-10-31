@@ -119,7 +119,7 @@ mouse_filter = 2
 [node name="SelectedNamesScroll" type="ScrollContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 20.0
 offset_top = 46.0
-offset_right = 128.0
+offset_right = 163.0
 offset_bottom = 107.0
 clip_contents = true
 horizontal_scroll_mode = 0
@@ -127,14 +127,14 @@ vertical_scroll_mode = 1
 mouse_filter = 1
 
 [node name="SelectedNames" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll"]
-custom_minimum_size = Vector2(96, 0)
+custom_minimum_size = Vector2(130, 0)
 layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="DurationHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 142.0
+offset_left = 150.0
 offset_top = 33.0
-offset_right = 240.0
+offset_right = 248.0
 offset_bottom = 43.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
@@ -144,9 +144,9 @@ horizontal_alignment = 1
 mouse_filter = 2
 
 [node name="DurationButtons" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 142.0
+offset_left = 150.0
 offset_top = 46.0
-offset_right = 240.0
+offset_right = 248.0
 offset_bottom = 107.0
 alignment = 1
 theme_override_constants/separation = 2

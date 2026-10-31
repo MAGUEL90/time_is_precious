@@ -39,8 +39,10 @@ func _run() -> void:
 	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.HAULER: 3}
 	Inventory.items.clear()
 	CityStockManager.treasury_shekel = 987
-	_seed("first", WorkerData.Profession.LABORER, 0.62)
-	_seed("second", WorkerData.Profession.HAULER, 0.87)
+	var first_citizen: CitizenData = _seed("first", WorkerData.Profession.LABORER, 0.62)
+	first_citizen.display_name = "Workshop Laborer"
+	var second_citizen: CitizenData = _seed("second", WorkerData.Profession.HAULER, 0.87)
+	second_citizen.display_name = "Worksite Hauler"
 	var long_name: String = "A Very Long Worker Name Preserved In The Save"
 	var long_candidate: CitizenData
 	for i: int in range(5):
@@ -55,7 +57,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(board.cards.size() == 7 and board.applicant_list.item_count == 7, "All available applicants have cards and native list entries.")
 	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the board does not hire or charge.")
-	_expect(board.cards[0].name_label.text == "Fixture first" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
+	_expect(board.cards[0].name_label.text == "Workshop Laborer" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
 	_expect(board.cards[0].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
 	_expect(board.feedback_label.text.is_empty(), "Remaining-time feedback is absent on open.")
 	_expect(not board.wallet_label.text.contains("Shekel") and not board.wallet_label.text.contains("Hours"), "Wallet and hours text do not appear in the menu.")
@@ -104,10 +106,11 @@ func _run() -> void:
 	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
 	var first_name: Label = board.selected_names_container.get_child(0)
 	var confirmation_names_scroll: ScrollContainer = board.selected_names_container.get_parent()
-	_expect(first_name.get_theme_font_size("font_size") > board.confirmation_panel.get_node("SelectedHeading").get_theme_font_size("font_size"),
-		"Candidate names are larger than the column heading.")
+	_expect(first_name.get_theme_font_size("font_size") == 12 and first_name.scale == Vector2.ONE
+		and board.selected_names_container.scale == Vector2.ONE and confirmation_names_scroll.scale == Vector2.ONE,
+		"Candidate names use the requested native 12-pixel font without control scaling.")
 	_expect(confirmation_names_scroll.get_global_rect().position.x >= panel_rect.position.x + 18.0
-		and confirmation_names_scroll.get_global_rect().end.x <= board.duration_button_container.get_global_rect().position.x - 10.0,
+		and confirmation_names_scroll.get_global_rect().end.x <= board.duration_buttons[0].get_global_rect().position.x - 8.0,
 		"Candidate names keep clear margins beside the panel and duration choices.")
 	_expect(board.confirm_hire_button.size.x < board.cancel_hire_button.size.x
 		and board.confirm_hire_button.size.x >= board.confirm_hire_button.get_combined_minimum_size().x,
@@ -162,7 +165,7 @@ func _run() -> void:
 	for _frame: int in range(6):
 		await get_tree().process_frame
 	_expect(board.selected_names_container.get_child_count() == 7 and names_scroll.clip_contents
-		and names_scroll.get_global_rect().end.x < board.duration_button_container.get_global_rect().position.x,
+		and names_scroll.get_global_rect().end.x < board.duration_buttons[0].get_global_rect().position.x,
 		"A full selection stays clipped to its own confirmation column.")
 	_expect(not board.confirm_quote_amount_label.text.is_empty() and Inventory.items.is_empty(), "A full selection shows its total without charging.")
 	await _capture("job-board-confirm-many")
@@ -194,6 +197,9 @@ func _run() -> void:
 	var name_one: Label = board.selected_names_container.get_child(0)
 	var name_two: Label = board.selected_names_container.get_child(1)
 	_expect(name_two.position.y >= name_one.position.y + name_one.size.y + 3.0, "Selected candidates have visible vertical spacing.")
+	for candidate_name: Label in [name_one, name_two]:
+		_expect(candidate_name.get_theme_font("font").get_string_size(candidate_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x <= candidate_name.size.x,
+			"The normal candidate name fits without being clipped at native font size.")
 	await _capture("job-board-confirm-batch")
 	var cancel := InputEventAction.new()
 	cancel.action = "ui_cancel"
@@ -284,6 +290,7 @@ func _capture(label: String) -> void:
 		return
 	await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	_expect(get_window().size == Vector2i(1200, 675), "Rendered fixture uses the 1200x675 window.")
 	var logical: Image = get_viewport().get_texture().get_image()
 	_expect(logical.get_size() == Vector2i(400, 225), "GL capture uses the native logical viewport.")
 	if logical.get_size() != Vector2i(400, 225):

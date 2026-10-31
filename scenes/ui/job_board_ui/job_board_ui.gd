@@ -348,7 +348,7 @@ func _refresh_confirmation_panel() -> void:
 		name_label.clip_text = true
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.add_theme_font_override("font", PIXEL_FONT)
-		name_label.add_theme_font_size_override("font_size", 8)
+		name_label.add_theme_font_size_override("font_size", 12)
 		name_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.77))
 		selected_names_container.add_child(name_label)
 	# Recalculate scroll bounds after rebuilding a list that may exceed its viewport.
