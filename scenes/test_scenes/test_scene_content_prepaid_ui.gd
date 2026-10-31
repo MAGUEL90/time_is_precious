@@ -38,6 +38,7 @@ func _run() -> void:
 	WorkerDatabase.dismissed_workers.clear()
 	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.HAULER: 3}
 	Inventory.items.clear()
+	CityStockManager.treasury_shekel = 987
 	_seed("first", WorkerData.Profession.LABORER, 0.62)
 	_seed("second", WorkerData.Profession.HAULER, 0.87)
 	var long_name: String = "A Very Long Worker Name Preserved In The Save"
@@ -58,9 +59,40 @@ func _run() -> void:
 	_expect(board.cards[0].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
 	_expect(board.feedback_label.text.is_empty(), "Remaining-time feedback is absent on open.")
 	_expect(not board.wallet_label.text.contains("Shekel") and not board.wallet_label.text.contains("Hours"), "Wallet and hours text do not appear in the menu.")
+	_expect(board.wallet_label.text == "0", "The balance remains the personal wallet even when city cash differs.")
+	_expect(not board.quote_label.is_visible_in_tree(), "The persistent summary is hidden on the Job Board.")
+	var scroll_rect: Rect2 = board.candidate_scroll.get_global_rect()
+	var wallet_row: Control = board.wallet_label.get_parent()
+	_expect(board.cards[1].get_global_rect().end.y <= scroll_rect.end.y + 0.1, "Two candidate cards fit fully in the expanded viewport.")
+	_expect(not board.feedback_label.get_global_rect().intersects(scroll_rect), "Contextual feedback does not overlap the candidate viewport.")
+	_expect(wallet_row.get_global_rect().position.x > board.hire_button.get_global_rect().end.x and wallet_row.get_global_rect().position.y >= scroll_rect.end.y,
+		"The wallet group is at the lower right, clear of the candidate area and Hire.")
 	_expect(board.cards[2].name_label.text != long_name and board.cards[2].name_label.tooltip_text == long_name and long_candidate.display_name == long_name, "Only the long displayed name is shortened; identity and tooltip retain the original.")
 	_expect(board.cards[2].name_label.get_global_rect().end.x <= board.cards[2].role_label.get_global_rect().position.x, "Long display name does not overlap the role.")
 	await _capture("job-board-initial")
+	Inventory.items["shekel"] = 9223372036854775807
+	board._refresh_quote()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(board.wallet_label.get_global_rect().end.x <= wallet_row.get_global_rect().end.x + 0.1
+		and board.wallet_label.get_global_rect().position.x >= board.hire_button.get_global_rect().end.x,
+		"The largest supported wallet amount remains inside its lower-right space.")
+	await _capture("job-board-large-wallet")
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3074457345618258602
+	board._refresh_quote()
+	board.hire_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(board.confirm_quote_amount_label.text == "3074457345618258602"
+		and board.confirm_quote_amount_label.get_global_rect().end.x <= board.confirmation_panel.get_global_rect().end.x - 10.0,
+		"A large valid contract total remains fully visible inside the confirmation panel.")
+	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.get("shekel", 0) == 9223372036854775807,
+		"Opening a large quote does not hire or debit the wallet.")
+	await _capture("job-board-confirm-large-total")
+	board.cancel_hire_button.pressed.emit()
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 2
+	Inventory.items.clear()
+	board._refresh_quote()
 	board.hire_button.pressed.emit()
 	_expect(board.confirmation_open and board.confirmation_layer.visible, "Hire opens the duration and confirmation panel.")
 	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the confirmation panel does not hire or charge.")
@@ -68,6 +100,14 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(board.selected_names_container.get_child_count() == 1, "Selected name appears in the confirmation panel.")
 	_expect(board.selected_names_container.get_global_rect().position.x < board.duration_button_container.get_global_rect().position.x, "Names are to the left of duration buttons.")
+	var title: Label = board.confirmation_panel.get_node("ConfirmationTitle")
+	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
+	_expect(panel_rect.size.x < 290.0 and title.get_theme_font_size("font_size") == 12, "The narrower contract panel uses a 12-pixel title.")
+	_expect(title.get_global_rect().position.y >= panel_rect.position.y + 12.0
+		and board.confirm_hire_button.get_global_rect().end.y <= panel_rect.end.y - 12.0,
+		"Title and actions retain margins within the confirmation panel.")
+	_expect(title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x <= title.size.x,
+		"The contract title fits without horizontal clipping.")
 	_expect(board.duration_buttons[0].has_focus(), "The selected duration has keyboard focus on opening.")
 	_expect(board.confirmation_panel.get_node_or_null("CloseConfirmationButton") == null, "Back is the only visible cancellation button in the confirmation panel.")
 	_expect(board.cancel_hire_button.text == "Back" and board.confirm_hire_button.text == "Confirm", "Confirmation actions use the requested labels.")
@@ -100,6 +140,22 @@ func _run() -> void:
 		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
 	board.cancel_hire_button.pressed.emit()
 	_expect(not board.confirmation_open and board.visible and board.hire_button.has_focus() and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Back returns focus to the board without hiring or charging.")
+	for index: int in range(1, board.cards.size()):
+		board.cards[index].selection_button.set_pressed(true)
+	board.hire_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var names_scroll: ScrollContainer = board.selected_names_container.get_parent()
+	for _frame: int in range(6):
+		await get_tree().process_frame
+	_expect(board.selected_names_container.get_child_count() == 7 and names_scroll.clip_contents
+		and names_scroll.get_global_rect().end.x < board.duration_button_container.get_global_rect().position.x,
+		"A full selection stays clipped to its own confirmation column.")
+	_expect(not board.confirm_quote_amount_label.text.is_empty() and Inventory.items.is_empty(), "A full selection shows its total without charging.")
+	await _capture("job-board-confirm-many")
+	board.cancel_hire_button.pressed.emit()
+	for index: int in range(1, board.cards.size()):
+		board.cards[index].selection_button.set_pressed(false)
 	board.cards[1].selection_button.set_pressed(true)
 	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0, 1]), "Checkboxes select independently.")
 	board.hire_button.pressed.emit()
@@ -136,6 +192,7 @@ func _run() -> void:
 	var hired: WorkerData = WorkerDatabase.get_worker_data("first")
 	_expect(hired != null and hired.payroll_contract_days == 9 and hired.payroll_paid_until_day == 109, "Exact funds hire the selected nine-day native contract.")
 	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.workers_by_id.size() == 2, "Final confirmation buys both contracts atomically once.")
+	_expect(CityStockManager.treasury_shekel == 987, "Hiring leaves city cash unchanged.")
 	Inventory.items["shekel"] = 100
 	board.confirm_hire_button.pressed.emit()
 	_expect(int(Inventory.items.get("shekel", 0)) == 100 and WorkerDatabase.workers_by_id.size() == 2, "Stale repeated confirmation cannot buy another batch.")
@@ -152,6 +209,8 @@ func _run() -> void:
 	await get_tree().process_frame
 	var displayed_name: Label = board.selected_names_container.get_child(0)
 	_expect(displayed_name.text != long_name and displayed_name.tooltip_text == long_name, "Confirmation shortens long names only for display.")
+	_expect(displayed_name.get_global_rect().end.x <= board.selected_names_container.get_parent().get_global_rect().end.x + 0.1,
+		"A long displayed name stays within its confirmation column.")
 	await _capture("job-board-confirm-long-name")
 	board.cancel_hire_button.pressed.emit()
 	var connections: int = board.confirm_hire_button.pressed.get_connections().size()
@@ -177,6 +236,7 @@ func _run() -> void:
 	_expect(board.empty_state_panel.visible and board.hire_button.disabled, "Empty state disables Hire.")
 	board.close()
 	_test_atomic_backend()
+	CityStockManager.treasury_shekel = 0
 	print("ContentPrepaidUITest: %s (%d failed)" % ["PASS" if failures == 0 else "FAIL", failures])
 	get_tree().quit(0 if failures == 0 else 1)
 

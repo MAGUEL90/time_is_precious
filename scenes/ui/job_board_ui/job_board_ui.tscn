@@ -81,9 +81,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -145.0
+offset_left = -127.0
 offset_top = -87.0
-offset_right = 145.0
+offset_right = 127.0
 offset_bottom = 87.0
 texture_filter = 1
 mouse_filter = 0
@@ -95,11 +95,11 @@ patch_margin_bottom = 16
 
 [node name="ConfirmationTitle" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 12.0
-offset_top = 9.0
-offset_right = 256.0
-offset_bottom = 25.0
+offset_top = 14.0
+offset_right = 242.0
+offset_bottom = 30.0
 theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 9
+theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(1, 0.941176, 0.772549, 1)
 text = "CHOOSE CONTRACT"
 horizontal_alignment = 1
@@ -107,9 +107,9 @@ mouse_filter = 2
 
 [node name="SelectedHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 14.0
-offset_top = 26.0
-offset_right = 145.0
-offset_bottom = 36.0
+offset_top = 33.0
+offset_right = 132.0
+offset_bottom = 43.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(1, 0.941176, 0.772549, 1)
@@ -117,25 +117,25 @@ text = "Selected candidates"
 mouse_filter = 2
 
 [node name="SelectedNamesScroll" type="ScrollContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 13.0
-offset_top = 38.0
-offset_right = 147.0
-offset_bottom = 105.0
+offset_left = 14.0
+offset_top = 46.0
+offset_right = 132.0
+offset_bottom = 107.0
 clip_contents = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 1
 mouse_filter = 1
 
 [node name="SelectedNames" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll"]
-custom_minimum_size = Vector2(126, 0)
+custom_minimum_size = Vector2(105, 0)
 layout_mode = 2
 theme_override_constants/separation = 1
 
 [node name="DurationHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 158.0
-offset_top = 26.0
-offset_right = 278.0
-offset_bottom = 36.0
+offset_left = 142.0
+offset_top = 33.0
+offset_right = 240.0
+offset_bottom = 43.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(1, 0.941176, 0.772549, 1)
@@ -144,18 +144,18 @@ horizontal_alignment = 1
 mouse_filter = 2
 
 [node name="DurationButtons" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 158.0
-offset_top = 38.0
-offset_right = 278.0
-offset_bottom = 104.0
+offset_left = 142.0
+offset_top = 46.0
+offset_right = 240.0
+offset_bottom = 107.0
 alignment = 1
 theme_override_constants/separation = 2
 
 [node name="ConfirmQuoteRow" type="HBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 12.0
-offset_top = 108.0
-offset_right = 278.0
-offset_bottom = 122.0
+offset_top = 109.0
+offset_right = 242.0
+offset_bottom = 121.0
 alignment = 1
 theme_override_constants/separation = 3
 mouse_filter = 2
@@ -187,9 +187,9 @@ mouse_filter = 1
 
 [node name="ConfirmationFeedbackLabel" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 12.0
-offset_top = 124.0
-offset_right = 278.0
-offset_bottom = 138.0
+offset_top = 123.0
+offset_right = 242.0
+offset_bottom = 137.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(1, 0.74, 0.59, 1)
@@ -198,10 +198,10 @@ vertical_alignment = 1
 mouse_filter = 2
 
 [node name="ConfirmationActions" type="HBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 51.0
-offset_top = 145.0
-offset_right = 239.0
-offset_bottom = 163.0
+offset_left = 36.0
+offset_top = 140.0
+offset_right = 218.0
+offset_bottom = 158.0
 alignment = 1
 theme_override_constants/separation = 6
 
@@ -248,9 +248,9 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = -3.0
+offset_top = 0.0
 offset_right = 336.0
-offset_bottom = 17.0
+offset_bottom = 20.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(1, 0.941176, 0.772549, 1)
@@ -263,10 +263,10 @@ visible = false
 focus_mode = 0
 
 [node name="CandidateScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox"]
-offset_left = 12.0
-offset_top = 27.0
-offset_right = 336.0
-offset_bottom = 127.0
+offset_left = 6.0
+offset_top = 26.0
+offset_right = 330.0
+offset_bottom = 150.0
 clip_contents = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 1
@@ -279,9 +279,9 @@ theme_override_constants/separation = 4
 
 [node name="EmptyStatePanel" type="NinePatchRect" parent="Root/Center/Window/Margin/MainVBox"]
 offset_left = 12.0
-offset_top = 27.0
+offset_top = 26.0
 offset_right = 324.0
-offset_bottom = 86.0
+offset_bottom = 150.0
 texture = SubResource("Empty")
 patch_margin_left = 4
 patch_margin_top = 4
@@ -293,7 +293,7 @@ mouse_filter = 2
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 304.0
-offset_bottom = 56.0
+offset_bottom = 116.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
@@ -318,19 +318,20 @@ theme_override_styles/focus = SubResource("Focus")
 text = "Hire"
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = 146.0
+offset_top = 152.0
 offset_right = 336.0
-offset_bottom = 157.0
+offset_bottom = 167.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 horizontal_alignment = 1
 mouse_filter = 2
 
 [node name="WalletRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = 15.0
-offset_right = 336.0
-offset_bottom = 26.0
-alignment = 1
+offset_left = 204.0
+offset_top = 170.0
+offset_right = 324.0
+offset_bottom = 186.0
+alignment = 2
 theme_override_constants/separation = 3
 
 [node name="WalletIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
@@ -359,6 +360,7 @@ tooltip_text = "Wallet balance in Shekel"
 mouse_filter = 1
 
 [node name="QuoteRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+visible = false
 offset_top = 130.0
 offset_right = 336.0
 offset_bottom = 142.0
