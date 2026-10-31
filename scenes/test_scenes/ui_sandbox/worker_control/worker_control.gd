@@ -51,7 +51,10 @@ var can_open: Callable = Callable()
 @onready var manage_goto_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/GotoButton
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
 @onready var manage_contract_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/ContractButton
-@onready var contract_current_label: Label = $Root/ContractWindow/Margin/MainVBox/CurrentContractLabel
+@onready var contract_range_row: HBoxContainer = $Root/ContractWindow/Margin/MainVBox/ContractRangeRow
+@onready var contract_current_day_label: Label = $Root/ContractWindow/Margin/MainVBox/ContractRangeRow/CurrentDayLabel
+@onready var contract_range_arrow: TextureRect = $Root/ContractWindow/Margin/MainVBox/ContractRangeRow/ArrowIcon
+@onready var contract_new_day_label: Label = $Root/ContractWindow/Margin/MainVBox/ContractRangeRow/NewDayLabel
 @onready var contract_days_container: HBoxContainer = $Root/ContractWindow/Margin/MainVBox/ContractDays
 @onready var renew_price_label: Label = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
 @onready var renew_price_icon: TextureRect = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
@@ -862,6 +865,8 @@ func _update_contract_day_selection() -> void:
 	for button: Button in contract_day_buttons:
 		var selected: bool = int(button.get_meta("contract_days", -1)) == _selected_contract_days
 		button.set_pressed_no_signal(selected)
+		var marker: TextureRect = button.get_node("SelectionMarker")
+		marker.visible = selected
 
 
 func _on_contract_days_selected(days: int) -> void:
@@ -881,7 +886,8 @@ func _update_contract_controls(row: Dictionary) -> void:
 	var price: int = _renewal_price(row, _selected_contract_days)
 	_displayed_contract_price = price
 	var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
-	contract_current_label.text = _current_contract_text(worker)
+	_update_contract_range(worker)
+	_update_renew_price_width(row)
 	renew_price_label.text = "Price: %d" % price if price > 0 else "Price unavailable"
 	renew_price_icon.visible = price > 0
 	contract_feedback_label.text = _renew_feedback_text
@@ -895,20 +901,62 @@ func _update_contract_controls(row: Dictionary) -> void:
 		_reposition_contract_after_layout()
 
 
-func _current_contract_text(worker: WorkerData) -> String:
+func _current_contract_expiry_day(worker: WorkerData) -> int:
 	if worker == null or worker.payroll_start_day < 0 or worker.payroll_paid_from_day < 0 \
 			or worker.payroll_paid_until_day < worker.payroll_paid_from_day:
-		return "Current contract ends:\n-"
-	var end_minute: int = worker.get_paid_end_minute()
-	var day: int = end_minute / 1440
-	var minute_of_day: int = end_minute % 1440
-	return "Current contract ends:\nDay %d, %02d:%02d" % [day, minute_of_day / 60, minute_of_day % 60]
+		return -1
+	# Paid-through is inclusive; expiry is the following day, at 07:00 or 08:00.
+	if worker.payroll_paid_until_day >= 9223372036854775807:
+		return -1
+	return worker.payroll_paid_until_day + 1
+
+
+func _renewal_expiry_day(worker: WorkerData, days: int) -> int:
+	if worker == null or days not in WorkerDatabase.CONTRACT_DAYS:
+		return -1
+	# Match the active/restart decision and boundary used by renew_contract.
+	var active: bool = worker.payroll_start_day >= 0 and not worker.is_payroll_blocked()
+	var paid_until_base: int = worker.payroll_paid_until_day if active else TimeComponentManager.current_day
+	if paid_until_base > WorkerDatabase.MAX_CONTRACT_DAY - days:
+		return -1
+	return paid_until_base + days + 1
+
+
+func _contract_day_text(day: int) -> String:
+	return "Day %d" % day if day >= 0 else "Day -"
+
+
+func _update_contract_range(worker: WorkerData) -> void:
+	var current_text: String = _contract_day_text(_current_contract_expiry_day(worker))
+	var new_text: String = _contract_day_text(_renewal_expiry_day(worker, _selected_contract_days))
+	var font: Font = contract_current_day_label.get_theme_font("font")
+	var font_size: int = contract_current_day_label.get_theme_font_size("font_size")
+	var slot_width: float = font.get_string_size(current_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		var possible_text: String = _contract_day_text(_renewal_expiry_day(worker, days))
+		slot_width = maxf(slot_width, font.get_string_size(possible_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	# Both slots reserve the largest possible value for this worker across all choices.
+	contract_current_day_label.custom_minimum_size.x = ceilf(slot_width)
+	contract_new_day_label.custom_minimum_size.x = ceilf(slot_width)
+	contract_current_day_label.text = current_text
+	contract_new_day_label.text = new_text
 
 
 func _renewal_price(row: Dictionary, days: int) -> int:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
 	var profession: WorkerData.Profession = worker.profession if worker != null else _profession_from_row(row)
 	return WorkerDatabase.get_contract_price(profession, days)
+
+
+func _update_renew_price_width(row: Dictionary) -> void:
+	var font: Font = renew_price_label.get_theme_font("font")
+	var font_size: int = renew_price_label.get_theme_font_size("font_size")
+	var width: float = 0.0
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		var price: int = _renewal_price(row, days)
+		var price_text: String = "Price: %d" % price if price > 0 else "Price unavailable"
+		width = maxf(width, font.get_string_size(price_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	renew_price_label.custom_minimum_size.x = ceilf(width)
 
 
 func _profession_from_row(row: Dictionary) -> WorkerData.Profession:

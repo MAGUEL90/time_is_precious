@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://byn62k7nrayc7"]
+[gd_scene load_steps=22 format=3 uid="uid://byn62k7nrayc7"]
 
 [ext_resource type="Script" uid="uid://cdia61myyxbw3" path="res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
@@ -15,6 +15,8 @@
 [ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="detail_3"]
 [ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="detail_4"]
 [ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="detail_coin"]
+[ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="contract_arrow"]
+[ext_resource type="Texture2D" uid="uid://dvf6iiypuilwu" path="res://assets/ui/ui_icon/checklist_icon.png" id="contract_check"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_window"]
 atlas = ExtResource("3_window")
@@ -484,7 +486,7 @@ text = "Contract"
 
 [node name="ContractWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(104, 96)
+custom_minimum_size = Vector2(104, 84)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -532,9 +534,22 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"WorkshopSquareButton24"
 theme_override_font_sizes/font_size = 6
+alignment = 2
 text = "3D"
 toggle_mode = true
 metadata/contract_days = 3
+
+[node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days3Button"]
+visible = false
+offset_left = 2.0
+offset_top = 3.0
+offset_right = 12.0
+offset_bottom = 13.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("contract_check")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Days6Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
 custom_minimum_size = Vector2(24, 16)
@@ -542,9 +557,22 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"WorkshopSquareButton24"
 theme_override_font_sizes/font_size = 6
+alignment = 2
 text = "6D"
 toggle_mode = true
 metadata/contract_days = 6
+
+[node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days6Button"]
+visible = false
+offset_left = 2.0
+offset_top = 3.0
+offset_right = 12.0
+offset_bottom = 13.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("contract_check")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Days9Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
 custom_minimum_size = Vector2(24, 16)
@@ -552,9 +580,22 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"WorkshopSquareButton24"
 theme_override_font_sizes/font_size = 6
+alignment = 2
 text = "9D"
 toggle_mode = true
 metadata/contract_days = 9
+
+[node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days9Button"]
+visible = false
+offset_left = 2.0
+offset_top = 3.0
+offset_right = 12.0
+offset_bottom = 13.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("contract_check")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="RenewPriceRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 8)
@@ -572,6 +613,7 @@ text = "Price: -"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 0
+clip_text = true
 
 [node name="ShekelIcon" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/RenewPriceRow"]
 custom_minimum_size = Vector2(8, 8)
@@ -606,16 +648,42 @@ theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Renew"
 
-[node name="CurrentContractLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 16)
+[node name="ContractRangeRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="CurrentDayLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
-text = "Current contract ends:\n-"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Day -"
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
+clip_text = true
+
+[node name="ArrowIcon" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("contract_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NewDayLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Day -"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
 
 [node name="CloseButton" parent="Root/ContractWindow" instance=ExtResource("4_close")]
 layout_mode = 1
