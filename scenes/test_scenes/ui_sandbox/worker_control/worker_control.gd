@@ -821,10 +821,14 @@ func _configure_contract_days() -> void:
 	popup_theme.default_font_size = 6
 	popup_theme.set_font("font", "PopupMenu", popup_theme.default_font)
 	popup_theme.set_font_size("font_size", "PopupMenu", 6)
-	var panel_text_color: Color = contract_current_label.get_theme_color("font_color")
-	popup_theme.set_color("font_color", "PopupMenu", panel_text_color)
-	popup_theme.set_color("font_hover_color", "PopupMenu", panel_text_color)
-	popup_theme.set_stylebox("panel", "PopupMenu", tools_picker_window.get_theme_stylebox("panel").duplicate())
+	var dropdown_text_color: Color = theme.get_color("font_color", "HudShortcutButton")
+	popup_theme.set_color("font_color", "PopupMenu", dropdown_text_color)
+	popup_theme.set_color("font_hover_color", "PopupMenu", dropdown_text_color)
+	popup_theme.set_stylebox(
+		"panel",
+		"PopupMenu",
+		theme.get_stylebox("normal", "WorkshopSquareButton24").duplicate()
+	)
 	var highlight := StyleBoxFlat.new()
 	var highlight_color: Color = theme.get_color("font_color", "HudShortcutButton")
 	highlight_color.a = 0.15
@@ -841,7 +845,7 @@ func _configure_contract_days() -> void:
 	arrow.rotate_90(CLOCKWISE)
 	contract_days_option.add_theme_icon_override("arrow", ImageTexture.create_from_image(arrow))
 	for days: int in WorkerDatabase.CONTRACT_DAYS:
-		contract_days_option.add_item("%d days" % days, days)
+		contract_days_option.add_item("%dD" % days, days)
 	contract_days_option.item_selected.connect(_on_contract_day_index_selected)
 
 
@@ -1262,7 +1266,7 @@ func _build_confirmation() -> void:
 	var panel: NinePatchRect = CONFIRM_SCENE.instantiate()
 	center.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	panel.custom_minimum_size = Vector2(200, 96)
+	panel.custom_minimum_size = Vector2(160, 80)
 	_confirm_label = panel.get_node("ConfirmMargin/ConfirmVBox/ConfirmLabel")
 	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_label.add_theme_font_size_override("font_size", 6)

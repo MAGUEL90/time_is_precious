@@ -25,6 +25,62 @@ func _expect_no_tooltips(node: Node) -> void:
 			for index: int in range(list.item_count):
 				_expect(not list.is_item_tooltip_enabled(index), "Job Board item tooltips stay disabled.")
 
+func _confirmation_geometry_controls() -> Array[Control]:
+	var controls: Array[Control] = [board.duration_button_container]
+	for button: Button in board.duration_buttons:
+		controls.append(button)
+	controls.append(board.confirm_quote_label.get_parent() as Control)
+	controls.append(board.confirm_quote_label)
+	controls.append(board.confirm_quote_icon)
+	controls.append(board.confirm_quote_amount_label)
+	return controls
+
+func _capture_confirmation_geometry() -> Array[Rect2]:
+	var geometry: Array[Rect2] = []
+	for control: Control in _confirmation_geometry_controls():
+		geometry.append(control.get_global_rect())
+	return geometry
+
+func _expect_confirmation_geometry(expected: Array[Rect2], context: String) -> void:
+	var controls: Array[Control] = _confirmation_geometry_controls()
+	_expect(expected.size() == controls.size(), context + ": geometry control count stays fixed.")
+	if expected.size() != controls.size():
+		return
+	for index: int in range(controls.size()):
+		var actual: Rect2 = controls[index].get_global_rect()
+		var same_position: bool = actual.position.is_equal_approx(expected[index].position)
+		var same_size: bool = actual.size.is_equal_approx(expected[index].size)
+		_expect(same_position and same_size,
+			"%s: control %d keeps its position and size (%s vs %s)." % [context, index, str(expected[index]), str(actual)])
+
+func _expect_confirmation_text_white(first_name: Label) -> void:
+	var labels: Array[Label] = [
+		board.confirmation_panel.get_node("ConfirmationTitle") as Label,
+		board.confirmation_panel.get_node("SelectedHeading") as Label,
+		board.confirmation_panel.get_node("DurationHeading") as Label,
+		first_name,
+		board.confirm_quote_label,
+		board.confirm_quote_amount_label,
+		board.confirmation_feedback_label,
+	]
+	for label: Label in labels:
+		_expect(label.get_theme_color("font_color").is_equal_approx(Color.WHITE),
+			"Contract modal label %s uses white text." % label.name)
+		var expected_size: int = 12 if label.name == "ConfirmationTitle" else 6
+		_expect(label.get_theme_font_size("font_size") == expected_size,
+			"Contract modal label %s retains its existing font size." % label.name)
+	var buttons: Array[Button] = [board.cancel_hire_button, board.confirm_hire_button]
+	buttons.append_array(board.duration_buttons)
+	for button: Button in buttons:
+		_expect(button.get_theme_font_size("font_size") == 6,
+			"Contract modal button %s retains the 6-pixel font." % button.name)
+		for state: StringName in [
+			&"font_color", &"font_hover_color", &"font_pressed_color",
+			&"font_hover_pressed_color", &"font_focus_color", &"font_disabled_color",
+		]:
+			_expect(button.get_theme_color(state).is_equal_approx(Color.WHITE),
+				"Contract modal button %s uses white text for %s." % [button.name, state])
+
 func _hover_without_tooltip(control: Control) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
@@ -60,9 +116,9 @@ func _run() -> void:
 	Inventory.items.clear()
 	CityStockManager.treasury_shekel = 987
 	var first_citizen: CitizenData = _seed("first", WorkerData.Profession.LABORER, 0.62)
-	first_citizen.display_name = "Workshop Laborer"
+	first_citizen.display_name = "Naram"
 	var second_citizen: CitizenData = _seed("second", WorkerData.Profession.HAULER, 0.87)
-	second_citizen.display_name = "Worksite Hauler"
+	second_citizen.display_name = "Lugal"
 	var long_name: String = "A Very Long Worker Name Preserved In The Save"
 	var long_candidate: CitizenData
 	for i: int in range(5):
@@ -77,7 +133,9 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(board.cards.size() == 7 and board.applicant_list.item_count == 7, "All available applicants have cards and native list entries.")
 	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the board does not hire or charge.")
-	_expect(board.cards[0].name_label.text == "Workshop Laborer" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
+	_expect(board.applicant_list.get_selected_items().is_empty() and board.hire_button.disabled,
+		"Opening the board leaves every applicant unselected and Hire disabled.")
+	_expect(board.cards[0].name_label.text == "Naram" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
 	_expect(board.cards[0].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
 	_expect(board.feedback_label.text.is_empty(), "Remaining-time feedback is absent on open.")
 	_expect(not board.wallet_label.text.contains("Shekel") and not board.wallet_label.text.contains("Hours"), "Wallet and hours text do not appear in the menu.")
@@ -114,6 +172,9 @@ func _run() -> void:
 	await _hover_without_tooltip(wallet_icon)
 	await _capture("job-board-wallet-hover")
 	await _capture("job-board-initial")
+	board.cards[0].selection_button.set_pressed(true)
+	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0]) and not board.hire_button.disabled,
+		"Manually checking a candidate selects it and enables Hire.")
 	Inventory.items["shekel"] = 9223372036854775807
 	board._refresh_quote()
 	await get_tree().process_frame
@@ -149,6 +210,7 @@ func _run() -> void:
 	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
 	var first_name: Label = board.selected_names_container.get_child(0)
 	var confirmation_names_scroll: ScrollContainer = board.selected_names_container.get_parent()
+	_expect_confirmation_text_white(first_name)
 	_expect(first_name.get_theme_font_size("font_size") == 6 and first_name.scale == Vector2.ONE
 		and board.selected_names_container.scale == Vector2.ONE and confirmation_names_scroll.scale == Vector2.ONE,
 		"Candidate names use the requested native 6-pixel font without control scaling.")
@@ -191,15 +253,64 @@ func _run() -> void:
 			visited_focus.append(focus)
 	for control: Control in [board.duration_buttons[0], board.duration_buttons[1], board.duration_buttons[2], board.cancel_hire_button, board.confirm_hire_button]:
 		_expect(visited_focus.has(control), "Every duration and remaining action is reachable by keyboard focus.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var duration_and_quote_geometry: Array[Rect2] = _capture_confirmation_geometry()
 	await _capture("job-board-confirm-single")
 	for option: int in range(3):
 		var days: int = WorkerDatabase.CONTRACT_DAYS[option]
 		_expect(int(board.duration_buttons[option].get_meta("contract_days")) == days, "A duration button maps to the existing allowed duration.")
 		board.duration_buttons[option].pressed.emit()
+		await get_tree().process_frame
+		await get_tree().process_frame
 		_expect(board.cards[0].wage_label.text == str(2 * (option + 1)), "Laborer card shows its price without trailing duration text.")
 		_expect(board.cards[1].wage_label.text == str(3 * (option + 1)), "Hauler card shows its own profession price.")
 		_expect(board.confirm_quote_amount_label.text == str(2 * (option + 1)) and board.confirm_quote_icon.visible, "The quoted price and coin are visible before confirmation.")
 		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
+		_expect_confirmation_geometry(duration_and_quote_geometry, "%d-day selection keeps selector and quote geometry fixed" % days)
+	var single_to_double_totals: Array[String] = ["5", "10", "15"]
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 5
+	var single_to_double_geometry: Array[Rect2] = []
+	for option: int in range(3):
+		board.duration_buttons[option].pressed.emit()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_expect(board.confirm_quote_amount_label.text == single_to_double_totals[option],
+			"Duration %d shows the correctly scaled one- or two-digit quote." % WorkerDatabase.CONTRACT_DAYS[option])
+		if option == 0:
+			single_to_double_geometry = _capture_confirmation_geometry()
+		else:
+			_expect_confirmation_geometry(single_to_double_geometry,
+				"One- to two-digit totals keep selector and quote geometry fixed")
+	var large_totals: Array[String] = [
+		"3074457345618258602", "6148914691236517204", "9223372036854775806",
+	]
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3074457345618258602
+	var large_total_geometry: Array[Rect2] = []
+	for option: int in range(3):
+		board.duration_buttons[option].pressed.emit()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_expect(board.confirm_quote_amount_label.text == large_totals[option],
+			"Duration %d retains its exact valid 19-digit quote." % WorkerDatabase.CONTRACT_DAYS[option])
+		if option == 0:
+			large_total_geometry = _capture_confirmation_geometry()
+		else:
+			_expect_confirmation_geometry(large_total_geometry,
+				"19-digit totals keep selector and quote geometry fixed")
+		var coin_to_total_gap: float = (
+			board.confirm_quote_amount_label.get_global_rect().position.x
+			- board.confirm_quote_icon.get_global_rect().end.x
+		)
+		_expect(is_equal_approx(coin_to_total_gap, 3.0),
+			"The quote coin stays adjacent to the amount at every supported duration.")
+	_expect(board.confirm_quote_amount_label.size.x >= 95.0
+		and board.confirm_quote_amount_label.get_global_rect().end.x <= panel_rect.end.x - 10.0,
+		"A 19-digit quote fits its fixed amount slot inside the panel.")
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 2
+	board.duration_buttons[2].pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	board.cancel_hire_button.pressed.emit()
 	_expect(not board.confirmation_open and board.visible and board.hire_button.has_focus() and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Back returns focus to the board without hiring or charging.")
 	for index: int in range(1, board.cards.size()):
@@ -281,6 +392,7 @@ func _run() -> void:
 	_expect(hired != null and hired.payroll_contract_days == 9 and hired.payroll_paid_until_day == 109, "Exact funds hire the selected nine-day native contract.")
 	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.workers_by_id.size() == 2, "Final confirmation buys both contracts atomically once.")
 	_expect(CityStockManager.treasury_shekel == 987, "Hiring leaves city cash unchanged.")
+	_expect(board.feedback_label.text.is_empty(), "Successful hiring leaves no success toast on the Job Board.")
 	Inventory.items["shekel"] = 100
 	board.confirm_hire_button.pressed.emit()
 	_expect(int(Inventory.items.get("shekel", 0)) == 100 and WorkerDatabase.workers_by_id.size() == 2, "Stale repeated confirmation cannot buy another batch.")

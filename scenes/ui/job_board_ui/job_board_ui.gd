@@ -4,10 +4,15 @@ signal closed
 
 const CandidateCard = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.tscn")
+const INITIAL_APPLICANTS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
 const SCROLL_PANEL: Texture2D = preload("res://assets/ui/ui_panel/brown_panel_16x16.png")
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
 const CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 const MAX_CONFIRM_NAME_LENGTH: int = 22
+const BUTTON_FONT_COLOR_STATES: Array[StringName] = [
+	&"font_color", &"font_hover_color", &"font_pressed_color",
+	&"font_hover_pressed_color", &"font_focus_color", &"font_disabled_color",
+]
 
 # Preserve the native selection/quote handles for existing callers.
 @onready var applicant_list: ItemList = $Root/Center/Window/Margin/MainVBox/ApplicantList
@@ -60,6 +65,8 @@ func _ready() -> void:
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
 	refresh_timer.timeout.connect(_poll_applicants)
 	_style_scrollbar()
+	_set_button_text_white(cancel_hire_button)
+	_set_button_text_white(confirm_hire_button)
 	confirmation_layer.visible = false
 	confirmation_panel.visible = false
 
@@ -90,7 +97,25 @@ func _build_duration_buttons() -> void:
 	for child: Node in duration_button_container.get_children():
 		if child is Button:
 			duration_buttons.append(child as Button)
+	var fixed_button_width: float = 0.0
+	var fixed_button_height: float = 0.0
+	for button: Button in duration_buttons:
+		button.icon = CHECK_ICON
+		var selected_minimum_size: Vector2 = button.get_combined_minimum_size()
+		fixed_button_width = maxf(fixed_button_width, selected_minimum_size.x)
+		fixed_button_height = maxf(fixed_button_height, selected_minimum_size.y)
+		button.icon = null
+	for button: Button in duration_buttons:
+		button.custom_minimum_size = Vector2(
+			maxf(button.custom_minimum_size.x, fixed_button_width),
+			maxf(button.custom_minimum_size.y, fixed_button_height),
+		)
+		_set_button_text_white(button)
 	_select_contract_days(_selected_contract_days_value)
+
+func _set_button_text_white(button: Button) -> void:
+	for color_state: StringName in BUTTON_FONT_COLOR_STATES:
+		button.add_theme_color_override(color_state, Color.WHITE)
 
 func _configure_confirmation_focus() -> void:
 	var controls: Array[Control] = []
@@ -164,6 +189,7 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 	applicant_list.clear()
 	applicants = CitizenManager.get_all_applicants()
 	for citizen: CitizenData in applicants:
+		INITIAL_APPLICANTS.normalize_legacy_applicant_name(citizen)
 		var index: int = applicant_list.add_item("%s | %s" % [citizen.display_name, _get_profession_name(citizen.profession)])
 		applicant_list.set_item_tooltip_enabled(index, false)
 		var card: CandidateCard = CARD_SCENE.instantiate()
@@ -173,8 +199,6 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 		cards.append(card)
 		if selected_ids.has(citizen.citizen_id):
 			applicant_list.select(index, false)
-	if not preserve_selection and not applicants.is_empty():
-		applicant_list.select(0)
 	empty_state_panel.visible = applicants.is_empty()
 	candidate_scroll.visible = not applicants.is_empty()
 	_refresh_quote()
@@ -324,11 +348,9 @@ func _confirm_hire() -> void:
 		confirmation_feedback_label.text = "Hire failed. Check your wallet and applicant availability."
 		_refresh_confirmation_panel()
 		return
-	var success_text: String = "Hired %d. Paid through Day %d." % [hired.size(), hired[0].payroll_paid_until_day]
 	_cancel_confirmation(false)
 	_hiring = false
 	_refresh_applicants()
-	feedback_label.text = success_text
 
 func _refresh_confirmation_panel() -> void:
 	if not confirmation_open:
@@ -349,12 +371,14 @@ func _refresh_confirmation_panel() -> void:
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.add_theme_font_override("font", PIXEL_FONT)
 		name_label.add_theme_font_size_override("font_size", 6)
-		name_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.77))
+		name_label.add_theme_color_override("font_color", Color.WHITE)
 		selected_names_container.add_child(name_label)
 	# Recalculate scroll bounds after rebuilding a list that may exceed its viewport.
 	selected_names_scroll.queue_sort.call_deferred()
 	var quote: Dictionary = _quote_for_ids(_pending_hire_ids, _selected_contract_days())
 	var quote_valid: bool = all_names_valid and bool(quote.get("valid", false))
+	confirm_quote_label.custom_minimum_size.x = _confirmation_quote_label_width(_pending_hire_ids.size())
+	confirm_quote_amount_label.custom_minimum_size.x = _confirmation_quote_amount_width(_pending_hire_ids)
 	if quote_valid:
 		var count: int = _pending_hire_ids.size()
 		var days: int = _selected_contract_days()
@@ -373,6 +397,38 @@ func _refresh_confirmation_panel() -> void:
 		_displayed_quote_total = -1
 		_displayed_quote_days = -1
 	confirm_hire_button.disabled = not quote_valid or _hiring
+
+func _confirmation_quote_label_width(candidate_count: int) -> float:
+	var font: Font = confirm_quote_label.get_theme_font("font")
+	var font_size: int = confirm_quote_label.get_theme_font_size("font_size")
+	var maximum_width: float = 0.0
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		if days not in [3, 6, 9]:
+			continue
+		var text: String = "%d day%s · %d candidate%s · Total" % [
+			days,
+			"s" if days != 1 else "",
+			candidate_count,
+			"s" if candidate_count != 1 else "",
+		]
+		maximum_width = maxf(maximum_width, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	return ceilf(maximum_width)
+
+func _confirmation_quote_amount_width(citizen_ids: PackedStringArray) -> float:
+	var font: Font = confirm_quote_amount_label.get_theme_font("font")
+	var font_size: int = confirm_quote_amount_label.get_theme_font_size("font_size")
+	var maximum_width: float = 0.0
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		if days not in [3, 6, 9]:
+			continue
+		var quote: Dictionary = _quote_for_ids(citizen_ids, days)
+		if not bool(quote.get("valid", false)):
+			continue
+		var text: String = str(int(quote.get("total", 0)))
+		maximum_width = maxf(maximum_width, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	if maximum_width <= 0.0:
+		maximum_width = font.get_string_size("0", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	return ceilf(maximum_width)
 
 func _quote_for_ids(citizen_ids: PackedStringArray, days: int) -> Dictionary:
 	var total: int = 0

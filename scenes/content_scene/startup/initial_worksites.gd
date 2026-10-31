@@ -5,14 +5,16 @@ extends Node2D
 @export var enable_initial_cart: bool = true
 const APPLICANT_ID: String = "initial_workshop_laborer"
 const HAULER_APPLICANT_ID: String = "initial_worksite_hauler"
+const LABORER_NAME: String = "Naram"
+const HAULER_NAME: String = "Lugal"
 const CART_UNIT_ID: String = "initial_worksite_cart"
 const CART_SUPPLIED_META: StringName = &"initial_worksite_cart_supplied"
 
 func _ready() -> void:
 	if not enable_initial_applicant:
 		return
-	_register_applicant(APPLICANT_ID, "Workshop Laborer", WorkerData.Profession.LABORER)
-	_register_applicant(HAULER_APPLICANT_ID, "Worksite Hauler", WorkerData.Profession.HAULER)
+	_register_applicant(APPLICANT_ID, LABORER_NAME, WorkerData.Profession.LABORER)
+	_register_applicant(HAULER_APPLICANT_ID, HAULER_NAME, WorkerData.Profession.HAULER)
 	if enable_initial_cart:
 		_supply_initial_cart.call_deferred()
 
@@ -34,3 +36,13 @@ func _register_applicant(citizen_id: String, display_name: String, profession: W
 	applicant.population_status = CitizenData.PopulationStatus.RESIDENT
 	CitizenManager.add_citizen(applicant)
 	CitizenManager.register_applicant(citizen_id, profession)
+
+
+static func normalize_legacy_applicant_name(applicant: CitizenData) -> void:
+	# Old checkpoints used role labels for these two authored applicant IDs.
+	if applicant == null:
+		return
+	if applicant.citizen_id == APPLICANT_ID and applicant.display_name == "Workshop Laborer":
+		applicant.display_name = LABORER_NAME
+	elif applicant.citizen_id == HAULER_APPLICANT_ID and applicant.display_name == "Worksite Hauler":
+		applicant.display_name = HAULER_NAME

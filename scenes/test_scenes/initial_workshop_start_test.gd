@@ -1,5 +1,7 @@
 extends Node
 
+const INITIAL_APPLICANTS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
+
 var failures: int = 0
 var content: Node
 var player: Player
@@ -46,6 +48,29 @@ func _run() -> void:
 	await _frames()
 	_expect(Inventory.items.is_empty(), "Starting content must not grant materials.")
 	_expect(WorkerDatabase.get_all_workers().is_empty(), "Initial applicant must not be pre-hired.")
+	var initial_laborer: CitizenData = CitizenManager.get_citizen(start.APPLICANT_ID)
+	var initial_hauler: CitizenData = CitizenManager.get_citizen(start.HAULER_APPLICANT_ID)
+	_expect(initial_laborer != null and initial_hauler != null, "Both original applicant IDs remain available.")
+	if initial_laborer == null or initial_hauler == null:
+		_finish()
+		return
+	_expect(CitizenGenerator.display_name_container.has(initial_laborer.display_name)
+		and CitizenGenerator.display_name_container.has(initial_hauler.display_name),
+		"New initial applicants use names from the existing citizen name pool.")
+	# Recreate the two exact placeholder names from an older restored roster.
+	initial_laborer.display_name = "Workshop Laborer"
+	initial_hauler.display_name = "Worksite Hauler"
+	var custom_name := CitizenData.new()
+	custom_name.citizen_id = start.APPLICANT_ID
+	custom_name.display_name = "A custom name"
+	INITIAL_APPLICANTS.normalize_legacy_applicant_name(custom_name)
+	var unrelated_id := CitizenData.new()
+	unrelated_id.citizen_id = "unrelated_applicant"
+	unrelated_id.display_name = "Workshop Laborer"
+	INITIAL_APPLICANTS.normalize_legacy_applicant_name(unrelated_id)
+	_expect(custom_name.display_name == "A custom name" and unrelated_id.display_name == "Workshop Laborer",
+		"Legacy normalization preserves custom names and other citizen IDs.")
+	var generator_counter_before: int = CitizenGenerator.counter_id
 	var board: JobBoard = start.get_node("JobBoard")
 	await _interact_at(board)
 	_expect(is_instance_valid(board.job_board_ui), "E opens the authored Job Board.")
@@ -53,9 +78,33 @@ func _run() -> void:
 		_finish()
 		return
 	_expect(board.job_board_ui.applicants.size() == 2, "Initial Laborer and Hauler applicants are visible.")
+	_expect(board.job_board_ui.applicant_list.get_selected_items().is_empty()
+		and board.job_board_ui.hire_button.disabled,
+		"Opening Job Board does not select an applicant or enable Hire.")
+	_expect(initial_laborer.display_name == INITIAL_APPLICANTS.LABORER_NAME
+		and initial_hauler.display_name == INITIAL_APPLICANTS.HAULER_NAME
+		and CitizenGenerator.counter_id == generator_counter_before
+		and initial_laborer.profession == WorkerData.Profession.LABORER
+		and initial_hauler.profession == WorkerData.Profession.HAULER,
+		"The two legacy placeholders resolve to stable individual names without changing IDs, professions, or the generator counter.")
 	var hauler_applicant_id: String = start.HAULER_APPLICANT_ID
 	var hauler_applicant: CitizenData = CitizenManager.get_citizen(hauler_applicant_id)
 	_expect(hauler_applicant != null and hauler_applicant.profession == WorkerData.Profession.HAULER, "Initial Hauler uses the existing citizen hiring flow.")
+	var laborer_index: int = -1
+	var hauler_index: int = -1
+	for index: int in range(board.job_board_ui.applicants.size()):
+		if board.job_board_ui.applicants[index].citizen_id == start.APPLICANT_ID:
+			laborer_index = index
+		elif board.job_board_ui.applicants[index].citizen_id == start.HAULER_APPLICANT_ID:
+			hauler_index = index
+	_expect(laborer_index >= 0, "The authored Laborer applicant is available for manual selection.")
+	_expect(hauler_index >= 0, "The authored Hauler applicant remains available.")
+	if laborer_index < 0 or hauler_index < 0:
+		_finish()
+		return
+	_expect(board.job_board_ui.cards[laborer_index].name_label.text == INITIAL_APPLICANTS.LABORER_NAME
+		and board.job_board_ui.cards[hauler_index].name_label.text == INITIAL_APPLICANTS.HAULER_NAME,
+		"Job Board cards display the corrected individual names for the two legacy applicants.")
 	await _capture("initial-job-board.png")
 	var contract_days: int = 9
 	var contract_index: int = WorkerDatabase.CONTRACT_DAYS.find(contract_days)
@@ -64,11 +113,12 @@ func _run() -> void:
 	if contract_index < 0 or contract_price <= 0:
 		_finish()
 		return
+	board.job_board_ui.cards[laborer_index].selection_button.set_pressed(true)
 	board.job_board_ui.hire_button.pressed.emit()
 	board.job_board_ui._select_contract_days(contract_days)
-	_expect(board.job_board_ui.applicant_list.get_selected_items() == PackedInt32Array([0])
+	_expect(board.job_board_ui.applicant_list.get_selected_items() == PackedInt32Array([laborer_index])
 		and board.job_board_ui.confirm_quote_amount_label.text == str(contract_price),
-		"The native Job Board selects the Laborer and quotes the full contract before confirmation.")
+		"Manually selecting the Laborer quotes the full contract before confirmation.")
 	board.job_board_ui.confirm_hire_button.pressed.emit()
 	_expect(WorkerDatabase.get_worker_data(start.APPLICANT_ID) == null and Inventory.items.is_empty(),
 		"An empty wallet cannot hire the applicant or create unpaid work.")
@@ -84,6 +134,9 @@ func _run() -> void:
 	if worker == null:
 		_finish()
 		return
+	_expect(worker.worker_id == start.APPLICANT_ID and worker.display_name == INITIAL_APPLICANTS.LABORER_NAME
+		and worker.get_resolved_display_name() == INITIAL_APPLICANTS.LABORER_NAME,
+		"Hiring a normalized legacy applicant keeps the fixed ID and individual name.")
 	_expect(worker.payroll_contract_days == contract_days and worker.payroll_paid_from_day == hire_day
 		and worker.payroll_paid_until_day == hire_day + contract_days and not worker.is_payroll_blocked(),
 		"The selected prepaid period activates immediately and covers the planned construction.")

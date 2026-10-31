@@ -122,7 +122,11 @@ func _run() -> void:
 	var option: OptionButton = hub.contract_days_option
 	_expect(option.item_count == 3 and option.get_item_id(0) == 3 and option.get_item_id(1) == 6 and option.get_item_id(2) == 9,
 		"The dropdown offers exactly three, six, and nine days.")
-	var duration_text_width: float = option.get_theme_font("font").get_string_size("3 days", HORIZONTAL_ALIGNMENT_LEFT, -1, option.get_theme_font_size("font_size")).x
+	var duration_labels: Array[String] = []
+	for index: int in range(option.item_count):
+		duration_labels.append(option.get_item_text(index))
+	_expect(duration_labels == ["3D", "6D", "9D"], "The dropdown uses compact three-, six-, and nine-day labels.")
+	var duration_text_width: float = option.get_theme_font("font").get_string_size("3D", HORIZONTAL_ALIGNMENT_LEFT, -1, option.get_theme_font_size("font_size")).x
 	_expect(option.size.x < 64 and option.size.x >= duration_text_width + 8.0
 		and option.size.x <= duration_text_width + 22.0,
 		"The duration selector is compact while leaving room for its arrow.")
@@ -130,11 +134,18 @@ func _run() -> void:
 		"The Contract frame uses the available space after narrowing the selector.")
 	var popup_theme: Theme = option.get_popup().theme
 	var list_panel: StyleBox = popup_theme.get_stylebox("panel", "PopupMenu")
-	_expect(list_panel is StyleBoxTexture and (list_panel as StyleBoxTexture).texture == hub.contract_window.texture,
-		"The dropdown list uses the same cream panel asset as Contract.")
-	_expect(popup_theme.get_color("font_color", "PopupMenu") == hub.contract_current_label.get_theme_color("font_color")
-		and popup_theme.get_color("font_hover_color", "PopupMenu") == hub.contract_current_label.get_theme_color("font_color"),
-		"Dropdown items remain readable against the cream panel.")
+	var list_panel_texture: AtlasTexture = null
+	if list_panel is StyleBoxTexture:
+		list_panel_texture = (list_panel as StyleBoxTexture).texture as AtlasTexture
+	_expect(list_panel_texture != null
+		and list_panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_24x24.png")
+		and list_panel_texture.region == Rect2(1, 1, 24, 24),
+		"The dropdown list reuses the existing normal brown 24x24 panel style.")
+	var dropdown_text_color: Color = hub.get_node("Root").theme.get_color("font_color", "HudShortcutButton")
+	_expect(dropdown_text_color == Color.WHITE
+		and popup_theme.get_color("font_color", "PopupMenu") == dropdown_text_color
+		and popup_theme.get_color("font_hover_color", "PopupMenu") == dropdown_text_color,
+		"Dropdown items remain white in normal and hover states.")
 	var expected_arrow: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
 	expected_arrow.rotate_90(CLOCKWISE)
 	_expect(option.get_theme_icon("arrow") != null, "The dropdown has an arrow icon.")

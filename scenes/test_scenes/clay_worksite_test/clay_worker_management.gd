@@ -194,8 +194,7 @@ func _dismissal_payroll_warning(worker: WorkerData) -> String:
 	var remaining: int = maxi(0, expires - schedule.now())
 	if remaining == 0:
 		return "Contract expired after Day %d. Unused payment is not refunded." % worker.payroll_paid_until_day
-	return "Paid through Day %d.\n%d d %02d h %02d m remain.\nUnused payment is not refunded." % [worker.payroll_paid_until_day,
-		remaining / 1440, (remaining % 1440) / 60, remaining % 60]
+	return "Unused payment is not refunded."
 
 func _wage_text(worker: WorkerData) -> String:
 	if worker.payroll_start_day < 0:

@@ -12,6 +12,31 @@ func _expect(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 
+func _expect_fire_dialog_layout(state_name: String, expected_extra_text: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var panel: NinePatchRect = fixture.worker_control._confirmation_overlay.find_child(
+		"ConfirmDiscardPanel", true, false) as NinePatchRect
+	var label: Label = fixture.worker_control._confirm_label
+	var panel_rect: Rect2 = panel.get_global_rect() if panel != null else Rect2()
+	var label_rect: Rect2 = label.get_global_rect()
+	var no_rect: Rect2 = fixture.worker_control._confirm_no_button.get_global_rect()
+	var yes_rect: Rect2 = fixture.worker_control._confirm_yes_button.get_global_rect()
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
+	_expect(panel != null and panel.custom_minimum_size == Vector2(160, 80)
+		and panel.size == Vector2(160, 80), "%s Fire panel uses the compact 160x80 size." % state_name)
+	_expect(panel_rect.encloses(label_rect) and panel_rect.encloses(no_rect) and panel_rect.encloses(yes_rect)
+		and viewport_rect.encloses(panel_rect), "%s Fire content and controls fit inside the panel and viewport." % state_name)
+	_expect(label.get_theme_font_size("font_size") == 6
+		and label.get_line_count() <= label.get_visible_line_count()
+		and label_rect.end.y <= no_rect.position.y,
+		"%s Fire text stays readable at pixel font 6 without clipping or overlapping buttons." % state_name)
+	_expect(label.text.contains("Their assignment will end.")
+		and label.text.contains("Tools return to City Storage.")
+		and label.text.contains(expected_extra_text), "%s Fire keeps its expected information." % state_name)
+	_expect(fixture.worker_control._confirm_no_button.text == "No"
+		and fixture.worker_control._confirm_yes_button.text == "Yes", "%s Fire retains No and Yes." % state_name)
+
 func _run() -> void:
 	fixture = preload("res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.tscn").instantiate()
 	fixture.prepare_nightmare_test = false
@@ -282,11 +307,53 @@ func _run() -> void:
 	fixture.worker_control._show_manage(ids[1])
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	_expect(fixture.worker_control._confirmation_overlay.visible and WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "Fire asks before dismissing worker.")
-	_expect(fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
-		and fixture.worker_control._confirm_label.text.contains("remain."), "Fire explains prepaid time forfeiture before Yes.")
+	_expect(fixture.worker_control._confirm_label.text.contains("Their assignment will end.")
+		and fixture.worker_control._confirm_label.text.contains("Tools return to City Storage.")
+		and fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
+		and not fixture.worker_control._confirm_label.text.contains("Paid through Day")
+		and not fixture.worker_control._confirm_label.text.contains(" remain."),
+		"Fire keeps assignment, tool-return, and no-refund information without dynamic payroll rows.")
+	await _expect_fire_dialog_layout("Active prepaid", "Unused payment is not refunded.")
 	await _capture("worker-hub-remove.png")
 	fixture.worker_control._confirm_no_button.pressed.emit()
 	_expect(WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "No preserves assignment.")
+	var paid_from_day: int = prepaid.payroll_paid_from_day
+	prepaid.payroll_paid_from_day = -1
+	fixture.worker_control.manage_fire_button.pressed.emit()
+	await _expect_fire_dialog_layout("Unpaid", "No payment made yet.")
+	fixture.worker_control._confirm_no_button.pressed.emit()
+	_expect(WorkerDatabase.has_worker_data(ids[1]) and Inventory.items.get("shekel", 0) == wallet_before_fire
+		and CityStockManager.treasury_shekel == treasury_before_fire, "No preserves unpaid worker and both balances.")
+	prepaid.payroll_paid_from_day = paid_from_day
+	var original_day: int = TimeComponentManager.current_day
+	var original_hour: int = TimeComponentManager.current_hour
+	var original_minute: int = TimeComponentManager.current_minute
+	var paid_until_day: int = prepaid.payroll_paid_until_day
+	var payroll_start_day: int = prepaid.payroll_start_day
+	prepaid.payroll_paid_from_day = WorkerDatabase.MAX_CONTRACT_DAY - 6
+	prepaid.payroll_paid_until_day = WorkerDatabase.MAX_CONTRACT_DAY
+	prepaid.payroll_start_day = WorkerDatabase.MAX_CONTRACT_DAY - 6
+	TimeComponentManager.current_day = WorkerDatabase.MAX_CONTRACT_DAY + 2
+	TimeComponentManager.current_hour = 12
+	TimeComponentManager.current_minute = 0
+	fixture.worker_control.manage_fire_button.pressed.emit()
+	prepaid.payroll_paid_from_day = paid_from_day
+	prepaid.payroll_paid_until_day = paid_until_day
+	prepaid.payroll_start_day = payroll_start_day
+	TimeComponentManager.current_day = original_day
+	TimeComponentManager.current_hour = original_hour
+	TimeComponentManager.current_minute = original_minute
+	_expect(fixture.worker_control._confirm_label.text.contains("Contract expired after Day %d." % WorkerDatabase.MAX_CONTRACT_DAY)
+		and fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
+		and not fixture.worker_control._confirm_label.text.contains("Paid through Day")
+		and not fixture.worker_control._confirm_label.text.contains(" remain."),
+		"Expired Fire keeps the max-day expiry and no-refund notice without paid-time rows.")
+	await _expect_fire_dialog_layout("Expired at max day", "Contract expired after Day %d." % WorkerDatabase.MAX_CONTRACT_DAY)
+	_expect(fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded."),
+		"Expired Fire keeps its no-refund notice.")
+	fixture.worker_control._confirm_no_button.pressed.emit()
+	_expect(WorkerDatabase.has_worker_data(ids[1]) and Inventory.items.get("shekel", 0) == wallet_before_fire
+		and CityStockManager.treasury_shekel == treasury_before_fire, "No preserves expired worker and both balances.")
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	var escape := InputEventAction.new()
 	escape.action = "ui_cancel"

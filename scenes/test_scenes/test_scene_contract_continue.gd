@@ -6,6 +6,8 @@ const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
 const VALUES: Script = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 const CHECKPOINT_PATH: String = "user://contract_continue/checkpoint.json"
 const WORKER_ID: String = "initial_workshop_laborer"
+const HAULER_ID: String = "initial_worksite_hauler"
+const INITIAL_APPLICANTS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
 const LEGACY_PENDING_ID: String = "contract_legacy_pending_fixture"
 const WOOD_SITE: StringName = &"WoodSite"
 const START_HOUR: int = 10
@@ -110,6 +112,13 @@ func _on_session_started(_continued: bool) -> void:
 func _write_initial_checkpoint(city: Node, store: Node) -> void:
 	_check(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(),
 		"Real New Game begins without fixture wallet funds or hired workers.")
+	var legacy_hauler: CitizenData = CitizenManager.get_citizen(HAULER_ID)
+	_check(legacy_hauler != null and legacy_hauler.display_name == INITIAL_APPLICANTS.HAULER_NAME,
+		"New Game creates the initial Hauler with its individual name.")
+	if legacy_hauler == null:
+		return
+	# This fixture saves the exact old placeholder to exercise a pre-existing checkpoint.
+	legacy_hauler.display_name = "Worksite Hauler"
 	_set_clock(TimeComponentManager.current_day, START_HOUR, START_MINUTE)
 	Inventory.add_item("shekel", INITIAL_WALLET_GRANT)
 	var worker: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 1, 3)
@@ -141,6 +150,30 @@ func _write_initial_checkpoint(city: Node, store: Node) -> void:
 func _continue_and_renew_active(city: Node, store: Node) -> void:
 	_check(_assert_exact_continue(city, store, "initial contract"),
 		"Continue restores the initial contract snapshot exactly before fixture changes.")
+	var legacy_hauler: CitizenData = CitizenManager.get_citizen(HAULER_ID)
+	_check(legacy_hauler != null and legacy_hauler.display_name == "Worksite Hauler",
+		"Continue restores the legacy applicant without altering the checkpoint.")
+	if legacy_hauler == null:
+		return
+	var checkpoint_before: PackedByteArray = FileAccess.get_file_as_bytes(CHECKPOINT_PATH)
+	var hauler_profession: WorkerData.Profession = legacy_hauler.profession
+	var hauler_status: CitizenData.EmploymentStatus = legacy_hauler.employment_status
+	var counter_before: int = CitizenGenerator.counter_id
+	var wallet_before_board: int = Inventory.items.get("shekel", 0)
+	var board: JobBoardUI = preload("res://scenes/ui/job_board_ui/job_board_ui.tscn").instantiate()
+	city.add_child(board)
+	board.open()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(legacy_hauler.display_name == INITIAL_APPLICANTS.HAULER_NAME
+		and legacy_hauler.citizen_id == HAULER_ID and legacy_hauler.profession == hauler_profession
+		and legacy_hauler.employment_status == hauler_status and CitizenGenerator.counter_id == counter_before
+		and Inventory.items.get("shekel", 0) == wallet_before_board
+		and FileAccess.get_file_as_bytes(CHECKPOINT_PATH) == checkpoint_before,
+		"Opening Job Board resolves the exact old name without changing its ID, profession, status, wallet, generator counter, or disk checkpoint.")
+	board.close()
+	board.queue_free()
+	await get_tree().process_frame
 	var worker: WorkerData = WorkerDatabase.get_worker_data(WORKER_ID)
 	if worker == null:
 		_check(false, "Continue restores the immediately hired Laborer.")
@@ -182,6 +215,9 @@ func _continue_and_renew_active(city: Node, store: Node) -> void:
 func _continue_expire_and_write_legacy(city: Node, store: Node) -> void:
 	_check(_assert_exact_continue(city, store, "active renewal"),
 		"A separate Continue restores the renewed contract and all captured owners exactly.")
+	var restored_hauler: CitizenData = CitizenManager.get_citizen(HAULER_ID)
+	_check(restored_hauler != null and restored_hauler.display_name == INITIAL_APPLICANTS.HAULER_NAME,
+		"The corrected applicant name survives the next ordinary save and Continue.")
 	var worker: WorkerData = WorkerDatabase.get_worker_data(WORKER_ID)
 	if worker == null:
 		_check(false, "Continue restores the actively renewed Laborer.")

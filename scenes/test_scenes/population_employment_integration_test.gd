@@ -189,14 +189,24 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"JobBoardUI must display one applicant."
 		)
 		_expect(
+			job_board_ui.applicant_list.get_selected_items().is_empty()
+				and job_board_ui.hire_button.disabled
+				and job_board_ui.quote_amount_label.text.is_empty(),
+			"Opening JobBoardUI leaves the applicant unselected and does not show a contract quote."
+		)
+		_expect(
 			job_board_ui.applicant_list.get_item_text(0).contains(
 				applicant.display_name
 			),
 			"Applicant row must show the citizen name."
 		)
+		job_board_ui.cards[0].selection_button.set_pressed(true)
 		_expect(
-			job_board_ui.quote_amount_label.text == "2" and job_board_ui.quote_icon.visible,
-			"Job Board quote must show the selected three-day contract price with its currency icon."
+			job_board_ui.applicant_list.get_selected_items() == PackedInt32Array([0])
+				and job_board_ui.quote_amount_label.text == "2"
+				and job_board_ui.quote_icon.visible
+				and not job_board_ui.hire_button.disabled,
+			"Manually selecting the applicant enables Hire and shows the three-day contract price."
 		)
 
 		job_board_ui.hire_button.pressed.emit()
@@ -275,8 +285,8 @@ func _test_applicant_hiring_lifecycle() -> void:
 			"Hire button must be disabled when no applicants remain."
 		)
 		_expect(
-			job_board_ui.feedback_label.text.contains("Hired"),
-			"JobBoardUI must show successful hiring feedback."
+			job_board_ui.feedback_label.text.is_empty(),
+			"Successful hiring leaves no success message on JobBoardUI."
 		)
 
 		job_board_ui.close()
