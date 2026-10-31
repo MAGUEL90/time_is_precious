@@ -605,7 +605,7 @@ theme_override_constants/separation = 4
 alignment = 1
 
 [node name="RenewButton" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractActions"]
-custom_minimum_size = Vector2(52, 16)
+custom_minimum_size = Vector2(36, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6

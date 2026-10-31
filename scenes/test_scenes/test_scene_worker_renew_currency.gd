@@ -274,6 +274,22 @@ func _press_tab() -> void:
 	Input.parse_input_event(tab)
 	await get_tree().process_frame
 
+func _click_button(button: Button) -> void:
+	if DisplayServer.get_name() == "headless":
+		button.pressed.emit()
+		return
+	var target: Vector2 = button.get_global_rect().get_center()
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.position = target
+	click.global_position = target
+	click.pressed = true
+	get_viewport().push_input(click, true)
+	click = click.duplicate()
+	click.pressed = false
+	get_viewport().push_input(click, true)
+	await get_tree().process_frame
+
 func _run() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.current_day = 100
@@ -328,6 +344,17 @@ func _run() -> void:
 	var buttons: Array[Button] = hub.contract_day_buttons
 	_expect(buttons[0].has_focus(), "Opening Contract gives keyboard focus to the first duration button.")
 	_expect(hub.renew_price_label.text == "Price: 2" and hub.renew_price_icon.visible, "Contract displays the official three-day price and coin icon.")
+	var renew_rect: Rect2 = hub.manage_renew_button.get_global_rect()
+	var renew_actions: Control = hub.manage_renew_button.get_parent() as Control
+	var renew_font: Font = hub.manage_renew_button.get_theme_font("font")
+	var renew_font_size: int = hub.manage_renew_button.get_theme_font_size("font_size")
+	var renew_text_width: float = renew_font.get_string_size(hub.manage_renew_button.text,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, renew_font_size).x
+	_expect(renew_rect.size.is_equal_approx(Vector2(36.0, 16.0))
+		and renew_rect.size.x >= renew_text_width + 8.0
+		and absf(renew_rect.get_center().x - renew_actions.get_global_rect().get_center().x) <= 0.5
+		and renew_font_size == 6 and hub.manage_renew_button.theme_type_variation == &"HudShortcutButton",
+		"Renew stays centered, compact, and large enough for its existing pixel-font label.")
 	_expect(hub.contract_current_day_label.text == "Day 104"
 		and hub.contract_new_day_label.text == "Day 107",
 		"Contract shows the current exclusive expiry and the selected 3D renewal preview.")
@@ -647,9 +674,11 @@ func _run() -> void:
 	_expect(hub.renew_price_label.text == "Price: 10" and Inventory.items.get("shekel", 0) == 18
 		and worker.payroll_paid_until_day == original_end,
 		"A changed worker profession updates the quote from current WorkerData and requires review before payment.")
-	hub.manage_renew_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _click_button(hub.manage_renew_button)
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
-		"Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
+		"Clicking Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
 	_expect(hub.manage_renew_button.disabled, "A completed renewal disables Renew.")
 	buttons[2].grab_focus()
 	await _press_tab()
