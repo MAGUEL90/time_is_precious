@@ -48,43 +48,40 @@ func _expect_duration_selection(days: int) -> void:
 	_expect(hub._selected_contract_days == days, "%d days is the selected contract duration." % days)
 	for button: Button in hub.contract_day_buttons:
 		var selected: bool = int(button.get_meta("contract_days", -1)) == days
-		var marker: TextureRect = button.get_node_or_null("SelectionMarker") as TextureRect
 		_expect(button.button_pressed == selected,
 			"Only the %d-day duration button is pressed." % days)
-		_expect(marker != null and marker.visible == selected,
-			"Only the %d-day duration button shows its SelectionMarker." % days)
+		_expect(_duration_button_has_distinct_pressed_style(button),
+			"The %d-day duration button uses a pressed style that differs from normal." % int(button.get_meta("contract_days", -1)))
 
-func _expect_marker_pixels(button: Button, days: int) -> void:
+func _duration_button_has_distinct_pressed_style(button: Button) -> bool:
+	var normal_style: StyleBoxTexture = button.get_theme_stylebox("normal") as StyleBoxTexture
+	var pressed_style: StyleBoxTexture = button.get_theme_stylebox("pressed") as StyleBoxTexture
+	if normal_style == null or pressed_style == null:
+		return false
+	var normal_texture: AtlasTexture = normal_style.texture as AtlasTexture
+	var pressed_texture: AtlasTexture = pressed_style.texture as AtlasTexture
+	if normal_texture == null or pressed_texture == null:
+		return false
+	return normal_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_16x16.png") \
+		and pressed_texture.atlas == normal_texture.atlas \
+		and normal_texture.region.size.is_equal_approx(Vector2(16.0, 16.0)) \
+		and pressed_texture.region.size.is_equal_approx(Vector2(16.0, 16.0)) \
+		and normal_texture.region != pressed_texture.region
+
+func _expect_selected_color(selected_index: int) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	await RenderingServer.frame_post_draw
-	var marker: TextureRect = button.get_node("SelectionMarker")
-	var marker_position: Vector2 = marker.get_global_rect().position
-	var origin := Vector2i(roundi(marker_position.x), roundi(marker_position.y))
+	var selected: Button = hub.contract_day_buttons[selected_index]
+	var other: Button = hub.contract_day_buttons[(selected_index + 1) % hub.contract_day_buttons.size()]
 	var frame: Image = get_viewport().get_texture().get_image()
-	var source: Image = Image.load_from_file(ProjectSettings.globalize_path("res://assets/ui/ui_icon/checklist_icon.png"))
-	var opaque_pixels: int = 0
-	var pixels_match: bool = marker.visible and marker_position.is_equal_approx(Vector2(origin)) \
-		and source != null and source.get_size() == Vector2i(16, 16)
-	if pixels_match:
-		for y: int in range(16):
-			for x: int in range(16):
-				var source_pixel: Color = source.get_pixel(x, y)
-				if source_pixel.a < 1.0:
-					continue
-				opaque_pixels += 1
-				var point := origin + Vector2i(x, y)
-				if point.x < 0 or point.y < 0 or point.x >= frame.get_width() or point.y >= frame.get_height():
-					pixels_match = false
-					continue
-				var rendered_pixel: Color = frame.get_pixelv(point)
-				var tolerance: float = 1.0 / 255.0 + 0.00001
-				if absf(source_pixel.r - rendered_pixel.r) > tolerance \
-						or absf(source_pixel.g - rendered_pixel.g) > tolerance \
-						or absf(source_pixel.b - rendered_pixel.b) > tolerance:
-					pixels_match = false
-	_expect(pixels_match and opaque_pixels > 0,
-		"The selected %dD checklist retains every opaque source pixel within one color step." % days)
+	var selected_point := Vector2i(selected.get_global_rect().position) + Vector2i(3, 3)
+	var other_point := Vector2i(other.get_global_rect().position) + Vector2i(3, 3)
+	var selected_color: Color = frame.get_pixelv(selected_point)
+	var other_color: Color = frame.get_pixelv(other_point)
+	_expect(selected_color.r + 0.05 < other_color.r
+		and selected_color.g + 0.05 < other_color.g,
+		"The selected %dD button is visibly darker than an unselected button." % int(selected.get_meta("contract_days")))
 
 func _select_duration(days: int) -> void:
 	for button: Button in hub.contract_day_buttons:
@@ -97,9 +94,6 @@ func _capture_duration_geometry() -> Array[Rect2]:
 	var bounds: Array[Rect2] = [hub.contract_window.get_global_rect(), hub.renew_price_label.get_global_rect()]
 	for button: Button in hub.contract_day_buttons:
 		bounds.append(button.get_global_rect())
-		var marker: Control = button.get_node_or_null("SelectionMarker") as Control
-		if marker != null:
-			bounds.append(marker.get_global_rect())
 	return bounds
 
 func _capture_contract_range_geometry() -> Array[Rect2]:
@@ -137,9 +131,6 @@ func _capture_contract_range_content_geometry() -> Array[Rect2]:
 	]
 	for button: Button in hub.contract_day_buttons:
 		controls.append(button)
-		var marker: Control = button.get_node_or_null("SelectionMarker") as Control
-		if marker != null:
-			controls.append(marker)
 	var bounds: Array[Rect2] = []
 	for control: Control in controls:
 		var rect: Rect2 = control.get_global_rect()
@@ -368,42 +359,47 @@ func _run() -> void:
 		_expect(button.visible and button.text == duration_labels[index]
 			and int(button.get_meta("contract_days", -1)) == day_values[index],
 			"Duration %d is always visible with the correct label and value." % day_values[index])
-		_expect(button_rect.size.is_equal_approx(first_button_rect.size) and button_rect.size.x <= 40.0
-			and button_rect.size.is_equal_approx(Vector2(34.0, 34.0))
+		_expect(button_rect.size.is_equal_approx(first_button_rect.size)
+			and button_rect.size.is_equal_approx(Vector2(16.0, 16.0))
+			and button.scale.is_equal_approx(Vector2.ONE)
 			and button_rect.position.y >= title_rect.end.y
 			and button_rect.end.y <= quote_rect.position.y,
-			"Duration %d uses an equal 34x34 button between the title and price." % day_values[index])
+			"Duration %d uses an equal, native-size 16x16 button between the title and price." % day_values[index])
 		if index > 0:
 			var previous_rect: Rect2 = buttons[index - 1].get_global_rect()
 			_expect(button_rect.position.x >= previous_rect.end.x
 				and is_equal_approx(button_rect.position.y, previous_rect.position.y),
 				"Duration buttons form one non-overlapping horizontal row.")
-		_expect(button.get_theme_font_size("font_size") == 6
+		_expect(button.theme_type_variation == &"WorkshopSquareButton16"
+			and button.toggle_mode
+			and button.alignment == HORIZONTAL_ALIGNMENT_CENTER
+			and button.get_theme_font_size("font_size") == 6
 			and button.get_theme_color("font_color").is_equal_approx(Color.WHITE)
 			and button.get_theme_color("font_pressed_color").is_equal_approx(Color.WHITE),
-			"Duration %d uses the white size-6 UI font." % day_values[index])
-		var marker: TextureRect = button.get_node_or_null("SelectionMarker") as TextureRect
-		var marker_rect: Rect2 = marker.get_global_rect() if marker != null else Rect2()
-		_expect(marker != null
-			and marker.texture == preload("res://assets/ui/ui_icon/checklist_icon.png")
-			and marker.texture.get_size().is_equal_approx(Vector2(16.0, 16.0))
-			and marker.size.is_equal_approx(Vector2(16.0, 16.0))
-			and marker.scale.is_equal_approx(Vector2.ONE)
-			and marker_rect.size.is_equal_approx(Vector2(16.0, 16.0))
-			and marker.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
-			and button_rect.encloses(marker_rect),
-			"Duration %d shows the original 16x16 checklist at native size with nearest filtering inside the button." % day_values[index])
-		var panel_style: StyleBox = button.get_theme_stylebox("normal")
-		var panel_texture: AtlasTexture = (panel_style as StyleBoxTexture).texture as AtlasTexture if panel_style is StyleBoxTexture else null
-		_expect(panel_texture != null
-			and panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_34x34.png")
-			and panel_texture.region.size == Vector2(34.0, 34.0),
-			"Duration %d reuses the existing brown 34x34 panel asset." % day_values[index])
-		var text_width: float = button.get_theme_font("font").get_string_size(button.text,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, button.get_theme_font_size("font_size")).x
-		var text_start: float = button_rect.end.x - panel_style.get_content_margin(SIDE_RIGHT) - text_width
-		_expect(marker_rect.end.x <= text_start,
-			"Duration %d keeps the full checklist clear of its label." % day_values[index])
+			"Duration %d uses the centered white size-6 UI font." % day_values[index])
+		var normal_panel_style: StyleBox = button.get_theme_stylebox("normal")
+		var normal_panel_texture: AtlasTexture = (normal_panel_style as StyleBoxTexture).texture as AtlasTexture \
+			if normal_panel_style is StyleBoxTexture else null
+		_expect(normal_panel_texture != null
+			and normal_panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_16x16.png")
+			and normal_panel_texture.region.size.is_equal_approx(Vector2(16.0, 16.0)),
+			"Duration %d uses the existing 16x16 brown panel style." % day_values[index])
+		var font: Font = button.get_theme_font("font")
+		var font_size: int = button.get_theme_font_size("font_size")
+		var text_size: Vector2 = font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		var horizontal_content_size: float = -1.0
+		var vertical_content_size: float = -1.0
+		if normal_panel_style != null:
+			horizontal_content_size = button_rect.size.x - normal_panel_style.get_content_margin(SIDE_LEFT) \
+				- normal_panel_style.get_content_margin(SIDE_RIGHT)
+			vertical_content_size = button_rect.size.y - normal_panel_style.get_content_margin(SIDE_TOP) \
+				- normal_panel_style.get_content_margin(SIDE_BOTTOM)
+		_expect(not button.clip_text and text_size.x <= horizontal_content_size
+			and text_size.y <= vertical_content_size,
+			"Duration %d label fits inside 16x16 without clipping or text scaling." % day_values[index])
+		_expect(button.icon == null and button.get_node_or_null("SelectionMarker") == null
+			and button.find_children("*", "TextureRect", true, false).is_empty(),
+			"Duration %d has no marker or icon." % day_values[index])
 	_expect(hub.contract_window.find_children("*", "OptionButton", true, false).is_empty(),
 		"Contract no longer has a duration dropdown.")
 	_expect(hub.contract_window.find_children("*", "PopupMenu", true, false).is_empty(),
@@ -425,7 +421,7 @@ func _run() -> void:
 	_expect(buttons[0].has_focus(), "Tab remains within Contract and returns to 3D.")
 	_expect_duration_selection(3)
 	var original_geometry: Array[Rect2] = _capture_duration_geometry()
-	await _expect_marker_pixels(buttons[0], 3)
+	await _expect_selected_color(0)
 	await _capture("worker-contract-day-3")
 	buttons[1].grab_focus()
 	var accept := InputEventKey.new()
@@ -442,7 +438,7 @@ func _run() -> void:
 	_expect(Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == 103,
 		"Changing contract length does not charge the wallet or alter the current contract.")
 	_expect_duration_geometry(original_geometry, 6)
-	await _expect_marker_pixels(buttons[1], 6)
+	await _expect_selected_color(1)
 	await _capture("worker-contract-day-6")
 	if DisplayServer.get_name() == "headless":
 		_select_duration(9)
@@ -473,7 +469,7 @@ func _run() -> void:
 		and worker.payroll_paid_until_day == 103, "Nine-day selection, including a repeated click, remains free and shows the correct quote.")
 	_expect_duration_selection(9)
 	_expect_duration_geometry(original_geometry, 9)
-	await _expect_marker_pixels(buttons[2], 9)
+	await _expect_selected_color(2)
 	await _capture("worker-contract-day-9")
 	var original_panel_position: Vector2 = hub.contract_window.position
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size

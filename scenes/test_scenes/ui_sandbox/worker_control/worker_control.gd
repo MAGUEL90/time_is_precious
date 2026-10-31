@@ -865,8 +865,6 @@ func _update_contract_day_selection() -> void:
 	for button: Button in contract_day_buttons:
 		var selected: bool = int(button.get_meta("contract_days", -1)) == _selected_contract_days
 		button.set_pressed_no_signal(selected)
-		var marker: TextureRect = button.get_node("SelectionMarker")
-		marker.visible = selected
 
 
 func _on_contract_days_selected(days: int) -> void:
