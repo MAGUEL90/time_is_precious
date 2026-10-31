@@ -182,13 +182,22 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 		and worker_control._fire_block_feedback.get_theme_font_size("font_size") == 6,
 		"%s feedback uses the same UI font at size 6." % capture_name)
 	var feedback_color: Color = worker_control._fire_block_feedback.get_theme_color("font_color")
-	_expect(feedback_color.r > feedback_color.g and feedback_color.r > feedback_color.b,
-		"%s feedback uses a red font." % capture_name)
+	var warning_label: Label = worker_control.get_node(
+		"Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/FeedbackArea/CartRequiredLabel")
+	var warning_color: Color = warning_label.get_theme_color("font_color")
+	_expect(warning_color == Color(1.0, 0.45, 0.4, 1.0) and feedback_color == warning_color,
+		"%s feedback matches the existing Cart Required warning color." % capture_name)
+	_expect(not worker_control._fire_block_feedback.has_theme_color_override("font_outline_color")
+		and not worker_control._fire_block_feedback.has_theme_constant_override("outline_size"),
+		"%s feedback has no added text outline." % capture_name)
 	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
-	_expect(popup_rect.encloses(feedback_rect) and feedback_rect.position.y >= popup_rect.position.y + 2.0
-		and feedback_rect.end.y <= fire_rect.position.y,
-		"%s feedback is above Fire with clearance from the popup border." % capture_name)
+	_expect(popup_rect.encloses(feedback_rect) and feedback_rect.position.x >= popup_rect.position.x + 2.0
+		and feedback_rect.end.x <= popup_rect.end.x - 2.0
+		and feedback_rect.position.y >= popup_rect.position.y + 2.0
+		and feedback_rect.end.y <= fire_rect.position.y - 1.0
+		and not feedback_rect.intersects(fire_rect),
+		"%s wrapped feedback stays within the popup, clear of its border and Fire." % capture_name)
 	await _capture(capture_name + ".png")
 	var exits_before: int = fire_hover_exit_events
 	await _move_mouse_to(Vector2(3, 3))

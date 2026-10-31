@@ -192,9 +192,9 @@ func _check_unfunded_renew() -> void:
 	var old_until: int = worker.payroll_paid_until_day
 	var hub: WorkerControlUI = await _open_manage()
 	await press(hub.manage_contract_button)
-	await press(hub.contract_days_3_button)
+	var selected_days: int = _select_worker_contract_days(hub, 3)
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
-	_expect(hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % price
+	_expect(selected_days == 3 and hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % price
 		and hub.renew_price_icon.visible, "The unfunded quote still shows the exact three-day price.")
 	await press(hub.manage_renew_button)
 	insufficient_checked = int(Inventory.items.get("shekel", 0)) == 0 \
@@ -287,17 +287,18 @@ func _renew_from_proceeds(price: int) -> void:
 	var expected_until: int = (old_until if was_active else TimeComponentManager.current_day) + 3
 	var hub: WorkerControlUI = await _open_manage()
 	await press(hub.manage_contract_button)
-	await press(hub.contract_days_3_button)
-	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+	var selected_days: int = _select_worker_contract_days(hub, 3)
+	_expect(selected_days == 3 and hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
 		"Contract displays the exact three-day price earned from the worker's sale.")
-	await press(hub.contract_back_button)
+	await press(hub.contract_close_button)
 	_expect(int(Inventory.items.get("shekel", 0)) == wallet_before
+		and CityStockManager.treasury_shekel == cash_before
 		and worker.payroll_paid_until_day == old_until and hub.manage_window.visible
 		and not hub.contract_window.visible,
-		"Back cancels the funded renewal without spending or extending its term.")
+		"Closing Contract returns to Manage without spending or extending its term.")
 	await press(hub.manage_contract_button)
-	await press(hub.contract_days_3_button)
-	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+	selected_days = _select_worker_contract_days(hub, 3)
+	_expect(selected_days == 3 and hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
 		"Reopened Contract retains the exact three-day quote before purchase.")
 	await _capture_proceeds("worker-contract")
 	await press(hub.manage_renew_button)

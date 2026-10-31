@@ -45,15 +45,26 @@ func _expect_contract_popup_fits(state_name: String) -> void:
 		"%s feedback and Renew remain inside Contract and the viewport." % state_name)
 
 func _expect_duration_selection(days: int) -> void:
-	var buttons: Array[Button] = [hub.contract_days_3_button, hub.contract_days_6_button, hub.contract_days_9_button]
-	var selected_count: int = 0
-	for button: Button in buttons:
-		var expected_selected: bool = button.text == "%d days" % days
-		if button.button_pressed:
-			selected_count += 1
-		_expect(button.button_pressed == expected_selected, "%d days is the only selected duration." % days)
-		_expect((button.icon != null) == expected_selected, "%d days has the only checklist indicator." % days)
-	_expect(selected_count == 1, "Exactly one contract duration is selected.")
+	_expect(hub.contract_days_option.get_selected_id() == days, "%d days is selected in the dropdown." % days)
+
+func _select_duration(days: int) -> void:
+	var option: OptionButton = hub.contract_days_option
+	var index: int = option.get_item_index(days)
+	_expect(index >= 0, "%d days is available in the dropdown." % days)
+	if index >= 0:
+		option.select(index)
+		option.item_selected.emit(index)
+
+func _press_tab() -> void:
+	var tab := InputEventKey.new()
+	tab.keycode = KEY_TAB
+	tab.pressed = true
+	Input.parse_input_event(tab)
+	await get_tree().process_frame
+	tab = tab.duplicate()
+	tab.pressed = false
+	Input.parse_input_event(tab)
+	await get_tree().process_frame
 
 func _run() -> void:
 	TimeComponentManager.set_process(false)
@@ -98,33 +109,91 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(not hub.manage_window.visible and hub.contract_window.visible, "Contract opens in its own panel.")
-	_expect(hub.contract_days_3_button.has_focus(), "Opening Contract gives keyboard focus to the first duration.")
+	_expect(hub.contract_days_option.has_focus(), "Opening Contract gives keyboard focus to the duration dropdown.")
 	_expect(hub.renew_price_label.text == "Price: 2" and hub.renew_price_icon.visible, "Contract displays the official three-day price and coin icon.")
-	_expect(hub.contract_current_label.text.contains("Paid through Day %d" % worker.payroll_paid_until_day)
-		and hub.contract_current_label.text.contains("Current term: 3 days"), "Contract panel shows the current paid-through day and term.")
+	_expect(hub.contract_current_label.text == "Current contract ends:\nDay 104, 07:00",
+		"Contract shows the actual new-contract expiry, including its hour.")
 	var contract_title: Label = hub.get_node("Root/ContractWindow/Margin/MainVBox/HeaderLabel")
 	_expect(contract_title.get_theme_font_size("font_size") == 12
 		and hub.contract_current_label.get_theme_font_size("font_size") == 6, "Contract title and details retain their approved pixel sizes.")
 	_expect(contract_title.get_theme_color("font_color") == hub.renew_price_label.get_theme_color("font_color")
 		and hub.contract_current_label.get_theme_color("font_color") == hub.renew_price_label.get_theme_color("font_color"),
 		"Contract title and details use the same brown text color as the price.")
-	_expect(hub.contract_days_3_button.text == "3 days" and hub.contract_days_6_button.text == "6 days"
-		and hub.contract_days_9_button.text == "9 days" and hub.contract_days_9_button.text.find("12") == -1,
-		"Contract offers exactly three, six, and nine days.")
+	var option: OptionButton = hub.contract_days_option
+	_expect(option.item_count == 3 and option.get_item_id(0) == 3 and option.get_item_id(1) == 6 and option.get_item_id(2) == 9,
+		"The dropdown offers exactly three, six, and nine days.")
+	var expected_arrow: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
+	expected_arrow.rotate_90(CLOCKWISE)
+	_expect(option.get_theme_icon("arrow") != null, "The dropdown has an arrow icon.")
+	if DisplayServer.get_name() != "headless":
+		_expect(option.get_theme_icon("arrow").get_image().get_data() == expected_arrow.get_data(),
+			"The dropdown arrow uses the existing rotated right-arrow asset.")
+	hub.contract_close_button.grab_focus()
+	_expect(hub.contract_close_button.has_focus(), "The Close icon is reachable by keyboard focus.")
+	option.grab_focus()
+	await _press_tab()
+	_expect(hub.manage_renew_button.has_focus(), "Tab moves from the dropdown to Renew.")
+	await _press_tab()
+	_expect(hub.contract_close_button.has_focus(), "Tab moves from Renew to Close.")
+	await _press_tab()
+	_expect(option.has_focus(), "Tab remains within Contract and returns to the dropdown.")
 	_expect_duration_selection(3)
 	await _capture("worker-contract-day-3")
-	hub.contract_days_6_button.pressed.emit()
+	option.show_popup()
+	await get_tree().process_frame
+	_expect(option.get_popup().visible and Inventory.items.get("shekel", 0) == wallet_before_contract,
+		"Opening the duration dropdown makes no transaction.")
+	await _capture("worker-contract-dropdown")
+	var dropdown_cancel := InputEventAction.new()
+	dropdown_cancel.action = "ui_cancel"
+	dropdown_cancel.pressed = true
+	get_viewport().push_input(dropdown_cancel)
+	await get_tree().process_frame
+	_expect(not option.get_popup().visible and hub.contract_window.visible,
+		"Cancel closes the dropdown before closing Contract.")
+	option.show_popup()
+	await get_tree().process_frame
+	option.get_popup().set_focused_item(1)
+	var dropdown_accept := InputEventKey.new()
+	dropdown_accept.keycode = KEY_ENTER
+	dropdown_accept.pressed = true
+	Input.parse_input_event(dropdown_accept)
+	await get_tree().process_frame
+	_expect(option.get_selected_id() == 6 and not option.get_popup().visible,
+		"Keyboard selection chooses six days and closes the dropdown.")
 	_expect(hub.renew_price_label.text == "Price: 4" and hub.renew_price_icon.visible, "Six days shows the official six-day price and coin icon.")
 	_expect(Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == 103,
 		"Changing contract length does not charge the wallet or alter the current contract.")
 	_expect_duration_selection(6)
 	await _capture("worker-contract-day-6")
-	hub.contract_days_9_button.pressed.emit()
+	if DisplayServer.get_name() == "headless":
+		_select_duration(9)
+	else:
+		option.show_popup()
+		await get_tree().process_frame
+		var popup: PopupMenu = option.get_popup()
+		var target: Vector2 = Vector2(popup.position) + Vector2(popup.size.x * 0.5, popup.size.y * 0.84)
+		var motion := InputEventMouseMotion.new()
+		motion.position = target
+		motion.global_position = target
+		get_viewport().push_input(motion, true)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.position = target
+		click.global_position = target
+		click.pressed = true
+		get_viewport().push_input(click, true)
+		click = click.duplicate()
+		click.pressed = false
+		get_viewport().push_input(click, true)
+		await get_tree().process_frame
+		_expect(option.get_selected_id() == 9 and not popup.visible,
+			"Mouse selection chooses nine days and closes the dropdown.")
 	_expect(hub.renew_price_label.text == "Price: 6" and Inventory.items.get("shekel", 0) == wallet_before_contract
 		and worker.payroll_paid_until_day == 103, "Nine-day quote is accurate and changing duration remains free.")
 	_expect_duration_selection(9)
 	await _capture("worker-contract-day-9")
-	hub.contract_days_6_button.pressed.emit()
+	_select_duration(6)
 	_expect_duration_selection(6)
 	_expect(hub.renew_price_icon.tooltip_text.is_empty() and hub.renew_price_icon.accessibility_name == "Shekel", "The currency icon has no tooltip and retains its accessible name.")
 	for control: Control in hub.find_children("*", "Control", true, false):
@@ -133,11 +202,53 @@ func _run() -> void:
 	_expect(hub.renew_price_label.size.x >= text_width and hub.renew_price_label.size.y <= 12, "The renewal price fits on one line.")
 	_expect(hub.renew_price_icon.get_global_rect().position.x - hub.renew_price_label.get_global_rect().end.x <= 3.0, "The currency icon stays beside the price.")
 	_expect(get_viewport().get_visible_rect().encloses(hub.contract_window.get_global_rect()) and hub.contract_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Contract panel and Renew button stay within their frames.")
+	_expect(hub.contract_current_label.get_global_rect().position.y >= hub.manage_renew_button.get_global_rect().end.y
+		and hub.contract_window.get_global_rect().encloses(hub.contract_current_label.get_global_rect()),
+		"The current expiry note is below Renew and inside the Contract panel.")
+	_expect(hub.contract_close_button.get_global_rect().position.y < hub.manage_renew_button.get_global_rect().position.y
+		and hub.contract_window.get_global_rect().encloses(hub.contract_close_button.get_global_rect()),
+		"Close is within the upper edge of Contract.")
 	await _capture("worker-contract-panel")
+	var ordinary_end: int = worker.payroll_paid_until_day
+	worker.payroll_paid_until_day = WorkerDatabase.MAX_CONTRACT_DAY
+	hub._update_contract_controls(_worker_rows()[0])
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(hub.contract_current_label.text == "Current contract ends:\nDay 100000001, 07:00"
+		and hub.contract_window.get_global_rect().encloses(hub.contract_current_label.get_global_rect())
+		and get_viewport().get_visible_rect().encloses(hub.contract_window.get_global_rect()),
+		"The longest supported expiry remains inside the panel and viewport.")
+	worker.payroll_paid_until_day = ordinary_end
+	hub._update_contract_controls(_worker_rows()[0])
+	TimeComponentManager.current_day = 104
+	TimeComponentManager.current_hour = 6
+	TimeComponentManager.current_minute = 59
+	_expect(not worker.is_payroll_blocked() and hub._current_contract_text(worker) == "Current contract ends:\nDay 104, 07:00",
+		"Active new contract displays its exclusive 07:00 expiry.")
+	TimeComponentManager.current_hour = 7
+	TimeComponentManager.current_minute = 0
+	_expect(worker.is_payroll_blocked() and hub._current_contract_text(worker) == "Current contract ends:\nDay 104, 07:00",
+		"Expired contract retains its actual expiry time.")
+	worker.payroll_contract_days = 0
+	TimeComponentManager.current_hour = 7
+	TimeComponentManager.current_minute = 59
+	_expect(not worker.is_payroll_blocked() and hub._current_contract_text(worker) == "Current contract ends:\nDay 104, 08:00",
+		"Legacy contracts display the distinct 08:00 expiry.")
+	TimeComponentManager.current_hour = 8
+	TimeComponentManager.current_minute = 0
+	_expect(worker.is_payroll_blocked(), "The legacy contract expires at 08:00.")
+	worker.payroll_contract_days = 3
+	var paid_from_before: int = worker.payroll_paid_from_day
+	worker.payroll_paid_from_day = -1
+	_expect(hub._current_contract_text(worker) == "Current contract ends:\n-", "Unpaid contracts do not invent an expiry.")
+	worker.payroll_paid_from_day = paid_from_before
+	TimeComponentManager.current_day = 100
+	TimeComponentManager.current_hour = 8
+	TimeComponentManager.current_minute = 1
 	var original_end: int = worker.payroll_paid_until_day
-	hub.contract_back_button.pressed.emit()
+	hub.contract_close_button.pressed.emit()
 	_expect(not hub.contract_window.visible and hub.manage_window.visible and Inventory.items.get("shekel", 0) == wallet_before_contract
-		and worker.payroll_paid_until_day == original_end, "Back cancels the contract panel without changing wallet or contract.")
+		and worker.payroll_paid_until_day == original_end, "Close dismisses the contract panel without changing wallet or contract.")
 	hub.manage_contract_button.pressed.emit()
 	var cancel_event := InputEventAction.new()
 	cancel_event.action = "ui_cancel"
@@ -148,7 +259,7 @@ func _run() -> void:
 		and Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == original_end,
 		"Keyboard cancel returns focus to Contract without changing wallet or contract.")
 	hub.manage_contract_button.pressed.emit()
-	hub.contract_days_6_button.pressed.emit()
+	_select_duration(6)
 	_expect(hub.renew_price_label.text == "Price: 4", "Reopening Contract presents a fresh official quote.")
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3
 	hub.manage_renew_button.pressed.emit()
@@ -167,10 +278,14 @@ func _run() -> void:
 	hub.manage_renew_button.pressed.emit()
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
+	_expect(hub.manage_renew_button.disabled, "A completed renewal disables Renew.")
+	option.grab_focus()
+	await _press_tab()
+	_expect(hub.contract_close_button.has_focus(), "Tab skips disabled Renew and reaches Close.")
 	hub.manage_renew_button.pressed.emit()
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"A repeated Renew click cannot charge or extend the same selection twice.")
-	hub.contract_days_3_button.pressed.emit()
+	_select_duration(3)
 	Inventory.items["shekel"] = 1
 	var paid_end_after_renewal: int = worker.payroll_paid_until_day
 	hub.manage_renew_button.pressed.emit()
@@ -181,7 +296,7 @@ func _run() -> void:
 	await _capture("worker-contract-not-enough-funds")
 	Inventory.items["shekel"] = 8
 	_expect(not hub.manage_renew_button.disabled, "A failed payment keeps the contract open for a later retry.")
-	hub.contract_back_button.pressed.emit()
+	hub.contract_close_button.pressed.emit()
 	hub._request_remove(_worker_rows()[0])
 	_expect(hub._confirmation_overlay.visible and hub.find_child("RenewalCostRow", true, false) == null, "Fire confirmation never shows renewal price.")
 	hub._confirm_no_button.pressed.emit()

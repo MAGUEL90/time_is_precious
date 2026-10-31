@@ -84,21 +84,21 @@ func _run() -> void:
 			return
 		await press(manage_button)
 		await press(hub.manage_contract_button)
-		await press(hub.contract_days_6_button)
+		var selected_days: int = _select_review_contract_days(hub, 6)
 		var renewal_price: int = WorkerDatabase.get_contract_price(worker.profession, 6)
-		_expect(hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % renewal_price
+		_expect(selected_days == 6 and hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % renewal_price
 			and hub.renew_price_icon.visible, "Naram's six-day Contract shows the exact renewal price")
 		await _capture("naram-contract")
 		var contract_position: Vector2 = hub.contract_window.position
 		var old_until: int = worker.payroll_paid_until_day
-		await press(hub.contract_back_button)
+		await press(hub.contract_close_button)
 		_expect(not hub.contract_window.visible and hub.manage_window.visible
 			and Inventory.items.get("shekel", 0) == before and worker.payroll_paid_until_day == old_until
 			and CityStockManager.treasury_shekel == treasury,
-			"Back cancels Naram's renewal without spending or extending it")
+			"Closing Contract returns to Manage without spending or extending Naram's renewal")
 		await press(hub.manage_contract_button)
-		await press(hub.contract_days_6_button)
-		_expect(hub.renew_price_label.text == "Price: %d" % renewal_price and hub.renew_price_icon.visible,
+		selected_days = _select_review_contract_days(hub, 6)
+		_expect(selected_days == 6 and hub.renew_price_label.text == "Price: %d" % renewal_price and hub.renew_price_icon.visible,
 			"Reopened Contract still quotes the exact six-day price")
 		await press(hub.manage_renew_button)
 		var wallet_after_renew: int = int(Inventory.items.get("shekel", 0))
@@ -140,3 +140,12 @@ func _capture(label: String) -> void:
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		_expect(get_viewport().get_texture().get_image().save_png("user://contract_ui/" + label + ".png") == OK, "Save " + label)
+
+func _select_review_contract_days(hub: WorkerControlUI, days: int) -> int:
+	var option: OptionButton = hub.contract_days_option
+	var index: int = option.get_item_index(days)
+	if index < 0:
+		return -1
+	option.select(index)
+	option.item_selected.emit(index)
+	return option.get_selected_id()

@@ -335,22 +335,23 @@ func renew_expired() -> void:
 		"Manage opens the worker's Contract popup")
 	if stopped:
 		return
-	await press(hub.contract_days_3_button)
+	var selected_days: int = _select_worker_contract_days(hub, 3)
 	var wallet_before: int = int(Inventory.items.get("shekel", 0))
 	var cash_before: int = CityStockManager.treasury_shekel
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	var signals_before: int = settlements.size()
-	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+	_expect(selected_days == 3 and hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
 		"The three-day renewal displays the exact wallet quote")
 	await _capture("worker-contract")
-	await press(hub.contract_back_button)
+	await press(hub.contract_close_button)
 	_expect(not hub.contract_window.visible and hub.manage_window.visible
 		and int(Inventory.items.get("shekel", 0)) == wallet_before
+		and CityStockManager.treasury_shekel == cash_before
 		and worker.is_payroll_blocked() and settlements.size() == signals_before,
-		"Back cancels renewal without spending or extending the expired contract")
+		"Closing Contract returns to Manage without spending or extending the expired contract")
 	await press(hub.manage_contract_button)
-	await press(hub.contract_days_3_button)
-	_expect(hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
+	selected_days = _select_worker_contract_days(hub, 3)
+	_expect(selected_days == 3 and hub.renew_price_label.text == "Price: %d" % price and hub.renew_price_icon.visible,
 		"Reopening Contract retains the correct three-day renewal quote")
 	await press(hub.manage_renew_button)
 	renewal_observed = int(Inventory.items.get("shekel", 0)) == wallet_before - price \
@@ -371,6 +372,15 @@ func renew_expired() -> void:
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Closing Worker Hub returns to the live world")
 	measure("renewed")
+
+func _select_worker_contract_days(hub: WorkerControlUI, days: int) -> int:
+	var option: OptionButton = hub.contract_days_option
+	var index: int = option.get_item_index(days)
+	if index < 0:
+		return -1
+	option.select(index)
+	option.item_selected.emit(index)
+	return option.get_selected_id()
 
 func hire() -> void:
 	while not stopped:

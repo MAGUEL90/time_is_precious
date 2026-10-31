@@ -303,24 +303,24 @@ func _renew_through_hub(hub: WorkerControlUI, worker_id: String, ui: RaidUI, mer
 	await get_tree().process_frame
 	_check(hub.contract_window.visible and not hub.manage_window.visible,
 		"Contract opens from Manage for %s." % worker_id)
-	hub.contract_days_3_button.pressed.emit()
+	var selected_days: int = _select_hub_contract_days(hub, CONTRACT_DAYS)
 	var expected_price: int = WorkerDatabase.get_contract_price(worker.profession, CONTRACT_DAYS)
-	_check(hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
+	_check(selected_days == CONTRACT_DAYS and hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
 		"The three-day quote for %s matches WorkerDatabase exactly." % worker_id)
 	_check(not hub.manage_renew_button.disabled, "The funded renewal control is enabled.")
-	hub.contract_back_button.pressed.emit()
+	hub.contract_close_button.pressed.emit()
 	await get_tree().process_frame
 	_check(not hub.contract_window.visible and hub.manage_window.visible
 		and int(Inventory.items.get("shekel", 0)) == wallet_before
 		and worker.payroll_paid_until_day == expiry_before,
-		"Back cancels %s renewal without spending wallet funds or changing expiry." % worker_id)
+		"Closing Contract returns to Manage without spending funds or changing %s expiry." % worker_id)
 	_check(ui._unread_notification and ui._notice_emergency and _is_red(ui.notification_button.modulate)
 		and _has_worker_fingerprint(ui, worker_id, "expired"),
 		"Cancel leaves %s expiry unread and red." % worker_id)
 	hub.manage_contract_button.pressed.emit()
 	await get_tree().process_frame
-	hub.contract_days_3_button.pressed.emit()
-	_check(hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
+	selected_days = _select_hub_contract_days(hub, CONTRACT_DAYS)
+	_check(selected_days == CONTRACT_DAYS and hub.renew_price_label.text == "Price: %d" % expected_price and hub.renew_price_icon.visible,
 		"Reopened Contract keeps the exact three-day quote for %s." % worker_id)
 	_check(not hub.manage_renew_button.disabled, "The confirmed renewal action is available after selecting its duration.")
 	hub.manage_renew_button.pressed.emit()
@@ -364,6 +364,16 @@ func _renew_through_hub(hub: WorkerControlUI, worker_id: String, ui: RaidUI, mer
 	else:
 		_check(not ui._unread_notification and not ui._notice_emergency and _is_white(ui.notification_button.modulate),
 			"After a frame, the worker-only indicator remains normal.")
+
+
+func _select_hub_contract_days(hub: WorkerControlUI, days: int) -> int:
+	var option: OptionButton = hub.contract_days_option
+	var index: int = option.get_item_index(days)
+	if index < 0:
+		return -1
+	option.select(index)
+	option.item_selected.emit(index)
+	return option.get_selected_id()
 
 
 func _read_partial_after_continue(city: Node, store: Node, ui: RaidUI, merchant: Node, raid_state: Node) -> void:

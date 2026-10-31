@@ -231,15 +231,24 @@ func _run() -> void:
 	var manage_rect: Rect2 = fixture.worker_control.manage_window.get_global_rect()
 	var manage_actions: VBoxContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin/MainVBox/Actions")
 	var action_names: Array[String] = []
+	var first_action_size: Vector2 = fixture.worker_control.manage_fire_button.size
 	for action: Node in manage_actions.get_children():
 		action_names.append(action.name)
+		var action_button: Button = action as Button
+		if action_button != null:
+			_expect(action_button.size == first_action_size, "%s uses the shared Manage button dimensions." % action.name)
+	var contract_text_width: float = fixture.worker_control.manage_contract_button.get_theme_font("font").get_string_size(
+		"Contract", HORIZONTAL_ALIGNMENT_LEFT, -1, fixture.worker_control.manage_contract_button.get_theme_font_size("font_size")).x
 	_expect(get_viewport().get_visible_rect().encloses(manage_rect)
 		and manage_rect.encloses(fixture.worker_control.manage_fire_button.get_global_rect())
 		and manage_rect.encloses(fixture.worker_control.manage_contract_button.get_global_rect())
+		and first_action_size.x > contract_text_width
+		and first_action_size.x - contract_text_width <= 12.0
+		and manage_rect.size.x <= 64.0 and manage_rect.size.y <= 100.0
 		and action_names == ["FireButton", "GotoButton", "DetailsButton", "ContractButton"]
 		and fixture.worker_control.manage_goto_button.text == "Go To"
 		and not fixture.worker_control.contract_window.visible,
-		"Manage contains Fire, Go To, Details, Contract in order and stays within the viewport.")
+		"Compact Manage buttons share a size slightly wider than Contract, stay ordered, and fit the viewport.")
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true

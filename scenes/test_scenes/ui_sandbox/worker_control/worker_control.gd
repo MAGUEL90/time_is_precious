@@ -52,13 +52,11 @@ var can_open: Callable = Callable()
 @onready var manage_details_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/DetailsButton
 @onready var manage_contract_button: Button = $Root/ManageWindow/Margin/MainVBox/Actions/ContractButton
 @onready var contract_current_label: Label = $Root/ContractWindow/Margin/MainVBox/CurrentContractLabel
-@onready var contract_days_3_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days3Button
-@onready var contract_days_6_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days6Button
-@onready var contract_days_9_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractDays/Days9Button
+@onready var contract_days_option: OptionButton = $Root/ContractWindow/Margin/MainVBox/ContractDays/DaysOption
 @onready var renew_price_label: Label = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/RenewPriceLabel
 @onready var renew_price_icon: TextureRect = $Root/ContractWindow/Margin/MainVBox/RenewPriceRow/ShekelIcon
 @onready var contract_feedback_label: Label = $Root/ContractWindow/Margin/MainVBox/FeedbackLabel
-@onready var contract_back_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractActions/BackButton
+@onready var contract_close_button: TextureButton = $Root/ContractWindow/CloseButton
 @onready var manage_renew_button: Button = $Root/ContractWindow/Margin/MainVBox/ContractActions/RenewButton
 @onready var details_header_label: Label = $Root/DetailsWindow/Margin/MainVBox/Header/TitleLabel
 @onready var details_scroll: ScrollContainer = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll
@@ -72,6 +70,7 @@ const BASE_WORKER_VISUAL_SCENE: PackedScene = preload("res://scenes/worker_visua
 const WORKER_PORTRAIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
 const STAR_ICON: Texture2D = preload("res://assets/ui/ui_icon/star_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
+const CONTRACT_ARROW_ICON: Texture2D = preload("res://assets/ui/ui_icon/right_arrow_icon.png")
 const CONTRACT_CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
@@ -87,7 +86,6 @@ var _selected_contract_days: int = 3
 var _displayed_contract_price: int = 0
 var _renew_completed_for_selection: bool = false
 var _renew_request_active: bool = false
-var _contract_days_group: ButtonGroup = ButtonGroup.new()
 var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
@@ -125,15 +123,8 @@ func _ready() -> void:
 	manage_goto_button.pressed.connect(_request_manage_goto)
 	manage_details_button.pressed.connect(_show_manage_details)
 	manage_contract_button.pressed.connect(_show_manage_contract)
-	contract_days_3_button.pressed.connect(_on_contract_days_selected.bind(3))
-	contract_days_6_button.pressed.connect(_on_contract_days_selected.bind(6))
-	contract_days_9_button.pressed.connect(_on_contract_days_selected.bind(9))
-	_contract_days_group.allow_unpress = false
-	for day_button: Button in [contract_days_3_button, contract_days_6_button, contract_days_9_button]:
-		day_button.toggle_mode = true
-		day_button.button_group = _contract_days_group
-		day_button.add_theme_constant_override("icon_max_width", 8)
-	contract_back_button.pressed.connect(_close_contract)
+	_configure_contract_days()
+	contract_close_button.pressed.connect(_close_contract)
 	manage_renew_button.pressed.connect(_request_manage_renew)
 	details_close_button.pressed.connect(_close_details)
 	_connect_needs_refresh_signal()
@@ -206,6 +197,14 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 			_cancel_remove_confirmation()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
+			get_viewport().set_input_as_handled()
+		return
+	if contract_window.visible and contract_days_option.get_popup().visible:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
+			contract_days_option.get_popup().hide()
+			contract_days_option.grab_focus()
 			get_viewport().set_input_as_handled()
 		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
 			get_viewport().set_input_as_handled()
@@ -311,6 +310,7 @@ func _reposition_manage_after_layout() -> void:
 
 
 func _reposition_contract_after_layout() -> void:
+	await get_tree().process_frame
 	await get_tree().process_frame
 	if not visible or not contract_window.visible or _manage_worker_id.is_empty():
 		return
@@ -732,8 +732,10 @@ func _find_manage_button(worker_id: String) -> Button:
 func _position_popup(popup: Control, source_button: Button) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var popup_size: Vector2 = popup.get_combined_minimum_size()
-	if popup == manage_window:
+	if popup == manage_window or (popup == contract_window and popup.visible):
 		popup_size = popup_size.max(popup.get_node("Margin").get_combined_minimum_size())
+	if popup == contract_window:
+		popup_size = popup_size.min(viewport_size - Vector2(4, 4))
 	if popup == details_window:
 		popup_size.x = clampf(popup_size.x, details_window.custom_minimum_size.x, viewport_size.x - 4.0)
 		popup_size.y = clampf(popup_size.y, details_window.custom_minimum_size.y, viewport_size.y - 4.0)
@@ -786,6 +788,44 @@ func _update_manage_controls(row: Dictionary) -> void:
 	manage_fire_button.disabled = fire_disabled
 	_sync_fire_hover_detector()
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
+
+
+func _configure_contract_days() -> void:
+	contract_days_option.focus_previous = contract_days_option.get_path_to(contract_close_button)
+	manage_renew_button.focus_previous = manage_renew_button.get_path_to(contract_days_option)
+	manage_renew_button.focus_next = manage_renew_button.get_path_to(contract_close_button)
+	contract_close_button.focus_next = contract_close_button.get_path_to(contract_days_option)
+	var theme: Theme = $Root.theme
+	for state: String in ["normal", "hover", "pressed", "disabled", "focus"]:
+		contract_days_option.add_theme_stylebox_override(state, theme.get_stylebox(state, "HudShortcutButton"))
+	var popup_theme: Theme = theme.duplicate()
+	popup_theme.default_font = theme.get_font("font", "HudShortcutButton")
+	popup_theme.default_font_size = 6
+	popup_theme.set_font("font", "PopupMenu", popup_theme.default_font)
+	popup_theme.set_font_size("font_size", "PopupMenu", 6)
+	popup_theme.set_color("font_color", "PopupMenu", theme.get_color("font_color", "HudShortcutButton"))
+	popup_theme.set_color("font_hover_color", "PopupMenu", theme.get_color("font_hover_color", "HudShortcutButton"))
+	popup_theme.set_stylebox("panel", "PopupMenu", theme.get_stylebox("normal", "HudShortcutButton"))
+	popup_theme.set_stylebox("hover", "PopupMenu", theme.get_stylebox("hover", "HudShortcutButton"))
+	popup_theme.set_constant("h_separation", "PopupMenu", 2)
+	popup_theme.set_constant("v_separation", "PopupMenu", 2)
+	var blank_check: Image = Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	blank_check.fill(Color.TRANSPARENT)
+	popup_theme.set_icon("radio_checked", "PopupMenu", CONTRACT_CHECK_ICON)
+	popup_theme.set_icon("radio_unchecked", "PopupMenu", ImageTexture.create_from_image(blank_check))
+	contract_days_option.get_popup().theme = popup_theme
+	var arrow: Image = CONTRACT_ARROW_ICON.get_image()
+	arrow.rotate_90(CLOCKWISE)
+	contract_days_option.add_theme_icon_override("arrow", ImageTexture.create_from_image(arrow))
+	for days: int in WorkerDatabase.CONTRACT_DAYS:
+		contract_days_option.add_item("%d days" % days, days)
+	contract_days_option.item_selected.connect(_on_contract_day_index_selected)
+
+
+func _on_contract_day_index_selected(index: int) -> void:
+	_on_contract_days_selected(contract_days_option.get_item_id(index))
+
+
 func _show_manage_contract() -> void:
 	if _manage_worker_id.is_empty():
 		return
@@ -799,23 +839,22 @@ func _show_manage_contract() -> void:
 	_displayed_contract_price = 0
 	_renew_completed_for_selection = false
 	_renew_request_active = false
-	_update_contract_day_buttons()
+	_update_contract_day_selection()
 	_update_contract_controls(row)
 	manage_window.hide()
 	details_window.hide()
 	contract_window.size = contract_window.get_combined_minimum_size()
 	_position_popup(contract_window, _manage_source_button)
 	contract_window.show()
-	_position_popup.call_deferred(contract_window, _manage_source_button)
+	_reposition_contract_after_layout()
 	_sync_fire_hover_detector()
-	contract_days_3_button.grab_focus()
+	contract_days_option.grab_focus()
 
 
-func _update_contract_day_buttons() -> void:
-	for day_button: Button in [contract_days_3_button, contract_days_6_button, contract_days_9_button]:
-		var selected: bool = day_button.text == "%d days" % _selected_contract_days
-		day_button.set_pressed_no_signal(selected)
-		day_button.icon = CONTRACT_CHECK_ICON if selected else null
+func _update_contract_day_selection() -> void:
+	var index: int = contract_days_option.get_item_index(_selected_contract_days)
+	if index >= 0:
+		contract_days_option.select(index)
 
 
 func _on_contract_days_selected(days: int) -> void:
@@ -825,7 +864,7 @@ func _on_contract_days_selected(days: int) -> void:
 		_renew_completed_for_selection = false
 		_renew_feedback_text = ""
 	_selected_contract_days = days
-	_update_contract_day_buttons()
+	_update_contract_day_selection()
 	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if not row.is_empty():
 		_update_contract_controls(row)
@@ -841,24 +880,22 @@ func _update_contract_controls(row: Dictionary) -> void:
 	contract_feedback_label.text = _renew_feedback_text
 	contract_feedback_label.visible = not _renew_feedback_text.is_empty()
 	manage_renew_button.disabled = price <= 0 or _renew_completed_for_selection or _renew_request_active
+	var next_focus: Control = contract_close_button if manage_renew_button.disabled else manage_renew_button
+	contract_days_option.focus_next = contract_days_option.get_path_to(next_focus)
+	var previous_focus: Control = contract_days_option if manage_renew_button.disabled else manage_renew_button
+	contract_close_button.focus_previous = contract_close_button.get_path_to(previous_focus)
 	if contract_window.visible:
-		contract_window.size = contract_window.get_combined_minimum_size()
-		_position_popup(contract_window, _manage_source_button)
+		_reposition_contract_after_layout()
 
 
 func _current_contract_text(worker: WorkerData) -> String:
-	if worker == null or worker.payroll_start_day < 0:
-		return "No active contract"
-	var status: String
-	if worker.is_waiting_for_first_payment():
-		status = "Contract unpaid"
-	elif worker.is_payroll_blocked():
-		status = "Expired after Day %d" % worker.payroll_paid_until_day
-	else:
-		status = "Paid through Day %d" % worker.payroll_paid_until_day
-	if worker.payroll_contract_days > 0:
-		status += "\nCurrent term: %d days" % worker.payroll_contract_days
-	return status
+	if worker == null or worker.payroll_start_day < 0 or worker.payroll_paid_from_day < 0 \
+			or worker.payroll_paid_until_day < worker.payroll_paid_from_day:
+		return "Current contract ends:\n-"
+	var end_minute: int = worker.get_paid_end_minute()
+	var day: int = end_minute / 1440
+	var minute_of_day: int = end_minute % 1440
+	return "Current contract ends:\nDay %d, %02d:%02d" % [day, minute_of_day / 60, minute_of_day % 60]
 
 
 func _renewal_price(row: Dictionary, days: int) -> int:
@@ -1062,6 +1099,7 @@ func _close_details() -> void:
 
 func _close_manage() -> void:
 	_hide_fire_block_feedback()
+	contract_days_option.get_popup().hide()
 	details_window.hide()
 	contract_window.hide()
 	manage_window.hide()
@@ -1072,6 +1110,7 @@ func _close_manage() -> void:
 func _close_contract() -> void:
 	if not contract_window.visible:
 		return
+	contract_days_option.get_popup().hide()
 	contract_window.hide()
 	if _manage_worker_id.is_empty():
 		_close_manage()
@@ -1222,12 +1261,10 @@ func _build_fire_block_feedback() -> void:
 	_fire_block_feedback.z_index = 21
 	_fire_block_feedback.theme_type_variation = &"HudLabelShortcut"
 	_fire_block_feedback.add_theme_font_size_override("font_size", 6)
-	_fire_block_feedback.add_theme_color_override("font_color", Color(1.0, 0.35, 0.31, 1.0))
-	_fire_block_feedback.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 0.95))
-	_fire_block_feedback.add_theme_constant_override("outline_size", 1)
+	_fire_block_feedback.add_theme_color_override("font_color", tools_cart_required_label.get_theme_color("font_color"))
 	_fire_block_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_fire_block_feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_fire_block_feedback.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_fire_block_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_fire_block_feedback.clip_text = false
 	_fire_block_feedback.hide()
 	$Root.add_child(_fire_block_feedback)
@@ -1271,42 +1308,24 @@ func _sync_fire_hover_detector() -> void:
 		_fire_hover_detector.hide()
 		_hide_fire_block_feedback()
 		return
-	_ensure_fire_feedback_clearance()
 	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
 	_fire_hover_detector.position = fire_rect.position
 	_fire_hover_detector.size = fire_rect.size
 	_fire_hover_detector.show()
 
 
-func _ensure_fire_feedback_clearance() -> void:
-	_fire_block_feedback.text = _fire_block_reason
-	_fire_block_feedback.reset_size()
-	var label_height: float = _fire_block_feedback.get_combined_minimum_size().y
-	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
-	var missing_space: float = 2.0 - (fire_rect.position.y - label_height - 1.0)
-	if missing_space <= 0.0:
-		return
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var max_y: float = maxf(viewport_size.y - manage_window.size.y - 2.0, 2.0)
-	manage_window.position.y = clampf(manage_window.position.y + missing_space, 2.0, max_y)
-
-
 func _position_fire_block_feedback() -> void:
 	if not is_instance_valid(_fire_block_feedback):
 		return
-	_fire_block_feedback.text = _fire_block_reason
-	_fire_block_feedback.reset_size()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var label_size: Vector2 = _fire_block_feedback.get_combined_minimum_size()
-	_fire_block_feedback.size = label_size
+	var popup_rect: Rect2 = manage_window.get_global_rect()
+	var label_size := Vector2(maxf(popup_rect.size.x - 12.0, 0.0), 16.0)
 	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
-	var x: float = fire_rect.position.x + (fire_rect.size.x - label_size.x) * 0.5
-	var max_x: float = maxf(viewport_size.x - label_size.x - 2.0, 2.0)
-	var max_y: float = maxf(viewport_size.y - label_size.y - 2.0, 2.0)
 	_fire_block_feedback.position = Vector2(
-		clampf(x, 2.0, max_x),
-		clampf(fire_rect.position.y - label_size.y - 1.0, 2.0, max_y)
+		popup_rect.position.x + 6.0,
+		fire_rect.position.y - label_size.y - 1.0
 	).round()
+	_fire_block_feedback.size = label_size
+	_fire_block_feedback.text = _fire_block_reason
 
 
 func _on_fire_hover_entered() -> void:
@@ -1327,7 +1346,6 @@ func _on_fire_hover_entered() -> void:
 	if not latest_disabled:
 		_hide_fire_block_feedback()
 		return
-	_fire_block_feedback.text = latest_reason
 	_position_fire_block_feedback()
 	_fire_block_feedback.show()
 
