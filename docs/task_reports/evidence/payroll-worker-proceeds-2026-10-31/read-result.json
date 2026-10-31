@@ -1,0 +1,18 @@
+{
+	"city_cash_after_isolation": 6,
+	"detail": "Separate-process Continue preserved the completed cycle.",
+	"failures": 0,
+	"initial_player_wood": 4,
+	"initial_wallet": 6,
+	"insufficient_checked": true,
+	"measurements": [],
+	"phase": "read",
+	"renewed_until": 11,
+	"sale_visits": [],
+	"status": "PASS",
+	"wallet_after_renew": 5,
+	"worker_sale_income": 6,
+	"worker_wood_collected": 33,
+	"worker_wood_kept": 6,
+	"worker_wood_sold": 3
+}
