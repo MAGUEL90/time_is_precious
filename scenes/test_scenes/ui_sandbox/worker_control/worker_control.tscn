@@ -502,7 +502,6 @@ custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
 mouse_filter = 1
 accessibility_name = "Shekel"
-tooltip_text = "Shekel"
 texture = ExtResource("detail_coin")
 expand_mode = 1
 stretch_mode = 5

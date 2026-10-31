@@ -17,6 +17,26 @@ func _expect(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 
+func _expect_no_tooltips(node: Node) -> void:
+	for control: Control in node.find_children("*", "Control", true, false):
+		_expect(control.tooltip_text.is_empty(), "Job Board control has no hover tooltip: " + str(control.get_path()))
+		if control is ItemList:
+			var list: ItemList = control as ItemList
+			for index: int in range(list.item_count):
+				_expect(not list.is_item_tooltip_enabled(index), "Job Board item tooltips stay disabled.")
+
+func _hover_without_tooltip(control: Control) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var point: Vector2 = control.size / 2.0
+	get_viewport().warp_mouse(control.global_position + point)
+	var motion := InputEventMouseMotion.new()
+	motion.position = control.global_position + point
+	get_viewport().push_input(motion)
+	await get_tree().create_timer(float(ProjectSettings.get_setting("gui/timers/tooltip_delay_sec", 0.5)) + 0.2, true).timeout
+	_expect(get_viewport().gui_get_hovered_control() == control, "The mouse is actually over the wallet icon.")
+	_expect(control.get_tooltip(point).is_empty(), "Hovering the wallet icon after the native delay has no tooltip.")
+
 func _seed(id: String, profession: WorkerData.Profession, satisfaction: float) -> CitizenData:
 	var citizen := CitizenData.new()
 	citizen.citizen_id = id
@@ -88,8 +108,11 @@ func _run() -> void:
 	_expect(not board.feedback_label.get_global_rect().intersects(scroll_rect), "Contextual feedback does not overlap the candidate viewport.")
 	_expect(wallet_row.get_global_rect().position.x > board.hire_button.get_global_rect().end.x and wallet_row.get_global_rect().position.y >= scroll_rect.end.y,
 		"The wallet group is at the lower right, clear of the candidate area and Hire.")
-	_expect(board.cards[2].name_label.text != long_name and board.cards[2].name_label.tooltip_text == long_name and long_candidate.display_name == long_name, "Only the long displayed name is shortened; identity and tooltip retain the original.")
+	_expect(board.cards[2].name_label.text != long_name and board.cards[2].name_label.tooltip_text.is_empty() and board.cards[2].name_label.accessibility_name == long_name and long_candidate.display_name == long_name, "Only the displayed name is shortened; the original identity remains accessible without a hover tooltip.")
 	_expect(board.cards[2].name_label.get_global_rect().end.x <= board.cards[2].role_label.get_global_rect().position.x, "Long display name does not overlap the role.")
+	_expect_no_tooltips(board)
+	await _hover_without_tooltip(wallet_icon)
+	await _capture("job-board-wallet-hover")
 	await _capture("job-board-initial")
 	Inventory.items["shekel"] = 9223372036854775807
 	board._refresh_quote()
@@ -151,6 +174,7 @@ func _run() -> void:
 	_expect(board.cancel_hire_button.text == "Back" and board.confirm_hire_button.text == "Confirm", "Confirmation actions use the requested labels.")
 	for button: Button in board.duration_buttons:
 		_expect(button.get_tooltip(button.size / 2.0).is_empty(), "Contract duration choices show no native tooltip.")
+	_expect_no_tooltips(board)
 	var visited_focus: Array[Control] = [board.duration_buttons[0]]
 	for step: int in range(8):
 		var focus_event := InputEventAction.new()
@@ -195,6 +219,8 @@ func _run() -> void:
 	names_scroll.ensure_control_visible(last_name)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# The board can rebuild confirmation names during its periodic refresh.
+	last_name = board.selected_names_container.get_child(6)
 	_expect(names_scroll.scroll_vertical > 0
 		and last_name.get_global_rect().end.y <= names_scroll.get_global_rect().end.y + 0.1,
 		"The last selected candidate remains reachable in the enlarged scrollable list.")
@@ -270,7 +296,7 @@ func _run() -> void:
 	board.hire_button.pressed.emit()
 	await get_tree().process_frame
 	var displayed_name: Label = board.selected_names_container.get_child(0)
-	_expect(displayed_name.text != long_name and displayed_name.tooltip_text == long_name, "Confirmation shortens long names only for display.")
+	_expect(displayed_name.text != long_name and displayed_name.tooltip_text.is_empty() and displayed_name.accessibility_name == long_name and long_candidate.display_name == long_name, "Confirmation shortens only the displayed name, keeping the original accessible without a tooltip.")
 	_expect(displayed_name.get_global_rect().end.x <= board.selected_names_container.get_parent().get_global_rect().end.x + 0.1,
 		"A long displayed name stays within its confirmation column.")
 	await _capture("job-board-confirm-long-name")

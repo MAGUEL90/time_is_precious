@@ -208,8 +208,8 @@ func _run() -> void:
 	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-building-complete-fade.png"))
 	await get_tree().create_timer(0.5).timeout
 	plot._process(1.1)
-	_expect(not bar.visible and plot.get_node("Label").visible,
-		"After the splash, the full bar is replaced by the normal workshop label.")
+	_expect(not bar.visible and plot.get_node("Label").text.is_empty(),
+		"After the splash, no building name is drawn over the workshop.")
 	visuals.plot_presence.update(visuals, 0.0)
 	for id: String in ids:
 		_expect(visuals.actors[id].visible, "All builders reappear when construction completes.")

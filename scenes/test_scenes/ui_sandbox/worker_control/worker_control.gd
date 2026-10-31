@@ -1071,7 +1071,6 @@ func _build_confirmation() -> void:
 	_confirm_currency_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_confirm_currency_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_confirm_currency_icon.accessibility_name = "Shekel"
-	_confirm_currency_icon.tooltip_text = "Shekel"
 	_confirm_cost_label = Label.new()
 	_confirm_cost_label.name = "RenewalCostLabel"
 	_confirm_cost_label.theme_type_variation = &"PanelTextSmall"

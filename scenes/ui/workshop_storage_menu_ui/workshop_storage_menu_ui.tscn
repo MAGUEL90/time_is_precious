@@ -89,7 +89,6 @@ theme_override_constants/separation = 3
 [node name="CapacityIcon" type="TextureRect" parent="Root/Center/TextureWindow/Margin/MainVBox/CapacityRow"]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
-tooltip_text = "Load 0 / 200"
 mouse_filter = 1
 texture_filter = 1
 texture = ExtResource("6_storage_icon")
@@ -183,7 +182,6 @@ theme_override_constants/separation = 2
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 size_flags_horizontal = 4
-tooltip_text = "No held output"
 mouse_filter = 1
 texture_filter = 1
 texture = ExtResource("7_no_output")

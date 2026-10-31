@@ -167,10 +167,10 @@ mouse_filter = 2
 [node name="ConfirmQuoteIcon" type="TextureRect" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow"]
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
+accessibility_name = "Shekel"
 texture = ExtResource("8_coin")
 expand_mode = 1
 stretch_mode = 4
-tooltip_text = "Contract total in Shekel"
 mouse_filter = 1
 
 [node name="ConfirmQuoteAmount" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow"]
@@ -207,7 +207,6 @@ layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
-tooltip_text = "Return to candidates without hiring"
 
 [node name="ConfirmHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
 custom_minimum_size = Vector2(42, 17)
@@ -333,26 +332,25 @@ theme_override_constants/separation = 3
 [node name="WalletIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
+accessibility_name = "Wallet"
 texture = ExtResource("9_wallet")
 expand_mode = 1
 stretch_mode = 3
-tooltip_text = "Player wallet balance in Shekel"
 mouse_filter = 1
 
 [node name="WalletCurrencyIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
+accessibility_name = "Shekel"
 texture = ExtResource("8_coin")
 expand_mode = 1
 stretch_mode = 5
-tooltip_text = "Shekel"
 mouse_filter = 1
 
 [node name="WalletLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
-tooltip_text = "Wallet balance in Shekel"
 mouse_filter = 1
 
 [node name="QuoteRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
@@ -375,10 +373,10 @@ mouse_filter = 2
 visible = false
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
+accessibility_name = "Shekel"
 texture = ExtResource("8_coin")
 expand_mode = 1
 stretch_mode = 4
-tooltip_text = "Contract total in Shekel"
 mouse_filter = 1
 
 [node name="QuoteAmount" type="Label" parent="Root/Center/Window/Margin/MainVBox/QuoteRow"]
@@ -386,7 +384,6 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 text = ""
-tooltip_text = "Contract total in Shekel"
 mouse_filter = 1
 
 [node name="CloseButton" parent="Root/Center/Window" instance=ExtResource("6_close")]
@@ -395,7 +392,6 @@ offset_top = 14.0
 offset_right = 352.0
 offset_bottom = 22.0
 focus_mode = 2
-tooltip_text = "Close (Esc)"
 
 [node name="RefreshTimer" type="Timer" parent="."]
 wait_time = 0.2

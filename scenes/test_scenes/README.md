@@ -42,6 +42,7 @@ See `docs/task_reports/prepaid-worker-contracts-2026-10-23.md` for evidence and 
 | `main_map_worker_hub_test.tscn` | Current `WorkerRuntime`, K/J modal controls and pause release |
 | `main_map_hauler_start_test.tscn` | Current-map hiring, Cart equipment ownership, reload and dismissal |
 | `debug_production_flow_test.tscn` | Current-map construction and two production cycles using explicit debug supplies |
+| `workshop_label_presentation_test.tscn` | BUILD WORKSHOP margins and worker scrolling, building labels, contract-expiry feedback and completed-workshop E; optional rendered captures via `TIP_MVP_CAPTURE_DIR` |
 | `mudbrick_production_chain_integration_test.tscn` | Held output, rejected empty-wallet payment, fee payment, drying and overdue fees |
 | `population_employment_integration_test.tscn` | Population/employment separation and worker lifecycle |
 

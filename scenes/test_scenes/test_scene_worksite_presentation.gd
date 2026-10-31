@@ -177,7 +177,7 @@ func _test_active_prompt_positions() -> void:
 	runtime._process(0.0)
 	var storage_prompt: InteractableLabelComponent = storage.interactable_label_component
 	_check(player.current_interactable == storage and storage_prompt.visible and storage.has_player_access(), "City Storage board access owns the visible E")
-	_check(storage.get_node("Label").visible, "City Storage caption remains visible while its board is focused")
+	_check(not storage.get_node("Label").visible, "City Storage name remains hidden while its board is focused")
 	_check_board_prompt(storage_prompt, storage.get_node("Board"))
 	await _capture("active-E-CityStorage", player.global_position)
 	var board_prompt_box: Rect2 = storage_prompt.get_global_transform() * Rect2(Vector2.ZERO, storage_prompt.size)

@@ -239,7 +239,7 @@ func _refresh_quote(_reset_feedback: bool = true) -> void:
 		quote_amount_label.text = ""
 		quote_icon.visible = false
 	wallet_label.text = str(int(Inventory.items.get("shekel", 0)))
-	wallet_label.tooltip_text = "Wallet balance: %s Shekel. Hires are paid from your wallet." % wallet_label.text
+	wallet_label.accessibility_name = "Wallet balance: %s Shekel" % wallet_label.text
 	hire_button.disabled = _hiring or confirmation_open or not valid or not WorkerDatabase.is_job_board_open()
 	if confirmation_open:
 		_refresh_confirmation_panel()
@@ -344,7 +344,7 @@ func _refresh_confirmation_panel() -> void:
 			continue
 		var name_label := Label.new()
 		name_label.text = _short_display_name(citizen.display_name, MAX_CONFIRM_NAME_LENGTH)
-		name_label.tooltip_text = citizen.display_name
+		name_label.accessibility_name = citizen.display_name
 		name_label.clip_text = true
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.add_theme_font_override("font", PIXEL_FONT)
@@ -360,8 +360,8 @@ func _refresh_confirmation_panel() -> void:
 		var days: int = _selected_contract_days()
 		confirm_quote_label.text = "%d day%s · %d candidate%s · Total" % [days, "s" if days != 1 else "", count, "s" if count != 1 else ""]
 		confirm_quote_amount_label.text = str(int(quote.get("total", 0)))
+		confirm_quote_amount_label.accessibility_name = "Total cost: %s Shekel" % confirm_quote_amount_label.text
 		confirm_quote_icon.visible = true
-		confirm_quote_amount_label.tooltip_text = "Total cost: %s Shekel from your wallet." % confirm_quote_amount_label.text
 		_displayed_quote_ids = _pending_hire_ids.duplicate()
 		_displayed_quote_total = int(quote.get("total", 0))
 		_displayed_quote_days = days

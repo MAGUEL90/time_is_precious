@@ -37,7 +37,7 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 	_snapshot = snapshot
 	_full_display_name = citizen.display_name
 	name_label.text = _short_display_name(_full_display_name)
-	name_label.tooltip_text = _full_display_name
+	name_label.accessibility_name = _full_display_name
 	role_label.text = "Job: " + profession_name
 	duty_label.text = "Hauls worksite goods to assigned storage." if citizen.profession == WorkerData.Profession.HAULER else ""
 	if citizen.profession == WorkerData.Profession.LABORER:
@@ -54,9 +54,9 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 	satisfaction_bar.value = citizen.satisfaction * 100.0
 	satisfaction_label.text = "%d%%" % roundi(citizen.satisfaction * 100.0)
 	# The baseline has no mood-to-icon thresholds; keep the existing neutral art.
-	mood_icon.tooltip_text = "Satisfaction: %d%%. Neutral icon is illustrative." % roundi(citizen.satisfaction * 100.0)
+	mood_icon.accessibility_name = "Satisfaction: %d%%" % roundi(citizen.satisfaction * 100.0)
 	wage_label.text = str(package_price) if package_price > 0 else "Unavailable"
-	wage_label.tooltip_text = "Contract hire cost: %d Shekel for %d days, paid from your wallet." % [package_price, contract_days] if package_price > 0 else "Contract price unavailable."
+	wage_label.accessibility_name = "Contract hire cost: %d Shekel for %d days" % [package_price, contract_days] if package_price > 0 else "Contract price unavailable"
 	_layout_card_rows()
 
 func _short_display_name(full_name: String) -> String:
@@ -97,7 +97,7 @@ func _layout_status_row() -> void:
 func set_selected(checked: bool) -> void:
 	selection_button.set_pressed_no_signal(checked)
 	check_icon.visible = checked
-	selection_button.tooltip_text = ("Deselect " if checked else "Select ") + _full_display_name
+	selection_button.accessibility_name = ("Deselect " if checked else "Select ") + _full_display_name
 
 func _on_toggled(checked: bool) -> void:
 	selection_toggled.emit(checked)

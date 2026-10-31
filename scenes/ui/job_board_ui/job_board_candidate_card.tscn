@@ -193,7 +193,6 @@ theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
 text = ""
 mouse_filter = 2
-tooltip_text = "Full package price for the selected contract duration, paid from your wallet."
 
 [node name="SatisfactionLabel" type="Label" parent="Details"]
 offset_left = 0.0
@@ -244,6 +243,7 @@ stretch_margin_bottom = 3
 mouse_filter = 2
 
 [node name="ShekelIcon" type="TextureRect" parent="Details"]
+accessibility_name = "Shekel"
 offset_left = 159.0
 offset_top = 44.0
 offset_right = 167.0

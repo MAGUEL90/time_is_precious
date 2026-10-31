@@ -230,7 +230,7 @@ func _sync_construction() -> void:
 		for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
 			art.texture = BUILT_PLOT
 		$Board.texture = BUILT_BOARD
-		$Label.text = "Workshop"
+		$Label.text = ""
 		if not has_node("BuiltWorkshop"):
 			var workshop: WorkShop = WORKSHOP.instantiate()
 			workshop.name = "BuiltWorkshop"
@@ -249,7 +249,7 @@ func _sync_construction() -> void:
 	elif construction.phase == "building":
 		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
 	else:
-		$Label.text = "" if construction.phase == "uncleared" else "Workshop Site"
+		$Label.text = ""
 
 func _sync_build_progress() -> void:
 	var completed: bool = (
