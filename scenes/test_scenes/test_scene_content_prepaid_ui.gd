@@ -106,9 +106,9 @@ func _run() -> void:
 	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
 	var first_name: Label = board.selected_names_container.get_child(0)
 	var confirmation_names_scroll: ScrollContainer = board.selected_names_container.get_parent()
-	_expect(first_name.get_theme_font_size("font_size") == 12 and first_name.scale == Vector2.ONE
+	_expect(first_name.get_theme_font_size("font_size") == 6 and first_name.scale == Vector2.ONE
 		and board.selected_names_container.scale == Vector2.ONE and confirmation_names_scroll.scale == Vector2.ONE,
-		"Candidate names use the requested native 12-pixel font without control scaling.")
+		"Candidate names use the requested native 6-pixel font without control scaling.")
 	_expect(confirmation_names_scroll.get_global_rect().position.x >= panel_rect.position.x + 18.0
 		and confirmation_names_scroll.get_global_rect().end.x <= board.duration_buttons[0].get_global_rect().position.x - 8.0,
 		"Candidate names keep clear margins beside the panel and duration choices.")
@@ -198,7 +198,7 @@ func _run() -> void:
 	var name_two: Label = board.selected_names_container.get_child(1)
 	_expect(name_two.position.y >= name_one.position.y + name_one.size.y + 3.0, "Selected candidates have visible vertical spacing.")
 	for candidate_name: Label in [name_one, name_two]:
-		_expect(candidate_name.get_theme_font("font").get_string_size(candidate_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x <= candidate_name.size.x,
+		_expect(candidate_name.get_theme_font("font").get_string_size(candidate_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 6).x <= candidate_name.size.x,
 			"The normal candidate name fits without being clipped at native font size.")
 	await _capture("job-board-confirm-batch")
 	var cancel := InputEventAction.new()
