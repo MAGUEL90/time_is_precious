@@ -22,6 +22,7 @@ const MAX_CONFIRM_NAME_LENGTH: int = 22
 @onready var wallet_label: Label = $Root/Center/Window/Margin/MainVBox/WalletRow/WalletLabel
 @onready var confirmation_layer: Control = $Root/HireConfirmLayer
 @onready var confirmation_panel: Control = $Root/HireConfirmLayer/ConfirmationPanel
+@onready var selected_names_scroll: ScrollContainer = $Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll
 @onready var selected_names_container: VBoxContainer = $Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll/SelectedNames
 @onready var duration_button_container: VBoxContainer = $Root/HireConfirmLayer/ConfirmationPanel/DurationButtons
 @onready var confirm_quote_label: Label = $Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow/ConfirmQuoteLabel
@@ -73,7 +74,7 @@ func _build_duration_buttons() -> void:
 		button.text = "%d days" % days
 		button.toggle_mode = true
 		button.button_group = _duration_button_group
-		button.custom_minimum_size = Vector2(96, 17)
+		button.custom_minimum_size = Vector2(52, 17)
 		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		button.theme_type_variation = &"HudShortcutButton"
 		button.add_theme_font_size_override("font_size", 6)
@@ -347,9 +348,11 @@ func _refresh_confirmation_panel() -> void:
 		name_label.clip_text = true
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.add_theme_font_override("font", PIXEL_FONT)
-		name_label.add_theme_font_size_override("font_size", 6)
+		name_label.add_theme_font_size_override("font_size", 8)
 		name_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.77))
 		selected_names_container.add_child(name_label)
+	# Recalculate scroll bounds after rebuilding a list that may exceed its viewport.
+	selected_names_scroll.queue_sort.call_deferred()
 	var quote: Dictionary = _quote_for_ids(_pending_hire_ids, _selected_contract_days())
 	var quote_valid: bool = all_names_valid and bool(quote.get("valid", false))
 	if quote_valid:

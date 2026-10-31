@@ -102,6 +102,19 @@ func _run() -> void:
 	_expect(board.selected_names_container.get_global_rect().position.x < board.duration_button_container.get_global_rect().position.x, "Names are to the left of duration buttons.")
 	var title: Label = board.confirmation_panel.get_node("ConfirmationTitle")
 	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
+	var first_name: Label = board.selected_names_container.get_child(0)
+	var confirmation_names_scroll: ScrollContainer = board.selected_names_container.get_parent()
+	_expect(first_name.get_theme_font_size("font_size") > board.confirmation_panel.get_node("SelectedHeading").get_theme_font_size("font_size"),
+		"Candidate names are larger than the column heading.")
+	_expect(confirmation_names_scroll.get_global_rect().position.x >= panel_rect.position.x + 18.0
+		and confirmation_names_scroll.get_global_rect().end.x <= board.duration_button_container.get_global_rect().position.x - 10.0,
+		"Candidate names keep clear margins beside the panel and duration choices.")
+	_expect(board.confirm_hire_button.size.x < board.cancel_hire_button.size.x
+		and board.confirm_hire_button.size.x >= board.confirm_hire_button.get_combined_minimum_size().x,
+		"Confirm is compact while retaining enough room for its label.")
+	for duration_button: Button in board.duration_buttons:
+		_expect(duration_button.size.x < 72.0 and duration_button.size.x >= duration_button.get_combined_minimum_size().x,
+			"Each duration button fits its contents without the old wide panel.")
 	_expect(panel_rect.size.x < 290.0 and title.get_theme_font_size("font_size") == 12, "The narrower contract panel uses a 12-pixel title.")
 	_expect(title.get_global_rect().position.y >= panel_rect.position.y + 12.0
 		and board.confirm_hire_button.get_global_rect().end.y <= panel_rect.end.y - 12.0,
@@ -153,6 +166,22 @@ func _run() -> void:
 		"A full selection stays clipped to its own confirmation column.")
 	_expect(not board.confirm_quote_amount_label.text.is_empty() and Inventory.items.is_empty(), "A full selection shows its total without charging.")
 	await _capture("job-board-confirm-many")
+	var last_name: Control = board.selected_names_container.get_child(6)
+	names_scroll.ensure_control_visible(last_name)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(names_scroll.scroll_vertical > 0
+		and last_name.get_global_rect().end.y <= names_scroll.get_global_rect().end.y + 0.1,
+		"The last selected candidate remains reachable in the enlarged scrollable list.")
+	await _capture("job-board-confirm-many-scrolled")
+	var previous_name_scroll: int = names_scroll.scroll_vertical
+	board._poll_applicants()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var last_name_after_poll: Control = board.selected_names_container.get_child(6)
+	_expect(names_scroll.scroll_vertical == previous_name_scroll
+		and last_name_after_poll.get_global_rect().end.y <= names_scroll.get_global_rect().end.y + 0.1,
+		"Polling preserves the selected-name scroll position and last visible candidate.")
 	board.cancel_hire_button.pressed.emit()
 	for index: int in range(1, board.cards.size()):
 		board.cards[index].selection_button.set_pressed(false)
@@ -160,6 +189,11 @@ func _run() -> void:
 	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0, 1]), "Checkboxes select independently.")
 	board.hire_button.pressed.emit()
 	_expect(board.confirm_quote_amount_label.text == "15" and board.selected_names_container.get_child_count() == 2, "Nine-day batch quote totals the selected candidates.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var name_one: Label = board.selected_names_container.get_child(0)
+	var name_two: Label = board.selected_names_container.get_child(1)
+	_expect(name_two.position.y >= name_one.position.y + name_one.size.y + 3.0, "Selected candidates have visible vertical spacing.")
 	await _capture("job-board-confirm-batch")
 	var cancel := InputEventAction.new()
 	cancel.action = "ui_cancel"

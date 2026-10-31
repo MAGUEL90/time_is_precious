@@ -106,9 +106,9 @@ horizontal_alignment = 1
 mouse_filter = 2
 
 [node name="SelectedHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 14.0
+offset_left = 20.0
 offset_top = 33.0
-offset_right = 132.0
+offset_right = 128.0
 offset_bottom = 43.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
@@ -117,9 +117,9 @@ text = "Selected candidates"
 mouse_filter = 2
 
 [node name="SelectedNamesScroll" type="ScrollContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
-offset_left = 14.0
+offset_left = 20.0
 offset_top = 46.0
-offset_right = 132.0
+offset_right = 128.0
 offset_bottom = 107.0
 clip_contents = true
 horizontal_scroll_mode = 0
@@ -127,9 +127,9 @@ vertical_scroll_mode = 1
 mouse_filter = 1
 
 [node name="SelectedNames" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll"]
-custom_minimum_size = Vector2(105, 0)
+custom_minimum_size = Vector2(96, 0)
 layout_mode = 2
-theme_override_constants/separation = 1
+theme_override_constants/separation = 4
 
 [node name="DurationHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 142.0
@@ -214,7 +214,7 @@ text = "Back"
 tooltip_text = "Return to candidates without hiring"
 
 [node name="ConfirmHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
-custom_minimum_size = Vector2(104, 17)
+custom_minimum_size = Vector2(38, 17)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
