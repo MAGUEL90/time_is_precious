@@ -422,7 +422,7 @@ layout_mode = 2
 
 [node name="ManageWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(52, 96)
+custom_minimum_size = Vector2(52, 82)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -441,7 +441,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 6
-theme_override_constants/margin_top = 20
+theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
@@ -484,7 +484,7 @@ text = "Contract"
 
 [node name="ContractWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(118, 96)
+custom_minimum_size = Vector2(104, 96)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -526,11 +526,12 @@ alignment = 1
 
 [node name="DaysOption" type="OptionButton" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
 texture_filter = 1
-custom_minimum_size = Vector2(64, 16)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 accessibility_name = "Contract length"
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
+theme_override_constants/arrow_margin = 2
 
 [node name="RenewPriceRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 8)
@@ -546,11 +547,13 @@ theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
 text = "Price: -"
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 0
 
 [node name="ShekelIcon" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/RenewPriceRow"]
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 1
 accessibility_name = "Shekel"
 texture = ExtResource("detail_coin")

@@ -192,12 +192,20 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 		"%s feedback has no added text outline." % capture_name)
 	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
-	_expect(popup_rect.encloses(feedback_rect) and feedback_rect.position.x >= popup_rect.position.x + 2.0
-		and feedback_rect.end.x <= popup_rect.end.x - 2.0
-		and feedback_rect.position.y >= popup_rect.position.y + 2.0
-		and feedback_rect.end.y <= fire_rect.position.y - 1.0
-		and not feedback_rect.intersects(fire_rect),
-		"%s wrapped feedback stays within the popup, clear of its border and Fire." % capture_name)
+	_expect(feedback_rect.position.y >= popup_rect.end.y + 1.0
+		and is_equal_approx(feedback_rect.get_center().x, popup_rect.get_center().x)
+		and feedback_rect.position.x >= 2.0
+		and feedback_rect.end.x <= get_viewport().get_visible_rect().size.x - 2.0
+		and feedback_rect.end.y <= get_viewport().get_visible_rect().size.y - 2.0
+		and not feedback_rect.intersects(popup_rect)
+		and not feedback_rect.intersects(fire_rect)
+		and worker_control._fire_block_feedback.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+		"%s feedback is centered just below Manage, inside the viewport, and ignores pointer input." % capture_name)
+	for node: Node in worker_control.find_children("*", "BaseButton", true, false):
+		var interactive_button: Control = node as Control
+		if is_instance_valid(interactive_button) and interactive_button.is_visible_in_tree():
+			_expect(not feedback_rect.intersects(interactive_button.get_global_rect()),
+				"%s feedback does not cover the visible %s control." % [capture_name, node.name])
 	await _capture(capture_name + ".png")
 	var exits_before: int = fire_hover_exit_events
 	await _move_mouse_to(Vector2(3, 3))
@@ -297,13 +305,16 @@ func _check_edge_clamping() -> void:
 		"Top-left edge mouse reaches Fire in viewport coordinates.")
 	_expect(worker_control._fire_block_feedback.visible, "Edge placement still shows actual hover feedback.")
 	var label_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
-	_expect(label_rect.position.x >= 0 and label_rect.position.y >= 0
+	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
+	_expect(label_rect.position.x >= 0 and label_rect.position.y >= popup_rect.end.y + 1.0
 		and label_rect.end.x <= viewport_size.x and label_rect.end.y <= viewport_size.y,
-		"Top-left feedback label stays inside the logical viewport.")
+		"Top-left feedback stays below Manage and inside the logical viewport.")
 	await _capture("edge-top-left.png")
-	worker_control.manage_window.position = Vector2(viewport_size.x - popup_size.x - 2.0,
-		viewport_size.y - popup_size.y - 2.0)
-	worker_control._sync_fire_hover_detector()
+	var bottom_source_button := Button.new()
+	bottom_source_button.position = Vector2(viewport_size.x - 44.0, viewport_size.y - 17.0)
+	bottom_source_button.size = Vector2(42.0, 15.0)
+	worker_control.get_node("Root").add_child(bottom_source_button)
+	worker_control._position_popup(worker_control.manage_window, bottom_source_button)
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	var bottom_right_fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
@@ -312,10 +323,14 @@ func _check_edge_clamping() -> void:
 		"Bottom-right edge mouse reaches Fire in viewport coordinates.")
 	_expect(worker_control._fire_block_feedback.visible, "Bottom-right edge placement still shows actual hover feedback.")
 	label_rect = worker_control._fire_block_feedback.get_global_rect()
-	_expect(label_rect.position.x >= 0 and label_rect.position.y >= 0
-		and label_rect.end.x <= viewport_size.x and label_rect.end.y <= viewport_size.y,
-		"Bottom-right feedback label stays inside the logical viewport.")
+	popup_rect = worker_control.manage_window.get_global_rect()
+	_expect(label_rect.position.x >= 0 and label_rect.position.y >= popup_rect.end.y + 1.0
+		and label_rect.end.x <= viewport_size.x and label_rect.end.y <= viewport_size.y - 2.0
+		and popup_rect.end.y < bottom_source_button.get_global_rect().position.y
+		and not label_rect.intersects(bottom_source_button.get_global_rect()),
+		"Bottom-edge Manage moves up to keep its centered feedback below it and clear of the source button.")
 	await _capture("edge-bottom-right.png")
+	bottom_source_button.queue_free()
 	worker_control._close_manage()
 
 

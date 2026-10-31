@@ -76,6 +76,9 @@ const CONTRACT_CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklis
 const DEFAULT_FIRE_CONFIRMATION_TEXT: String = (
 	"Fire this worker?\nTheir assignment will end.\nTools return to City Storage."
 )
+const FIRE_FEEDBACK_LABEL_HEIGHT: float = 16.0
+const FIRE_FEEDBACK_PANEL_GAP: float = 1.0
+const FIRE_FEEDBACK_VIEWPORT_MARGIN: float = 2.0
 
 var _active_tab: String = "status"
 var _selected_worker_id: String = ""
@@ -744,17 +747,29 @@ func _position_popup(popup: Control, source_button: Button) -> void:
 		maxf((viewport_size.x - popup_size.x) * 0.5, 2.0),
 		maxf((viewport_size.y - popup_size.y) * 0.5, 2.0)
 	)
+	var reserve_fire_feedback: bool = popup == manage_window and manage_fire_button.disabled
+	var feedback_overhang: float = 0.0
+	if reserve_fire_feedback:
+		var feedback_width: float = _fire_feedback_label_width(popup_size.x, viewport_size.x)
+		feedback_overhang = maxf((feedback_width - popup_size.x) * 0.5, 0.0)
 	if popup != details_window and is_instance_valid(source_button):
 		var source_rect: Rect2 = source_button.get_global_rect()
-		position = source_rect.position + Vector2(source_rect.size.x + 2.0, 0.0)
-		if position.x + popup_size.x > viewport_size.x:
-			position.x = source_rect.position.x - popup_size.x - 2.0
-	var max_position := Vector2(
-		maxf(viewport_size.x - popup_size.x - 2.0, 2.0),
-		maxf(viewport_size.y - popup_size.y - 2.0, 2.0)
-	)
-	position.x = clampf(position.x, 2.0, max_position.x)
-	position.y = clampf(position.y, 2.0, max_position.y)
+		if reserve_fire_feedback:
+			position.x = source_rect.end.x + 2.0 + feedback_overhang
+			if position.x + popup_size.x + feedback_overhang > viewport_size.x - FIRE_FEEDBACK_VIEWPORT_MARGIN:
+				position.x = source_rect.position.x - popup_size.x - 2.0 - feedback_overhang
+		else:
+			position.x = source_rect.end.x + 2.0
+			if position.x + popup_size.x > viewport_size.x:
+				position.x = source_rect.position.x - popup_size.x - 2.0
+		position.y = source_rect.position.y
+	var max_position_x: float = maxf(viewport_size.x - popup_size.x - FIRE_FEEDBACK_VIEWPORT_MARGIN, 2.0)
+	var min_position_x: float = FIRE_FEEDBACK_VIEWPORT_MARGIN + feedback_overhang if reserve_fire_feedback else 2.0
+	max_position_x = maxf(max_position_x - feedback_overhang, min_position_x)
+	position.x = clampf(position.x, min_position_x, max_position_x)
+	var vertical_reserve: float = FIRE_FEEDBACK_LABEL_HEIGHT + FIRE_FEEDBACK_PANEL_GAP + FIRE_FEEDBACK_VIEWPORT_MARGIN if reserve_fire_feedback else FIRE_FEEDBACK_VIEWPORT_MARGIN
+	var max_position_y: float = maxf(viewport_size.y - popup_size.y - vertical_reserve, 2.0)
+	position.y = clampf(position.y, 2.0, max_position_y)
 	popup.position = position
 	if popup == manage_window:
 		_sync_fire_hover_detector()
@@ -803,10 +818,15 @@ func _configure_contract_days() -> void:
 	popup_theme.default_font_size = 6
 	popup_theme.set_font("font", "PopupMenu", popup_theme.default_font)
 	popup_theme.set_font_size("font_size", "PopupMenu", 6)
-	popup_theme.set_color("font_color", "PopupMenu", theme.get_color("font_color", "HudShortcutButton"))
-	popup_theme.set_color("font_hover_color", "PopupMenu", theme.get_color("font_hover_color", "HudShortcutButton"))
-	popup_theme.set_stylebox("panel", "PopupMenu", theme.get_stylebox("normal", "HudShortcutButton"))
-	popup_theme.set_stylebox("hover", "PopupMenu", theme.get_stylebox("hover", "HudShortcutButton"))
+	var panel_text_color: Color = contract_current_label.get_theme_color("font_color")
+	popup_theme.set_color("font_color", "PopupMenu", panel_text_color)
+	popup_theme.set_color("font_hover_color", "PopupMenu", panel_text_color)
+	popup_theme.set_stylebox("panel", "PopupMenu", tools_picker_window.get_theme_stylebox("panel").duplicate())
+	var highlight := StyleBoxFlat.new()
+	var highlight_color: Color = theme.get_color("font_color", "HudShortcutButton")
+	highlight_color.a = 0.15
+	highlight.bg_color = highlight_color
+	popup_theme.set_stylebox("hover", "PopupMenu", highlight)
 	popup_theme.set_constant("h_separation", "PopupMenu", 2)
 	popup_theme.set_constant("v_separation", "PopupMenu", 2)
 	var blank_check: Image = Image.create(8, 8, false, Image.FORMAT_RGBA8)
@@ -1318,14 +1338,22 @@ func _position_fire_block_feedback() -> void:
 	if not is_instance_valid(_fire_block_feedback):
 		return
 	var popup_rect: Rect2 = manage_window.get_global_rect()
-	var label_size := Vector2(maxf(popup_rect.size.x - 12.0, 0.0), 16.0)
-	var fire_rect: Rect2 = manage_fire_button.get_global_rect()
-	_fire_block_feedback.position = Vector2(
-		popup_rect.position.x + 6.0,
-		fire_rect.position.y - label_size.y - 1.0
-	).round()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var label_size := Vector2(_fire_feedback_label_width(popup_rect.size.x, viewport_size.x), FIRE_FEEDBACK_LABEL_HEIGHT)
+	var label_x: float = popup_rect.get_center().x - label_size.x * 0.5
+	label_x = clampf(label_x, FIRE_FEEDBACK_VIEWPORT_MARGIN, viewport_size.x - label_size.x - FIRE_FEEDBACK_VIEWPORT_MARGIN)
+	_fire_block_feedback.position = Vector2(label_x, popup_rect.end.y + FIRE_FEEDBACK_PANEL_GAP).round()
 	_fire_block_feedback.size = label_size
 	_fire_block_feedback.text = _fire_block_reason
+
+
+func _fire_feedback_label_width(panel_width: float, viewport_width: float) -> float:
+	if not is_instance_valid(_fire_block_feedback):
+		return panel_width
+	var font: Font = _fire_block_feedback.get_theme_font("font")
+	var font_size: int = _fire_block_feedback.get_theme_font_size("font_size")
+	var text_width: float = font.get_string_size(_fire_block_reason, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	return minf(maxf(panel_width, text_width + 4.0), viewport_width - FIRE_FEEDBACK_VIEWPORT_MARGIN * 2.0)
 
 
 func _on_fire_hover_entered() -> void:

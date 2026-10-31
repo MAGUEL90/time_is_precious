@@ -80,6 +80,25 @@ func _run() -> void:
 	_expect(fixture.worker_control.find_child("FooterCloseButton", true, false) == null, "Only the top close control remains.")
 	fixture.worker_control._show_manage(ids[0])
 	_expect(fixture.worker_control.manage_fire_button.disabled and not fixture.worker_control.manage_goto_button.disabled, "Working enables Go to and disables Fire.")
+	var manage_margin: MarginContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin")
+	_expect(fixture.worker_control.manage_window.size.y <= 86.0 and manage_margin.get_theme_constant("margin_top") == 6,
+		"Compact Manage panel removes the large blank area above its four actions.")
+	fixture.worker_control._on_fire_hover_entered()
+	var fire_feedback_rect: Rect2 = fixture.worker_control._fire_block_feedback.get_global_rect()
+	var initial_manage_rect: Rect2 = fixture.worker_control.manage_window.get_global_rect()
+	var feedback_covers_button: bool = false
+	for node: Node in fixture.worker_control.find_children("*", "BaseButton", true, false):
+		var interactive_button: Control = node as Control
+		if is_instance_valid(interactive_button) and interactive_button.is_visible_in_tree() \
+			and fire_feedback_rect.intersects(interactive_button.get_global_rect()):
+			feedback_covers_button = true
+	_expect(fixture.worker_control._fire_block_feedback.visible
+		and fire_feedback_rect.position.y >= initial_manage_rect.end.y + 1.0
+		and is_equal_approx(fire_feedback_rect.get_center().x, initial_manage_rect.get_center().x)
+		and fixture.worker_control._fire_block_feedback.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		and not feedback_covers_button,
+		"Fire reason appears centered below Manage and does not cover interactive controls.")
+	fixture.worker_control._on_fire_hover_exited()
 	fixture.worker_control.manage_details_button.pressed.emit()
 	_expect(fixture.worker_control.details_label.text.contains("Productive days:") and fixture.worker_control.details_label.text.contains("Wage:"), "Details exposes requested worker data.")
 	await _capture("worker-hub-details.png")

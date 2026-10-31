@@ -122,6 +122,19 @@ func _run() -> void:
 	var option: OptionButton = hub.contract_days_option
 	_expect(option.item_count == 3 and option.get_item_id(0) == 3 and option.get_item_id(1) == 6 and option.get_item_id(2) == 9,
 		"The dropdown offers exactly three, six, and nine days.")
+	var duration_text_width: float = option.get_theme_font("font").get_string_size("3 days", HORIZONTAL_ALIGNMENT_LEFT, -1, option.get_theme_font_size("font_size")).x
+	_expect(option.size.x < 64 and option.size.x >= duration_text_width + 8.0
+		and option.size.x <= duration_text_width + 22.0,
+		"The duration selector is compact while leaving room for its arrow.")
+	_expect(hub.contract_window.size.x <= 110.0,
+		"The Contract frame uses the available space after narrowing the selector.")
+	var popup_theme: Theme = option.get_popup().theme
+	var list_panel: StyleBox = popup_theme.get_stylebox("panel", "PopupMenu")
+	_expect(list_panel is StyleBoxTexture and (list_panel as StyleBoxTexture).texture == hub.contract_window.texture,
+		"The dropdown list uses the same cream panel asset as Contract.")
+	_expect(popup_theme.get_color("font_color", "PopupMenu") == hub.contract_current_label.get_theme_color("font_color")
+		and popup_theme.get_color("font_hover_color", "PopupMenu") == hub.contract_current_label.get_theme_color("font_color"),
+		"Dropdown items remain readable against the cream panel.")
 	var expected_arrow: Image = preload("res://assets/ui/ui_icon/right_arrow_icon.png").get_image()
 	expected_arrow.rotate_90(CLOCKWISE)
 	_expect(option.get_theme_icon("arrow") != null, "The dropdown has an arrow icon.")
@@ -143,6 +156,8 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(option.get_popup().visible and Inventory.items.get("shekel", 0) == wallet_before_contract,
 		"Opening the duration dropdown makes no transaction.")
+	var dropdown_rect := Rect2(Vector2(option.get_popup().position), Vector2(option.get_popup().size))
+	_expect(get_viewport().get_visible_rect().encloses(dropdown_rect), "The open dropdown fits inside the viewport.")
 	await _capture("worker-contract-dropdown")
 	var dropdown_cancel := InputEventAction.new()
 	dropdown_cancel.action = "ui_cancel"
@@ -193,6 +208,18 @@ func _run() -> void:
 		and worker.payroll_paid_until_day == 103, "Nine-day quote is accurate and changing duration remains free.")
 	_expect_duration_selection(9)
 	await _capture("worker-contract-day-9")
+	var original_panel_position: Vector2 = hub.contract_window.position
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	hub.contract_window.position = viewport_size - hub.contract_window.size - Vector2(2, 2)
+	await get_tree().process_frame
+	option.show_popup()
+	await get_tree().process_frame
+	dropdown_rect = Rect2(Vector2(option.get_popup().position), Vector2(option.get_popup().size))
+	_expect(get_viewport().get_visible_rect().encloses(dropdown_rect),
+		"The dropdown stays inside the viewport when Contract is at the bottom-right edge.")
+	option.get_popup().hide()
+	hub.contract_window.position = original_panel_position
+	await get_tree().process_frame
 	_select_duration(6)
 	_expect_duration_selection(6)
 	_expect(hub.renew_price_icon.tooltip_text.is_empty() and hub.renew_price_icon.accessibility_name == "Shekel", "The currency icon has no tooltip and retains its accessible name.")
@@ -201,6 +228,10 @@ func _run() -> void:
 	var text_width: float = hub.renew_price_label.get_theme_font("font").get_string_size(hub.renew_price_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, hub.renew_price_label.get_theme_font_size("font_size")).x
 	_expect(hub.renew_price_label.size.x >= text_width and hub.renew_price_label.size.y <= 12, "The renewal price fits on one line.")
 	_expect(hub.renew_price_icon.get_global_rect().position.x - hub.renew_price_label.get_global_rect().end.x <= 3.0, "The currency icon stays beside the price.")
+	var price_rect: Rect2 = hub.renew_price_label.get_global_rect()
+	var icon_rect: Rect2 = hub.renew_price_icon.get_global_rect()
+	_expect(absf(price_rect.get_center().y - icon_rect.get_center().y) <= 0.5,
+		"Price text and the shekel icon are vertically aligned.")
 	_expect(get_viewport().get_visible_rect().encloses(hub.contract_window.get_global_rect()) and hub.contract_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Contract panel and Renew button stay within their frames.")
 	_expect(hub.contract_current_label.get_global_rect().position.y >= hub.manage_renew_button.get_global_rect().end.y
 		and hub.contract_window.get_global_rect().encloses(hub.contract_current_label.get_global_rect()),
@@ -218,6 +249,13 @@ func _run() -> void:
 		and hub.contract_window.get_global_rect().encloses(hub.contract_current_label.get_global_rect())
 		and get_viewport().get_visible_rect().encloses(hub.contract_window.get_global_rect()),
 		"The longest supported expiry remains inside the panel and viewport.")
+	var expiry_font: Font = hub.contract_current_label.get_theme_font("font")
+	var expiry_font_size: int = hub.contract_current_label.get_theme_font_size("font_size")
+	var longest_expiry_line: float = maxf(
+		expiry_font.get_string_size("Current contract ends:", HORIZONTAL_ALIGNMENT_LEFT, -1, expiry_font_size).x,
+		expiry_font.get_string_size("Day 100000001, 07:00", HORIZONTAL_ALIGNMENT_LEFT, -1, expiry_font_size).x)
+	_expect(hub.contract_current_label.size.x >= longest_expiry_line,
+		"Even the longest supported expiry text fits without clipping or extra wrapping.")
 	worker.payroll_paid_until_day = ordinary_end
 	hub._update_contract_controls(_worker_rows()[0])
 	TimeComponentManager.current_day = 104
