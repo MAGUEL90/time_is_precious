@@ -110,18 +110,6 @@ func _has_dust_activity() -> bool:
 				and _worker_is_at_plot_task(worker, task_key)
 			):
 				return true
-	for order: WorkOrder in WorkManager.active_orders.values():
-		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
-		if worker != null and worker.is_payroll_blocked():
-			continue
-		if (
-			order.current_status == WorkOrder.Status.RUNNING
-			and str(order.get_meta("visual_plot_id", "")) == construction.order_id
-			and str(_arrived_worker_tasks.get(order.worker_id, "")) == order.order_id
-			and worker != null
-			and _worker_is_at_plot_task(worker, order.order_id)
-		):
-			return true
 	return false
 
 func _worker_is_at_plot_task(worker: WorkerData, task_key: String) -> bool:

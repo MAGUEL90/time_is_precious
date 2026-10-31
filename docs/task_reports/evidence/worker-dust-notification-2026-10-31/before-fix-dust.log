@@ -1,0 +1,11 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+BACKLOG_BUILDING_DUST {"dust_count":1,"phase":"building","positions":["(-10.71793, 1.57525)"]}
+BACKLOG_BUILT_DUST {"dust_count":1,"finished_building_visible":true,"has_dust_activity":true,"phase":"built","positions":["(-4.321985, -9.397165)"],"worker_arrived":true}
+Registered Workshop fee: fee_1
+Created Workshop output lot: lot_1 | Items: { "wet_mudbrick": 20 } | Fees: ["fee_1"]
+WorkshopWorkerPresenceTest: PASS

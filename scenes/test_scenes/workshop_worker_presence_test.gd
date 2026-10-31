@@ -166,23 +166,29 @@ func _run() -> void:
 	_expect(_dust_count(plot) == 0, "The final activity puffs fade out after completion.")
 	visuals.plot_presence.update(visuals, 0.0)
 	_expect(visuals.actors[ids[0]].visible, "Worker reappears when clearing finishes.")
-	plot.worker_dust_enabled = false
 	for item_id: String in plot.construction.REQUIREMENTS:
 		Inventory.add_item(item_id, plot.construction.REQUIREMENTS[item_id])
+	plot.worker_dust_enabled = true
 	_expect(plot.construction.start_build(ids).success, "Eight workers start construction with unchanged requirements.")
 	var bar: TextureProgressBar = plot.get_node("BuildingProgress")
 	_expect(bar.visible and not plot.get_node("Label").visible and bar.value == 0.0,
 		"Construction shows the empty asset bar instead of the percentage label.")
-	_expect(not plot._has_dust_activity(), "A previous clearing arrival cannot enable dust for a new building task.")
+	_expect(plot.worker_dust_enabled and not plot._has_dust_activity(),
+		"A previous clearing arrival cannot enable dust for a new building task while dust is enabled.")
 	plot._process(2.0)
-	visuals.plot_presence.update(visuals, 2.0)
+	_expect(_dust_count(plot) == 0 and not plot._has_dust_activity(),
+		"Building emits no dust before the new builders' arrival update.")
+	plot.worker_dust_enabled = false
 	_drive_plot_arrival(visuals, ids)
 	visuals._process(0.2)
 	_expect(plot._has_dust_activity(), "Building dust becomes eligible after builders arrive.")
 	for id: String in ids:
 		_expect(not visuals.actors[id].visible, "All eight builders remain hidden inside the plot.")
 		_expect(not visuals.roaming.has(id), "Active builders cannot fall back to idle roaming.")
-	_expect(_dust_count(plot) == 0, "Disabling dust leaves the enter/hide mechanism intact.")
+	_expect(_dust_count(plot) == 0, "Disabling dust leaves arrival, hiding and roaming controls intact.")
+	plot.worker_dust_enabled = true
+	plot._process(2.0)
+	_expect(_dust_count(plot) > 0, "Arrived, paid builders can emit construction dust when enabled.")
 	_expect(other_plot.construction.phase == "uncleared", "The neighboring plot remains independent.")
 	TimeComponentManager.advance_minutes(270)
 	_expect(is_equal_approx(bar.value, 50.0), "Half the construction duration fills exactly half the bar.")
@@ -220,8 +226,24 @@ func _run() -> void:
 	_expect(workshop.start_job_from_storage(job, [ids[0]]), "Production starts through the real workshop API.")
 	_expect(not plot._has_dust_activity(), "A previous building arrival cannot enable dust for a new production order.")
 	visuals.plot_presence.update(visuals, 2.0)
-	_expect(plot._has_dust_activity() and not other_plot._has_dust_activity(), "After arrival, production dust belongs only to its originating plot.")
+	_drive_plot_arrival(visuals, [ids[0]] as Array[String])
+	var production_order_id: String = ""
+	for order: WorkOrder in WorkManager.active_orders.values():
+		if order.worker_id == ids[0]:
+			production_order_id = order.order_id
+	plot._process(2.0)
+	_expect(plot.worker_dust_enabled and not plot._has_dust_activity() and _dust_count(plot) == 0,
+		"Arrived production workers stay inside without production dust when dust is enabled.")
+	_expect(not production_order_id.is_empty(), "Production remains active after its worker arrives.")
 	_expect(not visuals.actors[ids[0]].visible, "Production uses the same hide-inside presentation.")
+	var dust_capture_dir: String = OS.get_environment("TIP_DUST_CAPTURE_DIR")
+	if not dust_capture_dir.is_empty():
+		DirAccess.make_dir_recursive_absolute(dust_capture_dir)
+		await RenderingServer.frame_post_draw
+		var capture_error: int = get_viewport().get_texture().get_image().save_png(
+			dust_capture_dir.path_join("production-worker-no-dust.png")
+		)
+		_expect(capture_error == OK, "Optional production no-dust capture saves at logical viewport size.")
 	content.free()
 	content = MAP.instantiate()
 	add_child(content)
@@ -230,8 +252,11 @@ func _run() -> void:
 	visuals = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
 	visuals.set_process(false)
 	visuals.plot_presence.update(visuals, 0.0)
+	var reloaded_plot = content.get_node("YSortWorld/WorkshopPlot")
 	_expect(not visuals.actors[ids[0]].visible, "Reloading the map retains the active production worker inside its plot.")
-	_expect(content.get_node("YSortWorld/WorkshopPlot")._has_dust_activity(), "Restored workers already inside resume activity dust.")
+	_expect(reloaded_plot.worker_dust_enabled and not reloaded_plot._has_dust_activity() and _dust_count(reloaded_plot) == 0,
+		"Reloaded production remains inside without dust even while dust is enabled.")
+	_expect(WorkManager.active_orders.has(production_order_id), "The production order remains running after the map reload.")
 	TimeComponentManager.advance_minutes(job.base_duration_minutes)
 	visuals.plot_presence.update(visuals, 0.0)
 	_expect(visuals.actors[ids[0]].visible, "Production completion restores the worker after a map reload.")
