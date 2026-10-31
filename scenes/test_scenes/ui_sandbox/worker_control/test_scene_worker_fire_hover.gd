@@ -15,6 +15,7 @@ var failures: int = 0
 var fire_review_dir: String = ""
 var fire_hover_enter_events: int = 0
 var fire_hover_exit_events: int = 0
+var removal_requests: int = 0
 var review_worker_id: String = WORKING_ID
 var fixture
 var worker_control
@@ -34,7 +35,7 @@ func _expect(ok: bool, message: String) -> void:
 func _run() -> void:
 	fire_review_dir = ProjectSettings.globalize_path("user://fire-hover-review")
 	DirAccess.make_dir_recursive_absolute(fire_review_dir)
-	print("Worker Fire hover screenshots: " + fire_review_dir)
+	print("Worker Fire click screenshots: " + fire_review_dir)
 	fixture = WORKSITE_FIXTURE.instantiate()
 	fixture.prepare_nightmare_test = false
 	fixture.test_hauler_carts = 0
@@ -43,13 +44,14 @@ func _run() -> void:
 	worker_control = fixture.worker_control
 	await get_tree().process_frame
 	await get_tree().process_frame
-	worker_control._fire_hover_detector.mouse_entered.connect(_on_fire_hover_probe_entered)
-	worker_control._fire_hover_detector.mouse_exited.connect(_on_fire_hover_probe_exited)
+	worker_control._fire_block_detector.mouse_entered.connect(_on_fire_hover_probe_entered)
+	worker_control._fire_block_detector.mouse_exited.connect(_on_fire_hover_probe_exited)
+	worker_control.remove_requested.connect(_on_remove_probe)
 	_expect(get_viewport().get_visible_rect().size == Vector2(400, 225), "Test uses the approved 400 x 225 logical viewport.")
 	_expect(get_window().size == Vector2i(1200, 675), "Test uses the 1200 x 675 development window.")
 	_expect(CitizenGenerator.display_name_container.has(REVIEW_LABORER_NAME)
 		and CitizenGenerator.display_name_container.has(REVIEW_HAULER_NAME), "Review names come from the game's citizen name pool.")
-	print("Worker Fire hover sizes: logical=%s window=%s" % [get_viewport().get_visible_rect().size, get_window().size])
+	print("Worker Fire click sizes: logical=%s window=%s" % [get_viewport().get_visible_rect().size, get_window().size])
 
 	_add_worker(WORKING_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.WORKING, "working_order")
 	_add_worker(TRAVELLING_ID, WorkerData.Profession.LABORER, WorkerData.WorkStatus.TRAVELLING, "travel_order")
@@ -64,13 +66,14 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	await _check_disabled_hover(WORKING_ID, "Working now", "working")
-	await _check_disabled_hover(TRAVELLING_ID, "Travelling", "travelling")
-	await _check_disabled_hover(HAULER_ID, "Hauler trip", "hauler-trip")
-	await _check_disabled_hover(RESERVED_ID, "Job reserved", "reserved")
-	await _check_disabled_hover(WORKSHOP_ID, "Workshop assigned", "workshop-assigned")
+	await _check_disabled_click(WORKING_ID, "Working now", "working")
+	await _check_disabled_click(TRAVELLING_ID, "Travelling", "travelling")
+	await _check_disabled_click(HAULER_ID, "Hauler trip", "hauler-trip")
+	await _check_disabled_click(RESERVED_ID, "Job reserved", "reserved")
+	await _check_disabled_click(WORKSHOP_ID, "Workshop assigned", "workshop-assigned")
 	await _check_generic_fallback()
 	await _check_stale_state_refresh()
+	await _check_stale_enabled_fire()
 	await _check_context_changes()
 	await _check_dense_roster()
 	await _check_edge_clamping()
@@ -78,10 +81,10 @@ func _run() -> void:
 
 	worker_control.close()
 	if failures > 0:
-		push_error("Worker Fire hover review failed with %d assertion(s)." % failures)
+		push_error("Worker Fire click review failed with %d assertion(s)." % failures)
 		get_tree().quit(1)
 		return
-	print("Worker Fire hover review passed.")
+	print("Worker Fire click review passed.")
 	get_tree().quit(0)
 
 
@@ -148,15 +151,19 @@ func _on_fire_hover_probe_exited() -> void:
 	fire_hover_exit_events += 1
 
 
-func _click_at(logical_position: Vector2) -> void:
+func _on_remove_probe(_worker_id: String) -> void:
+	removal_requests += 1
+
+
+func _click_at(logical_position: Vector2, button: MouseButton = MOUSE_BUTTON_LEFT) -> void:
 	var down := InputEventMouseButton.new()
-	down.button_index = MOUSE_BUTTON_LEFT
+	down.button_index = button
 	down.position = logical_position
 	down.global_position = logical_position
 	down.pressed = true
 	get_viewport().push_input(down, true)
 	var up := InputEventMouseButton.new()
-	up.button_index = MOUSE_BUTTON_LEFT
+	up.button_index = button
 	up.position = logical_position
 	up.global_position = logical_position
 	up.pressed = false
@@ -164,7 +171,7 @@ func _click_at(logical_position: Vector2) -> void:
 	await get_tree().process_frame
 
 
-func _check_disabled_hover(worker_id: String, reason: String, capture_name: String) -> void:
+func _check_disabled_click(worker_id: String, reason: String, capture_name: String) -> void:
 	_show_review_manage(worker_id)
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -172,13 +179,21 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 	_expect(bool(row.get("can_fire", true)) == false or bool(row.get("working", false)), "%s row is blocked by its real worker state." % capture_name)
 	_expect(str(row.get("fire_block_reason", "")) == reason, "%s row supplies the matching Fire block reason." % capture_name)
 	_expect(worker_control.manage_fire_button.disabled, "%s Fire remains disabled." % capture_name)
+	var requests_before: int = removal_requests
+	var wallet_before: int = int(Inventory.items.get("shekel", 0))
 	var fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
 	await _move_mouse_to(Vector2(3, 3))
 	var enters_before: int = fire_hover_enter_events
 	await _move_mouse_to(fire_rect.get_center())
 	_expect(fire_rect.has_point(get_viewport().get_mouse_position()), "%s OS mouse pointer reaches Fire in viewport coordinates." % capture_name)
 	_expect(fire_hover_enter_events > enters_before, "%s real mouse motion produces a hover-enter event." % capture_name)
-	_expect(worker_control._fire_block_feedback.visible, "%s actual mouse hover displays rendered feedback." % capture_name)
+	_expect(not worker_control._fire_block_feedback.visible, "%s hover alone does not display feedback." % capture_name)
+	await _click_at(fire_rect.get_center(), MOUSE_BUTTON_RIGHT)
+	_expect(not worker_control._fire_block_feedback.visible, "%s right-click does not display Fire feedback." % capture_name)
+	if capture_name == "working":
+		await _capture("before-click.png")
+	await _click_at(fire_rect.get_center())
+	_expect(worker_control._fire_block_feedback.visible, "%s blocked click displays feedback." % capture_name)
 	_expect(worker_control._fire_block_feedback.text == reason, "%s feedback matches the current cause." % capture_name)
 	_expect(worker_control._fire_block_feedback.get_theme_font("font") == worker_control.manage_fire_button.get_theme_font("font")
 		and worker_control._fire_block_feedback.get_theme_font_size("font_size") == 6,
@@ -215,18 +230,23 @@ func _check_disabled_hover(worker_id: String, reason: String, capture_name: Stri
 	var exits_before: int = fire_hover_exit_events
 	await _move_mouse_to(Vector2(3, 3))
 	_expect(fire_hover_exit_events > exits_before, "%s real mouse motion produces a hover-exit event." % capture_name)
-	_expect(not worker_control._fire_block_feedback.visible and worker_control.manage_window.visible,
-		"%s feedback hides after hover exit while Manage stays open." % capture_name)
+	_expect(worker_control._fire_block_feedback.visible and worker_control.manage_window.visible,
+		"%s feedback remains after the pointer leaves while Manage stays open." % capture_name)
 	var reenters_before: int = fire_hover_enter_events
 	await _move_mouse_to(fire_rect.get_center())
 	_expect(fire_hover_enter_events > reenters_before, "%s real mouse motion produces a second hover-enter event." % capture_name)
 	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == reason,
-		"%s feedback reappears on mouse re-entry." % capture_name)
+		"%s feedback persists on mouse re-entry." % capture_name)
 	await _click_at(fire_rect.get_center())
-	_expect(worker_control.manage_fire_button.disabled and not worker_control._confirmation_overlay.visible, "%s click does not activate disabled Fire." % capture_name)
+	await _click_at(fire_rect.get_center())
+	_expect(worker_control.manage_fire_button.disabled and not worker_control._confirmation_overlay.visible
+		and worker_control._fire_block_feedback.visible and WorkerDatabase.has_worker_data(worker_id)
+		and removal_requests == requests_before and int(Inventory.items.get("shekel", 0)) == wallet_before
+		and worker_control.find_children("FireBlockFeedback", "Label", true, false).size() == 1,
+		"%s repeated blocked clicks keep one warning, emit no removal request, and do not change the wallet." % capture_name)
 	worker_control._close_manage()
-	_expect(not worker_control._fire_block_feedback.visible and not worker_control._fire_hover_detector.visible,
-		"%s popup close hides feedback and the hover detector." % capture_name)
+	_expect(not worker_control._fire_block_feedback.visible and not worker_control._fire_block_detector.visible,
+		"%s popup close hides feedback and the click detector." % capture_name)
 	await get_tree().process_frame
 
 
@@ -240,6 +260,7 @@ func _check_generic_fallback() -> void:
 	var fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(fire_rect.get_center())
+	await _click_at(fire_rect.get_center())
 	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == "Cannot fire",
 		"Unknown disabled cause uses a short honest fallback.")
 	await _capture("generic-fallback.png")
@@ -257,41 +278,57 @@ func _check_stale_state_refresh() -> void:
 	var fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(fire_rect.get_center())
+	await _click_at(fire_rect.get_center())
 	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == "Travelling",
 		"Fresh travel state is visible before it changes.")
 	worker.current_work_status = WorkerData.WorkStatus.WORKING
-	await _move_mouse_to(Vector2(3, 3))
-	await _move_mouse_to(fire_rect.get_center())
-	_expect(not worker_control._fire_block_feedback.visible,
-		"A stale hover refresh hides old feedback until the pointer leaves again.")
-	await _move_mouse_to(Vector2(3, 3))
-	await _move_mouse_to(fire_rect.get_center())
+	await _click_at(fire_rect.get_center())
 	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == "Working now",
-		"Re-entry displays updated reason (text=%s cached=%s pointer_inside=%s ignore=%s mouse=%s rect=%s)." % [
-			worker_control._fire_block_feedback.text, worker_control._fire_block_reason,
-			worker_control._fire_hover_pointer_inside, worker_control._fire_hover_ignore_until_exit,
-			get_viewport().get_mouse_position(), worker_control.manage_fire_button.get_global_rect()])
+		"A new click replaces an outdated reason with the current worker state.")
 	worker_control.refresh()
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(not worker_control._fire_block_feedback.visible, "Roster refresh hides feedback while status is updated.")
 	worker.current_work_status = WorkerData.WorkStatus.IDLE
 	worker.current_order_id = ""
-	await _move_mouse_to(Vector2(3, 3))
-	await _move_mouse_to(fire_rect.get_center())
-	_expect(not worker_control.manage_fire_button.disabled and not worker_control._fire_block_feedback.visible,
-		"Stale disabled state is cleared when the worker becomes idle.")
-	await _move_mouse_to(Vector2(3, 3))
-	await _move_mouse_to(fire_rect.get_center())
-	worker_control.manage_fire_button.pressed.emit()
-	await get_tree().process_frame
-	_expect(worker_control._confirmation_overlay.visible,
-		"Fire works normally after the stale disabled state clears.")
+	await _click_at(fire_rect.get_center())
+	_expect(not worker_control.manage_fire_button.disabled and not worker_control._fire_block_feedback.visible
+		and worker_control._confirmation_overlay.visible,
+		"Clicking after the worker becomes idle clears stale state and opens the normal confirmation.")
 	worker_control._cancel_remove_confirmation()
 	worker_control._close_manage()
 	worker.current_work_status = WorkerData.WorkStatus.TRAVELLING
 	worker.current_order_id = "travel_order"
 	await get_tree().process_frame
+
+
+func _check_stale_enabled_fire() -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(IDLE_ID)
+	worker.current_work_status = WorkerData.WorkStatus.IDLE
+	worker.current_order_id = ""
+	_show_review_manage(IDLE_ID)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(not worker_control.manage_fire_button.disabled, "Idle worker initially has an enabled Fire button.")
+	var fire_center: Vector2 = worker_control.manage_fire_button.get_global_rect().get_center()
+	await _move_mouse_to(fire_center)
+	worker.current_work_status = WorkerData.WorkStatus.WORKING
+	worker.current_order_id = "working_order"
+	await _click_at(fire_center)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(worker_control.manage_fire_button.disabled and worker_control._fire_block_feedback.visible
+		and worker_control._fire_block_feedback.text == "Working now"
+		and not worker_control._confirmation_overlay.visible and WorkerDatabase.has_worker_data(IDLE_ID),
+		"A worker who becomes busy before an enabled Fire click is protected and shows the current reason.")
+	worker.current_work_status = WorkerData.WorkStatus.IDLE
+	worker.current_order_id = ""
+	worker_control.refresh()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(not worker_control._fire_block_feedback.visible and not worker_control.manage_fire_button.disabled,
+		"Refreshing the worker's idle state clears the outdated warning.")
+	worker_control._close_manage()
 
 
 func _check_context_changes() -> void:
@@ -300,6 +337,7 @@ func _check_context_changes() -> void:
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	await _click_at(worker_control.manage_fire_button.get_global_rect().get_center())
 	_expect(worker_control._fire_block_feedback.visible, "Feedback is visible before changing worker.")
 	_show_review_manage(RESERVED_ID)
 	_expect(not worker_control._fire_block_feedback.visible, "Changing worker hides the previous feedback.")
@@ -307,8 +345,9 @@ func _check_context_changes() -> void:
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	await _click_at(worker_control.manage_fire_button.get_global_rect().get_center())
 	_expect(worker_control._fire_block_feedback.visible and worker_control._fire_block_feedback.text == "Job reserved",
-		"Hover after changing worker shows that worker's reason.")
+		"Click after changing worker shows that worker's reason.")
 	worker_control._show_tools_tab()
 	_expect(not worker_control._fire_block_feedback.visible and not worker_control.manage_window.visible,
 		"Changing tabs closes Manage and hides its feedback.")
@@ -318,6 +357,7 @@ func _check_context_changes() -> void:
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	await _click_at(worker_control.manage_fire_button.get_global_rect().get_center())
 	_expect(worker_control._fire_block_feedback.visible, "Feedback can reappear after returning to Status.")
 	worker_control.close()
 	_expect(not worker_control._fire_block_feedback.visible and not worker_control.visible,
@@ -343,6 +383,7 @@ func _check_dense_roster() -> void:
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	await _click_at(worker_control.manage_fire_button.get_global_rect().get_center())
 	var feedback_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var scroll: ScrollContainer = worker_control.status_list.get_parent()
 	_expect(worker_control._fire_block_feedback.visible and scroll.get_v_scroll_bar().max_value > scroll.size.y,
@@ -359,6 +400,7 @@ func _check_dense_roster() -> void:
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	await _move_mouse_to(worker_control.manage_fire_button.get_global_rect().get_center())
+	await _click_at(worker_control.manage_fire_button.get_global_rect().get_center())
 	feedback_rect = worker_control._fire_block_feedback.get_global_rect()
 	_expect(worker_control._fire_block_feedback.visible
 		and not feedback_rect.intersects(scroll.get_global_rect())
@@ -378,14 +420,15 @@ func _check_edge_clamping() -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var popup_size: Vector2 = worker_control.manage_window.size
 	worker_control.manage_window.position = Vector2(2, 2)
-	worker_control._sync_fire_hover_detector()
+	worker_control._sync_fire_block_detector()
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	var top_left_fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
 	await _move_mouse_to(top_left_fire_rect.get_center())
 	_expect(top_left_fire_rect.has_point(get_viewport().get_mouse_position()),
 		"Top-left edge mouse reaches Fire in viewport coordinates.")
-	_expect(worker_control._fire_block_feedback.visible, "Edge placement still shows actual hover feedback.")
+	await _click_at(top_left_fire_rect.get_center())
+	_expect(worker_control._fire_block_feedback.visible, "Edge placement still shows feedback on click.")
 	var label_rect: Rect2 = worker_control._fire_block_feedback.get_global_rect()
 	var popup_rect: Rect2 = worker_control.manage_window.get_global_rect()
 	var hub_rect: Rect2 = worker_control.window.get_global_rect()
@@ -400,13 +443,15 @@ func _check_edge_clamping() -> void:
 	bottom_source_button.size = Vector2(42.0, 15.0)
 	worker_control.get_node("Root").add_child(bottom_source_button)
 	worker_control._position_popup(worker_control.manage_window, bottom_source_button)
+	worker_control._hide_fire_block_feedback()
 	await get_tree().process_frame
 	await _move_mouse_to(Vector2(3, 3))
 	var bottom_right_fire_rect: Rect2 = worker_control.manage_fire_button.get_global_rect()
 	await _move_mouse_to(bottom_right_fire_rect.get_center())
 	_expect(bottom_right_fire_rect.has_point(get_viewport().get_mouse_position()),
 		"Bottom-right edge mouse reaches Fire in viewport coordinates.")
-	_expect(worker_control._fire_block_feedback.visible, "Bottom-right edge placement still shows actual hover feedback.")
+	await _click_at(bottom_right_fire_rect.get_center())
+	_expect(worker_control._fire_block_feedback.visible, "Bottom-right edge placement still shows feedback on click.")
 	label_rect = worker_control._fire_block_feedback.get_global_rect()
 	popup_rect = worker_control.manage_window.get_global_rect()
 	_expect(absf(label_rect.get_center().x - hub_rect.get_center().x) <= 0.5
@@ -426,8 +471,7 @@ func _check_enabled_fire_confirmation() -> void:
 	_expect(not worker_control.manage_fire_button.disabled, "Idle worker keeps the normal enabled Fire action.")
 	var fire_center: Vector2 = worker_control.manage_fire_button.get_global_rect().get_center()
 	await _move_mouse_to(fire_center)
-	worker_control.manage_fire_button.pressed.emit()
-	await get_tree().process_frame
+	await _click_at(fire_center)
 	_expect(worker_control._confirmation_overlay.visible,
 		"Enabled Fire opens confirmation (disabled=%s mouse=%s rect=%s)." % [
 			worker_control.manage_fire_button.disabled, get_viewport().get_mouse_position(),
@@ -439,8 +483,7 @@ func _check_enabled_fire_confirmation() -> void:
 	_expect(not worker_control._confirmation_overlay.visible and WorkerDatabase.has_worker_data(IDLE_ID),
 		"No cancels Fire and retains the worker.")
 	await _move_mouse_to(fire_center)
-	worker_control.manage_fire_button.pressed.emit()
-	await get_tree().process_frame
+	await _click_at(fire_center)
 	_expect(worker_control._confirmation_overlay.visible, "Fire can open confirmation again after No.")
 	var yes_center: Vector2 = worker_control._confirm_yes_button.get_global_rect().get_center()
 	await _move_mouse_to(yes_center)

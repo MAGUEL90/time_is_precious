@@ -85,7 +85,7 @@ func _run() -> void:
 	var manage_margin: MarginContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin")
 	_expect(fixture.worker_control.manage_window.size.y <= 86.0 and manage_margin.get_theme_constant("margin_top") == 6,
 		"Compact Manage panel removes the large blank area above its four actions.")
-	fixture.worker_control._on_fire_hover_entered()
+	fixture.worker_control._request_manage_fire()
 	var fire_feedback_rect: Rect2 = fixture.worker_control._fire_block_feedback.get_global_rect()
 	var hub_rect: Rect2 = fixture.worker_control.window.get_global_rect()
 	var status_scroll_rect: Rect2 = fixture.worker_control.status_list.get_parent().get_global_rect()
@@ -103,7 +103,7 @@ func _run() -> void:
 		and not feedback_covers_button,
 		"Fire reason fits inside Worker Hub without covering controls (visible=%s feedback=%s hub=%s scroll=%s covers_button=%s)." % [
 			fixture.worker_control._fire_block_feedback.visible, fire_feedback_rect, hub_rect, status_scroll_rect, feedback_covers_button])
-	fixture.worker_control._on_fire_hover_exited()
+	fixture.worker_control._hide_fire_block_feedback()
 	fixture.worker_control.manage_details_button.pressed.emit()
 	_expect(fixture.worker_control.details_label.text.contains("Productive days:") and fixture.worker_control.details_label.text.contains("Wage:"), "Details exposes requested worker data.")
 	await _capture("worker-hub-details.png")
