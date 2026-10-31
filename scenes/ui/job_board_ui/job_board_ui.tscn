@@ -149,9 +149,9 @@ theme_override_constants/separation = 1
 
 [node name="ConfirmQuoteRow" type="HBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 12.0
-offset_top = 109.0
+offset_top = 111.0
 offset_right = 242.0
-offset_bottom = 121.0
+offset_bottom = 123.0
 alignment = 1
 theme_override_constants/separation = 3
 mouse_filter = 2
@@ -187,9 +187,9 @@ clip_text = true
 
 [node name="ConfirmationFeedbackLabel" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
 offset_left = 12.0
-offset_top = 123.0
+offset_top = 125.0
 offset_right = 242.0
-offset_bottom = 137.0
+offset_bottom = 139.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(1, 1, 1, 1)

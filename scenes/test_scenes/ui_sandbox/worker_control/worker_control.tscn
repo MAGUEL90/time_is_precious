@@ -486,7 +486,7 @@ text = "Contract"
 
 [node name="ContractWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(104, 84)
+custom_minimum_size = Vector2(118, 102)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -523,16 +523,16 @@ text = "Contract"
 horizontal_alignment = 1
 
 [node name="ContractDays" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 2
 
 [node name="Days3Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
-custom_minimum_size = Vector2(24, 16)
+custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_type_variation = &"WorkshopSquareButton24"
+theme_type_variation = &"WorkshopSquareButton34"
 theme_override_font_sizes/font_size = 6
 alignment = 2
 text = "3D"
@@ -541,21 +541,21 @@ metadata/contract_days = 3
 
 [node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days3Button"]
 visible = false
-offset_left = 2.0
-offset_top = 3.0
-offset_right = 12.0
-offset_bottom = 13.0
+offset_left = 3.0
+offset_top = 9.0
+offset_right = 19.0
+offset_bottom = 25.0
 mouse_filter = 2
 texture_filter = 1
 texture = ExtResource("contract_check")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 2
 
 [node name="Days6Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
-custom_minimum_size = Vector2(24, 16)
+custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_type_variation = &"WorkshopSquareButton24"
+theme_type_variation = &"WorkshopSquareButton34"
 theme_override_font_sizes/font_size = 6
 alignment = 2
 text = "6D"
@@ -564,21 +564,21 @@ metadata/contract_days = 6
 
 [node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days6Button"]
 visible = false
-offset_left = 2.0
-offset_top = 3.0
-offset_right = 12.0
-offset_bottom = 13.0
+offset_left = 3.0
+offset_top = 9.0
+offset_right = 19.0
+offset_bottom = 25.0
 mouse_filter = 2
 texture_filter = 1
 texture = ExtResource("contract_check")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 2
 
 [node name="Days9Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
-custom_minimum_size = Vector2(24, 16)
+custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_type_variation = &"WorkshopSquareButton24"
+theme_type_variation = &"WorkshopSquareButton34"
 theme_override_font_sizes/font_size = 6
 alignment = 2
 text = "9D"
@@ -587,15 +587,15 @@ metadata/contract_days = 9
 
 [node name="SelectionMarker" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractDays/Days9Button"]
 visible = false
-offset_left = 2.0
-offset_top = 3.0
-offset_right = 12.0
-offset_bottom = 13.0
+offset_left = 3.0
+offset_top = 9.0
+offset_right = 19.0
+offset_bottom = 25.0
 mouse_filter = 2
 texture_filter = 1
 texture = ExtResource("contract_check")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 2
 
 [node name="RenewPriceRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 8)

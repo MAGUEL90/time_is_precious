@@ -54,6 +54,38 @@ func _expect_duration_selection(days: int) -> void:
 		_expect(marker != null and marker.visible == selected,
 			"Only the %d-day duration button shows its SelectionMarker." % days)
 
+func _expect_marker_pixels(button: Button, days: int) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var marker: TextureRect = button.get_node("SelectionMarker")
+	var marker_position: Vector2 = marker.get_global_rect().position
+	var origin := Vector2i(roundi(marker_position.x), roundi(marker_position.y))
+	var frame: Image = get_viewport().get_texture().get_image()
+	var source: Image = Image.load_from_file(ProjectSettings.globalize_path("res://assets/ui/ui_icon/checklist_icon.png"))
+	var opaque_pixels: int = 0
+	var pixels_match: bool = marker.visible and marker_position.is_equal_approx(Vector2(origin)) \
+		and source != null and source.get_size() == Vector2i(16, 16)
+	if pixels_match:
+		for y: int in range(16):
+			for x: int in range(16):
+				var source_pixel: Color = source.get_pixel(x, y)
+				if source_pixel.a < 1.0:
+					continue
+				opaque_pixels += 1
+				var point := origin + Vector2i(x, y)
+				if point.x < 0 or point.y < 0 or point.x >= frame.get_width() or point.y >= frame.get_height():
+					pixels_match = false
+					continue
+				var rendered_pixel: Color = frame.get_pixelv(point)
+				var tolerance: float = 1.0 / 255.0 + 0.00001
+				if absf(source_pixel.r - rendered_pixel.r) > tolerance \
+						or absf(source_pixel.g - rendered_pixel.g) > tolerance \
+						or absf(source_pixel.b - rendered_pixel.b) > tolerance:
+					pixels_match = false
+	_expect(pixels_match and opaque_pixels > 0,
+		"The selected %dD checklist retains every opaque source pixel within one color step." % days)
+
 func _select_duration(days: int) -> void:
 	for button: Button in hub.contract_day_buttons:
 		if int(button.get_meta("contract_days", -1)) == days:
@@ -65,6 +97,9 @@ func _capture_duration_geometry() -> Array[Rect2]:
 	var bounds: Array[Rect2] = [hub.contract_window.get_global_rect(), hub.renew_price_label.get_global_rect()]
 	for button: Button in hub.contract_day_buttons:
 		bounds.append(button.get_global_rect())
+		var marker: Control = button.get_node_or_null("SelectionMarker") as Control
+		if marker != null:
+			bounds.append(marker.get_global_rect())
 	return bounds
 
 func _capture_contract_range_geometry() -> Array[Rect2]:
@@ -288,6 +323,10 @@ func _run() -> void:
 	await _capture("worker-contract-menu")
 	var wallet_before_contract: int = int(Inventory.items.get("shekel", 0))
 	hub.manage_contract_button.pressed.emit()
+	var required_panel_size: Vector2 = hub.contract_window.get_node("Margin").get_combined_minimum_size()
+	_expect(hub.contract_window.size.x >= required_panel_size.x
+		and hub.contract_window.size.y >= required_panel_size.y,
+		"Contract fits the larger duration panels immediately when opened.")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(not hub.manage_window.visible and hub.contract_window.visible, "Contract opens in its own panel.")
@@ -330,9 +369,10 @@ func _run() -> void:
 			and int(button.get_meta("contract_days", -1)) == day_values[index],
 			"Duration %d is always visible with the correct label and value." % day_values[index])
 		_expect(button_rect.size.is_equal_approx(first_button_rect.size) and button_rect.size.x <= 40.0
-			and button_rect.size.x >= 16.0 and button_rect.position.y >= title_rect.end.y
+			and button_rect.size.is_equal_approx(Vector2(34.0, 34.0))
+			and button_rect.position.y >= title_rect.end.y
 			and button_rect.end.y <= quote_rect.position.y,
-			"Duration %d is compact, equal-sized, and between the title and price." % day_values[index])
+			"Duration %d uses an equal 34x34 button between the title and price." % day_values[index])
 		if index > 0:
 			var previous_rect: Rect2 = buttons[index - 1].get_global_rect()
 			_expect(button_rect.position.x >= previous_rect.end.x
@@ -342,11 +382,28 @@ func _run() -> void:
 			and button.get_theme_color("font_color").is_equal_approx(Color.WHITE)
 			and button.get_theme_color("font_pressed_color").is_equal_approx(Color.WHITE),
 			"Duration %d uses the white size-6 UI font." % day_values[index])
+		var marker: TextureRect = button.get_node_or_null("SelectionMarker") as TextureRect
+		var marker_rect: Rect2 = marker.get_global_rect() if marker != null else Rect2()
+		_expect(marker != null
+			and marker.texture == preload("res://assets/ui/ui_icon/checklist_icon.png")
+			and marker.texture.get_size().is_equal_approx(Vector2(16.0, 16.0))
+			and marker.size.is_equal_approx(Vector2(16.0, 16.0))
+			and marker.scale.is_equal_approx(Vector2.ONE)
+			and marker_rect.size.is_equal_approx(Vector2(16.0, 16.0))
+			and marker.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
+			and button_rect.encloses(marker_rect),
+			"Duration %d shows the original 16x16 checklist at native size with nearest filtering inside the button." % day_values[index])
 		var panel_style: StyleBox = button.get_theme_stylebox("normal")
 		var panel_texture: AtlasTexture = (panel_style as StyleBoxTexture).texture as AtlasTexture if panel_style is StyleBoxTexture else null
 		_expect(panel_texture != null
-			and panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_24x24.png"),
-			"Duration %d reuses the existing brown 24x24 panel asset." % day_values[index])
+			and panel_texture.atlas == preload("res://assets/ui/ui_panel/brown_panel_34x34.png")
+			and panel_texture.region.size == Vector2(34.0, 34.0),
+			"Duration %d reuses the existing brown 34x34 panel asset." % day_values[index])
+		var text_width: float = button.get_theme_font("font").get_string_size(button.text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, button.get_theme_font_size("font_size")).x
+		var text_start: float = button_rect.end.x - panel_style.get_content_margin(SIDE_RIGHT) - text_width
+		_expect(marker_rect.end.x <= text_start,
+			"Duration %d keeps the full checklist clear of its label." % day_values[index])
 	_expect(hub.contract_window.find_children("*", "OptionButton", true, false).is_empty(),
 		"Contract no longer has a duration dropdown.")
 	_expect(hub.contract_window.find_children("*", "PopupMenu", true, false).is_empty(),
@@ -368,6 +425,7 @@ func _run() -> void:
 	_expect(buttons[0].has_focus(), "Tab remains within Contract and returns to 3D.")
 	_expect_duration_selection(3)
 	var original_geometry: Array[Rect2] = _capture_duration_geometry()
+	await _expect_marker_pixels(buttons[0], 3)
 	await _capture("worker-contract-day-3")
 	buttons[1].grab_focus()
 	var accept := InputEventKey.new()
@@ -384,6 +442,7 @@ func _run() -> void:
 	_expect(Inventory.items.get("shekel", 0) == wallet_before_contract and worker.payroll_paid_until_day == 103,
 		"Changing contract length does not charge the wallet or alter the current contract.")
 	_expect_duration_geometry(original_geometry, 6)
+	await _expect_marker_pixels(buttons[1], 6)
 	await _capture("worker-contract-day-6")
 	if DisplayServer.get_name() == "headless":
 		_select_duration(9)
@@ -414,6 +473,7 @@ func _run() -> void:
 		and worker.payroll_paid_until_day == 103, "Nine-day selection, including a repeated click, remains free and shows the correct quote.")
 	_expect_duration_selection(9)
 	_expect_duration_geometry(original_geometry, 9)
+	await _expect_marker_pixels(buttons[2], 9)
 	await _capture("worker-contract-day-9")
 	var original_panel_position: Vector2 = hub.contract_window.position
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
@@ -422,6 +482,20 @@ func _run() -> void:
 	for button: Button in buttons:
 		_expect(get_viewport().get_visible_rect().encloses(button.get_global_rect()),
 			"Every duration button stays inside the viewport at the bottom-right edge.")
+	var edge_anchor := Button.new()
+	hub.get_node("Root").add_child(edge_anchor)
+	edge_anchor.position = viewport_size - Vector2(16, 16)
+	edge_anchor.size = Vector2(14, 14)
+	hub._position_popup(hub.contract_window, edge_anchor)
+	await get_tree().process_frame
+	var edge_panel_rect: Rect2 = hub.contract_window.get_global_rect()
+	_expect(get_viewport().get_visible_rect().encloses(edge_panel_rect)
+		and edge_panel_rect.end.x <= edge_anchor.get_global_rect().position.x,
+		"The larger Contract panel opens inside the viewport on the left of a right-edge anchor.")
+	for button: Button in buttons:
+		_expect(edge_panel_rect.encloses(button.get_global_rect()),
+			"Each larger duration button fits inside Contract at the viewport edge.")
+	edge_anchor.queue_free()
 	hub.contract_window.position = original_panel_position
 	await get_tree().process_frame
 	_select_duration(6)

@@ -33,6 +33,11 @@ func _confirmation_geometry_controls() -> Array[Control]:
 	controls.append(board.confirm_quote_label)
 	controls.append(board.confirm_quote_icon)
 	controls.append(board.confirm_quote_amount_label)
+	controls.append(board.confirmation_feedback_label)
+	var actions: Control = board.confirmation_panel.get_node("ConfirmationActions") as Control
+	controls.append(actions)
+	controls.append(board.cancel_hire_button)
+	controls.append(board.confirm_hire_button)
 	return controls
 
 func _capture_confirmation_geometry() -> Array[Rect2]:
@@ -52,6 +57,39 @@ func _expect_confirmation_geometry(expected: Array[Rect2], context: String) -> v
 		var same_size: bool = actual.size.is_equal_approx(expected[index].size)
 		_expect(same_position and same_size,
 			"%s: control %d keeps its position and size (%s vs %s)." % [context, index, str(expected[index]), str(actual)])
+
+func _expect_confirmation_layout(context: String) -> void:
+	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
+	var duration_rect: Rect2 = board.duration_button_container.get_global_rect()
+	var quote_row: Control = board.confirm_quote_label.get_parent() as Control
+	var quote_rect: Rect2 = quote_row.get_global_rect()
+	var feedback_rect: Rect2 = board.confirmation_feedback_label.get_global_rect()
+	var actions: Control = board.confirmation_panel.get_node("ConfirmationActions") as Control
+	var actions_rect: Rect2 = actions.get_global_rect()
+	var contained_controls: Array[Control] = [
+		board.duration_button_container,
+		quote_row,
+		board.confirm_quote_label,
+		board.confirm_quote_icon,
+		board.confirm_quote_amount_label,
+		board.confirmation_feedback_label,
+		actions,
+		board.cancel_hire_button,
+		board.confirm_hire_button,
+	]
+	for button: Button in board.duration_buttons:
+		contained_controls.append(button)
+	for control: Control in contained_controls:
+		_expect(panel_rect.encloses(control.get_global_rect()),
+			"%s: %s remains inside the contract panel." % [context, control.name])
+	_expect(quote_rect.position.y >= duration_rect.end.y + 3.0,
+		"%s: quote summary clears duration choices by at least 3 logical pixels." % context)
+	_expect(quote_rect.end.y <= feedback_rect.position.y,
+		"%s: quote summary does not overlap contract feedback." % context)
+	_expect(quote_rect.end.y <= actions_rect.position.y,
+		"%s: quote summary does not overlap confirmation buttons." % context)
+	_expect(feedback_rect.end.y <= actions_rect.position.y,
+		"%s: contract feedback does not overlap confirmation buttons." % context)
 
 func _expect_confirmation_text_white(first_name: Label) -> void:
 	var labels: Array[Label] = [
@@ -210,6 +248,7 @@ func _run() -> void:
 	var panel_rect: Rect2 = board.confirmation_panel.get_global_rect()
 	var first_name: Label = board.selected_names_container.get_child(0)
 	var confirmation_names_scroll: ScrollContainer = board.selected_names_container.get_parent()
+	_expect_confirmation_layout("Contract panel opening")
 	_expect_confirmation_text_white(first_name)
 	_expect(first_name.get_theme_font_size("font_size") == 6 and first_name.scale == Vector2.ONE
 		and board.selected_names_container.scale == Vector2.ONE and confirmation_names_scroll.scale == Vector2.ONE,
@@ -375,8 +414,21 @@ func _run() -> void:
 	_expect(board.confirmation_open and board.confirm_quote_amount_label.text == "15" and Inventory.items.get("shekel", 0) == 100, "A second changed quote also requires review.")
 	Inventory.items["shekel"] = 14
 	board.confirm_hire_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	_expect(board.confirmation_open and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.get("shekel", 0) == 14, "Insufficient batch funds hire none and charge nothing.")
-	_expect(not board.confirmation_feedback_label.text.is_empty(), "An unsuccessful hire supplies contextual feedback.")
+	_expect_confirmation_layout("Insufficient-funds feedback")
+	var expected_feedback: String = "Hire failed. Check your wallet and applicant availability."
+	var feedback_font: Font = board.confirmation_feedback_label.get_theme_font("font")
+	var feedback_font_size: int = board.confirmation_feedback_label.get_theme_font_size("font_size")
+	var feedback_text_width: float = feedback_font.get_string_size(
+		expected_feedback, HORIZONTAL_ALIGNMENT_LEFT, -1, feedback_font_size
+	).x
+	_expect(board.confirmation_feedback_label.text == expected_feedback
+		and board.confirmation_feedback_label.get_line_count() == 1
+		and feedback_text_width <= board.confirmation_feedback_label.size.x
+		and board.confirmation_feedback_label.size.y >= feedback_font.get_height(feedback_font_size),
+		"Insufficient-funds feedback remains legible on one unclipped line.")
 	await _capture("job-board-insufficient-batch")
 	Inventory.items["shekel"] = 15
 	observed_ids = PackedStringArray(["first", "second"])
