@@ -1,0 +1,111 @@
+{
+	"arrival_observed": false,
+	"assignment_observed": false,
+	"expired_observed": false,
+	"failures": 0,
+	"first_payment_observed": false,
+	"measurements": [
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"dried": 0,
+			"earned": 0,
+			"eaten": 0,
+			"fatigue": 0.001,
+			"focus": 0.9995,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 1,
+				"points": 2,
+				"portion_points": 0
+			},
+			"harvested": 0,
+			"held": [],
+			"hunger": 0.458000000000007,
+			"inventory": {
+				"date_cluster": 13,
+				"shekel": 6,
+				"wood_log": 4
+			},
+			"minute": 9098,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 8,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued",
+			"walked_pixels": 0.0,
+			"wallet_paid": 0,
+			"worker_reliability": 0.7,
+			"worker_satisfaction": 0.2,
+			"workshop_stock": {
+
+			}
+		},
+		{
+			"city_cash": 0,
+			"clothing_missing": 2,
+			"construction": "uncleared",
+			"dried": 0,
+			"earned": 0,
+			"eaten": 12,
+			"fatigue": 0.0115,
+			"focus": 0.987250000000001,
+			"food": {
+				"consumer_count": 2,
+				"daily_need": 2,
+				"days_remaining": 2,
+				"points": 4,
+				"portion_points": 0
+			},
+			"harvested": 12,
+			"held": [],
+			"hunger": 0.0270000000000071,
+			"inventory": {
+				"date_cluster": 11,
+				"shekel": 6,
+				"wood_log": 4
+			},
+			"minute": 9147,
+			"paid": 0,
+			"paid_from": 5,
+			"paid_until": 8,
+			"payroll_start": 5,
+			"period_rate": 1,
+			"shaped": 0,
+			"sleeps": 0,
+			"sold_bricks": 0,
+			"sold_wood": 0,
+			"stage": "continued_city",
+			"walked_pixels": 1678.33227884769,
+			"wallet_paid": 0,
+			"worker_reliability": 0.7,
+			"worker_satisfaction": 0.2,
+			"workshop_stock": {
+
+			}
+		}
+	],
+	"normal_income": 0,
+	"output_after_renewal": 0,
+	"output_observed": 0,
+	"phase": "read",
+	"renewal_observed": false,
+	"settlements": [
+		{
+			"amount": 1,
+			"city_cash": 0,
+			"from_day": 5,
+			"minute": 9120,
+			"until_day": 8
+		}
+	],
+	"status": "PASS",
+	"visits": [],
+	"wallet_paid": 0
+}
