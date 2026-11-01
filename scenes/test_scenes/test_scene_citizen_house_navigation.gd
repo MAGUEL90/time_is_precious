@@ -100,8 +100,8 @@ func _run() -> void:
 		_finish()
 		return
 	var title: Label = plot_menu.get_node("Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel") as Label
-	_expect(title.text == "CLEAR HOUSE SITE" and not plot_menu.player_button.visible,
-		"The reached menu is the worker-only house cleaning menu.")
+	_expect(title.text == "CLEAR HOUSE SITE" and plot_menu.player_button.visible,
+		"The reached house menu offers player cleaning.")
 	await _capture("house-walked-menu")
 	plot_menu.close_menu()
 	for _frame: int in range(3):

@@ -95,20 +95,21 @@ func _exercise_house() -> void:
 		"Both real nine-day contracts debit only their quoted three-shekel wallet prices.")
 
 	var manual_preview: Dictionary = construction.get_clearing_preview([] as Array[String], true)
-	var manual_start: Dictionary = construction.start_clearing([] as Array[String], true)
-	_expect(not bool(manual_preview.get("can_start", true)) and not bool(manual_start.get("success", true))
+	var mixed_preview: Dictionary = construction.get_clearing_preview([FIRST_ID] as Array[String], true)
+	_expect(bool(manual_preview.get("can_start", false)) and not bool(mixed_preview.get("can_start", true))
 		and construction.phase == "uncleared" and not first.is_reserved(),
-		"Direct player cleaning is rejected without starting work or reserving a worker.")
+		"Player cleaning is available without assigning a worker, and mixed selection is rejected.")
 	if not await _open_house_menu("house-rubble"):
 		return
 	var menu: WorkshopPlotUI = house.get("menu") as WorkshopPlotUI
 	var title: Label = menu.get_node("Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel") as Label
-	_expect(title.text == "CLEAR HOUSE SITE" and not menu.player_button.visible
+	_expect(title.text == "CLEAR HOUSE SITE" and menu.player_button.visible
 		and menu.build_button.text == "Start Cleaning" and not player.can_move and get_tree().paused,
-		"Physical E opens the house-cleaning menu immediately with no Assign Player action.")
+		"Physical E opens the house-cleaning menu with Assign Player available.")
 	menu._on_player_selected(true)
-	_expect(not menu._use_player and not menu.player_button.button_pressed,
-		"Even a direct player-selection callback cannot enable house cleaning by the player.")
+	_expect(menu._use_player and menu.player_button.button_pressed,
+		"Player selection is retained in the house cleaning menu.")
+	menu._on_player_selected(false)
 	await _capture("house-cleaning-menu")
 	_prepare_departure_actor(FIRST_ID)
 	menu._on_worker_assignment_next_requested([FIRST_ID] as Array[String])

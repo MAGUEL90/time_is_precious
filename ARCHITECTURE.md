@@ -49,9 +49,12 @@ requires a newly paid contract. Current city checkpoints use schema v12 and acce
 they retain pending work and delivery state without rewriting old files on load.
 
 The authored citizen-house plot shares the construction state and worker-presence
-rules with workshop plots. A worker clears it before construction; on completion
-the persistent construction state adds three places to the existing city shelter
-capacity once. Checkpoints through v11 acquire an untouched, uncleared house plot
+rules with workshop plots. The player or a worker clears it before construction;
+the player may also build in three-hour manual sessions, with normal time-based
+needs and interruption rules. Paused work keeps the paid materials and can be
+resumed by the player or a replacement worker. On completion the persistent
+construction state adds three places to the existing city shelter capacity once.
+Checkpoints through v11 acquire an untouched, uncleared house plot
 without changing their saved shelter capacity. House materials and work duration
 are provisional. The initial applicant and supply bootstrap remains separate work.
 

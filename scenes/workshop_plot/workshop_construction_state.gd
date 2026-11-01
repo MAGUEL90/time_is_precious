@@ -22,6 +22,10 @@ var order_id: String = ORDER_ID
 var phase: String = "uncleared"
 var clearing_remaining: int = CLEARING_MINUTES
 var clearing_by_player: bool = false
+# Manual house building is a transient session. A paused building keeps its
+# ordinary workerless construction record, so no save schema change is needed.
+var player_building: bool = false
+var _player_interrupt_pending: bool = false
 var worker_ids: Array[String] = []
 # The original team size bounds replacements; total work stays fixed when the
 # current team changes. Both values are persisted with the construction state.
@@ -68,8 +72,16 @@ func _now() -> int:
 func is_transaction_busy() -> bool:
 	return _starting
 
+func is_player_work_active() -> bool:
+	return clearing_by_player or player_building
+
 func _finish_transaction() -> void:
 	_starting = false
+	if _player_interrupt_pending:
+		_player_interrupt_pending = false
+		if is_player_work_active():
+			interrupt_player_work()
+			return
 	WorkerDatabase.on_work_owner_transaction_finished()
 
 func _worker_reason(id: String) -> String:
@@ -94,7 +106,7 @@ func get_worker_options() -> Array[Dictionary]:
 		options.append({"id": worker.worker_id, "name": worker.get_resolved_display_name(), "available": reason.is_empty(), "reason": reason})
 	return options
 
-func get_preview(selected_ids: Array[String]) -> Dictionary:
+func get_preview(selected_ids: Array[String], use_player: bool = false) -> Dictionary:
 	var message: String = ""
 	var unique: Array[String] = []
 	for id: String in selected_ids:
@@ -106,7 +118,9 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		if not reason.is_empty():
 			message = reason
 			break
-	if selected_ids.is_empty():
+	if use_player and (not is_citizen_house() or not selected_ids.is_empty()):
+		message = "Choose player or workers."
+	elif selected_ids.is_empty() and not use_player:
 		message = "Select available workers."
 	elif selected_ids.size() > MAX_WORKER_CAPACITY:
 		message = "Too many workers selected."
@@ -126,7 +140,7 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		message = "Shelter capacity is full; construction paused."
 	elif _starting:
 		message = "Starting construction."
-	var duration: int = ceili(float(get_solo_minutes()) / selected_ids.size()) if not selected_ids.is_empty() else 0
+	var duration: int = get_solo_minutes() if use_player and is_citizen_house() else (ceili(float(get_solo_minutes()) / selected_ids.size()) if not selected_ids.is_empty() else 0)
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "building" else 0
 	var progress: float = 0.0
 	if phase == "building":
@@ -134,13 +148,13 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		progress = clampf(1.0 - float(_remaining_work_units()) / float(total_units), 0.0, 1.0)
 	elif phase == "built":
 		progress = 1.0
-	var preview: Dictionary = {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
+	var preview: Dictionary = {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": (1 if player_building else worker_ids.size()) if phase != "empty" else (1 if use_player else selected_ids.size()), "payroll_blocked": payroll_blocked}
 	if is_citizen_house():
 		preview["shelter_blocked"] = shelter_blocked
 	return preview
 
-func start_build(selected_ids: Array[String]) -> Dictionary:
-	var preview: Dictionary = get_preview(selected_ids)
+func start_build(selected_ids: Array[String], use_player: bool = false) -> Dictionary:
+	var preview: Dictionary = get_preview(selected_ids, use_player)
 	if not bool(preview.can_start):
 		return {"success": false, "message": preview.message}
 	_starting = true
@@ -172,7 +186,7 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 		_finish_transaction()
 		return {"success": false, "message": "Shelter capacity is full; construction was not started."}
 	worker_ids = reserved
-	worker_capacity = reserved.size()
+	worker_capacity = 1 if use_player else reserved.size()
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
@@ -180,8 +194,10 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 	# House work is exactly 2880 worker-minutes even if the team size does not
 	# divide it evenly. Existing workshops keep their original rounded total.
 	payroll_work_remainder = int(preview.duration_minutes) * worker_capacity - work_total_units
+	player_building = use_player
 	phase = "building"
-	_initialize_approaches()
+	if not use_player:
+		_initialize_approaches()
 	changed.emit()
 	_finish_transaction()
 	return {"success": true, "message": "Construction started."}
@@ -193,7 +209,7 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	if next_time <= _latest_time:
 		return
 	var elapsed: int = next_time - _latest_time
-	if not clearing_by_player:
+	if not is_player_work_active():
 		var worked: int = 0
 		var minute_of_day: int = _latest_time % 1440
 		var on_shift: bool = minute_of_day >= SHIFT_START and minute_of_day < SHIFT_END
@@ -251,6 +267,7 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		payroll_work_remainder = 0
 		clearing_remaining = 0
 		clearing_by_player = false
+		player_building = false
 		_release_workers(worker_ids)
 		changed.emit()
 		if owns_transaction:
@@ -270,7 +287,7 @@ func _all_workers_payroll_blocked() -> bool:
 func has_active_worker_at_plot() -> bool:
 	if phase not in ["building", "clearing"]:
 		return false
-	if phase == "clearing" and clearing_by_player:
+	if is_player_work_active():
 		return true
 	var minute_of_day: int = _now() % 1440
 	if minute_of_day < SHIFT_START or minute_of_day >= SHIFT_END:
@@ -326,7 +343,7 @@ func _rebase_team(next_count: int) -> bool:
 ## Atomically release a resigning builder with the existing worker transaction.
 ## A failed worker transaction restores the post-flush reservation and progress.
 func resign_worker(worker_id: String) -> bool:
-	if _starting or phase not in ["building", "clearing"] or clearing_by_player or not worker_ids.has(worker_id):
+	if _starting or phase not in ["building", "clearing"] or is_player_work_active() or not worker_ids.has(worker_id):
 		return false
 	_starting = true
 	flush_elapsed_work()
@@ -375,14 +392,14 @@ func resign_worker(worker_id: String) -> bool:
 
 
 func get_replacement_slots() -> int:
-	if phase not in ["building", "clearing"] or clearing_by_player:
+	if phase not in ["building", "clearing"] or is_player_work_active():
 		return 0
 	return maxi(0, worker_capacity - worker_ids.size())
 
 
 ## Replacements occupy only vacancies from the original team; materials remain paid.
 func add_replacement_workers(ids: Array[String]) -> Dictionary:
-	if _starting or phase not in ["building", "clearing"] or clearing_by_player:
+	if _starting or phase not in ["building", "clearing"] or is_player_work_active():
 		return {"success": false, "message": "Workers cannot be assigned now."}
 	_starting = true
 	flush_elapsed_work()
@@ -433,13 +450,11 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 	var message: String = ""
 	if phase != "uncleared":
 		message = "Clearing in progress." if phase == "clearing" else "Site is already clear."
-	elif is_citizen_house() and use_player:
-		message = "Assign a worker to clear this site."
 	elif use_player and not ids.is_empty():
 		message = "Choose player or one worker."
 	elif not use_player:
 		if ids.size() != 1:
-			message = "Assign one worker." if is_citizen_house() else "Assign player or one worker."
+			message = "Assign player or one worker."
 		else:
 			message = _worker_reason(ids[0])
 	var payroll_blocked: bool = phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked()
@@ -485,6 +500,44 @@ func _initialize_approaches(ids: Array[String] = []) -> void:
 			for id: String in approaching:
 				plot.begin_worker_approach(id, order_id + ":" + phase)
 			return
+
+## A player may take over an unstaffed house without repaying its materials.
+func resume_player_work() -> Dictionary:
+	if not is_citizen_house() or _starting or is_player_work_active() or phase not in ["building", "clearing"] or not worker_ids.is_empty():
+		return {"success": false, "message": "Player cannot take over this work."}
+	_starting = true
+	flush_elapsed_work()
+	if phase not in ["building", "clearing"] or not worker_ids.is_empty() or _remaining_work_units() <= 0:
+		_finish_transaction()
+		return {"success": false, "message": "The work is no longer available."}
+	if phase == "building" and _remaining_work_units() <= 1 and not _has_shelter_room():
+		_finish_transaction()
+		return {"success": false, "message": "Shelter capacity is full; construction paused."}
+	player_building = phase == "building"
+	clearing_by_player = phase == "clearing"
+	changed.emit()
+	_finish_transaction()
+	return {"success": true, "message": "Player work started."}
+
+
+## Leave paid building work in its normal, saveable workerless state.
+func interrupt_player_work() -> void:
+	if _starting:
+		if is_player_work_active():
+			_player_interrupt_pending = true
+		return
+	if clearing_by_player:
+		interrupt_player_clearing()
+		return
+	if not player_building:
+		return
+	_starting = true
+	flush_elapsed_work()
+	if player_building:
+		player_building = false
+		changed.emit()
+	_finish_transaction()
+
 
 func interrupt_player_clearing() -> void:
 	if _starting or phase != "clearing" or not clearing_by_player:

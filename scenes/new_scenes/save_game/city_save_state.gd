@@ -100,6 +100,8 @@ func busy_reason(map: Node) -> String:
 	for plot: Node in plots(map).values():
 		if plot._starting or plot.clearing_by_player:
 			return "Finish clearing first."
+		if plot.has_method("is_player_work_active") and plot.is_player_work_active():
+			return "Finish building first."
 	return ""
 
 func capture(map: Node) -> Dictionary:
