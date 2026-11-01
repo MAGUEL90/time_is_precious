@@ -12,15 +12,16 @@ func _run() -> void:
 	_expect(not player.debug_disable_player_needs, "Player needs must be enabled by default.")
 	player.fatigue = 0.2
 	player.hunger = 0.1
-	player.focus = 0.9
 	var hud = load("res://scenes/ui/bottom_hud/bottom_hud.tscn").instantiate()
 	add_child(hud)
 	await get_tree().process_frame
-	_expect(hud.fatigue_bar.value == 80 and hud.hunger_bar.value == 90 and hud.focus_bar.value == 90, "All bars must display remaining healthy condition.")
+	_expect(hud.fatigue_bar.value == 80 and hud.hunger_bar.value == 90, "Both bars must display remaining healthy condition.")
 	_expect(not hud.status_drawer.visible, "Healthy initial HUD must be closed.")
 	_expect(hud.find_child("ConditionHelp", true, false) == null and hud.find_child("ConditionAlert", true, false) == null, "HUD must not create help notes or text alerts.")
 	_expect(hud.status_drawer.get_node("StatusNames").get_child(0).text == "Energy", "Fatigue must be presented as Energy.")
-	_expect(hud.status_drawer.get_node("StatusNames").get_child(2).text == "Satiety", "Hunger must be presented as Satiety.")
+	_expect(hud.status_drawer.get_node("StatusNames").get_child(1).text == "Satiety", "Hunger must be presented as Satiety.")
+	_expect(hud.status_drawer.get_node("StatusNames").get_child_count() == 3 and hud.status_drawer.get_node("IndicatorRow").get_child_count() == 3, "The drawer shows Energy, Satiety and EXP only.")
+	_expect(hud.status_drawer.get_node("IndicatorRow").get_node_or_null("FocusIndicator") == null, "There is no Focus indicator.")
 	player.fatigue_warning_threshold = 0.65
 	player.fatigue = 0.65
 	player.condition_changed.emit()
@@ -30,43 +31,29 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(hud.find_child("ConditionAlert", true, false) == null, "Condition updates must not create text alerts.")
 	player.fatigue = 0.91
-	player.focus = 0.09
 	player.condition_changed.emit()
 	await get_tree().process_frame
 	_expect(hud.fatigue_indicator.modulate == hud.CONDITION_CRITICAL_COLOR, "Critical color must match player critical severity.")
-	_expect(hud.focus_indicator.modulate == hud.CONDITION_CRITICAL_COLOR, "Focus must also reflect critical severity.")
 	player.fatigue = 0.2
-	player.focus = 0.9
 	player.condition_changed.emit()
 	await get_tree().process_frame
 	_expect(hud.fatigue_indicator.modulate == hud.CONDITION_NORMAL_COLOR, "Recovery must restore the normal color.")
 	var before_hunger: float = player.hunger
 	var before_fatigue: float = player.fatigue
-	var before_focus: float = player.focus
 	player.on_minute_changed(1)
-	_expect(player.hunger > before_hunger and player.fatigue > before_fatigue and player.focus < before_focus, "Normal time must affect all needs again.")
-	var focus_after_time: float = player.focus
+	_expect(is_equal_approx(player.hunger, before_hunger + player.hunger_increase_per_min) and is_equal_approx(player.fatigue, before_fatigue + player.fatigue_increase_per_min), "Normal time applies both existing needs exactly once.")
+	var fatigue_after_time: float = player.fatigue
 	player.reduce_hunger(0.01)
-	_expect(player.focus == focus_after_time, "Eating must not directly refill Focus.")
+	_expect(player.fatigue == fatigue_after_time, "Reducing Hunger alone does not directly restore Energy.")
 	player.fatigue = 0.2
 	player.hunger = 1.0
-	player.focus = 0.9
 	_expect(not player.has_critical_condition(), "Zero Satiety alone must not trigger collapse.")
 	player.on_minute_changed(2)
-	_expect(not player.is_collapsing, "A hungry player with healthy Energy and Focus must stay awake.")
-	player.focus = 0.9
+	_expect(not player.is_collapsing and is_equal_approx(player.fatigue, 0.2 + player.fatigue_increase_per_min), "A hungry player with healthy Energy stays awake and loses the normal amount of Energy.")
 	player.hunger = 0.0
-	player._apply_awake_focus_loss()
-	var fed_focus_loss: float = 0.9 - player.focus
-	player.focus = 0.9
+	_expect(is_equal_approx(player.get_sleep_recovery_quality(), 1.0), "A fed player retains full sleep recovery quality.")
 	player.hunger = 1.0
-	player._apply_awake_focus_loss()
-	var hungry_focus_loss: float = 0.9 - player.focus
-	_expect(hungry_focus_loss > fed_focus_loss, "Low Satiety must still accelerate Focus drain.")
-	_expect(is_equal_approx(hungry_focus_loss, player.focus_loss_per_min + player.focus_loss_from_hunger_per_min), "Existing hunger Focus penalty must be unchanged.")
-	player.focus = player.focus_critical_threshold
-	_expect(player.has_critical_condition(), "Critical Focus must still trigger collapse.")
-	player.focus = 0.9
+	_expect(is_equal_approx(player.get_sleep_recovery_quality(), 0.25), "Full Hunger retains the existing lower sleep recovery quality.")
 	player.fatigue = player.fatigue_critical_threshold
 	_expect(player.has_critical_condition(), "Critical fatigue must still trigger collapse.")
 	player.fatigue = 0.2
@@ -77,6 +64,13 @@ func _run() -> void:
 	hud.drawer_tween.custom_step(1.0)
 	_expect(hud.status_drawer.visible, "Status action must open the drawer.")
 	_expect(is_equal_approx(hud.status_drawer.position.y, get_viewport().get_visible_rect().size.y - 60), "Drawer must stay anchored to the viewport bottom.")
+	await get_tree().process_frame
+	var names: HBoxContainer = hud.status_drawer.get_node("StatusNames")
+	var indicators: HBoxContainer = hud.status_drawer.get_node("IndicatorRow")
+	for index: int in range(3):
+		var name_label: Control = names.get_child(index) as Control
+		var indicator: Control = indicators.get_child(index) as Control
+		_expect(is_equal_approx(name_label.global_position.x, indicator.global_position.x), "Each status label remains aligned with its indicator.")
 	hud._animate_drawer(hud.DRAWER_CLOSED_Y, 0.0)
 	hud.drawer_tween.custom_step(1.0)
 	_expect(not hud.status_drawer.visible, "Closing must hide labels as well as bars.")
@@ -90,6 +84,7 @@ func _run() -> void:
 	_expect(not hud.visible and not hud.status_drawer.visible, "Nightmare must hide all condition UI.")
 	hud._on_nightmare_active_changed(false)
 	_expect(hud.visible and not hud.status_drawer.visible, "Return must restore the HUD without a stuck drawer.")
+	await _test_eating_and_sleep(player)
 	if "--capture-hud" in OS.get_cmdline_user_args():
 		hud._animate_drawer(hud.DRAWER_OPEN_Y, 0.0)
 		hud.drawer_tween.custom_step(1.0)
@@ -105,6 +100,40 @@ func _run() -> void:
 	player.free()
 	print("ConditionHUDRegressionTest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _test_eating_and_sleep(player: Player) -> void:
+	get_tree().paused = false
+	TimeComponentManager.set_process(false)
+	TimeComponentManager.is_paused = false
+	TimeComponentManager.current_day = 1
+	TimeComponentManager.current_hour = 8
+	TimeComponentManager.current_minute = 0
+	var original_inventory: Dictionary = Inventory.items.duplicate(true)
+	Inventory.items.assign({"date_cluster": 2})
+	var inventory_ui: InventoryUI = load("res://scenes/ui/inventory_ui/inventory_ui.tscn").instantiate()
+	add_child(inventory_ui)
+	player.hunger = 0.5
+	player.fatigue = 0.5
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(is_equal_approx(player.hunger, 0.46) and is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 1, "Eating a date preserves both its Hunger and Energy effects and consumes one item.")
+	player.hunger = 0.0
+	player.fatigue = 0.0
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(Inventory.items.get("date_cluster") == 1, "Eating with no possible effect does not consume another date.")
+	player.hunger = 0.0
+	player.fatigue = 0.8
+	player.last_sleep_day = -1
+	var start: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	_expect(player.sleep(), "Normal sleep succeeds.")
+	var after_sleep: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	_expect(after_sleep - start == 420 and is_equal_approx(player.hunger, 0.42) and is_equal_approx(player.fatigue, 0.15), "Fed sleep advances seven hours, grows Hunger and restores the existing Energy amount.")
+	_expect(not player.sleep() and TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute == after_sleep and is_equal_approx(player.hunger, 0.42) and is_equal_approx(player.fatigue, 0.15), "A repeated sleep on the same day changes neither time nor conditions.")
+	player.last_sleep_day = -1
+	player.hunger = 1.0
+	player.fatigue = 0.8
+	_expect(player.sleep() and is_equal_approx(player.fatigue, 0.6375) and is_equal_approx(player.hunger, 1.0), "Hungry sleep keeps the existing reduced recovery and Hunger cap.")
+	inventory_ui.free()
+	Inventory.items.assign(original_inventory)
 
 func _expect(condition: bool, message: String) -> void:
 	if not condition:

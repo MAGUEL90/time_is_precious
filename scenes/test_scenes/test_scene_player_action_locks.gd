@@ -23,7 +23,6 @@ func _run() -> void:
 	for scenario: String in ["pickup", "dialogue", "normal"]:
 		player.hunger = 0.0
 		player.fatigue = 0.89975
-		player.focus = 1.0
 		TimeComponentManager.is_paused = false
 		if scenario == "pickup":
 			var pickup: Node2D = fixture.get_node("WorldObjects/Pickups/PickupItem4") as Node2D

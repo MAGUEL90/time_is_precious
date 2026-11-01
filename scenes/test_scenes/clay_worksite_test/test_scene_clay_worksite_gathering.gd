@@ -49,7 +49,6 @@ func _run() -> void:
 	_expect(Inventory.items.get("clay_lump", 0) == clay_before + 6, "Stack collects once after freeing space.")
 	player.fatigue = 0.0
 	player.hunger = 0.0
-	player.focus = 1.0
 	before = _now()
 	result = other.execute(540, player, fixture, fixture._drop_output)
 	_expect(result.units == 46 and _now() - before == 540 and not result.interrupted, "Player completes nine hours without worker requirement.")
@@ -82,7 +81,6 @@ func _run() -> void:
 	other.stock = 72
 	player.fatigue = 0.88775
 	player.hunger = 0.0
-	player.focus = 1.0
 	result = other.execute(540, player, fixture, fixture._drop_output)
 	_expect(player.is_collapsing and result.minutes == 25 and result.units == 0, "Long selection still stops on actual collapse.")
 	_expect(player.current_experience == exp_before, "No EXP tuning.")

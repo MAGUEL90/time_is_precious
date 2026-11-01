@@ -27,7 +27,6 @@ func _run() -> void:
 		site.stock = 72
 		player.fatigue = sample.fatigue
 		player.hunger = 0.0
-		player.focus = 1.0
 		var before: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 		var preview: Dictionary = site.preview(180, player)
 		_expect(player.fatigue == sample.fatigue and Inventory.items.is_empty() and site.stock == 72, "Preview never changes conditions or resources.")
@@ -42,7 +41,6 @@ func _run() -> void:
 	site.stock = 72
 	player.fatigue = 0.5
 	player.hunger = 0.0
-	player.focus = 1.0
 	var ticks: Array[int] = [0]
 	var recover: Callable = func(_minute: int):
 		ticks[0] += 1

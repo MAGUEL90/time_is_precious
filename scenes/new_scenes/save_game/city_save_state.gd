@@ -6,11 +6,11 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 8
+const VERSION: int = 9
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
-	"player": ["global_position", "fatigue", "hunger", "focus", "current_experience", "last_sleep_day", "last_collapse_day", "total_collapse_count"],
+	"player": ["global_position", "fatigue", "hunger", "current_experience", "last_sleep_day", "last_collapse_day", "total_collapse_count"],
 	"inventory": ["items", "max_load"],
 	"city_storage": ["items", "units", "food_portions", "_unit_sequence"],
 	"stock": ["food_supply", "clothing_supply", "treasury_shekel", "shelter_capacity"],
@@ -136,7 +136,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -159,6 +159,16 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not raw.get("raid") is Dictionary or raw.raid.has("notification_seen_keys"):
 			return fail("Invalid legacy notification state.")
 		raw.raid["notification_seen_keys"] = {}
+	if version <= 8:
+		# Old checkpoints retain their on-disk bytes until a successful future save.
+		# Validate the retired field before dropping it from this staged copy.
+		var legacy_player: Variant = raw.get("player")
+		if not legacy_player is Dictionary or not legacy_player.has("focus"):
+			return fail("Invalid legacy player condition.")
+		var legacy_focus: Variant = legacy_player.focus
+		if typeof(legacy_focus) != TYPE_FLOAT or not is_finite(legacy_focus) or legacy_focus < 0.0 or legacy_focus > 1.0:
+			return fail("Invalid legacy player condition.")
+		legacy_player.erase("focus")
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
 			return fail("Invalid " + key + " state.")
@@ -382,7 +392,7 @@ func _validate_core(raw: Dictionary, map: Node) -> bool:
 	var c: Dictionary = raw.clock
 	if c.current_day < 0 or c.current_hour < 0 or c.current_hour > 23 or c.current_minute < 0 or c.current_minute > 59 or c.current_weather not in ["clear", "cloudy", "rainy", "storm"] or c._timer < 0:
 		return fail("Invalid clock.")
-	for k: String in ["fatigue", "hunger", "focus"]:
+	for k: String in ["fatigue", "hunger"]:
 		if raw.player[k] < 0 or raw.player[k] > 1:
 			return fail("Invalid player condition.")
 	if raw.player.current_experience < 0 or raw.player.total_collapse_count < 0 or raw.player.global_position.length() > 100000:

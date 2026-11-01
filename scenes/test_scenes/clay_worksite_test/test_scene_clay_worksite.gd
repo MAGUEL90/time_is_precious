@@ -235,7 +235,6 @@ func _prepare_nightmare_test() -> void:
 		return
 	player.fatigue = 0.89
 	player.hunger = 0.0
-	player.focus = 1.0
 	player.condition_changed.emit()
 	player.global_position = $WorksiteMarkers/ClaySiteA.global_position
 
@@ -312,7 +311,6 @@ func _prepare_overflow_test() -> void:
 		return
 	player.fatigue = 0.5
 	player.hunger = 0.0
-	player.focus = 1.0
 	player.condition_changed.emit()
 	var clay: ItemData = ItemDatabase.get_item_data("clay_lump")
 	if clay == null or clay.weight <= 0.0:

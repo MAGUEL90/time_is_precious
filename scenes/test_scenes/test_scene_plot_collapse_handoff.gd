@@ -22,7 +22,6 @@ func _run() -> void:
 	await get_tree().process_frame
 	player.fatigue = 0.89975
 	player.hunger = 0.0
-	player.focus = 1.0
 	var event := InputEventAction.new()
 	event.action = "interact"
 	event.pressed = true
@@ -30,8 +29,33 @@ func _run() -> void:
 	event = InputEventAction.new()
 	event.action = "interact"
 	get_viewport().push_input(event)
+	if not await _wait_until(func(): return is_instance_valid(plot.keeper_dialogue), "E opens the current workshop keeper greeting."):
+		_finish()
+		return
+	var greeting: Node = plot.keeper_dialogue
+	if not await _wait_until(func(): return is_instance_valid(greeting.balloon.dialogue_line), "The keeper's dialogue is ready."):
+		_finish()
+		return
+	var balloon: BaseGameDialogueBalloon = greeting.balloon
+	if balloon.dialogue_label.is_typing:
+		balloon.dialogue_label.skip_typing()
+	balloon.show_responses()
+	var continued: bool = false
+	for item: Control in balloon.responses_menu.get_menu_items():
+		var response: DialogueResponse = item.get_meta("response") as DialogueResponse
+		if is_instance_valid(response) and response.text.strip_edges() == "Continue":
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = true
+			item.gui_input.emit(click)
+			continued = true
+			break
+	_expect(continued, "The keeper greeting offers its normal Continue choice.")
+	if not await _wait_until(func(): return is_instance_valid(plot.menu), "Continuing the greeting opens the plot menu."):
+		_finish()
+		return
 	_expect(is_instance_valid(plot.menu) and get_tree().paused and not player.can_move,
-		"Actual E interaction opens the plot menu and owns its movement restriction.")
+		"The actual E and Continue interaction opens the plot menu and owns its movement restriction.")
 	if not is_instance_valid(plot.menu):
 		_finish()
 		return

@@ -110,7 +110,7 @@ func _run() -> void:
 	var laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)
 	production_citizen.satisfaction = 0.2
 	laborer.wage_shekel_per_day = 88
-	player.focus = 0.1
+	player.hunger = 0.9
 	_expect(store.load_checkpoint(), "Manual Load restores the earlier economy checkpoint: " + store.last_error)
 	var after: Dictionary = store.snapshot.capture(content)
 	_expect(_same_snapshot(before, after), "All checkpoint owners round-trip without offline time or repeated delivery.")

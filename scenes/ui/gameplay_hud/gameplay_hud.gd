@@ -155,10 +155,9 @@ func _refresh_player_status() -> void:
 	var food_daily_need: int = int(food_summary.get("daily_need", 0))
 	var clothing_summary: Dictionary = _get_clothing_supply_summary()
 	var status_lines: Array[String] = [
-		"FTG: %d%%, HGR: %d%%, FCS: %d%%" % [
+		"FTG: %d%%, HGR: %d%%" % [
 		player_ref.get_fatigue_percent(),
-		player_ref.get_hunger_percent(),
-		player_ref.get_focus_percent()],
+		player_ref.get_hunger_percent()],
 		"Food: %d pt / %d/day (%s)" % [food_points, food_daily_need, _get_food_supply_status(food_summary)],
 		_get_last_food_result_text(),
 		_get_clothing_stock_text(clothing_summary),

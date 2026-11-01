@@ -434,6 +434,7 @@ func _test_plot_schema(city: Node, store: Node) -> void:
 	# A genuine v5-shaped document removes the plot field from its encoded state,
 	# while preserving the five payroll fields that v5 already knew how to store.
 	var v5_raw: Dictionary = raw.duplicate(true)
+	v5_raw.player["focus"] = 0.75
 	for plot: Dictionary in v5_raw.plots.values():
 		plot.erase("payroll_work_remainder")
 	var v5: Dictionary = current.duplicate(true)
@@ -457,6 +458,7 @@ func _test_plot_schema(city: Node, store: Node) -> void:
 
 	for version: int in [1, 2, 3, 4]:
 		var old_raw: Dictionary = raw.duplicate(true)
+		old_raw.player["focus"] = 0.75
 		for plot: Dictionary in old_raw.plots.values():
 			plot.erase("payroll_work_remainder")
 		if version == 3:

@@ -769,6 +769,13 @@ unchanged. The existing slot filename stays stable. Version-1 city-only files ar
 explicitly as city checkpoints and upgraded by the next successful save. Unsupported
 future versions and the isolated worksite prototype are not silently migrated.
 
+Schema version 9 records player Hunger and Fatigue without Focus. Versions 1–8
+still require a valid legacy Focus value; it is discarded only from the staged
+runtime copy after validation. Continue does not rewrite the old file. A later
+successful checkpoint uses the existing rotation and retains the previous primary
+as its `.bak`. Player Energy remains the inverse presentation of Fatigue, and
+negotiation is temporarily unavailable in the MVP.
+
 For the authored city/home pair, SceneDoor asks CitySave to retain the existing worksite
 subtree under the runtime host before freeing the city. Its frame/input/physics processing
 and visible layers stop, while the existing minute-driven daily/hauling scheduler continues.

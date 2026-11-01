@@ -194,20 +194,21 @@ func _assert_managed_production_expiry(workshop: Node, job: JobData) -> void:
 
 func _assert_schema8_roundtrip() -> void:
 	var before: Dictionary = arrival_snapshot.capture(content)
-	_expect(not before.is_empty() and before.schema_version == 8, "Active writer explicitly writes schema8.")
+	_expect(not before.is_empty() and before.schema_version == ARRIVAL_CODEC.VERSION, "Active writer explicitly writes the current schema.")
 	if before.is_empty():
 		return
 	var document: Dictionary = JSON.parse_string(JSON.stringify(before, "", true, true))
-	_expect(arrival_snapshot.prepare(document, content), "Schema8 validates its saved arrived state: " + arrival_snapshot.error)
+	_expect(arrival_snapshot.prepare(document, content), "Current schema validates its saved arrived state: " + arrival_snapshot.error)
 	if not arrival_snapshot.prepared.is_empty():
 		var restored: WorkerData = arrival_snapshot.prepared.workers.workers_by_id[ARRIVAL_WORKER]
 		_expect(restored.physical_approach == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).physical_approach, "Saved position, task, target, and historical arrival survive JSON exactly.")
 
 func _assert_legacy_migrations() -> void:
 	var document: Dictionary = arrival_snapshot.capture(content)
-	for version: int in range(1, 8):
+	for version: int in range(1, 9):
 		var values = ARRIVAL_VALUES.new()
 		var raw: Dictionary = values.decode(document.state)
+		raw.player["focus"] = 0.75
 		if version < 7:
 			raw.raid.erase("notification_seen_keys")
 		if version < 6:
@@ -224,7 +225,8 @@ func _assert_legacy_migrations() -> void:
 		_expect(arrival_snapshot.prepare(legacy, content), "Strict v%d migration accepts exactly its historical worker fields: %s" % [version, arrival_snapshot.error])
 		if not arrival_snapshot.prepared.is_empty():
 			var restored: WorkerData = arrival_snapshot.prepared.workers.workers_by_id[ARRIVAL_WORKER]
-			_expect(restored.physical_approach.is_empty() and restored.current_order_id == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).current_order_id, "Legacy active task preserves its previous inside interpretation and reservation.")
+			var expected_approach: Dictionary = WorkerDatabase.get_worker_data(ARRIVAL_WORKER).physical_approach if version == 8 else {}
+			_expect(restored.physical_approach == expected_approach and restored.current_order_id == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).current_order_id, "Legacy active task preserves its version's approach and reservation.")
 			_expect(arrival_snapshot.prepared.inventory.items == raw.inventory.items and arrival_snapshot.prepared.plots == _migrated_plots(raw.plots), "Legacy migration preserves inventory and construction progress.")
 
 func _migrated_plots(source: Dictionary) -> Dictionary:
@@ -240,7 +242,8 @@ func _strip_worker_fields(value: Variant, version: int) -> void:
 			_strip_worker_fields(child, version)
 	elif value is Dictionary:
 		if value.get("class") == "WorkerData":
-			value.fields.erase("physical_approach")
+			if version < 8:
+				value.fields.erase("physical_approach")
 			if version < 7:
 				for field: String in ARRIVAL_VALUES.CONTRACT_FIELDS:
 					value.fields.erase(field)

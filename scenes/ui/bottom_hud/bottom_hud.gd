@@ -14,10 +14,8 @@ const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_game
 
 @onready var status_drawer: Control = $Root/StatusDrawer
 @onready var fatigue_indicator: HBoxContainer = $Root/StatusDrawer/IndicatorRow/FatigueIndicator
-@onready var focus_indicator: HBoxContainer = $Root/StatusDrawer/IndicatorRow/FocusIndicator
 @onready var hunger_indicator: HBoxContainer = $Root/StatusDrawer/IndicatorRow/HungerIndicator
 @onready var fatigue_bar: TextureProgressBar = $Root/StatusDrawer/IndicatorRow/FatigueIndicator/Bar
-@onready var focus_bar: TextureProgressBar = $Root/StatusDrawer/IndicatorRow/FocusIndicator/Bar
 @onready var hunger_bar: TextureProgressBar = $Root/StatusDrawer/IndicatorRow/HungerIndicator/Bar
 @onready var experience_bar: TextureProgressBar = $Root/StatusDrawer/IndicatorRow/ExperienceIndicator/Bar
 
@@ -111,15 +109,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_condition_changed() -> void:
 	var fatigue_remaining: int = 100 - player_ref.get_fatigue_percent()
-	var focus_remaining: int = player_ref.get_focus_percent()
 	var hunger_remaining: int = 100 - player_ref.get_hunger_percent()
 
 	fatigue_bar.value = fatigue_remaining
-	focus_bar.value = focus_remaining
 	hunger_bar.value = hunger_remaining
 
 	fatigue_indicator.modulate = _get_condition_color(player_ref.get_fatigue_severity())
-	focus_indicator.modulate = _get_condition_color(player_ref.get_focus_severity())
 	hunger_indicator.modulate = _get_condition_color(player_ref.get_hunger_severity())
 
 func _on_experience_changed() -> void:
@@ -151,7 +146,7 @@ func _setup_status_text() -> void:
 	names.position = Vector2(0, -10)
 	names.add_theme_constant_override("separation", 2)
 	names.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for title in ["Energy", "Focus", "Satiety", "EXP"]:
+	for title in ["Energy", "Satiety", "EXP"]:
 		var label: Label = _make_status_label(title)
 		label.custom_minimum_size.x = 38
 		names.add_child(label)

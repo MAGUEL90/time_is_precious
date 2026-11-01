@@ -236,6 +236,7 @@ func _sleep_flow(city: Node, player: Player, store: Node) -> void:
 func _strip_legacy_owner_fields(document: Dictionary) -> void:
 	var values = VALUES.new()
 	var raw: Dictionary = values.decode(document.state)
+	raw.player["focus"] = 0.75
 	raw.raid.erase("notification_seen_keys")
 	for plot: Dictionary in raw.plots.values():
 		plot.erase("payroll_work_remainder")

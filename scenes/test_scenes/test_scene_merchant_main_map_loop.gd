@@ -27,7 +27,7 @@ func _bind_map() -> void:
 func _measure(stage: String) -> void:
 	print("MAIN_LOOP ", JSON.stringify({"stage": stage, "day": TimeComponentManager.current_day,
 		"hour": TimeComponentManager.current_hour, "minute": TimeComponentManager.current_minute,
-		"inventory": Inventory.items, "energy": 1.0 - player.fatigue, "hunger": player.hunger, "focus": player.focus}))
+		"inventory": Inventory.items, "energy": 1.0 - player.fatigue, "hunger": player.hunger}))
 
 func _door(path: String) -> void:
 	player.global_position = content.get_node(path).global_position

@@ -1,6 +1,7 @@
 extends Node
 
 const MENU = preload("res://scenes/ui/start_menu/start_menu.tscn")
+const SAVE_STATE = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
 const TEST_PATH: String = "user://start_menu_test/checkpoint.json"
 var failures: int = 0
 var menu: CanvasLayer
@@ -59,7 +60,8 @@ func _run() -> void:
 			_write(evidence.path_join("actual-" + mode + ".json"), JSON.stringify(actual, "", true, true))
 			_write(evidence.path_join("expected-" + mode + ".json"), JSON.stringify(expected, "", true, true))
 		var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
-		var saved_sources: Dictionary = codec.decode(expected.state).pickup_sources
+		var expected_raw: Dictionary = codec.decode(expected.state)
+		var saved_sources: Dictionary = expected_raw.pickup_sources
 		_expect(store.snapshot._sources.capture() == saved_sources, "Continue restores every registered pickup source exactly.")
 		if mode == "city":
 			var view_count: int = 0
@@ -70,8 +72,20 @@ func _run() -> void:
 				for slot: int in range(slots.size()):
 					_expect(palm._pickups.has(slot) == slots[slot], "Continue projects the saved slot for " + str(palm.name))
 			_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == view_count, "Continue creates no duplicate palm views.")
+		var legacy_v8: bool = int(expected.schema_version) == 8
+		if legacy_v8:
+			expected_raw.player.erase("focus")
+			expected.state = codec.encode(expected_raw)
+			expected.schema_version = SAVE_STATE.VERSION
 		_expect(_same_snapshot(actual, expected), "Continue restores the full checkpoint without elapsed time or extra sleep.")
 		_expect(FileAccess.get_file_as_bytes(path) == bytes_before, "Continue never rewrites the checkpoint.")
+		if legacy_v8 and mode == "city":
+			_expect(store.save_checkpoint(), "A later save upgrades the continued v8 checkpoint.")
+			_expect(FileAccess.get_file_as_bytes(path + ".bak") == bytes_before, "The original v8 bytes remain available in the normal backup.")
+			var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+			var upgraded_raw: Dictionary = codec.decode(upgraded.state)
+			_expect(int(upgraded.schema_version) == SAVE_STATE.VERSION and not upgraded_raw.player.has("focus"), "The new checkpoint omits the retired Focus field.")
+			_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded checkpoint loads repeatedly.")
 		await _capture("continued-" + mode)
 	elif mode == "corrupt":
 		menu.continue_button.pressed.emit()

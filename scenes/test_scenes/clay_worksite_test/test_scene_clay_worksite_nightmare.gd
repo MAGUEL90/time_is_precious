@@ -16,9 +16,8 @@ func _run() -> void:
 	var panel = fixture.inspector
 	var cover: ColorRect = fixture.get_node("WorkTransition/Blackout")
 	for timed_out: bool in [false, true]:
-		player.fatigue = 0.88775
+		player.fatigue = 0.85
 		player.hunger = 0.0
-		player.focus = 1.0
 		player.global_position = fixture.get_node("WorksiteMarkers/ClaySiteA").global_position
 		var return_position: Vector2 = player.global_position
 		var event := InputEventAction.new()
@@ -37,6 +36,8 @@ func _run() -> void:
 			_expect(cover.visible and cover.modulate.a > 0.999, "Local cover never reveals worksite before global handoff.")
 			await get_tree().process_frame
 		_expect(not fixture._working and not panel.visible, "Handoff closes worksite panel.")
+		var stock_after_interruption: int = fixture.sites[&"ClaySiteA"].stock
+		_expect(stock_after_interruption < 72, "Some completed gathering is recorded before the interruption.")
 		_expect(SceneTransition.fade_overlay.modulate.a >= 0.999, "Global transition owns opaque black on handoff.")
 		await _wait_until(func(): return not SceneTransition.is_transitioning, "Nightmare entry transition completes.")
 		_expect(nightmare.is_active and player.can_move, "Nightmare is playable after entry.")
@@ -61,7 +62,7 @@ func _run() -> void:
 		await get_tree().process_frame
 		_expect(not nightmare.is_active and not get_tree().paused and not TimeComponentManager.is_paused, "Escape/timeout restores world time.")
 		_expect(player.can_move and fixture.get_node("TopHUD").visible and not panel.visible, "Movement/HUD restored without reopening panel.")
-	_expect(fixture.sites[&"ClaySiteA"].stock < 72, "Stock survives Nightmare return.")
+		_expect(fixture.sites[&"ClaySiteA"].stock == stock_after_interruption, "Interrupted worksite stock survives Nightmare return without extra output.")
 	fixture.queue_free()
 	await get_tree().process_frame
 	print("ClayWorksiteNightmareTest %s" % ("PASSED" if failures == 0 else "FAILED"))

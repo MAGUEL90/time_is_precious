@@ -26,13 +26,8 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @export var min_hunger: float = 0.0
 @export var max_hunger: float = 1.0
 @export var fatigue_increase_per_min: float = 0.0005
-@export var focus_loss_per_min: float = 0.00025
-@export var focus_loss_from_fatigue_per_min: float = 0.0005
-@export var focus_loss_from_hunger_per_min: float = 0.00035
 @export var sleep_duration_minutes: int = 420
 @export_range(0.0, 1.0, 0.01) var sleep_fatigue_recovery: float = 0.65
-@export_range(0.0, 1.0, 0.01) var sleep_focus_recovery: float = 0.75
-@export_range(0.0, 1.0, 0.01) var focus: float = 1.0
 @export_range(0, 10000, 1) var current_experience: int = 0
 @export_range(1, 10000, 1) var experience_required: int = 100
 
@@ -44,16 +39,12 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @export_range(0.0, 1.0, 0.01) var hunger_warning_threshold: float = 0.75
 @export_range(0.0, 1.0, 0.01) var hunger_critical_threshold: float = 0.90
 
-@export_range(0.0, 1.0, 0.01) var focus_warning_threshold: float = 0.30
-@export_range(0.0, 1.0, 0.01) var focus_critical_threshold: float = 0.10
-
 @export_group("")
 
 @export_group("Collapse")
 
 @export_range(0.0, 1.0, 0.01) var collapse_hunger_cost: float = 0.20
 @export_range(0.0, 1.0, 0.01) var collapse_fatigue_recovery: float = 0.30
-@export_range(0.0, 1.0, 0.01) var collapse_focus_recovery: float = 0.25
 
 @export_group("")
 
@@ -129,7 +120,6 @@ func on_minute_changed(_minute: int) -> void:
 
 	increase_hunger(hunger_increase_per_min)
 	increase_fatigue(fatigue_increase_per_min)
-	_apply_awake_focus_loss()
 	_check_for_collapse()
 
 # Input routing
@@ -363,17 +353,11 @@ func increase_hunger(amount: float) -> bool:
 		return true
 	return false
 
-func get_focus() -> float:
-	return focus
-
 func get_fatigue_percent() -> int:
 	return int(fatigue * 100.0)
 
 func get_hunger_percent() -> int:
 	return int(hunger * 100.0)
-
-func get_focus_percent() -> int:
-	return int(get_focus() * 100.0)
 
 # Workshop storage menu flow
 
@@ -865,26 +849,7 @@ func _play_pickup_action() -> void:
 
 	set_movement_locked(&"pickup", false)
 
-# Focus and experience
-
-func consume_focus(amount: float) -> bool:
-	if debug_disable_player_needs:
-		return amount > 0.0
-	if amount <= 0.0 or focus <= 0.0:
-		return false
-
-	focus = clampf(focus - amount, 0.0, 1.0)
-	condition_changed.emit()
-	return true
-
-func recover_focus(amount: float) -> bool:
-	if amount <= 0.0 or focus >= 1.0:
-		return false
-
-	focus = clampf(focus + amount, 0.0, 1.0)
-	condition_changed.emit()
-	return true
-
+# Experience
 func add_experience(amount: int) -> bool:
 	if amount <= 0 or current_experience >= experience_required:
 		return false
@@ -896,27 +861,6 @@ func add_experience(amount: int) -> bool:
 
 	experience_changed.emit()
 	return true
-
-func _apply_awake_focus_loss() -> void:
-	var fatigue_pressure: float = clampf(
-		(fatigue - 0.5) / 0.5,
-		0.0,
-		1.0
-	)
-
-	var hunger_pressure: float = clampf(
-		(hunger - 0.5) / 0.5,
-		0.0,
-		1.0
-	)
-
-	var total_focus_loss: float = (
-		focus_loss_per_min
-		+ focus_loss_from_fatigue_per_min * fatigue_pressure
-		+ focus_loss_from_hunger_per_min * hunger_pressure
-	)
-
-	consume_focus(total_focus_loss)
 
 # Sleep flow
 
@@ -953,22 +897,10 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 		* duration_ratio
 	)
 
-	var focus_recovery: float = (
-		sleep_focus_recovery
-		* recovery_quality
-		* duration_ratio
-	)
-
 	fatigue = clampf(
 		fatigue - fatigue_recovery,
 		min_fatigue,
 		max_fatigue
-	)
-
-	focus = clampf(
-		focus + focus_recovery,
-		0.0,
-		1.0
 	)
 
 	condition_changed.emit()
@@ -1001,19 +933,8 @@ func get_hunger_severity() -> int:
 		return ConditionSeverity.WARNING
 	return ConditionSeverity.NORMAL
 
-func get_focus_severity() -> int:
-	if focus <= focus_critical_threshold:
-		return ConditionSeverity.CRITICAL
-	if focus <= focus_warning_threshold:
-		return ConditionSeverity.WARNING
-	return ConditionSeverity.NORMAL
-
 func has_critical_condition() -> bool:
-	# Hunger affects collapse indirectly by accelerating Focus loss.
-	return (
-		get_fatigue_severity() == ConditionSeverity.CRITICAL
-		or get_focus_severity() == ConditionSeverity.CRITICAL
-	)
+	return get_fatigue_severity() == ConditionSeverity.CRITICAL
 
 # Collapse and Nightmare flow
 
@@ -1027,7 +948,6 @@ func _check_for_collapse() -> void:
 		collapse()
 
 func _reset_debug_needs() -> void:
-	focus = 1.0
 	fatigue = min_fatigue
 	hunger = min_hunger
 	condition_changed.emit()
@@ -1072,12 +992,6 @@ func apply_nightmare_consequences(total_world_minutes: int) -> void:
 		fatigue - collapse_fatigue_recovery,
 		min_fatigue,
 		max_fatigue
-	)
-
-	focus = clampf(
-		focus + collapse_focus_recovery,
-		0.0,
-		1.0
 	)
 
 	is_sleeping = false

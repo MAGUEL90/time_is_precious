@@ -116,7 +116,7 @@ func eat() -> void:
 
 func measure(stage: String) -> void:
 	var row := {"stage": stage, "minute": now(), "hunger": player.hunger, "energy": 1.0 - player.fatigue,
-		"focus": player.focus, "harvested": harvested, "eaten": eaten, "dates": Inventory.items.get("date_cluster", 0),
+		"harvested": harvested, "eaten": eaten, "dates": Inventory.items.get("date_cluster", 0),
 		"work_minutes": work_minutes, "work_units": work_units, "walk_seconds": walk_seconds}
 	measurements.append(row)
 	print("WALK_MEASURE ", JSON.stringify(row))

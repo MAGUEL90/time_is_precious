@@ -72,7 +72,6 @@ func _run() -> void:
 	var home: Node = get_tree().current_scene
 	player = home.get_node("YSortWorld/Player")
 	player.hunger = 0.2
-	player.focus = 0.8
 	player.fatigue = 0.7
 	player.last_sleep_day = -1
 	var sleep_spot: SleepSpot = home.get_node("YSortWorld/SleepSpot")
@@ -109,7 +108,7 @@ func _run() -> void:
 		_expect(current.available == expected_available, "Sleep refills only sources whose authored timer expires: " + id)
 		_expect(current.rng == old.rng, "Sleep/refill does not consume new pickup-source RNG draws: " + id)
 		_expect(current.config == old.config, "Sleep preserves each pickup source's authored configuration: " + id)
-	_expect(raw.player.last_sleep_day == TimeComponentManager.current_day and is_equal_approx(raw.player.focus, player.focus), "The checkpoint includes completed sleep recovery and the daily sleep latch.")
+	_expect(raw.player.last_sleep_day == TimeComponentManager.current_day and is_equal_approx(raw.player.fatigue, player.fatigue) and is_equal_approx(raw.player.hunger, player.hunger), "The checkpoint includes completed sleep recovery, Hunger and the daily sleep latch.")
 	_expect(sleep_spot._save_feedback.visible and sleep_spot._save_feedback.text == "Game saved", "Successful sleep gives visible save feedback in the existing pixel font.")
 	await capture_defense("sleep-save-home.png")
 	await sleep_spot.on_player_interact(player)
@@ -277,6 +276,7 @@ func _finish_sleep_test() -> void:
 
 func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
 	# Pseudo-legacy documents omit owner fields absent in those schemas.
+	raw.player["focus"] = 0.75
 	raw.raid.erase("notification_seen_keys")
 	for plot: Dictionary in raw.plots.values():
 		plot.erase("payroll_work_remainder")

@@ -41,6 +41,7 @@ func _run() -> void:
 	var before: Dictionary = store.snapshot.capture(content)
 	var codec = VALUES.new()
 	var saved_raw: Dictionary = codec.decode(before.state)
+	_test_player_condition_migration(before, saved_raw)
 	_expect(saved_raw.pickup_sources is Dictionary and saved_raw.pickup_sources.size() == 6,
 		"The version-4 snapshot records exactly the six authored pickup-source identities.")
 	_expect(is_equal_approx(saved_raw.clock._timer, 0.375), "The fractional clock tick is captured alongside pending palm timers.")
@@ -51,7 +52,7 @@ func _run() -> void:
 	state._work_paid.clear()
 	WorkStateRuntime.get_node("CityProgression").progress = 0
 	player.global_position += Vector2(30, 20)
-	player.focus = 0.1
+	player.fatigue = 0.1
 	_expect(store.load_checkpoint(), "Manual Load restores the checkpoint: " + store.last_error)
 	await _assert_seed(saved_raw.pickup_sources)
 	var after: Dictionary = store.snapshot.capture(content)
@@ -192,7 +193,7 @@ func _seed() -> void:
 	_set_clock_minute(7 * 1440 + 600)
 	Inventory.items.assign({"shekel": 17, "stone": 3})
 	storage.items = {"stone": 100, "wood_log": 100, "egg": 5}
-	player.focus = 0.75
+	player.fatigue = 0.75
 	var pickup: PickUpItem = preload("res://scenes/pickup_item/pickup_item.tscn").instantiate()
 	pickup.item_id = "clay_lump"
 	pickup.quantity = 4
@@ -229,7 +230,7 @@ func _assert_seed(expected_palms: Dictionary = {}) -> void:
 	_expect(Inventory.items.get("shekel") == 17 and Inventory.items.get("stone") == 3, "Player inventory survives the checkpoint.")
 	_expect(storage.items.get("stone") == 90 and storage.items.get("wood_log") == 95, "Materials already paid for construction remain paid exactly once.")
 	_expect(state._work_remaining == 120 and state._work_kind == "build" and state.wall_hp == 0, "Unfinished wall work retains its timer and ruined wall.")
-	_expect(WorkStateRuntime.get_node("CityProgression").progress == 35 and player.focus == 0.75, "City progress and player conditions survive.")
+	_expect(WorkStateRuntime.get_node("CityProgression").progress == 35 and is_equal_approx(player.fatigue, 0.75), "City progress and player conditions survive.")
 
 func _clean_files() -> void:
 	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
@@ -488,6 +489,58 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 
 func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
 	# Pseudo-legacy documents omit owner fields absent in those schemas.
+	raw.player["focus"] = 0.75
 	raw.raid.erase("notification_seen_keys")
 	for plot: Dictionary in raw.plots.values():
 		plot.erase("payroll_work_remainder")
+
+func _test_player_condition_migration(current: Dictionary, raw: Dictionary) -> void:
+	_expect(current.schema_version == 9 and not raw.player.has("focus"), "Current checkpoints contain only Hunger and Fatigue.")
+	var values = VALUES.new()
+	var legacy_raw: Dictionary = raw.duplicate(true)
+	legacy_raw.player["focus"] = 0.63
+	var legacy: Dictionary = current.duplicate(true)
+	legacy.schema_version = 8
+	legacy.state = values.encode(legacy_raw)
+	var sentinel: Dictionary = store.snapshot.capture(content)
+	for allowed_focus: float in [0.0, 1.0]:
+		var boundary_raw: Dictionary = legacy_raw.duplicate(true)
+		boundary_raw.player["focus"] = allowed_focus
+		var boundary: Dictionary = legacy.duplicate(true)
+		boundary.state = values.encode(boundary_raw)
+		_expect(store.snapshot.prepare(boundary, content), "Legacy Focus boundary remains valid: " + str(allowed_focus))
+		_expect(sentinel == store.snapshot.capture(content), "Preparing a legacy checkpoint does not mutate live state.")
+	for invalid_focus: Variant in ["missing", "wrong_type", -0.01, 1.01]:
+		var bad_raw: Dictionary = legacy_raw.duplicate(true)
+		if typeof(invalid_focus) == TYPE_STRING and invalid_focus == "missing":
+			bad_raw.player.erase("focus")
+		elif typeof(invalid_focus) == TYPE_STRING and invalid_focus == "wrong_type":
+			bad_raw.player["focus"] = "0.63"
+		else:
+			bad_raw.player["focus"] = invalid_focus
+		var invalid: Dictionary = legacy.duplicate(true)
+		invalid.state = values.encode(bad_raw)
+		_expect(not store.snapshot.prepare(invalid, content), "Invalid legacy Focus is rejected: " + str(invalid_focus))
+		_expect(sentinel == store.snapshot.capture(content), "Rejected legacy data never mutates live state.")
+	var invalid_current: Dictionary = current.duplicate(true)
+	invalid_current.state = values.encode(legacy_raw)
+	_expect(not store.snapshot.prepare(invalid_current, content), "Current checkpoints reject an unexpected Focus field.")
+	var bad_raw: Dictionary = legacy_raw.duplicate(true)
+	bad_raw.player["focus"] = 1.01
+	var invalid_disk: Dictionary = legacy.duplicate(true)
+	invalid_disk.state = values.encode(bad_raw)
+	var invalid_bytes: String = JSON.stringify(invalid_disk, "", true, true)
+	_write_text(CHECKPOINT_PATH, invalid_bytes)
+	_expect(not store.load_checkpoint() and not store.save_checkpoint(), "Invalid legacy saves cannot be loaded or overwritten.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == invalid_bytes and sentinel == store.snapshot.capture(content), "Invalid save bytes and the live world are preserved.")
+	var legacy_bytes: String = JSON.stringify(legacy, "", true, true)
+	_write_text(CHECKPOINT_PATH, legacy_bytes)
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "A valid v8 checkpoint loads repeatedly.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == legacy_bytes, "Loading a legacy checkpoint leaves its bytes untouched.")
+	_expect(is_equal_approx(player.fatigue, raw.player.fatigue) and is_equal_approx(player.hunger, raw.player.hunger), "Migration preserves both player needs.")
+	_expect(store.save_checkpoint(), "A later save writes the new checkpoint.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == legacy_bytes, "The replaced legacy checkpoint remains in the normal backup.")
+	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var migrated: Dictionary = values.decode(saved.state)
+	_expect(saved.schema_version == 9 and not migrated.player.has("focus"), "The new checkpoint omits the retired Focus field.")
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "The new checkpoint also loads repeatedly.")

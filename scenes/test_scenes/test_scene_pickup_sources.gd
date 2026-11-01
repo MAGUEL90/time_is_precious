@@ -76,9 +76,11 @@ func _run() -> void:
 			old_palms[key].erase("config")
 	raw.erase("pickup_sources")
 	raw.date_palms = old_palms
+	_strip_post_v3_owner_fields(raw)
 	var legacy: Dictionary = saved.duplicate(true)
 	legacy.schema_version = 3
 	legacy.state = codec.encode(raw)
+	_strip_post_v3_worker_fields(legacy.state)
 	_expect(store.snapshot.prepare(legacy, content), "v3 accepts new authored source types through explicit migration.")
 	_expect(sentinel == store.snapshot.capture(content), "Migration preparation does not reset new sources.")
 	store.snapshot.apply_prepared(content, false)

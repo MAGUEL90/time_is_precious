@@ -262,22 +262,5 @@ func proceed_contract() -> void:
 	is_contract_activated = true
 
 func try_negotiate_contract() -> void:
-	if player_reff == null:
-		var player: Player = get_tree().get_first_node_in_group("player")
-		if player == null:
-			return
-
-		player_reff = player
-
-	TimeComponentManager.advance_minutes(negotiation_base_duration_minutes)
-
-	var player_focus: float = player_reff.get_focus()
-
-	var success_chance: float = clampf((player_focus - negotiation_difficulty) + 0.5, 0.01, 0.99)
-	var negotiation_roll: float = randf()
-	var negotiation_success: bool = negotiation_roll < success_chance
-
-	if negotiation_success:
-		proceed_contract()
-
-	print("Focus: %.1f, Chance: %.1f, Roll: %.1f, Success: %s" % [player_focus, success_chance, negotiation_roll, negotiation_success])
+	# Retain the callback safely for old callers while negotiation is unavailable.
+	return

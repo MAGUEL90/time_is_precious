@@ -1,16 +1,12 @@
-[gd_scene load_steps=19 format=3 uid="uid://04lfa0355no7"]
+[gd_scene load_steps=17 format=3 uid="uid://04lfa0355no7"]
 
 [ext_resource type="PackedScene" uid="uid://rsx7sjnfh6ut" path="res://scenes/ui/status_indicator/status_indicator.tscn" id="1_amamv"]
 [ext_resource type="Script" uid="uid://cnxr4b22t03hr" path="res://scenes/ui/bottom_hud/bottom_hud.gd" id="1_ric74"]
 [ext_resource type="Texture2D" uid="uid://0r2hw0t1kxn6" path="res://assets/ui/bottom_hud/base_template_bottom_hud.png" id="1_xx36t"]
-[ext_resource type="Texture2D" uid="uid://cpiqwsclu6aoc" path="res://assets/ui/ui_icon/focus_icon.png" id="2_0qxx0"]
 [ext_resource type="PackedScene" uid="uid://cocp8t8x2la81" path="res://scenes/ui/bottom_hud/bottom_hud_slot.tscn" id="2_hxnt4"]
 [ext_resource type="Texture2D" uid="uid://7ywyxd1vd82c" path="res://assets/ui/bottom_hud/icon_bottom_hud.png" id="3_amamv"]
 [ext_resource type="Texture2D" uid="uid://bnvey8ew22rwh" path="res://assets/ui/ui_icon/hunger_icon.png" id="3_nwqr3"]
 [ext_resource type="Texture2D" uid="uid://cimquy70mlvx5" path="res://assets/ui/ui_icon/XP icon.png" id="4_iweik"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_lhyk8"]
-atlas = ExtResource("2_0qxx0")
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xx5ha"]
 atlas = ExtResource("3_nwqr3")
@@ -64,9 +60,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -79.0
+offset_left = -59.0
 offset_top = -60.0
-offset_right = 79.0
+offset_right = 59.0
 offset_bottom = -44.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -84,12 +80,6 @@ theme_override_constants/separation = 2
 
 [node name="FatigueIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
 layout_mode = 2
-
-[node name="FocusIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
-layout_mode = 2
-
-[node name="Icon" parent="Root/StatusDrawer/IndicatorRow/FocusIndicator" index="0"]
-texture = SubResource("AtlasTexture_lhyk8")
 
 [node name="HungerIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
 layout_mode = 2
@@ -178,7 +168,6 @@ layout_mode = 2
 texture = SubResource("AtlasTexture_ric74")
 
 [editable path="Root/StatusDrawer/IndicatorRow/FatigueIndicator"]
-[editable path="Root/StatusDrawer/IndicatorRow/FocusIndicator"]
 [editable path="Root/StatusDrawer/IndicatorRow/HungerIndicator"]
 [editable path="Root/StatusDrawer/IndicatorRow/ExperienceIndicator"]
 [editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton2"]

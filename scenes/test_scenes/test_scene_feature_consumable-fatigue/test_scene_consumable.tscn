@@ -245,7 +245,6 @@ position = Vector2(116, 109)
 position = Vector2(168, 117)
 fatigue = 0.8
 hunger = 0.7
-focus = 0.5
 current_experience = 50
 
 [node name="NightmareWorld" parent="." instance=ExtResource("6_e6gr8")]

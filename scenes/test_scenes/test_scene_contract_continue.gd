@@ -655,6 +655,7 @@ func _make_legacy_v6(current: Dictionary, store: Node) -> Dictionary:
 	pending_worker.payroll_last_attempt_day = -1
 	raw.workers.workers_by_id[LEGACY_PENDING_ID] = pending_worker
 	raw.raid.erase("notification_seen_keys")
+	raw.player["focus"] = 0.75
 	var encoded_state: Variant = values.encode(raw)
 	_check(values.error.is_empty() and encoded_state is Dictionary,
 		"Encode the legacy fixture through CitySaveValues before removing fields absent in schema six.")

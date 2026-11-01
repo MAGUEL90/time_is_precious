@@ -623,17 +623,22 @@ of rebuilding the city through smarter leadership.
 
 ## 18. Player Condition and Sleep Direction
 
+**MVP decision, 2026-11-01:** The player has Hunger and Energy (displayed from
+Fatigue), with no Focus condition. Critical Energy triggers collapse. Existing
+food, sleep recovery and manual work relationships remain in place. Negotiation
+is temporarily unavailable during the MVP. Earlier Focus and negotiation
+descriptions in this document are historical direction, not current MVP rules.
+Regular citizens and workers keep their existing needs; workers have no Energy
+system.
+
 The player has a personal condition layer that reinforces the time economy and the risk of
-relying too heavily on manual work. The current MVP establishes the core relationship between
-Fatigue, Hunger / Body Fuel, Focus, Sleep, Collapse, and the Nightmare consequence. Exact balance
-and final presentation remain provisional.
+relying too heavily on manual work. Exact balance and final presentation remain provisional.
 
 The current design direction is intentionally simple:
 
 ```text
 Hunger / Body Fuel = body fuel
-Fatigue = physical tiredness
-Focus = mental sharpness
+Energy = remaining capacity, displayed as the inverse of Fatigue
 Sleep = main recovery action
 ```
 
@@ -648,10 +653,6 @@ There is no separate short-rest system for the early MVP. Sleep is the single re
   hungry, so a higher internal value means a worse condition. The HUD may display the inverse as
   remaining nourishment, keeping a full bar consistent with a healthy state. The final
   public-facing term still needs to be chosen.
-- **Focus:** mental sharpness and high-performance capacity. Focus is not only a punishment meter.
-  It is a semi-resource / condition stat that supports better output, special dialogue choices,
-  negotiation, strategy, and precision work. High Focus is good, while high Fatigue and poor
-  nourishment make it harder to maintain.
 - **Sleep:** the main recovery action. It advances the world clock, so recovery always costs time.
 
 ### 18.2 Sleep Rules
@@ -662,9 +663,9 @@ There is no separate short-rest system for the early MVP. Sleep is the single re
 - A full sleep advances world time; seven in-game hours remains an initial tuning direction, not a
   locked final value.
 - Hunger or food pressure continues while time passes during sleep.
-- Sleep restores Fatigue and Focus, but it does **not** restore Hunger / Body Fuel.
+- Sleep restores Energy by reducing Fatigue, but it does **not** restore Hunger / Body Fuel.
 - Sleep quality depends on the player's nourishment. Sleeping while well fed restores more
-  Fatigue and Focus than sleeping while starving.
+  Energy than sleeping while starving.
 - Sleep should restore the player without completely erasing the consequences of poor planning.
 - A bed or another valid SleepSpot provides the interaction. The player cannot sleep from an
   arbitrary location during normal gameplay.
@@ -679,9 +680,10 @@ sleep -> eat -> perform high-value action -> sleep again -> repeat
 The player may plan around the daily sleep, but cannot farm recovery repeatedly within the same
 calendar day.
 
-### 18.3 Focus Usage
+### 18.3 Historical Focus Direction — Not Active in MVP
 
-Focus should create better performance rather than only punishing the player.
+The following prior direction is retained for history and is superseded by the
+2026-11-01 MVP decision. Negotiation is unavailable during the MVP.
 
 High Focus can improve:
 
@@ -724,13 +726,9 @@ by making Focus harder to maintain. Negotiation should primarily cost time and F
 
 ### 18.4 Worker Relationship
 
-Player Focus should not make workers irrelevant.
-
-- Player Focus improves player-led decisions, negotiation, and special / precision actions.
 - Workers provide stable production volume and protect the player's limited time.
 - Worker work speed should not be directly reduced because the player is tired.
-- Low player Focus may affect management quality later, but it should not unfairly punish worker
-  output before the worker management loop is readable.
+- Worker needs remain Food, Clothing and Shelter; workers do not have Energy.
 
 The design rule is:
 
@@ -741,8 +739,7 @@ Workers = stable volume and scalable production
 
 ### 18.5 Collapse and Nightmare Consequence
 
-Critical Fatigue or critical low Focus can trigger collapse. Hunger is not a direct collapse
-trigger: poor nourishment increases Focus drain and can therefore lead to collapse indirectly.
+Critical Fatigue (low Energy) triggers collapse. Hunger is not a direct collapse trigger.
 Exact thresholds remain balancing values. Collapse is a penalty rather than a substitute for
 healthy sleep.
 
@@ -755,7 +752,7 @@ When Collapse happens:
 - escaping quickly reduces the time loss, while a timeout adds an additional penalty
 - later Collapse tiers increase pressure through stronger penalties, reduced vision, and
   progressively harder or longer challenges
-- Hunger becomes worse, while Fatigue and Focus recover only partially
+- Hunger becomes worse, while Fatigue recovers only partially
 - the normal sleep opportunity is consumed for the day on which the player returns
 
 When the Nightmare ends, the transition should clearly report time spent, tier penalties,
@@ -764,21 +761,20 @@ not be strategically equal to solving the challenge.
 
 Collapse should have visible warnings and feel like the result of ignored conditions, not a
 sudden random punishment. Collapse must never become free sleep. It costs time, worsens Hunger,
-only partially restores Fatigue and Focus, and consumes the player's daily sleep opportunity.
+only partially restores Energy, and consumes the player's daily sleep opportunity.
 
-Fatigue does not need to reduce movement speed in the first version. Time loss, poorer Focus,
-lower action quality, and collapse risk are enough initial pressure.
+Fatigue does not need to reduce movement speed in the first version. Existing manual-work
+output, time loss and collapse risk provide the current pressure.
 
 ### 18.6 Design Purpose
 
 The condition layer should strengthen the game's central message:
 
 - manual work has a personal cost beyond the minutes spent performing it
-- food, sleep, and Focus compete with production and travel for limited time
+- food and sleep compete with production and travel for limited time
 - good recovery creates better output and better decisions
-- poor recovery creates weaker negotiation, less optimal output, and collapse risk
+- poor recovery creates less optimal manual output and collapse risk
 - delegation becomes valuable because it protects the player's time and condition
-- Focus connects physical self-management to negotiation and managerial decision-making
 
 Sleep must not become a free healing button. It is another strategic use of the player's most
 important resource: time.
@@ -788,13 +784,12 @@ important resource: time.
 The MVP is functional, but these decisions remain open for balancing and later iterations:
 
 - whether the public-facing term is Hunger, Body Fuel, or Satiety
-- exact drain, recovery, Focus cost, and collapse values
+- exact drain, recovery and collapse values
 - exact full sleep duration
 - how the once-per-day sleep limit resets across midnight and after Collapse
 - which additional locations can act as valid SleepSpots
 - final warning sprites, animation, audio, and presentation before Collapse
-- which actions spend Focus and how clearly those costs are communicated
-- how production bonus progress from Focus is stored and displayed
+- negotiation design after the MVP
 - how Nightmare maze difficulty, time limits, and penalties scale across tiers
 - which condition and Nightmare values must persist across save and load
 

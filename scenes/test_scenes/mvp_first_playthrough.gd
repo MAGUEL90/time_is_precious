@@ -63,7 +63,7 @@ func bind_map() -> void:
 
 func measure(stage: String) -> void:
 	var row := {"stage": stage, "minute": now(), "inventory": Inventory.items.duplicate(),
-		"hunger": player.hunger, "fatigue": player.fatigue, "focus": player.focus,
+		"hunger": player.hunger, "fatigue": player.fatigue,
 		"harvested": harvested, "eaten": eaten, "sold_wood": sold_wood, "sold_bricks": sold_bricks,
 		"earned": earned, "paid": paid, "shaped": shaped, "dried": dried, "sleeps": sleeps,
 		"walked_pixels": walked, "food": CitizenNeedsManager.get_food_supply_summary(),
