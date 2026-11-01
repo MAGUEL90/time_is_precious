@@ -84,8 +84,9 @@ func _test_tiers_and_full_shifts() -> void:
 		_expect(schedule.jobs[SITE].stats.gather_0.output == expected, "Full shift output at satisfaction %s" % case[0])
 		_expect(dropped == expected and session.stock == 1000 - expected and worker.profession_xp == expected,
 			"Stock, ground output, and XP conserve completed items at %s" % case[0])
-		_expect(int(schedule.minutes_by_worker.gather_0) == 480 and not schedule.jobs[SITE].progress.has("gather_0"),
-			"Full shift consumes 480 minutes and clears incomplete work")
+		var expected_partial: float = snappedf(480.0 * worker.get_satisfaction_work_multiplier() - expected * session.minutes_per_unit, schedule.PROGRESS_PRECISION)
+		_expect(int(schedule.minutes_by_worker.gather_0) == 480 and is_equal_approx(float(schedule.jobs[SITE].progress.gather_0), expected_partial),
+			"Full shift consumes 480 minutes and retains incomplete work")
 		_advance(60)
 		_expect(dropped == expected, "No extra gathering outside the shift")
 
@@ -123,8 +124,9 @@ func _test_multiple_and_depleted_stock() -> void:
 	_advance(20)
 	var output: int = int(schedule.jobs[SITE].stats.gather_0.output) + int(schedule.jobs[SITE].stats.gather_1.output)
 	_expect(output == 1 and dropped == 1 and session.stock == 0, "Competing workers never exceed depleted stock")
-	_expect(not schedule.jobs[SITE].progress.has("gather_0") and not schedule.jobs[SITE].progress.has("gather_1"),
-		"Depleted site clears unfinished gathering")
+	_expect(is_equal_approx(float(schedule.jobs[SITE].progress.gather_0), 0.5)
+		and is_equal_approx(float(schedule.jobs[SITE].progress.gather_1), 9.45),
+		"Depleted site retains each worker's unfinished item separately")
 
 func _test_fast_site_and_exact_boundaries() -> void:
 	_setup([0.8], 1.0)

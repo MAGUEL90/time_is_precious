@@ -202,6 +202,69 @@ func get_assigned_worker_ids() -> Array[String]:
 func get_max_assigned_worker_slots() -> int:
 	return max_assigned_worker_slots
 
+func get_plot_order_id() -> String:
+	var plot: Node = get_parent()
+	if plot != null and plot.is_in_group("workshop_plots"):
+		return str(plot.construction.order_id)
+	return ""
+
+func get_paused_orders() -> Array[WorkOrder]:
+	var orders: Array[WorkOrder] = []
+	var plot_id: String = get_plot_order_id()
+	for order: WorkOrder in WorkManager.active_orders.values():
+		var order_plot: String = str(order.get_meta("visual_plot_id", ""))
+		if not plot_id.is_empty() and order.worker_kind == WorkOrder.Worker_Type.NPC and order.current_status == WorkOrder.Status.QUEUED and order.worker_id.is_empty() and (order_plot == plot_id or order_plot.is_empty()):
+			orders.append(order)
+	return orders
+
+func get_replacement_options(order_id: String) -> Array[Dictionary]:
+	var order: WorkOrder = WorkManager.active_orders.get(order_id)
+	var job: JobData = get_job_data(order.job_id) if order != null else null
+	var options: Array[Dictionary] = []
+	for worker: WorkerData in WorkerDatabase.get_all_workers():
+		var reason: String = _replacement_reason(worker, job)
+		options.append({"id": worker.worker_id, "available": reason.is_empty(), "reason": reason})
+	return options
+
+func _replacement_reason(worker: WorkerData, job: JobData) -> String:
+	if worker == null or job == null or worker.is_reserved() or worker.current_work_status != WorkerData.WorkStatus.IDLE:
+		return "Worker unavailable."
+	if worker.is_payroll_blocked():
+		return worker.get_onboarding_status()
+	if worker.resignation_pending or worker.profession != job.requirement_profession or worker.get_resolved_satisfaction() <= 0.0:
+		return "Requires an eligible matching worker."
+	if not assigned_worker_ids.has(worker.worker_id) and assigned_worker_ids.size() >= max_assigned_worker_slots:
+		return "Release a workshop worker slot first."
+	var citizen: CitizenData = worker.get_linked_citizen()
+	if citizen != null and not citizen.can_be_assigned():
+		if not assigned_worker_ids.has(worker.worker_id) or citizen.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+			return "Worker is assigned elsewhere."
+	return ""
+
+func resume_paused_job(order_id: String, worker_id: String) -> bool:
+	last_start_job_error = ""
+	var order: WorkOrder = WorkManager.active_orders.get(order_id)
+	var plot_id: String = get_plot_order_id()
+	var order_plot: String = str(order.get_meta("visual_plot_id", "")) if order != null else ""
+	if order == null or order.current_status != WorkOrder.Status.QUEUED or not order.worker_id.is_empty() or (not order_plot.is_empty() and order_plot != plot_id) or (order_plot.is_empty() and plot_id.is_empty()):
+		last_start_job_error = "This work is no longer waiting at this workshop."
+		return false
+	var job: JobData = get_job_data(order.job_id)
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	var reason: String = _replacement_reason(worker, job)
+	if not reason.is_empty():
+		last_start_job_error = reason
+		return false
+	if not WorkManager.resume_paused_order(order_id, worker_id, job, plot_id, Callable(self, "_bind_resumed_worker")):
+		last_start_job_error = WorkManager.get_last_start_job_error()
+		return false
+	return true
+
+func _bind_resumed_worker(order_id: String, worker_id: String) -> void:
+	if not assigned_worker_ids.has(worker_id):
+		assigned_worker_ids.append(worker_id)
+	_bind_plot_approach(order_id, worker_id)
+
 func assign_workers(worker_ids: Array[String]) -> bool:
 	var next_assigned_worker_ids: Array[String] = []
 
@@ -294,14 +357,13 @@ func start_mudbrick_job_from_storage() -> bool:
 		WorkShopStorage,
 		WorkShopStorage,
 		mudbrick_make.workshop_fee_amount,
-		max_assigned_worker_slots
+		max_assigned_worker_slots,
+		Callable(self, "_bind_plot_approach")
 	)
 
 	if order_id.is_empty():
 		print(WorkManager.get_last_start_job_error())
 		return false
-	_bind_plot_approach(order_id, worker_id)
-
 	print("Started mudbrick job: ", order_id)
 	return true
 
@@ -353,7 +415,8 @@ func start_job_from_storage(
 		WorkShopStorage,
 		WorkShopStorage,
 		job.workshop_fee_amount,
-		max_assigned_worker_slots
+		max_assigned_worker_slots,
+		Callable(self, "_bind_plot_approach")
 	)
 
 	if order_id.is_empty():
@@ -363,9 +426,6 @@ func start_job_from_storage(
 		return false
 
 	last_start_job_error = ""
-	# Presentation-only identity survives a map reload with the runtime order.
-	# Production ownership, timing and outputs remain with WorkManager.
-	_bind_plot_approach(order_id, worker_id)
 	return true
 
 func _bind_plot_approach(order_id: String, worker_id: String) -> void:

@@ -83,6 +83,7 @@ func _refresh_navigation() -> void:
 	var visuals: Node = get_node_or_null("WorkerVisuals")
 	if visuals != null:
 		visuals.site_paths.clear()
+		visuals.plot_presence.states.clear()
 
 func _watch_navigation_changes(node: Node) -> void:
 	if node.has_method("get_built_footprints") and node.construction != null:
@@ -221,7 +222,7 @@ func _exit_tree() -> void:
 	if retain_resource_stock and is_instance_valid(WorkStateRuntime):
 		for session in sites.values():
 			session.cancel()
-		var snapshot: Dictionary = {"day": TimeComponentManager.current_day, "sites": {}, "storages": {}, "ground": []}
+		var snapshot: Dictionary = {"day": TimeComponentManager.current_day, "sites": {}, "storages": {}, "ground": [], "pending_output": {}, "pending_progress": {}}
 		for id: StringName in sites:
 			snapshot.sites[id] = sites[id].stock
 		for id: StringName in storage_destinations:
@@ -232,6 +233,10 @@ func _exit_tree() -> void:
 			if not drop.is_queued_for_deletion() and not drop.is_collecting:
 				snapshot.ground.append({"item_id": drop.item_id, "quantity": drop.quantity, "position": drop.position,
 					"site": str(drop.get_meta("daily_site", ""))})
+		for site_id: Variant in daily.pending_output:
+			snapshot.pending_output[str(site_id)] = int(daily.pending_output[site_id].quantity)
+		for site_id: Variant in daily.pending_progress:
+			snapshot.pending_progress[str(site_id)] = daily.pending_progress[site_id].duplicate()
 		WorkStateRuntime.set_meta(RESOURCE_STOCK_META, snapshot)
 	super._exit_tree()
 
@@ -255,3 +260,12 @@ func _restore_resource_stock() -> void:
 			callback = _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))
 		if _drop_output_at(entry.quantity, entry.position, callback, entry.item_id) and not str(site_id).is_empty():
 			$GroundOutput.get_child(-1).set_meta("daily_site", str(site_id))
+	for saved_id: Variant in snapshot.get("pending_output", {}):
+		var site_id := StringName(saved_id)
+		if sites.has(site_id):
+			daily.pending_output[site_id] = {"quantity": int(snapshot.pending_output[saved_id]),
+				"drop": _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))}
+	for saved_id: Variant in snapshot.get("pending_progress", {}):
+		var site_id := StringName(saved_id)
+		if sites.has(site_id):
+			daily.pending_progress[site_id] = snapshot.pending_progress[saved_id].duplicate()

@@ -6,9 +6,34 @@ static func encode_city(codec: RefCounted, raw: Dictionary) -> Variant:
 	for result: Dictionary in legacy.needs.last_needs_results.values():
 		result["reliability"] = 0.5
 		result["reliability_delta"] = -0.05
-	var encoded: Variant = codec.encode(legacy)
+	var encoded: Variant = encode_v10(codec, legacy)
 	add_city_object_fields(encoded)
 	return encoded
+
+## Version 10 predates the construction team and deferred-resignation fields.
+static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
+	var legacy: Dictionary = raw.duplicate(true)
+	for plot: Dictionary in legacy.plots.values():
+		plot.erase("worker_capacity")
+		plot.erase("work_total_units")
+	legacy.worksites.schema_version = 1
+	legacy.worksites.erase("pending_output")
+	legacy.worksites.erase("pending_progress")
+	for route: Dictionary in legacy.worksites.routes.values():
+		route.erase("resigning")
+	var encoded: Variant = codec.encode(legacy)
+	_remove_resignation_fields(encoded)
+	return encoded
+
+static func _remove_resignation_fields(value: Variant) -> void:
+	if value is Dictionary:
+		if value.get("$type") == "object" and value.get("class") == "WorkerData":
+			value.fields.erase("resignation_pending")
+		for child: Variant in value.values():
+			_remove_resignation_fields(child)
+	elif value is Array:
+		for child: Variant in value:
+			_remove_resignation_fields(child)
 
 static func add_city_object_fields(value: Variant) -> void:
 	if value is Dictionary:

@@ -21,7 +21,7 @@ const OBJECT_FIELDS: Dictionary = {
 	],
 	"WorkerData": [
 		"worker_id", "display_name", "profession", "profession_xp", "current_order_id", "physical_approach",
-		"current_job_id", "current_work_status", "profession_star", "efficiency",
+		"current_job_id", "current_work_status", "resignation_pending", "profession_star", "efficiency",
 		"payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day", "payroll_contract_days", "payroll_paid_start_minute",
 		"wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
 		"shelter_fulfilled", "satisfaction",
@@ -46,6 +46,7 @@ var allow_legacy_contract_fields: bool = false
 var allow_legacy_worker_fields: bool = false
 var allow_legacy_approach_field: bool = false
 var allow_legacy_reliability_field: bool = false
+var allow_legacy_resignation_field: bool = false
 var error: String = ""
 
 
@@ -306,6 +307,8 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		allowed_fields.append("reliability")
 	if allow_legacy_approach_field and type_name == "WorkerData":
 		allowed_fields.erase("physical_approach")
+	if allow_legacy_resignation_field and type_name == "WorkerData":
+		allowed_fields.erase("resignation_pending")
 	if allow_legacy_worker_fields and type_name == "WorkerData":
 		for field: String in PAYROLL_FIELDS:
 			allowed_fields.erase(field)
@@ -343,7 +346,7 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 
 func _prepare_object_field(instance: Object, type_name: String, field_name: String, decoded: Variant) -> Variant:
 	if type_name == "WorkerData" and field_name == "physical_approach":
-		if not decoded is Dictionary or not WorkerData.physical_approach_valid(decoded):
+		if not decoded is Dictionary or not WorkerData.physical_approach_valid(decoded, not allow_legacy_resignation_field):
 			_fail("Invalid WorkerData.physical_approach.")
 			return null
 		return decoded

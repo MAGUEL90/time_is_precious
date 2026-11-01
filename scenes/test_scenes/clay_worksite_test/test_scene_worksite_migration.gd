@@ -43,12 +43,29 @@ func _run() -> void:
 	probe.destinations = registry
 	probe.enabled = true
 	var current: Dictionary = probe.codec.capture(fixture, registry)
-	_expect(probe.codec.validate(current, fixture, registry), "The current fixture is a valid v2 checkpoint: " + probe.codec.error)
+	_expect(probe.codec.validate(current, fixture, registry), "The current fixture is a valid v3 checkpoint: " + probe.codec.error)
+	var version_two: Dictionary = current.duplicate(true)
+	version_two.schema_version = 2
+	version_two.erase("pending_output")
+	version_two.erase("pending_progress")
+	for group: String in ["workers", "dismissed"]:
+		for data: Dictionary in version_two[group].values():
+			data.erase("resignation_pending")
+	for route: Dictionary in version_two.routes.values():
+		route.erase("resigning")
+	_expect(probe.codec.restore(version_two, fixture, registry)
+		and fixture.daily.pending_output.is_empty() and fixture.daily.pending_progress.is_empty(),
+		"A v2 prototype checkpoint restores with empty new worksite fields.")
 	var legacy: Dictionary = current.duplicate(true)
 	legacy.schema_version = 1
+	legacy.erase("pending_output")
+	legacy.erase("pending_progress")
+	for route: Dictionary in legacy.routes.values():
+		route.erase("resigning")
 	legacy.jobs.ClaySiteA.progress[LABORER] = 7
 	for group: String in ["workers", "dismissed", "citizens"]:
 		for data: Dictionary in legacy[group].values():
+			data.erase("resignation_pending")
 			data.reliability = 0.5
 	var legacy_bytes: String = JSON.stringify(legacy, "", true, true)
 	_write(probe.path, legacy_bytes)
@@ -58,11 +75,11 @@ func _run() -> void:
 	_expect(probe.save_now(), "An explicit save upgrades the prototype checkpoint.")
 	_expect(FileAccess.get_file_as_string(probe.path + ".bak") == legacy_bytes, "The v1 checkpoint remains in the normal backup.")
 	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(probe.path))
-	var omitted: bool = upgraded.schema_version == 2
+	var omitted: bool = upgraded.schema_version == 3
 	for group: String in ["workers", "dismissed", "citizens"]:
 		for data: Dictionary in upgraded[group].values():
 			omitted = omitted and not data.has("reliability")
-	_expect(omitted, "The v2 writer omits retired fields from all worker and citizen records.")
+	_expect(omitted, "The v3 writer omits retired fields from all worker and citizen records.")
 	for kind: String in ["worker_missing", "worker_type", "worker_outside", "citizen_missing", "citizen_type", "citizen_outside"]:
 		var invalid: Dictionary = legacy.duplicate(true)
 		var record: Dictionary = invalid.workers[LABORER] if kind.begins_with("worker") else invalid.citizens[LABORER]
@@ -75,7 +92,7 @@ func _run() -> void:
 		_expect(not probe.codec.validate(invalid, fixture, registry), "Invalid v1 Reliability is rejected: " + kind)
 	var unexpected: Dictionary = upgraded.duplicate(true)
 	unexpected.workers[LABORER].reliability = 0.5
-	_expect(not probe.codec.validate(unexpected, fixture, registry), "A v2 checkpoint rejects the retired field.")
+	_expect(not probe.codec.validate(unexpected, fixture, registry), "A v3 checkpoint rejects the retired field.")
 	var invalid_progress: Dictionary = upgraded.duplicate(true)
 	for amount: Variant in [-0.1, fixture.sites[&"ClaySiteA"].minutes_per_unit, INF, "7"]:
 		invalid_progress.jobs.ClaySiteA.progress[LABORER] = amount
@@ -83,7 +100,7 @@ func _run() -> void:
 	fixture.daily.jobs[&"ClaySiteA"].progress[LABORER] = 9.35
 	_expect(probe.save_now(), "Fractional progress is saved to disk.")
 	fixture.daily.jobs[&"ClaySiteA"].progress[LABORER] = 0.0
-	_expect(probe.load_now() == "loaded", "The v2 fractional checkpoint loads from disk.")
+	_expect(probe.load_now() == "loaded", "The v3 fractional checkpoint loads from disk.")
 	var job: Dictionary = fixture.daily.jobs[&"ClaySiteA"]
 	_expect(is_equal_approx(float(job.progress[LABORER]), 9.35), "Fractional progress is not truncated on restore.")
 	var stock_before: int = fixture.sites[&"ClaySiteA"].stock

@@ -19,6 +19,7 @@ const WORKER_ASSIGNMENT_UI: PackedScene = preload(
 signal closed
 signal build_requested(worker_ids: Array[String])
 signal clearing_requested(worker_ids: Array[String], use_player: bool)
+signal replacement_requested(worker_ids: Array[String])
 
 @onready var requirements_page: VBoxContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage
 @onready var window: NinePatchRect = $Root/Center/Window
@@ -35,6 +36,7 @@ signal clearing_requested(worker_ids: Array[String], use_player: bool)
 @onready var progress_bar: ProgressBar = $Root/Center/Window/Margin/MainVBox/ProgressPage/ProgressBar
 @onready var remaining_label: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/RemainingLabel
 @onready var team_label: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/TeamLabel
+@onready var progress_footer: HBoxContainer = $Root/Center/Window/Margin/MainVBox/ProgressPage/Footer
 @onready var progress_close_button: Button = $Root/Center/Window/Margin/MainVBox/ProgressPage/Footer/CloseButton
 @onready var close_button: BaseButton = $Root/Center/Window/Margin/MainVBox/TitleHeader/CloseButton
 
@@ -45,6 +47,7 @@ var _is_closing: bool = false
 var _worker_assignment_menu: WorkshopWorkerAssignmentUI
 var _use_player: bool = false
 var player_button: Button
+var replacement_button: Button
 
 
 func _ready() -> void:
@@ -64,6 +67,15 @@ func _ready() -> void:
 	player_button.toggle_mode = true
 	player_button.toggled.connect(_on_player_selected)
 	assign_workers_button.get_parent().add_child(player_button)
+	replacement_button = Button.new()
+	replacement_button.name = "ReplacementButton"
+	replacement_button.text = "Assign"
+	replacement_button.custom_minimum_size = Vector2(52, 16)
+	replacement_button.theme_type_variation = &"HudShortcutButton"
+	replacement_button.add_theme_font_size_override("font_size", 6)
+	replacement_button.pressed.connect(_open_worker_assignment)
+	progress_footer.add_child(replacement_button)
+	progress_footer.move_child(replacement_button, 0)
 
 func _on_player_selected(selected: bool) -> void:
 	_use_player = selected
@@ -117,6 +129,8 @@ func show_error(message: String) -> void:
 		status_label.text = message
 		_set_status_color(message)
 		status_label.show()
+	elif progress_page.visible:
+		team_label.text = message
 
 
 func _input(event: InputEvent) -> void:
@@ -201,6 +215,7 @@ func _refresh_view() -> void:
 	var phase: String = _get_phase()
 	var clearing: bool = phase in ["uncleared", "clearing"]
 	var show_requirements: bool = phase in ["empty", "uncleared"]
+	replacement_button.visible = phase in ["building", "clearing"] and is_instance_valid(_construction) and _construction.get_replacement_slots() > 0
 	materials_list.visible = not clearing
 	requirements_page.get_node("MaterialsTitle").visible = not clearing
 	player_button.visible = phase == "uncleared"
@@ -404,9 +419,12 @@ func _open_worker_assignment() -> void:
 	_worker_assignment_menu.assignment_back_requested.connect(_on_worker_assignment_returned)
 	_worker_assignment_menu.assignment_cancelled.connect(_on_worker_assignment_returned)
 	current_scene.add_child(_worker_assignment_menu)
+	var slots: int = 1 if _get_phase() == "uncleared" else maxi(worker_options.size(), 1)
+	if _get_phase() in ["building", "clearing"]:
+		slots = _construction.get_replacement_slots()
 	_worker_assignment_menu.open_assignment(
 		_selected_worker_ids,
-		1 if _get_phase() == "uncleared" else maxi(worker_options.size(), 1),
+		slots,
 		WorkerData.Profession.NONE,
 		worker_options
 	)
@@ -432,6 +450,9 @@ func _on_worker_assignment_next_requested(worker_ids: Array[String]) -> void:
 	if not worker_ids.is_empty():
 		_use_player = false
 	_status_override = ""
+	if _get_phase() in ["building", "clearing"]:
+		replacement_requested.emit(_selected_worker_ids.duplicate())
+		_selected_worker_ids.clear()
 	_refresh_view()
 
 
@@ -483,7 +504,9 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 	progress_bar.value = progress * 100.0
 	if phase in ["building", "clearing"]:
 		progress_title.text = ("Clearing: %d%%" if phase == "clearing" else "Construction: %d%%") % roundi(progress * 100.0)
-		remaining_label.text = "Remaining: %s" % _format_duration(remaining, true)
+		remaining_label.text = "Work left: %s" % _format_duration(remaining, true)
+		if worker_count == 0 and not _construction.clearing_by_player:
+			remaining_label.text = "Paused: assign workers"
 	else:
 		progress_bar.value = 100.0
 		progress_title.text = "Workshop construction complete"
@@ -493,9 +516,15 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 		"builder" if worker_count == 1 else "builders"
 	]
 	if phase == "clearing":
-		team_label.text = "Player clearing the site" if _construction.clearing_by_player else "1 worker clearing the site"
+		team_label.text = "Player clearing the site" if _construction.clearing_by_player else ("1 worker clearing the site" if worker_count > 0 else "No worker assigned")
+	if phase in ["building", "clearing"] and worker_count > 0 and not _construction.clearing_by_player:
+		var minute_of_day: int = TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+		if minute_of_day < _construction.SHIFT_START or minute_of_day >= _construction.SHIFT_END:
+			team_label.text = "Off shift: return at 07:00"
 	if bool(preview.get("payroll_blocked", false)):
 		team_label.text = str(preview.get("message", "Contract expired - renew in Worker Hub."))
+	if not _status_override.is_empty():
+		team_label.text = _status_override
 
 
 func _format_duration(total_minutes: int, include_zero_units: bool) -> String:

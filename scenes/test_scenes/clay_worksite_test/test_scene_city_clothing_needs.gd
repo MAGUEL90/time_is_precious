@@ -30,6 +30,7 @@ func _run() -> void:
 	_test_provider_contract_and_atomicity()
 	_test_summary_is_read_only_without_provider()
 	_test_clothing_lifecycle_and_satisfaction()
+	_test_ten_day_satisfaction_boundaries()
 	_test_day_eight_renewal_with_stock()
 	_test_shortage_and_legacy_counter_is_ignored()
 	_test_linked_worker_and_legacy_worker_are_unique_recipients()
@@ -297,12 +298,42 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	_set_items({})
 	_set_new_day(base_day + 12)
-	resident.satisfaction = 0.01
+	resident.satisfaction = 0.0
 	CitizenNeedsManager.process_daily_needs()
-	_expect(is_equal_approx(resident.satisfaction, 0.01), "Negative satisfaction deltas must clamp at 0.01.")
+	_expect(is_zero_approx(resident.satisfaction), "Negative satisfaction deltas must clamp at zero.")
 	capped = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
 	_expect(is_zero_approx(float(capped.satisfaction_delta)),
 		"A result already at the lower limit must report the actual zero penalty.")
+
+
+func _test_ten_day_satisfaction_boundaries() -> void:
+	_clear_people()
+	var resident: CitizenData = _make_resident("ten_day_needs_boundary")
+	resident.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	CitizenManager.add_citizen(resident)
+	CityStockManager.shelter_capacity = 1
+	_set_items({SIMPLE_CLOTHES: 1})
+	var base_day: int = TimeComponentManager.current_day + 100
+	_set_new_fixture_day(base_day)
+	for offset: int in range(10):
+		_set_new_day(base_day + offset)
+		CitizenNeedsManager.process_daily_needs()
+		var once: float = resident.satisfaction
+		CitizenNeedsManager.process_daily_needs()
+		_expect(resident.satisfaction == once, "Repeated daily evaluation does not duplicate a shortage.")
+		if offset < 9:
+			_expect(resident.satisfaction > 0.0, "Satisfaction remains above zero before ten shortage days.")
+	_expect(resident.satisfaction == 0.0, "Ten shortage days take 50% exactly to zero.")
+	_set_items({SIMPLE_CLOTHES: 2, READY_BREAD: 10})
+	for offset: int in range(1, 11):
+		_set_new_day(base_day + 9 + offset)
+		CitizenNeedsManager.process_daily_needs()
+		if offset < 10:
+			_expect(resident.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
+				"A recovering resident below 50% has not applied yet.")
+	_expect(resident.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
+		and resident.employment_status == CitizenData.EmploymentStatus.APPLICANT,
+		"Ten fully supplied days recover 0% to the existing 50% applicant threshold.")
 
 
 func _test_shortage_and_legacy_counter_is_ignored() -> void:

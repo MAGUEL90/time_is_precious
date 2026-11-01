@@ -45,6 +45,8 @@ signal night_shift
 var _timer: float = 0.0
 var _last_shift: String = "" # menyimpan shift terakhir supaya signal shift tidak terpanggil setiap menit
 var _target_environment_color: Color = Color(1.0, 1.0, 1.0)
+var _advancing_time: bool = false
+var _cycling_day: bool = false
 
 # Lifecycle
 
@@ -67,12 +69,18 @@ func _process(delta: float) -> void:
 		var alpha: float = 1.0 - exp(-env_transition_speed * delta) # smoothing stabil berbasis delta
 		environment.color = environment.color.lerp(_target_environment_color, alpha)
 
+	# A checkpoint or other owner can hold its transaction across frames. Freeze
+	# the accumulated fraction as well as the clock until that owner finishes.
+	if not can_advance_time():
+		return
 	_timer += delta
 	if _timer >= seconds_per_minute:
 		_timer -= seconds_per_minute
 
-		advance_one_minute()
+		_advancing_time = true
+		_advance_one_minute()
 		day_cycle()
+		_advancing_time = false
 
 # Time progression
 
@@ -80,7 +88,35 @@ func emit_time_signal() -> void:
 	# State snapshots sync consumers; elapsed-time signals belong to advance_one_minute().
 	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather)
 
-func advance_one_minute() -> void:
+## A caller must finish its current transaction before requesting elapsed time.
+## Refusing reentrant requests keeps each minute's signals and worksite settlement
+## together; callers that need synchronous completion can check the result.
+func is_dispatching_time() -> bool:
+	return _advancing_time or _cycling_day
+
+func can_advance_time() -> bool:
+	if is_dispatching_time():
+		return false
+	if StorageDestination.is_any_delivery_busy():
+		return false
+	var workers: Node = get_node_or_null("/root/WorkerDatabase")
+	if workers != null and bool(workers.call("is_world_time_transition_busy")):
+		return false
+	var needs: Node = get_node_or_null("/root/CitizenNeedsManager")
+	if needs != null and (bool(needs.get("_processing_daily_needs")) or bool(needs.get("_processing_food")) or bool(needs.get("_processing_clothing")) or bool(needs.get("_daily_needs_retry_pending"))):
+		return false
+	var checkpoint: Node = get_node_or_null("/root/WorkStateRuntime/CitySave")
+	return checkpoint == null or not bool(checkpoint.get("_busy"))
+
+func advance_one_minute() -> bool:
+	if not can_advance_time():
+		return false
+	_advancing_time = true
+	_advance_one_minute()
+	_advancing_time = false
+	return true
+
+func _advance_one_minute() -> void:
 	current_minute += 1
 	if current_minute >= minute_per_hour:
 		current_minute = 0
@@ -95,15 +131,18 @@ func advance_one_minute() -> void:
 	emit_signal("minute_changed", current_minute) # signal menit berubah setiap menit
 	emit_signal("time_changed", current_day, current_hour, current_minute, current_weather) # broadcast waktu terbaru
 
-func advance_minutes(total_minutes: int) -> void:
-	if total_minutes <= 0:
-		return
+func advance_minutes(total_minutes: int) -> bool:
+	if total_minutes <= 0 or not can_advance_time():
+		return false
 
+	_advancing_time = true
 	for _each_minute in range(total_minutes):
-		advance_one_minute()
+		_advance_one_minute()
 		day_cycle()
 
+	_advancing_time = false
 	_timer = 0.0
+	return true
 
 func on_new_day() -> void:
 	roll_daily_weather()
@@ -111,6 +150,9 @@ func on_new_day() -> void:
 # Day cycle presentation
 
 func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emit shift pertama kali di _ready()
+	if _cycling_day:
+		return
+	_cycling_day = true
 	var darkness: float = 0.0
 	var new_shift: String = "morning" # shift baru yang dihitung dari jam sekarang
 
@@ -207,6 +249,7 @@ func day_cycle(force_emit: bool = false) -> void: # force_emit dipakai untuk emi
 			"afternoon": emit_signal("afternoon_shift") # signal shift siang
 			"noon": emit_signal("noon_shift") # signal shift sore
 			"night": emit_signal("night_shift") # signal shift malam
+	_cycling_day = false
 
 # Weather
 

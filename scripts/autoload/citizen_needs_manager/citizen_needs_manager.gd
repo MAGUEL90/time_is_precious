@@ -5,6 +5,8 @@ signal needs_changed
 const FOOD_SUPPLY_PER_CITIZEN_PER_DAY: int = 1
 const FOOD_SUPPLY_PER_WORKER_PER_DAY: int = 1
 const CLOTHING_LIFETIME_DAYS: int = 7
+# Stabilize daily percentage-point arithmetic without rounding player data to whole percent.
+const SATISFACTION_PRECISION: float = 0.000000001
 
 var last_food_fulfilled_count: int = 0
 var last_food_unfulfilled_count: int = 0
@@ -20,6 +22,8 @@ var last_needs_results: Dictionary = {}
 var _processing_daily_needs: bool = false
 var _processing_food: bool = false
 var _processing_clothing: bool = false
+var _daily_needs_retry_pending: bool = false
+var _daily_needs_retry_after_frame: bool = false
 
 # Lifecycle and daily orchestration
 
@@ -34,6 +38,18 @@ func process_daily_needs() -> void:
 	if _processing_daily_needs or _processing_food or _processing_clothing or day <= last_processed_day:
 		return
 	_processing_daily_needs = true
+	if not WorkerDatabase.flush_before_daily_needs():
+		# A nested delivery/payroll transaction owns the previous interval. Its
+		# completion will retry the same daily calculation without double rations.
+		_processing_daily_needs = false
+		_daily_needs_retry_pending = true
+		if not _daily_needs_retry_after_frame:
+			_daily_needs_retry_after_frame = true
+			get_tree().process_frame.connect(_retry_daily_needs_after_frame, CONNECT_ONE_SHOT)
+		return
+	_daily_needs_retry_pending = false
+	# An older checkpoint may already contain a zero-Satisfaction idle worker.
+	WorkerDatabase.resign_idle_workers_at_zero()
 	last_needs_results.clear()
 	process_daily_food_needs()
 	process_daily_clothing_needs()
@@ -46,10 +62,17 @@ func process_daily_needs() -> void:
 		_apply_daily_effect_and_record(citizen, citizen.citizen_id, day)
 
 	process_daily_worker_needs()
+	WorkerDatabase.resign_idle_workers_at_zero()
 	CitizenManager.evaluate_daily_applications()
 	last_processed_day = day
 	_processing_daily_needs = false
 	needs_changed.emit()
+
+
+func _retry_daily_needs_after_frame() -> void:
+	_daily_needs_retry_after_frame = false
+	if _daily_needs_retry_pending:
+		process_daily_needs()
 
 # Need processing
 
@@ -292,9 +315,9 @@ func _apply_daily_effect_and_record(person: Variant, person_id: String, day: int
 	var satisfaction_before: float = float(person.satisfaction)
 	var fulfilled: bool = person.are_basic_needs_fulfilled()
 	if fulfilled:
-		person.satisfaction = clampf(person.satisfaction + 0.05, 0.01, 0.99)
+		person.satisfaction = clampf(snappedf(person.satisfaction + 0.05, SATISFACTION_PRECISION), 0.0, 0.99)
 	else:
-		person.satisfaction = clampf(person.satisfaction - 0.05, 0.01, 0.99)
+		person.satisfaction = clampf(snappedf(person.satisfaction - 0.05, SATISFACTION_PRECISION), 0.0, 0.99)
 	var allocation: Dictionary = _get_valid_clothing_allocation(person_id, day)
 	var missing: Array[String] = []
 	if not bool(person.food_fulfilled):

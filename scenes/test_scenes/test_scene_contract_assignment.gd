@@ -47,6 +47,8 @@ func _run() -> void:
 	fixture.enable_worker_commute = false
 	fixture.test_hauler_carts = 1
 	add_child(fixture)
+	# This clock-driven worker fixture does not exercise Player needs/collapse.
+	fixture.player.debug_disable_player_needs = true
 	await get_tree().process_frame
 	get_tree().paused = true
 	schedule = fixture.daily
@@ -111,8 +113,10 @@ func _test_paid_midshift_and_expired_worker() -> void:
 		and int(schedule.minutes_by_worker.get(PAID_ID, 0)) == 0, "Assignment creates no retroactive work.")
 	TimeComponentManager.advance_minutes(60)
 	_expect(int(schedule.minutes_by_worker.get(PAID_ID, 0)) == 60
-		and float(schedule.jobs[&"ClaySiteA"].progress.get(PAID_ID, 0.0)) == 60.0,
-		"An hour of progress contains only minutes after the paid worker joined.")
+		and is_equal_approx(float(schedule.jobs[&"ClaySiteA"].progress.get(PAID_ID, 0.0)), 60.0),
+		"An hour of progress contains only minutes after the paid worker joined (minutes %d, progress %.15f, time %d)." % [
+			int(schedule.minutes_by_worker.get(PAID_ID, 0)),
+			float(schedule.jobs[&"ClaySiteA"].progress.get(PAID_ID, 0.0)), schedule.now()])
 	TimeComponentManager.advance_minutes(schedule.SHIFT_END - 13 * 60)
 	_expect(int(schedule.minutes_by_worker.get(PAID_ID, 0)) == schedule.SHIFT_END - 12 * 60,
 		"Mid-shift worker receives only the remaining paid shift minutes.")

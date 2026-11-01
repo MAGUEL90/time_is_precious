@@ -54,6 +54,7 @@ func _ready() -> void:
 		sites[site.name].reserved_slots = daily.active_count.bind(site.name)
 	daily.setup(sites)
 	city_tools = _create_city_tool_storage()
+	daily.equipment_storage = city_tools
 	for index: int in range(test_hauler_carts):
 		city_tools.add_tool_unit("test_cart_%d" % index, "cart", "Cart %d" % (index + 1))
 	worker_management = preload("res://scenes/test_scenes/clay_worksite_test/clay_worker_management.gd").new()

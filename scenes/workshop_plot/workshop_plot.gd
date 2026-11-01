@@ -48,7 +48,13 @@ func begin_worker_approach(worker_id: String, task_key: String) -> void:
 		if departures != null and departures.get_child_count() > 0:
 			origin = departures.get_child(0).global_position
 	worker.begin_physical_approach("plot", task_key, construction.order_id, origin, entry)
-	if origin.distance_to(entry) <= 0.1:
+	var scheduled: bool = task_key in [construction.order_id + ":clearing", construction.order_id + ":building"]
+	var production_order: WorkOrder = WorkManager.active_orders.get(task_key)
+	if production_order != null and WorkManager.is_shaping_order(production_order):
+		scheduled = true
+	var minute_of_day: int = TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var on_shift: bool = minute_of_day >= construction.SHIFT_START and minute_of_day < construction.SHIFT_END
+	if origin.distance_to(entry) <= 0.1 and (not scheduled or on_shift):
 		worker.mark_physical_arrival(task_key)
 
 func get_worker_entry_position() -> Vector2:
@@ -100,6 +106,8 @@ func _has_dust_activity() -> bool:
 	if construction == null:
 		return false
 	if construction.phase in ["clearing", "building"]:
+		if not construction.has_active_worker_at_plot():
+			return false
 		var task_key: String = construction.order_id + ":" + construction.phase
 		for worker_id: String in construction.worker_ids:
 			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -188,6 +196,7 @@ func on_player_interact(interacting_player: Player) -> void:
 	menu.closed.connect(_on_menu_closed)
 	menu.build_requested.connect(_on_build_requested)
 	menu.clearing_requested.connect(_on_clearing_requested)
+	menu.replacement_requested.connect(_on_replacement_requested)
 	get_tree().paused = true
 	menu.open_menu(construction)
 	get_viewport().set_input_as_handled()
@@ -201,6 +210,16 @@ func _on_build_requested(ids: Array[String]) -> void:
 		close_menu()
 	else:
 		menu.show_error(str(result.get("message", "Could not start construction.")))
+
+func _on_replacement_requested(ids: Array[String]) -> void:
+	if not is_instance_valid(menu) or not has_player_access():
+		close_menu()
+		return
+	var result: Dictionary = construction.add_replacement_workers(ids)
+	if bool(result.get("success", false)):
+		close_menu()
+	else:
+		menu.show_error(str(result.get("message", "Could not assign workers.")))
 
 func _sync_construction() -> void:
 	_sync_build_progress()
@@ -233,9 +252,9 @@ func _sync_construction() -> void:
 			add_child(workshop)
 			_show_table_resource(workshop)
 	elif construction.phase == "clearing":
-		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing"
+		$Label.text = "No worker" if construction.worker_ids.is_empty() and not construction.clearing_by_player else ("Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing")
 	elif construction.phase == "building":
-		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
+		$Label.text = "No workers" if construction.worker_ids.is_empty() else ("Contract expired" if construction._all_workers_payroll_blocked() else "Building")
 	else:
 		$Label.text = ""
 
@@ -329,7 +348,8 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	while construction.phase == "clearing" and is_inside_tree() and not is_queued_for_deletion():
 		if not has_player_access() or player.has_critical_condition():
 			break
-		TimeComponentManager.advance_minutes(1)
+		if not TimeComponentManager.advance_minutes(1):
+			break
 	construction.interrupt_player_clearing()
 	await get_tree().create_timer(0.5, true).timeout
 	cover.queue_free()

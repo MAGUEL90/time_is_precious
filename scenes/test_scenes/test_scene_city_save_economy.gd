@@ -100,6 +100,7 @@ func _run() -> void:
 	var before: Dictionary = store.snapshot.capture(content)
 	_expect(not before.is_empty(), "The saved economy world can be captured through the same snapshot interface.")
 	_test_fractional_migration(before)
+	_test_v10_migration(before)
 
 	# Let the real route deliver and the real process complete, then load the
 	# earlier checkpoint. This tests rollback of stock, cargo, workers and outputs.
@@ -171,7 +172,7 @@ func _test_fractional_migration(original: Dictionary) -> void:
 	var threshold: float = float(session.minutes_per_unit)
 	CitizenManager.get_citizen(LABORER_ID).satisfaction = 0.2
 	runtime.daily.jobs[WOOD_SITE].progress[LABORER_ID] = threshold - 0.65
-	_expect(store.save_checkpoint(), "A v10 city checkpoint saves fractional gathering work.")
+	_expect(store.save_checkpoint(), "A current city checkpoint saves fractional gathering work.")
 	var current: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
 	var values = MIGRATION_VALUES.new()
 	var current_raw: Dictionary = values.decode(current.state)
@@ -190,9 +191,9 @@ func _test_fractional_migration(original: Dictionary) -> void:
 		if document.schema_version == 9:
 			var record: Dictionary = CitizenNeedsManager.last_needs_results[LABORER_ID]
 			_expect(not record.has("reliability") and not record.has("reliability_delta"), "The restored v9 same-day needs record is sanitized.")
-			_expect(store.save_checkpoint(), "The explicit next save upgrades v9 to v10.")
+			_expect(store.save_checkpoint(), "The explicit next save upgrades v9 to the current schema.")
 			_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == bytes, "The v9 bytes remain in the normal backup.")
-			_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 10, "The upgraded city checkpoint uses v10.")
+			_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == store.snapshot.VERSION, "The upgraded city checkpoint uses the current schema.")
 		var stock_before: int = int(session.stock)
 		var output_before: int = int(job.stats[LABORER_ID].output)
 		TimeComponentManager.advance_minutes(1)
@@ -201,6 +202,220 @@ func _test_fractional_migration(original: Dictionary) -> void:
 	restore_file.store_string(JSON.stringify(original, "", true, true))
 	restore_file.close()
 	_expect(store.load_checkpoint() and _same_snapshot(original, store.snapshot.capture(content)), "The economy fixture restores its original checkpoint after migration probes.")
+
+func _test_v10_migration(original: Dictionary) -> void:
+	var plots: Dictionary = store.snapshot.plots(content)
+	var plot_view: Node = content.get_node("YSortWorld/WorkshopPlot2")
+	var plot: Node = plot_view.construction
+	var plot_id: String = str(plot.name)
+	_expect(plots.get(plot_id) == plot, "The v10 fixture has the authored workshop construction plot.")
+	if plots.get(plot_id) != plot:
+		return
+	# Start an actual paid construction job with the otherwise idle third hire.
+	plot.phase = "empty"
+	plot.clearing_remaining = 0
+	for item_id: String in plot.REQUIREMENTS:
+		Inventory.add_item(item_id, int(plot.REQUIREMENTS[item_id]))
+	var worker: WorkerData = WorkerDatabase.get_worker_data(PRODUCTION_ID)
+	var citizen: CitizenData = CitizenManager.get_citizen(PRODUCTION_ID)
+	worker.profession_xp = 17
+	citizen.experience = 12.5
+	var ids: Array[String] = [PRODUCTION_ID]
+	var started: Dictionary = plot.start_build(ids)
+	_expect(bool(started.get("success", false)), "A hired worker starts the construction migration fixture.")
+	if not bool(started.get("success", false)):
+		_restore_migration_original(original)
+		return
+	worker.physical_approach.position = worker.physical_approach.target
+	_expect(worker.mark_physical_arrival(plot.order_id + ":building"), "The construction worker reaches the authored entry.")
+	TimeComponentManager.advance_minutes(1)
+	var values = MIGRATION_VALUES.new()
+	var current: Dictionary = store.snapshot.capture(content)
+	var raw: Dictionary = values.decode(current.state)
+	var old_plot: Dictionary = raw.plots[plot_id].duplicate(true)
+	var old_worker: WorkerData = raw.workers.workers_by_id[PRODUCTION_ID]
+	var old_citizen: CitizenData = raw.citizens.citizens_by_id[PRODUCTION_ID]
+	var old_route: Dictionary = raw.worksites.routes[HAULER_ID].duplicate(true)
+	var legacy: Dictionary = current.duplicate(true)
+	legacy.schema_version = 10
+	legacy.state = MIGRATION_FIXTURE.encode_v10(values, raw)
+	var source_codec = MIGRATION_VALUES.new()
+	source_codec.allow_legacy_resignation_field = true
+	var source_raw: Dictionary = source_codec.decode(legacy.state)
+	var objects: Array = MIGRATION_FIXTURE.city_objects(legacy.state, "WorkerData")
+	var source_shape_valid: bool = not objects.is_empty()
+	for object: Dictionary in objects:
+		source_shape_valid = source_shape_valid and not object.fields.has("resignation_pending")
+	for saved_plot: Dictionary in source_raw.plots.values():
+		source_shape_valid = source_shape_valid and not saved_plot.has("worker_capacity") and not saved_plot.has("work_total_units")
+	for route: Dictionary in source_raw.worksites.routes.values():
+		source_shape_valid = source_shape_valid and not route.has("resigning")
+	_expect(source_shape_valid and source_raw.worksites.schema_version == 1 and not source_raw.worksites.has("pending_output")
+		and not source_raw.worksites.has("pending_progress"),
+		"The v10 source genuinely omits all v11 and nested worksite v2 fields.")
+	var legacy_bytes: PackedByteArray = (JSON.stringify(legacy, "\t", true, true) + "\n").to_utf8_buffer()
+	_write_checkpoint_bytes(legacy_bytes)
+	var files_before: Dictionary = _migration_files()
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "The v10 checkpoint loads repeatedly through the real disk boundary: " + store.last_error)
+	_expect(_migration_files() == files_before and FileAccess.get_file_as_bytes(CHECKPOINT_PATH) == legacy_bytes,
+		"Continue preserves the exact source bytes and all recovery files.")
+	var restored_worker: WorkerData = WorkerDatabase.get_worker_data(PRODUCTION_ID)
+	var restored_citizen: CitizenData = CitizenManager.get_citizen(PRODUCTION_ID)
+	var same_contract: bool = true
+	var all_pending_default: bool = true
+	for group: Dictionary in [WorkerDatabase.workers_by_id, WorkerDatabase.dismissed_workers]:
+		for restored: WorkerData in group.values():
+			all_pending_default = all_pending_default and not restored.resignation_pending
+	for field: String in MIGRATION_VALUES.PAYROLL_FIELDS + MIGRATION_VALUES.CONTRACT_FIELDS:
+		same_contract = same_contract and restored_worker.get(field) == old_worker.get(field)
+	_expect(restored_worker.worker_id == old_worker.worker_id and restored_worker.display_name == old_worker.display_name
+		and restored_worker.profession_xp == 17 and all_pending_default and same_contract
+		and restored_citizen.citizen_id == old_citizen.citizen_id and restored_citizen.display_name == old_citizen.display_name
+		and is_equal_approx(restored_citizen.experience, 12.5),
+		"Continue retains worker and citizen identity, XP, every contract field, and defaults pending resignation to false.")
+	var restored_plot: Dictionary = MIGRATION_VALUES.new().decode(store.snapshot.capture(content).state).plots[plot_id]
+	var old_fields_preserved: bool = true
+	for field: String in old_plot:
+		if field not in ["worker_capacity", "work_total_units"]:
+			old_fields_preserved = old_fields_preserved and _same_snapshot(restored_plot[field], old_plot[field])
+	_expect(old_fields_preserved and restored_plot.worker_capacity == old_plot.worker_ids.size()
+		and restored_plot.work_total_units == (old_plot.completes_at - old_plot.started_at) * old_plot.worker_ids.size(),
+		"Continue retains every old building field and reconstructs the original team capacity and total work.")
+	var restored_route: Dictionary = store.snapshot._sites.capture(runtime).routes[HAULER_ID]
+	old_route.erase("resigning")
+	restored_route.erase("resigning")
+	_expect(_same_snapshot(restored_route, old_route) and not runtime.daily.hauling.routes[HAULER_ID].resigning
+		and runtime.daily.pending_output.is_empty() and runtime.daily.pending_progress.is_empty(),
+		"The old worksite restores its route and cargo with no pending delivery, output, or progress.")
+	var migrated_state: Dictionary = store.snapshot.capture(content)
+	_expect(store.save_checkpoint(), "A later explicit save upgrades the v10 checkpoint: " + store.last_error)
+	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	_expect(upgraded.get("schema_version") == 11 and FileAccess.get_file_as_bytes(CHECKPOINT_PATH + ".bak") == legacy_bytes,
+		"The upgraded v11 checkpoint keeps the exact v10 source bytes in its normal backup.")
+	var upgraded_files: Dictionary = _migration_files()
+	_expect(store.load_checkpoint() and store.load_checkpoint() and _same_snapshot(migrated_state, store.snapshot.capture(content))
+		and _migration_files() == upgraded_files, "The upgraded v11 checkpoint loads repeatedly without changing state or files: " + store.last_error)
+	_test_shift_sentinel_boundary(current)
+	var remaining_before: int = plot.completes_at - plot._latest_time
+	TimeComponentManager.advance_minutes(1)
+	_expect(plot.completes_at - plot._latest_time == remaining_before - 1,
+		"The restored paid construction worker continues the saved job.")
+	_test_malformed_v11(current, raw, plot_id)
+	_restore_migration_original(original)
+	_test_v10_clearing(original, plot_id)
+
+func _test_shift_sentinel_boundary(current: Dictionary) -> void:
+	var values = MIGRATION_VALUES.new()
+	var boundary_raw: Dictionary = values.decode(current.state)
+	var departing: WorkerData = boundary_raw.workers.workers_by_id[PRODUCTION_ID]
+	departing.physical_approach.arrived = false
+	departing.physical_approach.arrival_minute = WorkerData.PLOT_DEPARTURE_PENDING
+	departing.current_work_status = WorkerData.WorkStatus.TRAVELLING
+	var v11: Dictionary = current.duplicate(true)
+	v11.state = values.encode(boundary_raw)
+	var sentinel: Dictionary = store.snapshot.capture(content)
+	_expect(store.snapshot.prepare(v11, content), "The shift-departure sentinel validates in v11: " + store.snapshot.error)
+	var v10: Dictionary = current.duplicate(true)
+	v10.schema_version = 10
+	v10.state = MIGRATION_FIXTURE.encode_v10(values, boundary_raw)
+	var bytes: PackedByteArray = (JSON.stringify(v10, "\t", true, true) + "\n").to_utf8_buffer()
+	_write_checkpoint_bytes(bytes)
+	var files_before: Dictionary = _migration_files()
+	_expect(not store.load_checkpoint() and not store.save_checkpoint(), "The v11 shift-departure sentinel is rejected in v10.")
+	_expect(_migration_files() == files_before and FileAccess.get_file_as_bytes(CHECKPOINT_PATH) == bytes
+		and _same_snapshot(sentinel, store.snapshot.capture(content)),
+		"A rejected legacy sentinel preserves every file and the live world.")
+
+func _test_v10_clearing(original: Dictionary, plot_id: String) -> void:
+	var plot: Node = store.snapshot.plots(content)[plot_id]
+	var ids: Array[String] = [PRODUCTION_ID]
+	var started: Dictionary = plot.start_clearing(ids, false)
+	_expect(bool(started.get("success", false)), "A hired worker starts the v10 clearing fixture.")
+	if bool(started.get("success", false)):
+		var values = MIGRATION_VALUES.new()
+		var current: Dictionary = store.snapshot.capture(content)
+		var raw: Dictionary = values.decode(current.state)
+		var old_plot: Dictionary = raw.plots[plot_id].duplicate(true)
+		var v10: Dictionary = current.duplicate(true)
+		v10.schema_version = 10
+		v10.state = MIGRATION_FIXTURE.encode_v10(values, raw)
+		var bytes: PackedByteArray = (JSON.stringify(v10, "\t", true, true) + "\n").to_utf8_buffer()
+		_write_checkpoint_bytes(bytes)
+		var files_before: Dictionary = _migration_files()
+		_expect(store.load_checkpoint(), "A v10 worker-clearing checkpoint loads: " + store.last_error)
+		var migrated: Dictionary = values.decode(store.snapshot.capture(content).state).plots[plot_id]
+		var old_fields_preserved: bool = true
+		for field: String in old_plot:
+			if field not in ["worker_capacity", "work_total_units"]:
+				old_fields_preserved = old_fields_preserved and _same_snapshot(migrated[field], old_plot[field])
+		_expect(old_fields_preserved and migrated.worker_capacity == 1 and migrated.work_total_units == plot.CLEARING_MINUTES
+			and _migration_files() == files_before and FileAccess.get_file_as_bytes(CHECKPOINT_PATH) == bytes,
+			"The clearing migration retains its original fields, restores defaults, and leaves all files untouched.")
+	_restore_migration_original(original)
+
+func _test_malformed_v11(current: Dictionary, raw: Dictionary, plot_id: String) -> void:
+	var sentinel: Dictionary = store.snapshot.capture(content)
+	var baseline_valid: bool = store.snapshot.prepare(current, content)
+	_expect(baseline_valid, "The unmodified v11 source validates before corruption probes: " + store.snapshot.error)
+	if not baseline_valid:
+		return
+	for invalid_case: String in ["worker_pending_missing", "worker_pending_type", "plot_capacity_missing", "plot_capacity_negative", "plot_work_missing", "plot_work_zero", "pending_output_missing", "pending_output_invalid", "pending_progress_missing", "pending_progress_invalid", "route_resigning_missing", "route_resigning_type", "route_resigning_invalid", "worksite_cursor_ahead", "worksite_cursor_behind", "work_cursor_ahead", "work_cursor_behind", "process_cursor_ahead", "process_cursor_behind", "plot_cursor_ahead", "plot_cursor_behind"]:
+		var bad_raw: Dictionary = raw.duplicate(true)
+		var clock_minute: int = raw.clock.current_day * 1440 + raw.clock.current_hour * 60 + raw.clock.current_minute
+		match invalid_case:
+			"plot_capacity_missing": bad_raw.plots[plot_id].erase("worker_capacity")
+			"plot_capacity_negative": bad_raw.plots[plot_id].worker_capacity = -1
+			"plot_work_missing": bad_raw.plots[plot_id].erase("work_total_units")
+			"plot_work_zero": bad_raw.plots[plot_id].work_total_units = 0
+			"pending_output_missing": bad_raw.worksites.erase("pending_output")
+			"pending_output_invalid": bad_raw.worksites.pending_output = {"WoodSite": 0}
+			"pending_progress_missing": bad_raw.worksites.erase("pending_progress")
+			"pending_progress_invalid": bad_raw.worksites.pending_progress = {"WoodSite": [0.0]}
+			"route_resigning_missing": bad_raw.worksites.routes[HAULER_ID].erase("resigning")
+			"route_resigning_type": bad_raw.worksites.routes[HAULER_ID].resigning = "false"
+			"route_resigning_invalid": bad_raw.worksites.routes[HAULER_ID].resigning = true
+			"worksite_cursor_ahead": bad_raw.worksites.ledger.last_tick = clock_minute + 1
+			"worksite_cursor_behind": bad_raw.worksites.ledger.last_tick = clock_minute - 1
+			"work_cursor_ahead": bad_raw.work._last_total_minutes = clock_minute + 1
+			"work_cursor_behind": bad_raw.work._last_total_minutes = clock_minute - 1
+			"process_cursor_ahead": bad_raw.process._last_total_minutes = clock_minute + 1
+			"process_cursor_behind": bad_raw.process._last_total_minutes = clock_minute - 1
+			"plot_cursor_ahead": bad_raw.plots[plot_id]._latest_time = clock_minute + 1
+			"plot_cursor_behind": bad_raw.plots[plot_id]._latest_time = clock_minute - 1
+		var bad: Dictionary = current.duplicate(true)
+		bad.state = MIGRATION_VALUES.new().encode(bad_raw)
+		if invalid_case.begins_with("worker_pending"):
+			for object: Dictionary in MIGRATION_FIXTURE.city_objects(bad.state, "WorkerData"):
+				if object.fields.worker_id == PRODUCTION_ID:
+					if invalid_case.ends_with("missing"):
+						object.fields.erase("resignation_pending")
+					else:
+						object.fields.resignation_pending = "false"
+					break
+		var bad_bytes: PackedByteArray = (JSON.stringify(bad, "\t", true, true) + "\n").to_utf8_buffer()
+		_write_checkpoint_bytes(bad_bytes)
+		var files_before: Dictionary = _migration_files()
+		_expect(not store.load_checkpoint() and not store.save_checkpoint(), "Malformed v11 data blocks Load and Save: " + invalid_case)
+		_expect(_migration_files() == files_before and FileAccess.get_file_as_bytes(CHECKPOINT_PATH) == bad_bytes
+			and _same_snapshot(sentinel, store.snapshot.capture(content)),
+			"Rejected v11 data preserves every save file and the live world: " + invalid_case)
+
+func _write_checkpoint_bytes(bytes: PackedByteArray) -> void:
+	var file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+	file.store_buffer(bytes)
+	file.close()
+
+func _migration_files() -> Dictionary:
+	var result: Dictionary = {}
+	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
+		var path: String = CHECKPOINT_PATH + suffix
+		result[suffix] = FileAccess.get_file_as_bytes(path) if FileAccess.file_exists(path) else null
+	return result
+
+func _restore_migration_original(original: Dictionary) -> void:
+	_write_checkpoint_bytes(JSON.stringify(original, "", true, true).to_utf8_buffer())
+	_expect(store.load_checkpoint() and _same_snapshot(original, store.snapshot.capture(content)),
+		"The economy fixture restores the original checkpoint after the v10 probes.")
 
 func _reset_singletons_before_load() -> void:
 	CitizenManager.citizens_by_id.clear()

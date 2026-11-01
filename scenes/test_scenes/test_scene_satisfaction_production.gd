@@ -83,7 +83,7 @@ func _run_case(test_case: Dictionary, case_index: int) -> void:
 		seed(rng_seed)
 		var next_random: int = randi()
 		seed(rng_seed)
-		now_total += JOB.base_duration_minutes
+		now_total = _after_shift_minutes(now_total, JOB.base_duration_minutes)
 		WorkManager.on_time_changed(floori(float(now_total) / 1440.0),
 			floori(float(now_total % 1440) / 60.0), now_total % 60)
 		_expect(randi() == next_random, "%s completion does not consume an RNG draw." % test_case.name)
@@ -104,3 +104,19 @@ func _run_case(test_case: Dictionary, case_index: int) -> void:
 
 	WorkerDatabase.workers_by_id.erase(worker_id)
 	CitizenManager.citizens_by_id.erase(worker_id)
+
+
+func _after_shift_minutes(start: int, minutes: int) -> int:
+	var cursor: int = start
+	var remaining: int = minutes
+	while remaining > 0:
+		var minute: int = cursor % 1440
+		if minute < 7 * 60:
+			cursor += 7 * 60 - minute
+		elif minute >= 15 * 60:
+			cursor += 1440 - minute + 7 * 60
+		else:
+			var worked: int = mini(remaining, 15 * 60 - minute)
+			cursor += worked
+			remaining -= worked
+	return cursor

@@ -13,6 +13,8 @@ var reentry_result: Dictionary = {}
 var reentry_minute_before: int = -1
 var reentry_minute_after: int = -1
 var reentry_stock_after_cancel: int = -1
+var clock_reentry_result: Dictionary = {}
+var block_clock_at: int = -1
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -39,6 +41,7 @@ func _run() -> void:
 	await _run_teardown_case("owner_detached_during_transition", true, false)
 	await _run_teardown_case("player_freed", false, true)
 	await _run_normal_completion_control()
+	await _run_clock_refusal_cases()
 
 	TimeComponentManager.current_day = int(saved_clock.day)
 	TimeComponentManager.current_hour = int(saved_clock.hour)
@@ -141,6 +144,46 @@ func _run_normal_completion_control() -> void:
 func _has_result_schema(result: Dictionary) -> bool:
 	return (result.size() == 5 and result.has("units") and result.has("minutes")
 		and result.has("interrupted") and result.has("to_bag") and result.has("to_ground"))
+
+func _run_clock_refusal_cases() -> void:
+	Inventory.items.clear()
+	Inventory.max_load = 1000.0
+	fixture = load("res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.tscn").instantiate()
+	fixture.prepare_nightmare_test = false
+	add_child(fixture)
+	await get_tree().process_frame
+	fixture.player.debug_disable_player_needs = true
+	var site = fixture.sites[&"ClaySiteA"]
+	var initial_stock: int = site.stock
+	_expect(site.toggle_participant("player"), "Clock refusal fixture selects the player.")
+	clock_reentry_result.clear()
+	TimeComponentManager.minute_changed.connect(_attempt_hourly_work_during_clock)
+	var before: int = _now()
+	_expect(TimeComponentManager.advance_minutes(1), "Outer clock minute succeeds.")
+	TimeComponentManager.minute_changed.disconnect(_attempt_hourly_work_during_clock)
+	_expect(_now() == before + 1 and clock_reentry_result.get("minutes", -1) == 0
+		and clock_reentry_result.get("units", -1) == 0 and clock_reentry_result.get("interrupted", false)
+		and site.stock == initial_stock and not site.working,
+		"Reentrant manual work reports no elapsed work or output when the clock rejects it.")
+	block_clock_at = _now() + 11
+	TimeComponentManager.minute_changed.connect(_block_clock_after_minute)
+	before = _now()
+	var result: Dictionary = site.execute(180, fixture.player, fixture, fixture._drop_output)
+	TimeComponentManager.minute_changed.disconnect(_block_clock_after_minute)
+	fixture.city_tools._transfer_in_progress = false
+	_expect(_now() - before == 11 and result.minutes == 11 and result.interrupted
+		and result.units == 1 and int(Inventory.items.get("clay_lump", 0)) == 1
+		and site.stock == initial_stock - 1 and not site.working,
+		"A later clock refusal preserves completed minutes and pays earned output once.")
+	fixture.queue_free()
+	await get_tree().process_frame
+
+func _attempt_hourly_work_during_clock(_minute: int) -> void:
+	clock_reentry_result = fixture.sites[&"ClaySiteA"].execute(180, fixture.player, fixture, fixture._drop_output)
+
+func _block_clock_after_minute(_minute: int) -> void:
+	if _now() == block_clock_at:
+		fixture.city_tools._transfer_in_progress = true
 
 func _reenter_during_settlement() -> void:
 	if reentry_attempted:

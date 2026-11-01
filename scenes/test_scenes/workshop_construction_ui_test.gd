@@ -1,5 +1,6 @@
 extends Node
 
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 var failures: int = 0
 var captures: String = ""
 
@@ -70,15 +71,21 @@ func _run() -> void:
 	TimeComponentManager.is_paused = true
 	var content = load("res://scenes/content_scene/content_scene.tscn").instantiate()
 	add_child(content)
-	var plot = content.get_node("YSortWorld/WorkshopPlot")
+	# This fixture exercises the direct-E generic plot; the main keeper plot
+	# intentionally inserts a separate authored greeting first.
+	var plot = content.get_node("YSortWorld/WorkshopPlot2")
 	var player: Player = content.get_node("YSortWorld/Player")
 	player.debug_disable_player_needs = true
+	player.debug_disable_fatigue = true
+	var visuals: Node2D = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
+	visuals.set_process(false)
 	var state: Node = plot.construction
 	var ids: Array[String] = []
 	for i in range(3):
 		var worker := WorkerData.new()
 		worker.worker_id = "construction_ui_%d" % i
 		worker.display_name = "Builder %d" % (i + 1)
+		worker.satisfaction = 1.0
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
 		ids.append(worker.worker_id)
 	var busy_worker := WorkerData.new()
@@ -107,7 +114,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	plot.menu.build_button.pressed.emit()
 	_expect(state.phase == "clearing" and player.can_move and not get_tree().paused, "Worker clearing frees player movement.")
-	TimeComponentManager.advance_minutes(state.CLEARING_MINUTES)
+	_expect(SHIFT_DRIVER.work_minutes(state.CLEARING_MINUTES, visuals, [ids[0]] as Array[String]), "The cleaner arrives and completes their shifts.")
 	await _press("interact")
 	var build: Button = plot.menu.find_child("BuildButton", true, false)
 	var assign_workers: Button = plot.menu.find_child("AssignWorkersButton", true, false)
@@ -188,17 +195,13 @@ func _run() -> void:
 	build.pressed.emit()
 	await get_tree().process_frame
 	_expect(state.phase == "building", "Build button starts construction.")
-	_expect(state.worker_ids.size() == 3 and state.completes_at - state.started_at == 1440, "Three selected builders take one game day.")
+	_expect(state.worker_ids.size() == 3 and state.completes_at - state.started_at == 1440, "Three selected builders take 1440 work minutes.")
 	_expect(not get_tree().paused and not is_instance_valid(plot.menu), "Successful Build closes the panel and resumes world simulation.")
 	await _press("interact")
 	_expect(is_instance_valid(plot.menu), "Building plot exposes its progress panel.")
 	await _capture("progress")
 	await _press("ui_cancel")
-	var finish: int = state.completes_at
-	TimeComponentManager.current_day = finish / 1440
-	TimeComponentManager.current_hour = (finish % 1440) / 60
-	TimeComponentManager.current_minute = finish % 60
-	TimeComponentManager.emit_time_signal()
+	_expect(SHIFT_DRIVER.work_minutes(1440, visuals, ids), "The builders return for each shift until construction completes.")
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	await get_tree().process_frame

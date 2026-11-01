@@ -43,6 +43,7 @@ func can_be_hired() -> bool:
 		population_status == PopulationStatus.RESIDENT
 		and employment_status == EmploymentStatus.APPLICANT
 		and profession != WorkerData.Profession.NONE
+		and satisfaction >= MIN_APPLICANT_SATISFACTION
 	)
 
 func can_be_assigned() -> bool:

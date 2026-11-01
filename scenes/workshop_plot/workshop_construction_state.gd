@@ -7,8 +7,11 @@ signal changed()
 const REQUIREMENTS: Dictionary = {"wood_log": 6, "clay_lump": 12, "reed_bundle": 8}
 const SOLO_MINUTES: int = 3 * 24 * 60
 const ORDER_ID: String = "construction:main_workshop"
+const MAX_WORKER_CAPACITY: int = 10000
 
 const CLEARING_MINUTES: int = 180
+const SHIFT_START: int = 7 * 60
+const SHIFT_END: int = 15 * 60
 
 var order_id: String = ORDER_ID
 
@@ -16,6 +19,10 @@ var phase: String = "uncleared"
 var clearing_remaining: int = CLEARING_MINUTES
 var clearing_by_player: bool = false
 var worker_ids: Array[String] = []
+# The original team size bounds replacements; total work stays fixed when the
+# current team changes. Both values are persisted with the construction state.
+var worker_capacity: int = 0
+var work_total_units: int = 0
 var started_at: int = 0
 var completes_at: int = 0
 var _latest_time: int = 0
@@ -38,9 +45,18 @@ func get_requirements() -> Dictionary:
 func _now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 
+func is_transaction_busy() -> bool:
+	return _starting
+
+func _finish_transaction() -> void:
+	_starting = false
+	WorkerDatabase.on_work_owner_transaction_finished()
+
 func _worker_reason(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
+		return "Worker unavailable."
+	if worker.resignation_pending or worker.get_resolved_satisfaction() <= 0.0:
 		return "Worker unavailable."
 	if worker.is_payroll_blocked():
 		return worker.get_onboarding_status()
@@ -72,6 +88,8 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 			break
 	if selected_ids.is_empty():
 		message = "Select available workers."
+	elif selected_ids.size() > MAX_WORKER_CAPACITY:
+		message = "Too many workers selected."
 	for id: String in REQUIREMENTS:
 		if not Inventory.has_item(id, int(REQUIREMENTS[id])) and message.is_empty():
 			message = "Missing materials in Inventory."
@@ -86,7 +104,8 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "building" else 0
 	var progress: float = 0.0
 	if phase == "building":
-		progress = clampf(float(_latest_time - started_at) / maxi(completes_at - started_at, 1), 0.0, 1.0)
+		var total_units: int = work_total_units if work_total_units > 0 else maxi(1, (completes_at - started_at) * maxi(1, worker_ids.size()))
+		progress = clampf(1.0 - float(_remaining_work_units()) / float(total_units), 0.0, 1.0)
 	elif phase == "built":
 		progress = 1.0
 	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
@@ -100,7 +119,7 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 	for id: String in selected_ids:
 		if not _worker_reason(id).is_empty() or not WorkerDatabase.assign_worker(id):
 			_release_workers(reserved)
-			_starting = false
+			_finish_transaction()
 			return {"success": false, "message": "Worker availability changed."}
 		WorkerDatabase.get_worker_data(id).start_work(order_id, "Build Workshop")
 		reserved.append(id)
@@ -111,18 +130,20 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 			for consumed_id: String in consumed:
 				Inventory.add_item(consumed_id, int(consumed[consumed_id]))
 			_release_workers(reserved)
-			_starting = false
+			_finish_transaction()
 			return {"success": false, "message": "Materials changed; construction was not started."}
 		consumed[id] = quantity
 	worker_ids = reserved
+	worker_capacity = reserved.size()
 	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
+	work_total_units = int(preview.duration_minutes) * worker_capacity
 	phase = "building"
 	_initialize_approaches()
-	_starting = false
 	changed.emit()
+	_finish_transaction()
 	return {"success": true, "message": "Construction started."}
 
 func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> void:
@@ -132,14 +153,33 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 	if next_time <= _latest_time:
 		return
 	var elapsed: int = next_time - _latest_time
-	if not clearing_by_player and not worker_ids.is_empty():
-		var contribution: int = payroll_work_remainder
-		for id: String in worker_ids:
-			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
-			if worker != null:
-				contribution += worker.get_arrived_paid_minutes(_latest_time, next_time, "plot", order_id + ":" + phase, order_id)
-		var worked: int = contribution / worker_ids.size()
-		payroll_work_remainder = contribution % worker_ids.size()
+	if not clearing_by_player:
+		var worked: int = 0
+		var minute_of_day: int = _latest_time % 1440
+		var on_shift: bool = minute_of_day >= SHIFT_START and minute_of_day < SHIFT_END
+		# Once a shift ends, the worker must physically depart and return. A
+		# coarse clock jump therefore cannot credit a later day's shift.
+		var shift_end: int = _latest_time - minute_of_day + SHIFT_END
+		var eligible_end: int = mini(next_time, shift_end) if on_shift else _latest_time
+		if not worker_ids.is_empty():
+			var contribution: int = payroll_work_remainder
+			for id: String in worker_ids:
+				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+				if worker != null and not worker.resignation_pending and worker.get_resolved_satisfaction() > 0.0:
+					contribution += worker.get_arrived_paid_minutes(_latest_time, eligible_end, "plot", order_id + ":" + phase, order_id)
+			worked = contribution / worker_ids.size()
+			payroll_work_remainder = contribution % worker_ids.size()
+		if not on_shift or next_time >= shift_end:
+			var presence: Script = null
+			for id: String in worker_ids:
+				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+				if worker == null:
+					continue
+				if worker.physical_approach.get("arrival_minute", -1) == WorkerData.PLOT_DEPARTURE_PENDING and not worker.physical_approach.get("arrived", false) and worker.current_work_status == WorkerData.WorkStatus.RESTING:
+					continue
+				if presence == null:
+					presence = load("res://scenes/workshop_plot/workshop_worker_presence.gd")
+				presence.end_shift_for_worker(worker, "plot", order_id + ":" + phase, order_id)
 		started_at += elapsed - worked
 		completes_at += elapsed - worked
 	_latest_time = next_time
@@ -165,6 +205,9 @@ func has_active_worker_at_plot() -> bool:
 		return false
 	if phase == "clearing" and clearing_by_player:
 		return true
+	var minute_of_day: int = _now() % 1440
+	if minute_of_day < SHIFT_START or minute_of_day >= SHIFT_END:
+		return false
 	var task_key: String = order_id + ":" + phase
 	for id: String in worker_ids:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
@@ -177,11 +220,135 @@ func has_active_worker_at_plot() -> bool:
 	return false
 
 func _refresh_payroll_status() -> void:
-	if phase in ["building", "clearing"]:
+	if not _starting and phase in ["building", "clearing"]:
 		changed.emit()
 
 func _flush_payroll_boundary() -> void:
+	flush_elapsed_work()
+
+## Settle the elapsed interval before Satisfaction changes or a team changes.
+func flush_elapsed_work() -> void:
 	_on_time_changed(TimeComponentManager.current_day, TimeComponentManager.current_hour, TimeComponentManager.current_minute, TimeComponentManager.current_weather)
+
+
+func _remaining_work_units() -> int:
+	var scale: int = maxi(1, worker_ids.size())
+	return maxi(0, (completes_at - _latest_time) * scale - payroll_work_remainder)
+
+
+func _ceil_units(units: int, scale: int) -> int:
+	if units <= 0:
+		return 0
+	@warning_ignore("integer_division")
+	return 1 + (units - 1) / scale
+
+
+func _rebase_team(next_count: int) -> bool:
+	var remaining: int = _remaining_work_units()
+	if remaining <= 0 or work_total_units <= 0 or next_count < 0 or next_count > MAX_WORKER_CAPACITY:
+		return false
+	var scale: int = maxi(1, next_count)
+	var remaining_minutes: int = _ceil_units(remaining, scale)
+	var total_minutes: int = _ceil_units(work_total_units, scale)
+	payroll_work_remainder = remaining_minutes * scale - remaining
+	completes_at = _latest_time + remaining_minutes
+	started_at = completes_at - total_minutes
+	return true
+
+
+## Atomically release a resigning builder with the existing worker transaction.
+## A failed worker transaction restores the post-flush reservation and progress.
+func resign_worker(worker_id: String) -> bool:
+	if _starting or phase not in ["building", "clearing"] or clearing_by_player or not worker_ids.has(worker_id):
+		return false
+	_starting = true
+	flush_elapsed_work()
+	# A job finishing at this boundary has already released its team.
+	if phase not in ["building", "clearing"]:
+		var completed_resignation: bool = WorkerDatabase.resign_idle_worker(worker_id)
+		_finish_transaction()
+		return completed_resignation
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	if worker == null or worker.current_order_id != order_id:
+		_finish_transaction()
+		return false
+	var citizen: CitizenData = worker.get_linked_citizen()
+	var previous_status: int = citizen.employment_status if citizen != null else -1
+	var previous_order: String = worker.current_order_id
+	var previous_job: String = worker.current_job_id
+	var previous_activity: int = worker.current_work_status
+	var previous_approach: Dictionary = worker.physical_approach.duplicate(true)
+	var previous_ids: Array[String] = worker_ids.duplicate()
+	var previous_start: int = started_at
+	var previous_end: int = completes_at
+	var previous_remainder: int = payroll_work_remainder
+	var next_ids: Array[String] = worker_ids.duplicate()
+	next_ids.erase(worker_id)
+	if not _rebase_team(next_ids.size()):
+		_finish_transaction()
+		return false
+	worker_ids = next_ids
+	worker.finish_work(order_id)
+	if not WorkerDatabase.unassign_worker(worker_id) or not WorkerDatabase.resign_idle_worker(worker_id):
+		worker_ids = previous_ids
+		started_at = previous_start
+		completes_at = previous_end
+		payroll_work_remainder = previous_remainder
+		worker.current_order_id = previous_order
+		worker.current_job_id = previous_job
+		worker.current_work_status = previous_activity
+		worker.physical_approach = previous_approach
+		if citizen != null:
+			citizen.employment_status = previous_status
+		_finish_transaction()
+		return false
+	changed.emit()
+	_finish_transaction()
+	return true
+
+
+func get_replacement_slots() -> int:
+	if phase not in ["building", "clearing"] or clearing_by_player:
+		return 0
+	return maxi(0, worker_capacity - worker_ids.size())
+
+
+## Replacements occupy only vacancies from the original team; materials remain paid.
+func add_replacement_workers(ids: Array[String]) -> Dictionary:
+	if _starting or phase not in ["building", "clearing"] or clearing_by_player:
+		return {"success": false, "message": "Workers cannot be assigned now."}
+	_starting = true
+	flush_elapsed_work()
+	if phase not in ["building", "clearing"]:
+		_finish_transaction()
+		return {"success": false, "message": "The work is complete."}
+	if ids.is_empty() or ids.size() > get_replacement_slots():
+		_finish_transaction()
+		return {"success": false, "message": "Choose available replacement workers."}
+	var seen: Dictionary = {}
+	for id: String in ids:
+		if id.is_empty() or seen.has(id) or worker_ids.has(id) or not _worker_reason(id).is_empty():
+			_finish_transaction()
+			return {"success": false, "message": "Worker availability changed."}
+		seen[id] = true
+	var reserved: Array[String] = []
+	for id: String in ids:
+		if not WorkerDatabase.assign_worker(id):
+			_release_workers(reserved)
+			_finish_transaction()
+			return {"success": false, "message": "Worker availability changed."}
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		worker.start_work(order_id, "Clear Workshop Site" if phase == "clearing" else "Build Workshop")
+		reserved.append(id)
+	if not _rebase_team(worker_ids.size() + reserved.size()):
+		_release_workers(reserved)
+		_finish_transaction()
+		return {"success": false, "message": "Work could not be resumed."}
+	worker_ids.append_array(reserved)
+	_initialize_approaches(reserved)
+	changed.emit()
+	_finish_transaction()
+	return {"success": true, "message": "Replacement workers assigned."}
 
 func _release_workers(ids: Array[String]) -> void:
 	for id: String in ids:
@@ -211,18 +378,25 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 		message = "Contract expired - renew in Worker Hub."
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "clearing" else clearing_remaining
 	var progress: float = 1.0 - float(remaining) / CLEARING_MINUTES
+	var count: int = (1 if clearing_by_player else worker_ids.size()) if phase == "clearing" else (1 if use_player else ids.size())
 	return {"can_start": message.is_empty(), "message": message, "duration_minutes": clearing_remaining,
-		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": 1, "payroll_blocked": payroll_blocked}
+		"remaining_minutes": remaining, "progress_ratio": progress, "worker_count": count, "payroll_blocked": payroll_blocked}
 
 func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
+	if _starting:
+		return {"success": false, "message": "Starting construction."}
 	var preview: Dictionary = get_clearing_preview(ids, use_player)
 	if not bool(preview.can_start):
 		return {"success": false, "message": preview.message}
+	_starting = true
 	if not use_player:
 		if not WorkerDatabase.assign_worker(ids[0]):
+			_finish_transaction()
 			return {"success": false, "message": "Worker unavailable."}
 		WorkerDatabase.get_worker_data(ids[0]).start_work(order_id, "Clear Workshop Site")
 	worker_ids = ids.duplicate()
+	worker_capacity = 1
+	work_total_units = CLEARING_MINUTES
 	clearing_by_player = use_player
 	payroll_work_remainder = 0
 	started_at = _now()
@@ -232,19 +406,23 @@ func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 	if not use_player:
 		_initialize_approaches()
 	changed.emit()
+	_finish_transaction()
 	return {"success": true, "message": "Clearing started."}
 
-func _initialize_approaches() -> void:
+func _initialize_approaches(ids: Array[String] = []) -> void:
+	var approaching: Array[String] = worker_ids if ids.is_empty() else ids
 	for plot: Node in get_tree().get_nodes_in_group("workshop_plots"):
 		if plot.construction == self:
-			for id: String in worker_ids:
+			for id: String in approaching:
 				plot.begin_worker_approach(id, order_id + ":" + phase)
 			return
 
 func interrupt_player_clearing() -> void:
-	if phase != "clearing" or not clearing_by_player:
+	if _starting or phase != "clearing" or not clearing_by_player:
 		return
+	_starting = true
 	clearing_remaining = maxi(completes_at - _latest_time, 0)
 	phase = "uncleared"
 	clearing_by_player = false
 	changed.emit()
+	_finish_transaction()

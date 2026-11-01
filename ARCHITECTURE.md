@@ -1,6 +1,6 @@
 # ARCHITECTURE - Time is Precious
 
-Last updated: 2026-10-18
+Last updated: 2026-11-01
 
 ## Purpose
 
@@ -31,6 +31,27 @@ v1/v2/v3 compatibility paths. Merchant gameplay rolls 1–2 requests per visit
 (wood 3–6 and/or dry bricks 10–20); fixed quantities belong to accounting fixtures.
 The production chain and output uses exist; normal first-playthrough validation
 is tracked separately in `ROADMAP.md`. This clarification changes no architecture.
+
+## Worker shifts and needs — 2026-11-01
+
+The approved worker-needs revision uses a 07:00–15:00 game-time shift for
+resource gathering, initial workshop construction and NPC wet-mudbrick shaping.
+Paid workers must reach their assigned plot; their unfinished work and materials
+remain when the shift ends. Drying is a passive `ProcessManager` batch and
+continues outside the shift without an assigned worker.
+
+Basic needs continue to settle once at midnight. A worker who reaches zero
+Satisfaction resigns and forfeits the remaining prepaid contract; unfinished
+work can be continued by a replacement. A Hauler carrying a load completes that
+delivery before departure. The original citizen and worker progression remain,
+and a returning applicant must recover to the existing 50% threshold; rehiring
+requires a newly paid contract. Current city checkpoints use schema v11 and accept earlier schemas;
+they retain pending work and delivery state without rewriting old files on load.
+
+Earlier fixed-team and uninterrupted-construction descriptions below represent
+prior checkpoints. The Game Director's 2026-11-01 shift and resignation decisions
+supersede the older 1% minimum and fixed-team statements in `docs/game-concept.md`;
+that protected design document still needs a separately authorized update.
 
 ## Current Architectural Priority
 

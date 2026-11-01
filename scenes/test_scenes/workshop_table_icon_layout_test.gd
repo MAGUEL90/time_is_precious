@@ -1,6 +1,7 @@
 extends Node
 
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 var failures: int = 0
 
 func _ready() -> void:
@@ -16,7 +17,9 @@ func _run() -> void:
 	TimeComponentManager.is_paused = false
 	TimeComponentManager.environment.color = Color.WHITE
 	var content: Node = CONTENT.instantiate()
-	var plot: Node = content.get_node("YSortWorld/WorkshopPlot")
+	# The main authored keeper uses its own finished-building artwork; the
+	# second plot retains the generic recipe-icon presentation tested here.
+	var plot: Node = content.get_node("YSortWorld/WorkshopPlot2")
 	var slots: Node2D = plot.get_node("TableResources")
 	# Configure only this test-owned instance, like dragging the authored slots.
 	for child: Node in slots.get_children():
@@ -29,6 +32,10 @@ func _run() -> void:
 		slots.add_child(icon)
 	slots.position += Vector2(3, 0)
 	add_child(content)
+	content.get_node("YSortWorld/Player").debug_disable_player_needs = true
+	content.get_node("YSortWorld/Player").debug_disable_fatigue = true
+	var visuals: Node2D = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
+	visuals.set_process(false)
 	content.get_node("TimeDebugOverlay").set_process(false)
 	_expect(not slots.visible, "Preview icons stay hidden on an uncleared plot.")
 	var transforms: Array[Transform2D] = []
@@ -36,13 +43,14 @@ func _run() -> void:
 		transforms.append(icon.global_transform)
 	var worker := WorkerData.new()
 	worker.worker_id = "table_icon_layout_builder"
+	worker.satisfaction = 1.0
 	WorkerDatabase.workers_by_id[worker.worker_id] = worker
 	_expect(plot.construction.start_clearing([worker.worker_id] as Array[String], false).success, "Clearing starts normally.")
-	TimeComponentManager.advance_minutes(180)
+	_expect(SHIFT_DRIVER.work_minutes(180, visuals, [worker.worker_id] as Array[String]), "The clearing worker arrives during their shift.")
 	_expect(not slots.visible, "Empty plot still hides the table material previews.")
 	Inventory.add_bulk_item(plot.construction.get_requirements())
 	_expect(plot.construction.start_build([worker.worker_id] as Array[String]).success, "Normal construction starts.")
-	TimeComponentManager.advance_minutes(plot.construction.SOLO_MINUTES)
+	_expect(SHIFT_DRIVER.work_minutes(plot.construction.SOLO_MINUTES, visuals, [worker.worker_id] as Array[String]), "The builder returns for each shift until construction completes.")
 	var workshop: WorkShop = plot.get_node("BuiltWorkshop")
 	_expect(slots.visible and slots.get_child_count() == 2, "Completion displays the two authored slots.")
 	for index in range(2):

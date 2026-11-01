@@ -191,6 +191,7 @@ func _restore_parked_worksite(city_map: Node) -> void:
 	snapshot._restore_city_drops(city_drops, city_map)
 	city_drops.clear()
 	_departing_map = null
+	snapshot._sites.emit_restored_notifications()
 
 func _on_scene_changed() -> void:
 	var scene: Node = get_tree().current_scene

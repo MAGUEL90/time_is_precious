@@ -27,9 +27,13 @@ func _run() -> void:
 		await _assert_seed(read_raw.get("pickup_sources", {}))
 		var expected: Dictionary = read_document.duplicate(true)
 		if read_document.schema_version == 9:
-			# The staged legacy payload is the expected v10 state, with only the
-			# validated retired fields removed. The source file remains untouched.
+			# Normalize the nested v1 worksite defaults to the captured v2 shape.
 			expected.schema_version = CODEC.VERSION
+			read_raw.worksites.schema_version = 2
+			read_raw.worksites.pending_output = {}
+			read_raw.worksites.pending_progress = {}
+			for route: Dictionary in read_raw.worksites.routes.values():
+				route.resigning = false
 			expected.state = VALUES.new().encode(read_raw)
 			for result: Dictionary in read_raw.needs.last_needs_results.values():
 				_expect(not result.has("reliability") and not result.has("reliability_delta"), "A genuine v9 ledger loads without retired fields.")
@@ -164,9 +168,11 @@ func _run() -> void:
 	_expect(sentinel == store.snapshot.capture(content), "Schema rejection has no side effects.")
 	# Continue the real build, then save during the real raid, after a breach.
 	_set_clock_minute(_clock_minute() + state._work_remaining)
+	content.get_node("YSortWorld/WorkerRuntime").daily.tick()
 	_expect(state.wall_hp == 50 and state._attack_at > _clock_minute(), "Restored construction finishes once and starts a journey.")
 	var arrival: int = state._attack_at
 	_set_clock_minute(arrival)
+	content.get_node("YSortWorld/WorkerRuntime").daily.tick()
 	state.set_process(false)
 	state.advance_attack(8.0)
 	_expect(state.phase == "attacking", "The attack has started before the in-flight checkpoint.")
@@ -203,6 +209,9 @@ func _run() -> void:
 
 func _seed() -> void:
 	_set_clock_minute(7 * 1440 + 600)
+	# This fixture jumps the clock directly; worksite time normally advances via
+	# per-minute signals, so settle its idle ledger before capturing the world.
+	content.get_node("YSortWorld/WorkerRuntime").daily.tick()
 	Inventory.items.assign({"shekel": 17, "stone": 3})
 	storage.items = {"stone": 100, "wood_log": 100, "egg": 5}
 	player.fatigue = 0.75
@@ -618,7 +627,7 @@ func _test_reliability_migration(current: Dictionary, raw: Dictionary) -> void:
 		else:
 			ledger[key] = "invalid"
 		var bad: Dictionary = legacy.duplicate(true)
-		bad.state = values.encode(bad_raw)
+		bad.state = LEGACY_RELIABILITY.encode_v10(values, bad_raw)
 		LEGACY_RELIABILITY.add_city_object_fields(bad.state)
 		_expect(not store.snapshot.prepare(bad, content), "Invalid legacy ledger is rejected: " + invalid_kind)
 		_expect(sentinel == store.snapshot.capture(content), "Invalid legacy ledger leaves live owners intact: " + invalid_kind)
@@ -628,7 +637,8 @@ func _test_reliability_migration(current: Dictionary, raw: Dictionary) -> void:
 	v9_with_focus.state = LEGACY_RELIABILITY.encode_city(values, wrong_focus)
 	_expect(not store.snapshot.prepare(v9_with_focus, content), "Version 9 still rejects Focus, which was removed in that version.")
 	var current_with_legacy_objects: Dictionary = current.duplicate(true)
-	current_with_legacy_objects.state = LEGACY_RELIABILITY.encode_city(values, staged_raw)
+	current_with_legacy_objects.state = values.encode(staged_raw)
+	LEGACY_RELIABILITY.add_city_object_fields(current_with_legacy_objects.state)
 	_expect(not store.snapshot.prepare(current_with_legacy_objects, content), "Current schema rejects retired object and ledger fields.")
 	var legacy_ledger_raw: Dictionary = staged_raw.duplicate(true)
 	legacy_ledger_raw.needs.last_needs_results[id].reliability = 0.5
@@ -658,7 +668,7 @@ func _test_reliability_migration(current: Dictionary, raw: Dictionary) -> void:
 	var fields_absent: bool = true
 	for object: Dictionary in objects:
 		fields_absent = fields_absent and not object.fields.has("reliability")
-	_expect(upgraded.schema_version == CODEC.VERSION and fields_absent and not upgraded_raw.needs.last_needs_results[id].has("reliability_delta"), "Upgraded v10 omits every retired Reliability field.")
-	_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded v10 checkpoint loads repeatedly.")
+	_expect(upgraded.schema_version == CODEC.VERSION and fields_absent and not upgraded_raw.needs.last_needs_results[id].has("reliability_delta"), "The upgraded checkpoint omits every retired Reliability field.")
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded checkpoint loads repeatedly.")
 	_write_text(CHECKPOINT_PATH, JSON.stringify(current, "", true, true))
 	_expect(store.load_checkpoint() and sentinel == store.snapshot.capture(content), "The original checkpoint restores after the migration test.")

@@ -3,6 +3,7 @@ extends Node2D
 const MAP = preload("res://scenes/content_scene/content_scene.tscn")
 const DUST = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
 const SPLASH = preload("res://scenes/workshop_plot/construction_complete_splash.gd")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 var failures: int = 0
 
 func _ready() -> void:
@@ -32,6 +33,9 @@ func _drive_plot_arrival(visuals: Node2D, ids: Array[String]) -> void:
 		visuals.plot_presence.update(visuals, 0.1)
 
 func _check_completion_pixels() -> void:
+	if DisplayServer.get_name() == "headless":
+		print("WorkshopWorkerPresenceTest: rendered pixel checks require a display.")
+		return
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(64, 24)
 	viewport.world_2d = World2D.new()
@@ -83,6 +87,8 @@ func _run() -> void:
 	TimeComponentManager.is_paused = false
 	var content = MAP.instantiate()
 	add_child(content)
+	content.get_node("YSortWorld/Player").debug_disable_player_needs = true
+	content.get_node("YSortWorld/Player").debug_disable_fatigue = true
 	var plot = content.get_node("YSortWorld/WorkshopPlot")
 	plot.set_process(false) # Advance the cosmetic timer explicitly for repeatable assertions.
 	var other_plot = content.get_node("YSortWorld/WorkshopPlot2")
@@ -94,6 +100,7 @@ func _run() -> void:
 		var worker := WorkerData.new()
 		worker.worker_id = "presence_worker_%d" % i
 		worker.profession = WorkerData.Profession.LABORER
+		worker.satisfaction = 1.0
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
 		ids.append(worker.worker_id)
 	var result: Dictionary = plot.construction.start_clearing([ids[0]] as Array[String], false)
@@ -121,8 +128,7 @@ func _run() -> void:
 	camera.zoom = Vector2(3, 3)
 	camera.make_current()
 	await get_tree().create_timer(0.15).timeout
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-worker-entry-dust.png"))
+	await _capture("tip-worker-entry-dust.png")
 	await get_tree().create_timer(0.6).timeout
 	_expect(_dust_count(plot) == 0, "Dust removes itself after its short lifetime.")
 	plot._worker_dust_rng.seed = 123
@@ -137,8 +143,7 @@ func _run() -> void:
 			_expect(plot.worker_dust_area.has_point(child.position), "Activity dust stays inside the configured plot area.")
 	_expect(positions.size() == 4 and positions[0] != positions[1], "Active clearing repeatedly spawns dust at changing positions.")
 	_expect(intervals[0] != intervals[1], "The delay changes between puffs.")
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-worker-activity-dust.png"))
+	await _capture("tip-worker-activity-dust.png")
 	for interval: float in intervals:
 		_expect(interval >= plot.worker_dust_interval_min and interval <= plot.worker_dust_interval_max,
 			"Random delays stay within the Inspector bounds.")
@@ -146,13 +151,12 @@ func _run() -> void:
 	plot._process(2.0)
 	_expect(_dust_count(plot) == 4, "Opening a paused menu stops new activity puffs.")
 	get_tree().paused = false
-	TimeComponentManager.advance_minutes(90)
+	_expect(SHIFT_DRIVER.work_minutes(90, visuals, [ids[0]] as Array[String]), "The cleaner contributes during the shift.")
 	_expect(is_equal_approx(clearing_bar.value, 50.0), "Cleaning fills half the bar after 90 of its 180 minutes.")
 	camera.global_position = plot.global_position + Vector2(0, -4)
 	camera.zoom = Vector2(2, 2)
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-cleaning-progress.png"))
-	TimeComponentManager.advance_minutes(90)
+	await _capture("tip-cleaning-progress.png")
+	_expect(SHIFT_DRIVER.work_minutes(90, visuals, [ids[0]] as Array[String]), "The cleaner completes during the shift.")
 	_expect(not clearing_bar.visible and clearing_bar.value == 100.0 and not plot.get_node("Label").visible,
 		"Finished cleaning hands the full bar to its completion animation without duplicating it.")
 	var cleaning_splashes: int = 0
@@ -190,13 +194,12 @@ func _run() -> void:
 	plot._process(2.0)
 	_expect(_dust_count(plot) > 0, "Arrived, paid builders can emit construction dust when enabled.")
 	_expect(other_plot.construction.phase == "uncleared", "The neighboring plot remains independent.")
-	TimeComponentManager.advance_minutes(270)
+	_expect(SHIFT_DRIVER.work_minutes(270, visuals, ids), "The builders return as needed through half their work.")
 	_expect(is_equal_approx(bar.value, 50.0), "Half the construction duration fills exactly half the bar.")
 	camera.global_position = plot.global_position + Vector2(0, -4)
 	camera.zoom = Vector2(2, 2)
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-building-progress.png"))
-	TimeComponentManager.advance_minutes(270)
+	await _capture("tip-building-progress.png")
+	_expect(SHIFT_DRIVER.work_minutes(270, visuals, ids), "The builders return as needed to finish.")
 	_expect(not bar.visible and bar.value == 100.0, "Completion hands the full bar to its bounce/highlight/fade animation.")
 	plot._sync_construction()
 	var splashes: int = 0
@@ -207,11 +210,9 @@ func _run() -> void:
 				"Completion keeps the original full bar textures.")
 	_expect(splashes == 1, "Repeated synchronization cannot replay the completion splash.")
 	await get_tree().create_timer(0.16).timeout
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-building-complete-splash.png"))
+	await _capture("tip-building-complete-splash.png")
 	await get_tree().create_timer(0.45).timeout
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join("tip-building-complete-fade.png"))
+	await _capture("tip-building-complete-fade.png")
 	await get_tree().create_timer(0.5).timeout
 	plot._process(1.1)
 	_expect(not bar.visible and plot.get_node("Label").text.is_empty(),
@@ -237,7 +238,7 @@ func _run() -> void:
 	_expect(not production_order_id.is_empty(), "Production remains active after its worker arrives.")
 	_expect(not visuals.actors[ids[0]].visible, "Production uses the same hide-inside presentation.")
 	var dust_capture_dir: String = OS.get_environment("TIP_DUST_CAPTURE_DIR")
-	if not dust_capture_dir.is_empty():
+	if not dust_capture_dir.is_empty() and DisplayServer.get_name() != "headless":
 		DirAccess.make_dir_recursive_absolute(dust_capture_dir)
 		await RenderingServer.frame_post_draw
 		var capture_error: int = get_viewport().get_texture().get_image().save_png(
@@ -247,6 +248,8 @@ func _run() -> void:
 	content.free()
 	content = MAP.instantiate()
 	add_child(content)
+	content.get_node("YSortWorld/Player").debug_disable_player_needs = true
+	content.get_node("YSortWorld/Player").debug_disable_fatigue = true
 	_expect(not content.get_node("YSortWorld/WorkshopPlot/BuildingProgress").visible,
 		"Reloading an already-built plot does not replay its completion bar.")
 	visuals = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
@@ -257,8 +260,14 @@ func _run() -> void:
 	_expect(reloaded_plot.worker_dust_enabled and not reloaded_plot._has_dust_activity() and _dust_count(reloaded_plot) == 0,
 		"Reloaded production remains inside without dust even while dust is enabled.")
 	_expect(WorkManager.active_orders.has(production_order_id), "The production order remains running after the map reload.")
-	TimeComponentManager.advance_minutes(job.base_duration_minutes)
+	_expect(SHIFT_DRIVER.work_minutes(job.base_duration_minutes, visuals, [ids[0]] as Array[String]), "The production worker returns as needed to complete their work.")
 	visuals.plot_presence.update(visuals, 0.0)
 	_expect(visuals.actors[ids[0]].visible, "Production completion restores the worker after a map reload.")
 	print("WorkshopWorkerPresenceTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _capture(filename: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(OS.get_environment("TEMP").path_join(filename))

@@ -137,9 +137,7 @@ func get_all_applicants() -> Array[CitizenData]:
 	var applicants: Array[CitizenData] = []
 
 	for citizen in citizens_by_id.values():
-		if citizen.population_status != CitizenData.PopulationStatus.RESIDENT:
-			continue
-		if citizen.employment_status != CitizenData.EmploymentStatus.APPLICANT:
+		if not citizen.can_be_hired():
 			continue
 
 		applicants.append(citizen)

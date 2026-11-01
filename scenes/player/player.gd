@@ -875,7 +875,7 @@ func sleep() -> bool:
 	return sleep_for_minutes(sleep_duration_minutes)
 
 func sleep_for_minutes(duration_minutes: int) -> bool:
-	if not can_sleep() or duration_minutes <= 0:
+	if not can_sleep() or duration_minutes <= 0 or not time_component_manager.can_advance_time():
 		return false
 
 	var recovery_quality: float = get_sleep_recovery_quality()
@@ -888,7 +888,10 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 	is_sleeping = true
 	set_movement_locked(&"sleep", true)
 
-	time_component_manager.advance_minutes(duration_minutes)
+	if not time_component_manager.advance_minutes(duration_minutes):
+		is_sleeping = false
+		set_movement_locked(&"sleep", false)
+		return false
 	last_sleep_day = TimeComponentManager.current_day
 
 	var fatigue_recovery: float = (
@@ -978,9 +981,13 @@ func collapse() -> void:
 		last_collapse_day = TimeComponentManager.current_day
 		push_warning("Player failed to enter Nightmare World.")
 
-func apply_nightmare_consequences(total_world_minutes: int) -> void:
+func apply_nightmare_consequences(total_world_minutes: int) -> bool:
+	if total_world_minutes <= 0 or not time_component_manager.can_advance_time():
+		return false
 	is_sleeping = true
-	time_component_manager.advance_minutes(total_world_minutes)
+	if not time_component_manager.advance_minutes(total_world_minutes):
+		is_sleeping = false
+		return false
 
 	hunger = clampf(
 		hunger + collapse_hunger_cost,
@@ -999,6 +1006,7 @@ func apply_nightmare_consequences(total_world_minutes: int) -> void:
 	last_sleep_day = TimeComponentManager.current_day
 	condition_changed.emit()
 	collapse_completed.emit(total_world_minutes)
+	return true
 
 func _enter_nightmare() -> bool:
 	var nightmare_world: NightmareWorld = (

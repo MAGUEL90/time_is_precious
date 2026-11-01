@@ -97,12 +97,19 @@ text = "Choose a work order."
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="WorkOrderGrid" type="GridContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body"]
+[node name="WorkScroll" type="ScrollContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body"]
+custom_minimum_size = Vector2(175, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="WorkOrderGrid" type="GridContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/WorkScroll"]
 layout_mode = 2
 theme_override_constants/h_separation = 4
 columns = 3
 
-[node name="LockedCard" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/WorkOrderGrid" instance=ExtResource("3_k3f0b")]
+[node name="LockedCard" parent="Root/Center/TextureWindow/Margin/MainVBox/Body/WorkScroll/WorkOrderGrid" instance=ExtResource("3_k3f0b")]
 layout_mode = 2
 disabled = true
 card_title = "Locked"

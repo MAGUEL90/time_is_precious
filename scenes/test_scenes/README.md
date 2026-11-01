@@ -10,6 +10,24 @@ Check the engine version first with `godot --version`; pass the full path to the
 4.5.x binary if the default command selects another version. A fresh checkout
 needs `godot --headless --editor --import --path .` before command-line tests.
 
+## Worker shifts and resignation (2026-11-01)
+
+Run with Godot 4.5.1 and an isolated user-data directory. For each multi-process
+case, use the same fresh directory for its phases and run one engine at a time.
+
+| Scene | Coverage / arguments |
+| --- | --- |
+| `workshop_shift_resignation_test.tscn` | Construction and clearing shifts, midnight resignation, replacement, physical departure and return, conservation |
+| `workshop_resignation_shift_test.tscn` | Shaping shift, zero/pending eligibility, replacement, unlocated legacy work and transactional callbacks |
+| `workshop_resignation_continue_test.tscn` | Real city checkpoint: `-- --workshop-resignation-phase=write`, `read`, `finish` in three processes |
+| `test_scene_resignation_menu_continue.tscn` | Actual Start Menu Continue for the preceding workshop checkpoint immediately after its `write` phase |
+| `test_scene_worksite_resignation_continue.tscn` | In-flight delivery and retained ground output: `-- --resign-phase=write`, then `read` |
+| `test_scene_worksite_midnight_continue.tscn` | Gathering fraction, midnight resignation and replacement: `-- --midnight-phase=write`, then `read` |
+| `clay_worksite_test/test_scene_worksite_resignation.tscn` | Worksite reentry, pending delivery, tools, ground output and replacement progress |
+| `test_scene_passive_drying_shift.tscn` | Real passive drying across 15:00 and midnight without a worker |
+| `test_scene_applicant_eligibility.tscn`, `test_scene_idle_resignation.tscn`, `test_scene_idle_resignation_save.tscn` | Applicant threshold, prepaid contract forfeiture, recovery, rehire and idle Continue |
+| `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
+
 ## Prepaid worker contracts (2026-10-23)
 
 Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and

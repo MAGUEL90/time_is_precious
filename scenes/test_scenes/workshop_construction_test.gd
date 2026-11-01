@@ -204,11 +204,11 @@ func _test_team_durations_and_completion() -> void:
 			_expect(Inventory.items == after_start, "A team-change attempt must not consume additional materials.")
 
 			var start_time: int = state.started_at
-			_advance_state_to(state, state.completes_at - 1)
+			_advance_worker_minutes(state, expected_duration - 1)
 			_expect(state.phase == "building", "Construction must not complete one minute early.")
 			_expect(int(state.get_preview([] as Array[String]).remaining_minutes) == 1, "One minute before completion must report exactly one minute remaining.")
 			var changes_before_finish: int = _change_count
-			_advance_state_to(state, state.completes_at)
+			_advance_worker_minutes(state, 1)
 			_expect(state.phase == "built", "Construction must complete at its exact deadline.")
 			_expect(_change_count == changes_before_finish + 1, "The completion transition must emit one state change.")
 			_expect(not WorkerDatabase.get_worker_data(selected_worker_id).is_reserved(), "Completion must release the worker reservation.")
@@ -253,7 +253,7 @@ func _test_map_reload_and_built_workshop_access() -> void:
 	_expect(clearing_worker.matches_physical_approach("plot", _fixture_state.order_id + ":clearing", _fixture_state.order_id)
 		and not clearing_worker.physical_approach.arrived, "Clearing starts with a pending physical route to the plot.")
 	_drive_plot_arrivals(visuals, [TEST_WORKER_IDS[0]] as Array[String], "clearing", _fixture_state.order_id)
-	_advance_state_to(_fixture_state, _fixture_state.completes_at)
+	_advance_worker_minutes(_fixture_state, _fixture_state.CLEARING_MINUTES, visuals)
 	_expect(_fixture_state.phase == "empty" and not clearing_worker.is_reserved(),
 		"Arrived clearing finishes and releases its worker before construction.")
 	var result: Dictionary = _fixture_state.start_build(selected)
@@ -266,7 +266,7 @@ func _test_map_reload_and_built_workshop_access() -> void:
 		and not second_worker.physical_approach.arrived,
 		"The newly assigned second builder must travel to the plot before contributing.")
 	_drive_plot_arrivals(visuals, selected, "building", _fixture_state.order_id)
-	_advance_state_to(_fixture_state, _fixture_state.started_at + 900)
+	_advance_worker_minutes(_fixture_state, 900, visuals)
 	var retained_state: Variant = _fixture_state
 	var retained_remaining: int = int(_fixture_state.get_preview([] as Array[String]).remaining_minutes)
 	var retained_progress: float = float(_fixture_state.get_preview([] as Array[String]).progress_ratio)
@@ -285,7 +285,9 @@ func _test_map_reload_and_built_workshop_access() -> void:
 		return
 	_expect(is_equal_approx(float(reloaded_plot.construction.get_preview([] as Array[String]).progress_ratio), retained_progress), "Recreated plot must show the same construction progress.")
 	_expect(str(reloaded_plot.get_node("Label").text).begins_with("Building"), "Recreated plot must render its in-progress state.")
-	_advance_state_to(retained_state, retained_state.completes_at)
+	var reloaded_visuals: Node2D = _content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
+	reloaded_visuals.set_process(false)
+	_advance_worker_minutes(retained_state, int(retained_state.get_preview([] as Array[String]).remaining_minutes), reloaded_visuals)
 	await get_tree().process_frame
 	var built_workshop: WorkShop = reloaded_plot.get_node_or_null("BuiltWorkshop") as WorkShop
 	_expect(retained_state.phase == "built" and built_workshop != null, "Completion on the real map must spawn the existing Workshop scene as BuiltWorkshop.")
@@ -319,6 +321,27 @@ func _advance_state_to(state: Variant, total_minutes: int) -> void:
 	var day: int = int(total_minutes / 1440)
 	var within_day: int = total_minutes % 1440
 	state.call("_on_time_changed", day, int(within_day / 60), within_day % 60, "clear")
+
+func _advance_worker_minutes(state: Variant, amount: int, visuals: Node2D = null) -> void:
+	while amount > 0 and state.phase in ["building", "clearing"]:
+		var now: int = state._latest_time
+		var minute: int = now % 1440
+		if minute < state.SHIFT_START or minute >= state.SHIFT_END:
+			var next_start: int = now - minute + state.SHIFT_START + (1440 if minute >= state.SHIFT_END else 0)
+			_set_clock_for_fixture(next_start)
+			_advance_state_to(state, next_start)
+			if visuals != null:
+				_drive_plot_arrivals(visuals, state.worker_ids, state.phase, state.order_id)
+			continue
+		var step: int = mini(amount, state.SHIFT_END - minute)
+		_set_clock_for_fixture(now + step)
+		_advance_state_to(state, now + step)
+		amount -= step
+
+func _set_clock_for_fixture(total_minutes: int) -> void:
+	TimeComponentManager.current_day = int(total_minutes / 1440)
+	TimeComponentManager.current_hour = int((total_minutes % 1440) / 60)
+	TimeComponentManager.current_minute = total_minutes % 60
 
 func _drive_plot_arrivals(visuals: Node2D, worker_ids: Array[String], phase: String, order_id: String) -> void:
 	var was_paused: bool = TimeComponentManager.is_paused

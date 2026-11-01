@@ -119,7 +119,11 @@ func execute(requested_minutes: int, player: Player, owner_node: Node, drop_outp
 		# Advancement emits signals synchronously. Record this minute first so a
 		# cancel from one of those signals stores the elapsed time accurately.
 		result.minutes += 1
-		TimeComponentManager.advance_minutes(1)
+		if not TimeComponentManager.advance_minutes(1):
+			# No clock signal ran, so this proposed minute did not happen.
+			result.minutes -= 1
+			result.interrupted = true
+			break
 		# cancel() can run synchronously from a minute signal during the call above.
 		# Its refund is final; do not earn or settle those units a second time.
 		if _cancelled:

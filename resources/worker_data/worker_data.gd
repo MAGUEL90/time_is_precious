@@ -3,6 +3,9 @@ extends Resource
 
 enum Profession {NONE, LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
+## A plot worker who must complete the existing departure route before return.
+## Negative values are sentinels; actual arrival minutes are always nonnegative.
+const PLOT_DEPARTURE_PENDING: int = -2
 
 @export var worker_id: String = ""
 @export var display_name: String = ""
@@ -11,6 +14,9 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export var current_order_id: String = ""
 @export var current_job_id: String = ""
 @export var current_work_status: WorkStatus = WorkStatus.IDLE
+# Set at the zero-Satisfaction boundary. A loaded Hauler finishes its current
+# delivery before leaving, even if needs recover or the game is continued.
+@export var resignation_pending: bool = false
 # Empty is the deliberate legacy interpretation. Nonempty values contain only
 # bounded data in world FEET coordinates, never scene paths or executable values.
 @export var physical_approach: Dictionary = {}
@@ -186,7 +192,7 @@ func get_arrived_paid_minutes(from_minute: int, to_minute: int, kind: String, ta
 	# Intersect paid and arrived intervals once; overlapping blocks cannot add up.
 	return to_minute - eligible_from - get_payroll_unpaid_minutes(eligible_from, to_minute)
 
-static func physical_approach_valid(value: Dictionary) -> bool:
+static func physical_approach_valid(value: Dictionary, allow_shift_departure: bool = true) -> bool:
 	if value.is_empty():
 		return true
 	var spec: Dictionary = {"kind": TYPE_STRING, "task": TYPE_STRING, "owner": TYPE_STRING,
@@ -213,4 +219,4 @@ static func physical_approach_valid(value: Dictionary) -> bool:
 	if value.arrived:
 		# Resource workers retain their native work/idle wander after entering.
 		return value.arrival_minute >= 0 and value.arrival_minute <= 1000000000 and (value.kind == "site" or value.position.distance_to(value.target) <= 0.1)
-	return value.arrival_minute == -1
+	return value.arrival_minute == -1 or (allow_shift_departure and value.kind == "plot" and value.arrival_minute == PLOT_DEPARTURE_PENDING)

@@ -95,7 +95,9 @@ func _test_immigration_acceptance() -> void:
 		CitizenNeedsManager.get_citizen_count() == 1,
 		"Accepted residents must count toward resident needs.")
 
-	immigrant.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	_expect(
+		CitizenManager.register_applicant(immigrant.citizen_id, WorkerData.Profession.LABORER),
+		"An eligible resident can register with a profession.")
 	_expect(
 		CitizenManager.get_all_applicants().has(immigrant),
 		"Resident applicants must appear in the applicant query.")
