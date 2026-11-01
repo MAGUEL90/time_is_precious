@@ -19,7 +19,6 @@ const MIN_APPLICANT_SATISFACTION: float = 0.5
 @export var citizen_id: String = ""
 @export var display_name: String = ""
 @export var satisfaction: float = 0.5
-@export var reliability: float = 1.0
 @export var food_fulfilled: bool = false
 @export var clothing_fulfilled: bool = false
 @export var shelter_fulfilled: bool = false

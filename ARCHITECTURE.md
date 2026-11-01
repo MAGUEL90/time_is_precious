@@ -194,7 +194,8 @@ if is_hired:
     consume_city_stock()
 ```
 
-Current daily needs/satisfaction/reliability behavior exists at prototype level, but balance remains unfinished.
+Daily needs and Satisfaction exist at prototype level; balance remains unfinished.
+Reliability is retired from the current worker/citizen MVP.
 
 ## Workshop / Production Responsibilities
 
@@ -338,8 +339,8 @@ the affordable recipients at the unchanged one-point/person rate; linked workers
 the result through CitizenData. Food fulfilled/unfulfilled counters include this same set.
 The existing midnight event drives consumption, with per-day and reentrancy guards so time
 skips process every day and repeated notifications cannot eat the same day's ration twice.
-Existing shelter and reliability values are preserved. Satisfaction follows the approved
-daily basic-needs rule in `docs/game-concept.md` section 11.
+Shelter behavior is unchanged. Satisfaction follows the approved daily basic-needs rule
+in `docs/game-concept.md` section 11.
 
 The physical City Storage food summary, legacy GameplayHUD food status and immigration food
 readiness query this same stock/recipient calculation. Full days remaining is whole days
@@ -380,15 +381,25 @@ daily evaluation. Both panels refresh on stock/time/population changes and the c
 refreshing the modal never issues clothing or consumes food.
 
 After all three needs are evaluated, `last_needs_results` stores per-person flags, missing
-needs, clothing days remaining and actual clamped satisfaction/reliability changes.
+needs, clothing days remaining and actual clamped Satisfaction changes.
 `needs_changed` is emitted once after the complete daily result. Worker-management rows
 read `get_worker_needs_summary()`; Worker Hub Details refreshes its visible scrollable
 popup from the signal. Missing evaluation displays unknown needs and current values without
 an invented delta. UI reads never issue clothing or process another day.
 
-This does not implement disk saving. A future persistence snapshot must retain city items,
-prepared portions, clothing allocations and processed-day markers coherently to prevent
-duplication on load.
+The city/home checkpoint retains city items, prepared portions, clothing allocations and
+processed-day markers coherently to prevent duplication on load.
+
+### Satisfaction and worker output
+
+The existing Satisfaction tiers multiply output by 0.85 below 40%, 1.0 from 40% to
+below 75%, and 1.05 from 75% upward. Linked workers use their citizen's current value;
+unlinked workers use their own. Workshop NPC batches round their multiplied output.
+Daily gathering applies the same multiplier to each productive minute and awards only
+completed items. Partial progress carries through the shift and a save/Continue, but an
+unfinished item is not awarded at shift end or depletion. Thus 48 base items at the low
+tier yield 40 completed gathered items, while a single workshop batch rounds to 41.
+Reliability has no active stat, daily update, random output penalty, or UI in the MVP.
 
 ### Approved storage integration direction (staged, not fully implemented)
 
@@ -775,6 +786,12 @@ runtime copy after validation. Continue does not rewrite the old file. A later
 successful checkpoint uses the existing rotation and retains the previous primary
 as its `.bak`. Player Energy remains the inverse presentation of Fatigue, and
 negotiation is temporarily unavailable in the MVP.
+
+Schema version 10 removes retired Reliability fields from workers, citizens, and daily
+needs results. Versions 1–9 validate and discard those fields from the staged runtime
+copy without modifying the original file. A later successful checkpoint writes version
+10 using the existing backup rotation. Isolated worksite saves use their own schema and
+retain fractional gathering progress as well as compatibility with their older version.
 
 For the authored city/home pair, SceneDoor asks CitySave to retain the existing worksite
 subtree under the runtime host before freeing the city. Its frame/input/physics processing

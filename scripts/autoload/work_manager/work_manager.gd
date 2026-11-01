@@ -215,27 +215,18 @@ func _finalize_order(order_id: String, order: WorkOrder, now_total_minutes: int)
 					Inventory.add_item(item_id, int(job_outputs[item_id]))
 	elif is_npc_worker:
 		var multiplier: float = 1.0
-		var success_chance: float = 1.0
-		var reliability_roll: float = randf()
-		var reliability_output_multiplier: float = 1.0
 
 		worker_data = WorkerDatabase.get_worker_data(order.worker_id)
 
 		if worker_data:
 			multiplier = worker_data.get_satisfaction_work_multiplier()
-			success_chance = worker_data.get_reliability_success_chance()
-
-			if reliability_roll > success_chance:
-				reliability_output_multiplier = 0.75
-			else:
-				reliability_output_multiplier = 1.0
 
 		var final_outputs: Dictionary[String, int] = {}
 
 		for item_id in job_outputs.keys():
 			var item_id_string: String = str(item_id)
 			var base_amount: int = int(job_outputs[item_id_string])
-			var final_amount: int = roundi(base_amount * multiplier * reliability_output_multiplier)
+			var final_amount: int = roundi(base_amount * multiplier)
 			final_outputs[item_id_string] = final_amount
 
 		if (

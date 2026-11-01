@@ -193,6 +193,11 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	var linked_worker: WorkerData = _make_worker(resident.citizen_id)
 	CitizenManager.add_citizen(resident)
 	WorkerDatabase.workers_by_id[linked_worker.worker_id] = linked_worker
+	var unevaluated_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
+	_expect(not bool(unevaluated_summary.evaluated) and is_equal_approx(float(unevaluated_summary.satisfaction), resident.satisfaction),
+		"An unevaluated worker summary must show the linked resident's current satisfaction.")
+	_assert_summary_without_reliability(unevaluated_summary)
+	_assert_summary_without_reliability(CitizenNeedsManager.get_worker_needs_summary(null))
 
 	var base_day: int = TimeComponentManager.current_day + 100
 	_set_new_fixture_day(base_day)
@@ -207,7 +212,6 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	_expect(CitizenNeedsManager.has_signal("needs_changed"), "Daily needs must expose a completed-evaluation signal.")
 	CitizenNeedsManager.connect("needs_changed", needs_callback)
 	var satisfaction_before: float = resident.satisfaction
-	var reliability_before: float = resident.reliability
 	CitizenNeedsManager.process_daily_needs()
 	CitizenNeedsManager.disconnect("needs_changed", needs_callback)
 	var stock_after_first_evaluation: int = int(provider.get_clothing_item_count())
@@ -215,7 +219,6 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	_expect(resident.food_fulfilled and resident.clothing_fulfilled and resident.shelter_fulfilled, "A stocked day must fulfill all three resident needs.")
 	_expect(is_equal_approx(resident.satisfaction, satisfaction_before + 0.05), "A fully covered day must increase satisfaction by 0.05.")
-	_expect(is_equal_approx(resident.reliability, reliability_before + 0.03), "A fully covered day must increase reliability by 0.03.")
 	_expect(needs_signal_count[0] == 1, "Duplicate and reentrant daily-needs calls must emit one completed-evaluation signal.")
 	_expect(int(provider.get_clothing_item_count()) == stock_after_first_evaluation, "Duplicate daily-needs calls must not consume another clothing unit.")
 	_expect(provider.get("items").get(SIMPLE_CLOTHES, 0) == 0, "The first clothing need must consume one physical garment.")
@@ -247,12 +250,10 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	_set_new_day(base_day + 7)
 	var satisfaction_before_expiry: float = resident.satisfaction
-	var reliability_before_expiry: float = resident.reliability
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.clothing_fulfilled, "Expired clothing must fail when no replacement is available.")
 	_expect(provider.get_clothing_item_count() == 0, "Clothing expiry must not create phantom stock or negative stock.")
 	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry - 0.05), "Clothing shortage must reduce satisfaction by five percentage points.")
-	_expect(is_equal_approx(resident.reliability, reliability_before_expiry - 0.05), "Clothing shortage must apply the approved reliability decrease.")
 	var expired_summary: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
 	_expect(int(expired_summary.get("replacement_need", 0)) >= 1, "An expired garment must create replacement need.")
 	_expect(not bool(expired_summary.get("can_cover_all", true)), "No physical stock must not claim full clothing coverage.")
@@ -263,13 +264,11 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	_set_items({SIMPLE_CLOTHES: 1, READY_BREAD: 1})
 	_set_new_day(base_day + 8)
 	var satisfaction_before_recovery: float = resident.satisfaction
-	var reliability_before_recovery: float = resident.reliability
 	CitizenNeedsManager.process_daily_needs()
 	_expect(resident.clothing_fulfilled, "A physical clothing deposit must recover coverage on the next day.")
 	_expect(provider.get_clothing_item_count() == 0, "Recovery must consume exactly the deposited physical garment.")
 	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_recovery + 0.05), "Recovered clothing with food and shelter must restore the positive satisfaction delta.")
 	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry), "One fully supplied day must recover one day's satisfaction loss away from the limits.")
-	_expect(is_equal_approx(resident.reliability, reliability_before_recovery + 0.03), "Recovered clothing with food and shelter must restore the positive reliability delta.")
 
 	_set_items({})
 	_set_new_day(base_day + 9)
@@ -290,23 +289,19 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	_set_items({READY_BREAD: 1})
 	_set_new_day(base_day + 11)
 	resident.satisfaction = 0.99
-	resident.reliability = 0.99
 	CitizenNeedsManager.process_daily_needs()
 	_expect(is_equal_approx(resident.satisfaction, 0.99), "Positive satisfaction deltas must clamp at 0.99.")
-	_expect(is_equal_approx(resident.reliability, 0.99), "Positive reliability deltas must clamp at 0.99.")
 	var capped: Dictionary = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
-	_expect(is_zero_approx(float(capped.satisfaction_delta)) and is_zero_approx(float(capped.reliability_delta)),
+	_expect(is_zero_approx(float(capped.satisfaction_delta)),
 		"A result already at the upper limit must report the actual zero bonus.")
 
 	_set_items({})
 	_set_new_day(base_day + 12)
 	resident.satisfaction = 0.01
-	resident.reliability = 0.01
 	CitizenNeedsManager.process_daily_needs()
 	_expect(is_equal_approx(resident.satisfaction, 0.01), "Negative satisfaction deltas must clamp at 0.01.")
-	_expect(is_equal_approx(resident.reliability, 0.01), "Negative reliability deltas must clamp at 0.01.")
 	capped = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
-	_expect(is_zero_approx(float(capped.satisfaction_delta)) and is_zero_approx(float(capped.reliability_delta)),
+	_expect(is_zero_approx(float(capped.satisfaction_delta)),
 		"A result already at the lower limit must report the actual zero penalty.")
 
 
@@ -377,9 +372,7 @@ func _test_linked_worker_and_legacy_worker_are_unique_recipients() -> void:
 	var linked_worker: WorkerData = _make_worker(resident.citizen_id)
 	var legacy_worker: WorkerData = _make_worker("clothing_legacy_worker")
 	linked_worker.satisfaction = 0.10
-	linked_worker.reliability = 0.20
 	legacy_worker.satisfaction = 0.40
-	legacy_worker.reliability = 0.50
 	CitizenManager.add_citizen(resident)
 	WorkerDatabase.workers_by_id[linked_worker.worker_id] = linked_worker
 	WorkerDatabase.workers_by_id[legacy_worker.worker_id] = legacy_worker
@@ -400,7 +393,6 @@ func _test_linked_worker_and_legacy_worker_are_unique_recipients() -> void:
 	_expect(resident.clothing_fulfilled and legacy_worker.clothing_fulfilled, "Linked residents and legacy workers must both receive clothing when stock covers both.")
 	_expect(provider.get_clothing_item_count() == 0, "Unique clothing allocation must consume exactly two physical garments.")
 	_expect(is_equal_approx(linked_worker.satisfaction, 0.10), "A linked worker must not receive a second satisfaction evaluation through WorkerData.")
-	_expect(is_equal_approx(linked_worker.reliability, 0.20), "A linked worker must not receive a second reliability evaluation through WorkerData.")
 	_expect(CityStockManager.clothing_supply == 77, "Linked and legacy clothing allocation must ignore abstract clothing stock.")
 	_expect(CitizenNeedsManager.get("last_needs_results").size() == 2, "Needs results must contain one completed result per unique recipient.")
 
@@ -438,10 +430,8 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	_set_items({SIMPLE_CLOTHES: 7, READY_BREAD: 16})
 
 	var initial_satisfaction: Array[float] = []
-	var initial_reliability: Array[float] = []
 	for resident: CitizenData in residents:
 		initial_satisfaction.append(resident.satisfaction)
-		initial_reliability.append(resident.reliability)
 
 	CitizenNeedsManager.process_daily_needs()
 	var first_summary: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
@@ -460,10 +450,8 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 		var resident: CitizenData = residents[index]
 		_expect(resident.clothing_fulfilled, "The first seven residents must receive physical clothing.")
 		_expect(is_equal_approx(resident.satisfaction, initial_satisfaction[index] + 0.05), "A covered resident must receive the positive satisfaction delta.")
-		_expect(is_equal_approx(resident.reliability, initial_reliability[index] + 0.03), "A covered resident must receive the positive reliability delta.")
 	_expect(not residents[7].clothing_fulfilled, "The eighth resident must remain uncovered while physical clothing is short.")
 	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] - 0.05), "The uncovered resident must receive the shortage satisfaction delta.")
-	_expect(is_equal_approx(residents[7].reliability, initial_reliability[7] - 0.05), "The uncovered resident must receive the shortage reliability delta.")
 	_expect(CitizenNeedsManager.get("last_needs_results").size() == 8, "Linked workers must not create duplicate daily-needs results.")
 	_expect(WorkerDatabase.workers_by_id.size() == 4, "The fixture must retain exactly its four linked worker records.")
 
@@ -487,10 +475,8 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	var before_summary_last_processed: int = CitizenNeedsManager.last_processed_day
 	var before_summary_last_clothing_processed: int = CitizenNeedsManager.last_clothing_processed_day
 	var before_summary_satisfaction: Array[float] = []
-	var before_summary_reliability: Array[float] = []
 	for resident: CitizenData in residents:
 		before_summary_satisfaction.append(resident.satisfaction)
-		before_summary_reliability.append(resident.reliability)
 
 	var summary_before_next_day: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
 	var summary_before_next_day_without_argument: Dictionary = CitizenNeedsManager.get_clothing_supply_summary()
@@ -508,7 +494,6 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	for index: int in range(residents.size()):
 		_expect(residents[index].clothing_fulfilled == (index < 7), "Summary reads must preserve actual current-day clothing coverage.")
 		_expect(is_equal_approx(residents[index].satisfaction, before_summary_satisfaction[index]), "Summary reads must not change satisfaction.")
-		_expect(is_equal_approx(residents[index].reliability, before_summary_reliability[index]), "Summary reads must not change reliability.")
 
 	_set_new_day(base_day + 1)
 	CitizenNeedsManager.process_daily_needs()
@@ -522,12 +507,10 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 		var resident_id: String = residents[index].citizen_id
 		_expect(int(_allocation_for(resident_id).get("issued_day", -1)) == int(original_issue_days[resident_id]), "Previously covered residents must retain their original clothing issue dates.")
 	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7]), "The previously uncovered resident must recover the shortage satisfaction loss on the next day.")
-	_expect(is_equal_approx(residents[7].reliability, initial_reliability[7] - 0.02), "The previously uncovered resident must receive the net reliability recovery on the next day.")
 	var eighth_worker: WorkerData = WorkerDatabase.get_worker_data(residents[7].citizen_id)
 	var eighth_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(eighth_worker)
 	_assert_worker_summary(eighth_summary, base_day + 1, true, true, true, 7)
 	_expect(is_equal_approx(float(eighth_summary.get("satisfaction_delta", 0.0)), 0.05), "The recovered eighth resident must receive a positive satisfaction delta.")
-	_expect(is_equal_approx(float(eighth_summary.get("reliability_delta", 0.0)), 0.03), "The recovered eighth resident must receive a positive reliability delta.")
 	_expect(WorkerDatabase.workers_by_id.size() == 4, "Daily-needs processing must not create duplicate workers.")
 	_expect(provider.get("items").get(SIMPLE_CLOTHES, 0) == 0, "Daily-needs processing must not leave extra clothing garments.")
 
@@ -542,9 +525,10 @@ func _assert_worker_summary(
 ) -> void:
 	for key: String in [
 		"evaluated", "day", "food", "clothing", "shelter", "clothing_days_left",
-		"satisfaction", "reliability", "satisfaction_delta", "reliability_delta", "missing"
+		"satisfaction", "satisfaction_delta", "missing"
 	]:
 		_expect(summary.has(key), "Worker needs summary must expose the '%s' field." % key)
+	_assert_summary_without_reliability(summary)
 	_expect(bool(summary.get("evaluated", false)), "Worker needs summary must identify a completed evaluation.")
 	_expect(int(summary.get("day", -1)) == day, "Worker needs summary must report the evaluated day.")
 	_expect(bool(summary.get("food", false)) == food, "Worker needs summary food state must match the evaluated recipient.")
@@ -557,6 +541,11 @@ func _assert_worker_summary(
 	var missing: Variant = summary.get("missing", [])
 	if missing is Array:
 		_expect((missing as Array).is_empty() == (food and clothing and shelter), "Worker needs summary missing list must match the three need states.")
+
+
+func _assert_summary_without_reliability(summary: Dictionary) -> void:
+	_expect(not summary.has("reliability") and not summary.has("reliability_delta"),
+		"Worker needs summaries must not expose Reliability fields.")
 
 
 func _allocation_for(recipient_id: String) -> Dictionary:
@@ -613,7 +602,6 @@ func _make_resident(citizen_id: String) -> CitizenData:
 	citizen.population_status = CitizenData.PopulationStatus.RESIDENT
 	citizen.employment_status = CitizenData.EmploymentStatus.HIRED
 	citizen.satisfaction = 0.50
-	citizen.reliability = 0.50
 	return citizen
 
 

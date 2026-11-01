@@ -2,6 +2,7 @@ extends "res://scenes/test_scenes/test_scene_defense_dialogue.gd"
 
 const CODEC = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const LEGACY_RELIABILITY = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 const CHECKPOINT_PATH: String = "user://city_save_test/checkpoint.json"
 var store: Node
 
@@ -19,11 +20,21 @@ func _run() -> void:
 		if argument.begins_with("--city-save-phase="):
 			mode = argument.trim_prefix("--city-save-phase=")
 	if mode == "read":
+		var original_bytes: String = FileAccess.get_file_as_string(CHECKPOINT_PATH)
+		var read_document: Dictionary = JSON.parse_string(original_bytes)
 		_expect(store.load_checkpoint(), "A fresh game process loads the disk checkpoint: " + store.last_error)
-		var read_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
-		var read_raw: Dictionary = VALUES.new().decode(read_document.state)
+		var read_raw: Dictionary = store.snapshot.prepared.duplicate(true)
 		await _assert_seed(read_raw.get("pickup_sources", {}))
-		_expect(JSON.parse_string(JSON.stringify(store.snapshot.capture(content), "", true, true)) == JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)), "Fresh-process restore matches every captured owner and RNG state.")
+		var expected: Dictionary = read_document.duplicate(true)
+		if read_document.schema_version == 9:
+			# The staged legacy payload is the expected v10 state, with only the
+			# validated retired fields removed. The source file remains untouched.
+			expected.schema_version = CODEC.VERSION
+			expected.state = VALUES.new().encode(read_raw)
+			for result: Dictionary in read_raw.needs.last_needs_results.values():
+				_expect(not result.has("reliability") and not result.has("reliability_delta"), "A genuine v9 ledger loads without retired fields.")
+			_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == original_bytes, "Loading a genuine v9 checkpoint preserves its exact bytes.")
+		_expect(JSON.parse_string(JSON.stringify(store.snapshot.capture(content), "", true, true)) == JSON.parse_string(JSON.stringify(expected, "", true, true)), "Fresh-process restore matches every captured owner and RNG state after migration.")
 		_finish()
 		return
 	_clean_files()
@@ -42,6 +53,7 @@ func _run() -> void:
 	var codec = VALUES.new()
 	var saved_raw: Dictionary = codec.decode(before.state)
 	_test_player_condition_migration(before, saved_raw)
+	_test_reliability_migration(before, saved_raw)
 	_expect(saved_raw.pickup_sources is Dictionary and saved_raw.pickup_sources.size() == 6,
 		"The version-4 snapshot records exactly the six authored pickup-source identities.")
 	_expect(is_equal_approx(saved_raw.clock._timer, 0.375), "The fractional clock tick is captured alongside pending palm timers.")
@@ -81,7 +93,7 @@ func _run() -> void:
 	var legacy_raw: Dictionary = saved_raw.duplicate(true)
 	legacy_raw.erase("pickup_sources")
 	_strip_post_v3_owner_fields(legacy_raw)
-	legacy.state = codec.encode(legacy_raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, legacy_raw)
 	_strip_post_v3_worker_fields(legacy.state)
 	_assert_legacy_validation_only(legacy)
 	var legacy_file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
@@ -94,7 +106,7 @@ func _run() -> void:
 	legacy_raw = saved_raw.duplicate(true)
 	legacy_raw.erase("pickup_sources")
 	_strip_post_v3_owner_fields(legacy_raw)
-	legacy.state = codec.encode(legacy_raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, legacy_raw)
 	_strip_post_v3_worker_fields(legacy.state)
 	legacy_file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))
@@ -119,7 +131,7 @@ func _run() -> void:
 	legacy_raw.erase("pickup_sources")
 	legacy_raw["date_palms"] = legacy_palms
 	_strip_post_v3_owner_fields(legacy_raw)
-	legacy.state = codec.encode(legacy_raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, legacy_raw)
 	_strip_post_v3_worker_fields(legacy.state)
 	legacy_rng = _set_palm_rng_sentinels()
 	_assert_legacy_validation_only(legacy)
@@ -495,19 +507,19 @@ func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
 		plot.erase("payroll_work_remainder")
 
 func _test_player_condition_migration(current: Dictionary, raw: Dictionary) -> void:
-	_expect(current.schema_version == 9 and not raw.player.has("focus"), "Current checkpoints contain only Hunger and Fatigue.")
+	_expect(current.schema_version == CODEC.VERSION and not raw.player.has("focus"), "Current checkpoints contain only Hunger and Fatigue.")
 	var values = VALUES.new()
 	var legacy_raw: Dictionary = raw.duplicate(true)
 	legacy_raw.player["focus"] = 0.63
 	var legacy: Dictionary = current.duplicate(true)
 	legacy.schema_version = 8
-	legacy.state = values.encode(legacy_raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(values, legacy_raw)
 	var sentinel: Dictionary = store.snapshot.capture(content)
 	for allowed_focus: float in [0.0, 1.0]:
 		var boundary_raw: Dictionary = legacy_raw.duplicate(true)
 		boundary_raw.player["focus"] = allowed_focus
 		var boundary: Dictionary = legacy.duplicate(true)
-		boundary.state = values.encode(boundary_raw)
+		boundary.state = LEGACY_RELIABILITY.encode_city(values, boundary_raw)
 		_expect(store.snapshot.prepare(boundary, content), "Legacy Focus boundary remains valid: " + str(allowed_focus))
 		_expect(sentinel == store.snapshot.capture(content), "Preparing a legacy checkpoint does not mutate live state.")
 	for invalid_focus: Variant in ["missing", "wrong_type", -0.01, 1.01]:
@@ -519,7 +531,7 @@ func _test_player_condition_migration(current: Dictionary, raw: Dictionary) -> v
 		else:
 			bad_raw.player["focus"] = invalid_focus
 		var invalid: Dictionary = legacy.duplicate(true)
-		invalid.state = values.encode(bad_raw)
+		invalid.state = LEGACY_RELIABILITY.encode_city(values, bad_raw)
 		_expect(not store.snapshot.prepare(invalid, content), "Invalid legacy Focus is rejected: " + str(invalid_focus))
 		_expect(sentinel == store.snapshot.capture(content), "Rejected legacy data never mutates live state.")
 	var invalid_current: Dictionary = current.duplicate(true)
@@ -528,7 +540,7 @@ func _test_player_condition_migration(current: Dictionary, raw: Dictionary) -> v
 	var bad_raw: Dictionary = legacy_raw.duplicate(true)
 	bad_raw.player["focus"] = 1.01
 	var invalid_disk: Dictionary = legacy.duplicate(true)
-	invalid_disk.state = values.encode(bad_raw)
+	invalid_disk.state = LEGACY_RELIABILITY.encode_city(values, bad_raw)
 	var invalid_bytes: String = JSON.stringify(invalid_disk, "", true, true)
 	_write_text(CHECKPOINT_PATH, invalid_bytes)
 	_expect(not store.load_checkpoint() and not store.save_checkpoint(), "Invalid legacy saves cannot be loaded or overwritten.")
@@ -542,5 +554,111 @@ func _test_player_condition_migration(current: Dictionary, raw: Dictionary) -> v
 	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == legacy_bytes, "The replaced legacy checkpoint remains in the normal backup.")
 	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
 	var migrated: Dictionary = values.decode(saved.state)
-	_expect(saved.schema_version == 9 and not migrated.player.has("focus"), "The new checkpoint omits the retired Focus field.")
+	_expect(saved.schema_version == CODEC.VERSION and not migrated.player.has("focus"), "The new checkpoint omits the retired Focus field.")
 	_expect(store.load_checkpoint() and store.load_checkpoint(), "The new checkpoint also loads repeatedly.")
+
+func _test_reliability_migration(current: Dictionary, raw: Dictionary) -> void:
+	var values = VALUES.new()
+	var staged_raw: Dictionary = raw.duplicate(true)
+	var id: String = "reliability_migration_person"
+	var citizen := CitizenData.new()
+	citizen.citizen_id = id
+	citizen.display_name = "Saved resident"
+	citizen.satisfaction = 0.43
+	citizen.experience = 12.5
+	staged_raw.citizens.citizens_by_id[id] = citizen
+	var worker := WorkerData.new()
+	worker.worker_id = id
+	worker.display_name = "Saved worker"
+	worker.profession_xp = 7
+	worker.satisfaction = 0.61
+	staged_raw.workers.workers_by_id[id] = worker
+	staged_raw.needs.last_needs_results[id] = {
+		"evaluated": true, "day": staged_raw.clock.current_day, "food": true,
+		"clothing": false, "shelter": true, "clothing_days_left": 0,
+		"satisfaction": 0.43, "satisfaction_delta": -0.05, "missing": ["Clothing"]
+	}
+	var legacy: Dictionary = current.duplicate(true)
+	legacy.schema_version = 9
+	legacy.state = LEGACY_RELIABILITY.encode_city(values, staged_raw)
+	var sentinel: Dictionary = store.snapshot.capture(content)
+	_expect(store.snapshot.prepare(legacy, content), "A v9 checkpoint with retired Reliability validates: " + store.snapshot.error)
+	var prepared: Dictionary = store.snapshot.prepared
+	var result: Dictionary = prepared.needs.last_needs_results.get(id, {})
+	_expect(not result.has("reliability") and not result.has("reliability_delta") and result.get("missing") == ["Clothing"], "Migration removes retired daily values and preserves the remaining record.")
+	_expect(prepared.citizens.citizens_by_id[id].display_name == "Saved resident" and is_equal_approx(prepared.citizens.citizens_by_id[id].experience, 12.5) and prepared.workers.workers_by_id[id].profession_xp == 7, "Migration preserves citizen and worker fields.")
+	_expect(sentinel == store.snapshot.capture(content), "Preparing v9 does not mutate live owners.")
+	for invalid_kind: String in ["citizen_missing", "citizen_type", "citizen_low", "citizen_high", "worker_missing", "worker_type"]:
+		var bad: Dictionary = legacy.duplicate(true)
+		var target_class: String = "CitizenData" if invalid_kind.begins_with("citizen") else "WorkerData"
+		var target: Dictionary = {}
+		for object: Dictionary in LEGACY_RELIABILITY.city_objects(bad.state, target_class):
+			if object.fields.get("citizen_id", object.fields.get("worker_id", "")) == id:
+				target = object.fields
+				break
+		_expect(not target.is_empty(), "The invalid-object fixture finds " + target_class)
+		if invalid_kind.ends_with("missing"):
+			target.erase("reliability")
+		elif invalid_kind.ends_with("type"):
+			target.reliability = "0.5"
+		elif invalid_kind.ends_with("low"):
+			target.reliability = -0.01
+		else:
+			target.reliability = 1.01
+		_expect(not store.snapshot.prepare(bad, content), "Invalid legacy object field is rejected: " + invalid_kind)
+		_expect(sentinel == store.snapshot.capture(content), "Invalid legacy object leaves live owners intact: " + invalid_kind)
+	for invalid_kind: String in ["reliability_missing", "reliability_type", "delta_missing", "delta_type"]:
+		var bad_raw: Dictionary = staged_raw.duplicate(true)
+		var ledger: Dictionary = bad_raw.needs.last_needs_results[id]
+		ledger.reliability = 0.5
+		ledger.reliability_delta = -0.05
+		var key: String = "reliability_delta" if invalid_kind.begins_with("delta") else "reliability"
+		if invalid_kind.ends_with("missing"):
+			ledger.erase(key)
+		else:
+			ledger[key] = "invalid"
+		var bad: Dictionary = legacy.duplicate(true)
+		bad.state = values.encode(bad_raw)
+		LEGACY_RELIABILITY.add_city_object_fields(bad.state)
+		_expect(not store.snapshot.prepare(bad, content), "Invalid legacy ledger is rejected: " + invalid_kind)
+		_expect(sentinel == store.snapshot.capture(content), "Invalid legacy ledger leaves live owners intact: " + invalid_kind)
+	var wrong_focus: Dictionary = staged_raw.duplicate(true)
+	wrong_focus.player.focus = 0.5
+	var v9_with_focus: Dictionary = legacy.duplicate(true)
+	v9_with_focus.state = LEGACY_RELIABILITY.encode_city(values, wrong_focus)
+	_expect(not store.snapshot.prepare(v9_with_focus, content), "Version 9 still rejects Focus, which was removed in that version.")
+	var current_with_legacy_objects: Dictionary = current.duplicate(true)
+	current_with_legacy_objects.state = LEGACY_RELIABILITY.encode_city(values, staged_raw)
+	_expect(not store.snapshot.prepare(current_with_legacy_objects, content), "Current schema rejects retired object and ledger fields.")
+	var legacy_ledger_raw: Dictionary = staged_raw.duplicate(true)
+	legacy_ledger_raw.needs.last_needs_results[id].reliability = 0.5
+	legacy_ledger_raw.needs.last_needs_results[id].reliability_delta = -0.05
+	var current_with_legacy_ledger: Dictionary = current.duplicate(true)
+	current_with_legacy_ledger.state = values.encode(legacy_ledger_raw)
+	_expect(not store.snapshot.prepare(current_with_legacy_ledger, content), "Current schema separately rejects retired daily ledger fields.")
+	var bad_disk: Dictionary = legacy.duplicate(true)
+	var bad_objects: Array = LEGACY_RELIABILITY.city_objects(bad_disk.state, "WorkerData")
+	for object: Dictionary in bad_objects:
+		if object.fields.worker_id == id:
+			object.fields.reliability = "invalid"
+	var bad_bytes: String = JSON.stringify(bad_disk, "", true, true)
+	_write_text(CHECKPOINT_PATH, bad_bytes)
+	_expect(not store.load_checkpoint() and not store.save_checkpoint(), "A malformed legacy Reliability value blocks load and overwrite.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == bad_bytes and sentinel == store.snapshot.capture(content), "Rejected legacy bytes and live owners remain untouched.")
+	var legacy_bytes: String = JSON.stringify(legacy, "", true, true)
+	_write_text(CHECKPOINT_PATH, legacy_bytes)
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "A v9 Reliability checkpoint loads repeatedly through the disk boundary.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == legacy_bytes, "Loading v9 leaves its bytes untouched.")
+	_expect(CitizenManager.citizens_by_id[id].display_name == "Saved resident" and WorkerDatabase.workers_by_id[id].profession_xp == 7 and not CitizenNeedsManager.last_needs_results[id].has("reliability"), "Applied v9 retains the person, worker and sanitized daily record.")
+	_expect(store.save_checkpoint(), "The next explicit save upgrades v9.")
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == legacy_bytes, "The normal backup keeps the prior v9 bytes.")
+	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var upgraded_raw: Dictionary = values.decode(upgraded.state)
+	var objects: Array = LEGACY_RELIABILITY.city_objects(upgraded.state, "CitizenData") + LEGACY_RELIABILITY.city_objects(upgraded.state, "WorkerData")
+	var fields_absent: bool = true
+	for object: Dictionary in objects:
+		fields_absent = fields_absent and not object.fields.has("reliability")
+	_expect(upgraded.schema_version == CODEC.VERSION and fields_absent and not upgraded_raw.needs.last_needs_results[id].has("reliability_delta"), "Upgraded v10 omits every retired Reliability field.")
+	_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded v10 checkpoint loads repeatedly.")
+	_write_text(CHECKPOINT_PATH, JSON.stringify(current, "", true, true))
+	_expect(store.load_checkpoint() and sentinel == store.snapshot.capture(content), "The original checkpoint restores after the migration test.")

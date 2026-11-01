@@ -241,7 +241,6 @@ func get_worker_needs_summary(worker: WorkerData) -> Dictionary:
 	if worker == null:
 		return empty
 	empty["satisfaction"] = worker.get_resolved_satisfaction()
-	empty["reliability"] = worker.get_resolved_reliability()
 	var resolved_citizen: CitizenData = worker.get_linked_citizen()
 	var person_id: String = resolved_citizen.citizen_id if resolved_citizen != null else worker.worker_id.strip_edges()
 	if person_id.is_empty() or not last_needs_results.has(person_id):
@@ -260,9 +259,7 @@ func _empty_needs_summary() -> Dictionary:
 		"shelter": false,
 		"clothing_days_left": 0,
 		"satisfaction": 0.0,
-		"reliability": 0.0,
 		"satisfaction_delta": 0.0,
-		"reliability_delta": 0.0,
 		"missing": []
 	}
 
@@ -293,14 +290,11 @@ func _apply_daily_effect_and_record(person: Variant, person_id: String, day: int
 	if person_id.is_empty():
 		return
 	var satisfaction_before: float = float(person.satisfaction)
-	var reliability_before: float = float(person.reliability)
 	var fulfilled: bool = person.are_basic_needs_fulfilled()
 	if fulfilled:
 		person.satisfaction = clampf(person.satisfaction + 0.05, 0.01, 0.99)
-		person.reliability = clampf(person.reliability + 0.03, 0.01, 0.99)
 	else:
 		person.satisfaction = clampf(person.satisfaction - 0.05, 0.01, 0.99)
-		person.reliability = clampf(person.reliability - 0.05, 0.01, 0.99)
 	var allocation: Dictionary = _get_valid_clothing_allocation(person_id, day)
 	var missing: Array[String] = []
 	if not bool(person.food_fulfilled):
@@ -320,9 +314,7 @@ func _apply_daily_effect_and_record(person: Variant, person_id: String, day: int
 		"shelter": bool(person.shelter_fulfilled),
 		"clothing_days_left": maxi(0, clothing_days_left),
 		"satisfaction": float(person.satisfaction),
-		"reliability": float(person.reliability),
 		"satisfaction_delta": float(person.satisfaction) - satisfaction_before,
-		"reliability_delta": float(person.reliability) - reliability_before,
 		"missing": missing
 	}
 

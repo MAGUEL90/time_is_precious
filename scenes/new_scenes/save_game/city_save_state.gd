@@ -6,7 +6,7 @@ const WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites
 const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
-const VERSION: int = 9
+const VERSION: int = 10
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -99,6 +99,7 @@ func capture(map: Node) -> Dictionary:
 	var raw: Dictionary = {}
 	for key: String in GROUPS:
 		raw[key] = fields(nodes[key], GROUPS[key])
+	_without_retired_needs_fields(raw)
 	# Icons are authored presentation, never file-controlled resources.
 	raw.raid = _without_icons(raw.raid)
 	raw["rng"] = {"raid": _rng(nodes.raid._rng), "merchant": _rng(nodes.merchant._request_rng), "immigration": _rng(ImmigrationManager.rng)}
@@ -136,7 +137,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -149,6 +150,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	values.allow_legacy_worker_fields = version < 5
 	values.allow_legacy_contract_fields = version < 7
 	values.allow_legacy_approach_field = version < 8
+	values.allow_legacy_reliability_field = version < 10
 	var raw: Variant = values.decode(document.state)
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
@@ -169,6 +171,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if typeof(legacy_focus) != TYPE_FLOAT or not is_finite(legacy_focus) or legacy_focus < 0.0 or legacy_focus > 1.0:
 			return fail("Invalid legacy player condition.")
 		legacy_player.erase("focus")
+	if version < 10 and not _migrate_legacy_needs(raw):
+		return false
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
 			return fail("Invalid " + key + " state.")
@@ -216,6 +220,33 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	_without_transient_worker_assignments(raw)
 	prepared = raw
 	return true
+
+func _migrate_legacy_needs(raw: Dictionary) -> bool:
+	# Validate the retired fields before discarding them from the staged copy.
+	# Decoding already enforces finite floats; do not impose new bounds on old
+	# ledger values that the previous schema accepted.
+	var needs: Variant = raw.get("needs")
+	if not needs is Dictionary or not needs.get("last_needs_results") is Dictionary:
+		return fail("Invalid legacy daily needs ledger.")
+	for result: Variant in needs.last_needs_results.values():
+		if not result is Dictionary:
+			return fail("Invalid legacy daily needs ledger.")
+		for key: String in ["reliability", "reliability_delta"]:
+			if not result.has(key) or typeof(result[key]) != TYPE_FLOAT or not is_finite(result[key]):
+				return fail("Invalid legacy daily needs ledger.")
+			result.erase(key)
+	return true
+
+func _without_retired_needs_fields(raw: Dictionary) -> void:
+	# Capture must not mutate live daily summaries while omitting old keys.
+	var needs: Dictionary = raw.needs.duplicate()
+	var results: Dictionary = needs.last_needs_results.duplicate(true)
+	for result: Variant in results.values():
+		if result is Dictionary:
+			result.erase("reliability")
+			result.erase("reliability_delta")
+	needs.last_needs_results = results
+	raw.needs = needs
 
 func _without_transient_worker_assignments(raw: Dictionary) -> void:
 	# Workshop selector drafts have no persistent owner. Keep actual reservations,
@@ -467,7 +498,7 @@ func _validate_people(raw: Dictionary) -> bool:
 	var workers: Dictionary = raw.workers.workers_by_id
 	for id: String in raw.citizens.citizens_by_id:
 		var person: CitizenData = raw.citizens.citizens_by_id[id]
-		if person.citizen_id != id or person.satisfaction < 0 or person.satisfaction > 1 or person.reliability < 0 or person.reliability > 1 or person.population_status < 0 or person.population_status > 3 or person.employment_status < 0 or person.employment_status > 3:
+		if person.citizen_id != id or person.satisfaction < 0 or person.satisfaction > 1 or person.population_status < 0 or person.population_status > 3 or person.employment_status < 0 or person.employment_status > 3:
 			return fail("Invalid citizen.")
 	for group: Dictionary in [workers, raw.workers.dismissed_workers]:
 		for id: String in group:
@@ -612,7 +643,7 @@ func _validate_records(raw: Dictionary) -> bool:
 			return fail("Invalid clothing allocation.")
 	for id: Variant in raw.needs.last_needs_results:
 		var result: Variant = raw.needs.last_needs_results[id]
-		if not id is String or not _record(result, {"evaluated": TYPE_BOOL, "day": TYPE_INT, "food": TYPE_BOOL, "clothing": TYPE_BOOL, "shelter": TYPE_BOOL, "clothing_days_left": TYPE_INT, "satisfaction": TYPE_FLOAT, "reliability": TYPE_FLOAT, "satisfaction_delta": TYPE_FLOAT, "reliability_delta": TYPE_FLOAT, "missing": TYPE_ARRAY}) or not _strings(result.missing):
+		if not id is String or not _record(result, {"evaluated": TYPE_BOOL, "day": TYPE_INT, "food": TYPE_BOOL, "clothing": TYPE_BOOL, "shelter": TYPE_BOOL, "clothing_days_left": TYPE_INT, "satisfaction": TYPE_FLOAT, "satisfaction_delta": TYPE_FLOAT, "missing": TYPE_ARRAY}) or result.has("reliability") or result.has("reliability_delta") or not _strings(result.missing):
 			return fail("Invalid daily needs ledger.")
 	for id: Variant in raw.merchant._offers:
 		var offer: Variant = raw.merchant._offers[id]

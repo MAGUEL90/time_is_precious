@@ -16,7 +16,6 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export var physical_approach: Dictionary = {}
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
-@export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
 @export var wage_shekel_per_day: int = 0
 # Last prepaid period and last morning attempt. -1 preserves legacy saves/fixtures.
 @export var payroll_start_day: int = -1
@@ -71,14 +70,6 @@ func get_resolved_satisfaction() -> float:
 
 	return satisfaction
 
-func get_resolved_reliability() -> float:
-	var citizen_data: CitizenData = get_linked_citizen()
-
-	if citizen_data != null:
-		return citizen_data.reliability
-
-	return reliability
-
 func get_satisfaction_work_multiplier() -> float:
 	var resolved_satisfaction: float = get_resolved_satisfaction()
 
@@ -88,16 +79,6 @@ func get_satisfaction_work_multiplier() -> float:
 		return 1.0
 	else:
 		return 0.85
-
-func get_reliability_success_chance() -> float:
-	var resolved_reliability: float = get_resolved_reliability()
-
-	if resolved_reliability >= 0.75:
-		return 0.95
-	elif resolved_reliability >= 0.4:
-		return 0.85
-	else:
-		return 0.65
 
 # Work lifecycle
 

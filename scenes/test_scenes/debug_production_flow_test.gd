@@ -73,7 +73,7 @@ func _run() -> void:
 	debug.step_minutes(4320)
 	await _settle()
 	_expect(plot.construction.phase == "built" and not worker.is_reserved(), "Debug time completes construction and releases the hired worker.")
-	_expect(is_equal_approx(worker.get_resolved_satisfaction(), 0.5) and is_equal_approx(worker.get_resolved_reliability(), 0.9), "Worker guard survives day transitions on linked citizen stats.")
+	_expect(is_equal_approx(worker.get_resolved_satisfaction(), 0.5), "Worker guard preserves linked citizen satisfaction across day transitions.")
 	workshop = plot.get_node("BuiltWorkshop")
 	debug.production_button.pressed.emit()
 	initial_materials.assign(Inventory.items)

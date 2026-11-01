@@ -9,6 +9,8 @@ const CART_UNIT_ID: String = "initial_worksite_cart"
 const GLOVE_UNIT_ID: String = "city_save_laborer_glove"
 const WOOD_SITE: StringName = &"WoodSite"
 const PROCESS_ID: String = "drying_mudbrick"
+const MIGRATION_VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const MIGRATION_FIXTURE = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 
 var store: Node
 var runtime: Node
@@ -97,6 +99,7 @@ func _run() -> void:
 		return
 	var before: Dictionary = store.snapshot.capture(content)
 	_expect(not before.is_empty(), "The saved economy world can be captured through the same snapshot interface.")
+	_test_fractional_migration(before)
 
 	# Let the real route deliver and the real process complete, then load the
 	# earlier checkpoint. This tests rollback of stock, cargo, workers and outputs.
@@ -160,6 +163,44 @@ func _run() -> void:
 		"Repeated time after Load does not create a second workshop output or fee.")
 	_test_work_order()
 	await _finish()
+
+func _test_fractional_migration(original: Dictionary) -> void:
+	# Force a nearly complete item for a physically arrived, paid Laborer.
+	# Both checkpoint versions must resume the same partial work at low Satisfaction.
+	var session = runtime.sites[WOOD_SITE]
+	var threshold: float = float(session.minutes_per_unit)
+	CitizenManager.get_citizen(LABORER_ID).satisfaction = 0.2
+	runtime.daily.jobs[WOOD_SITE].progress[LABORER_ID] = threshold - 0.65
+	_expect(store.save_checkpoint(), "A v10 city checkpoint saves fractional gathering work.")
+	var current: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var values = MIGRATION_VALUES.new()
+	var current_raw: Dictionary = values.decode(current.state)
+	var legacy: Dictionary = current.duplicate(true)
+	legacy.schema_version = 9
+	legacy.state = MIGRATION_FIXTURE.encode_city(values, current_raw)
+	for document: Dictionary in [current, legacy]:
+		var bytes: String = JSON.stringify(document, "", true, true)
+		var file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+		file.store_string(bytes)
+		file.close()
+		_expect(store.load_checkpoint(), "The fractional city checkpoint loads: v%d" % document.schema_version)
+		_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH) == bytes, "Loading leaves the checkpoint bytes intact: v%d" % document.schema_version)
+		var job: Dictionary = runtime.daily.jobs[WOOD_SITE]
+		_expect(is_equal_approx(float(job.progress[LABORER_ID]), threshold - 0.65), "Fractional progress survives disk: v%d" % document.schema_version)
+		if document.schema_version == 9:
+			var record: Dictionary = CitizenNeedsManager.last_needs_results[LABORER_ID]
+			_expect(not record.has("reliability") and not record.has("reliability_delta"), "The restored v9 same-day needs record is sanitized.")
+			_expect(store.save_checkpoint(), "The explicit next save upgrades v9 to v10.")
+			_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == bytes, "The v9 bytes remain in the normal backup.")
+			_expect(JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH)).schema_version == 10, "The upgraded city checkpoint uses v10.")
+		var stock_before: int = int(session.stock)
+		var output_before: int = int(job.stats[LABORER_ID].output)
+		TimeComponentManager.advance_minutes(1)
+		_expect(int(session.stock) == stock_before - 1 and int(job.stats[LABORER_ID].output) == output_before + 1 and is_equal_approx(float(job.progress[LABORER_ID]), 0.2), "Continued low-Satisfaction gathering completes exactly one item: v%d" % document.schema_version)
+	var restore_file := FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+	restore_file.store_string(JSON.stringify(original, "", true, true))
+	restore_file.close()
+	_expect(store.load_checkpoint() and _same_snapshot(original, store.snapshot.capture(content)), "The economy fixture restores its original checkpoint after migration probes.")
 
 func _reset_singletons_before_load() -> void:
 	CitizenManager.citizens_by_id.clear()
@@ -241,7 +282,6 @@ func _hire_and_assign_team() -> bool:
 	applicant.population_status = CitizenData.PopulationStatus.RESIDENT
 	applicant.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	applicant.satisfaction = 0.5
-	applicant.reliability = 0.99
 	applicant.visual_profile = VisualProfile.new()
 	CitizenManager.add_citizen(applicant)
 	var registered: bool = CitizenManager.register_applicant(PRODUCTION_ID, WorkerData.Profession.LABORER)
@@ -255,7 +295,6 @@ func _hire_and_assign_team() -> bool:
 	for id: String in [LABORER_ID, HAULER_ID, PRODUCTION_ID]:
 		var citizen: CitizenData = CitizenManager.get_citizen(id)
 		citizen.satisfaction = 0.5
-		citizen.reliability = 0.99
 	_expect(city_storage.allocate(CART_UNIT_ID, HAULER_ID), "The real city Cart is allocated to the hired Hauler.")
 	_expect(city_storage.allocate(GLOVE_UNIT_ID, LABORER_ID), "The city glove is allocated to the hired resource Laborer.")
 	_expect(runtime.daily.toggle(WOOD_SITE, LABORER_ID), "The hired Laborer joins the Wood Site assignment.")

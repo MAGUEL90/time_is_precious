@@ -332,10 +332,10 @@ func _refresh_worker_list() -> void:
 			continue
 		var worker_data: WorkerData = worker as WorkerData
 		var label: Label = Label.new()
-		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%%, REL %d%%\nNeeds F: %s C: %s S: %s\n" % [
+		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%%\nNeeds F: %s C: %s S: %s\n" % [
 			worker_data.display_name,_get_worker_profession_name(worker_data.profession), worker_data.profession_star,
 			_get_worker_work_status_text(worker_data),
-			roundi(worker_data.satisfaction * 100.0), roundi(worker_data.reliability * 100.0),
+			roundi(worker_data.satisfaction * 100.0),
 			_get_need_text(worker_data.food_fulfilled), _get_need_text(worker_data.clothing_fulfilled), _get_need_text(worker_data.shelter_fulfilled)
 		]
 		worker_list.add_child(label)

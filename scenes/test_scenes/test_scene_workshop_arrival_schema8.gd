@@ -99,7 +99,7 @@ func _run() -> void:
 			var quantity: int = int(lot.items.get("wet_mudbrick", 0))
 			var base: int = int(job.outputs.get("wet_mudbrick", 0))
 			var multiplier: float = worker.get_satisfaction_work_multiplier()
-			_expect(quantity in [roundi(base * multiplier), roundi(base * multiplier * 0.75)] and not lot.fee_ids.is_empty() and lot.source_id == job.job_id, "Held output retains the native satisfaction/reliability quantity and job fee ownership.")
+			_expect(quantity == roundi(base * multiplier) and not lot.fee_ids.is_empty() and lot.source_id == job.job_id, "Held output retains the Satisfaction-scaled quantity and job fee ownership.")
 	_assert_managed_production_expiry(workshop, job)
 	_finish_arrival()
 
@@ -209,6 +209,10 @@ func _assert_legacy_migrations() -> void:
 		var values = ARRIVAL_VALUES.new()
 		var raw: Dictionary = values.decode(document.state)
 		raw.player["focus"] = 0.75
+		# Historical versions recorded both fields on each settled needs result.
+		for result: Dictionary in raw.needs.last_needs_results.values():
+			result["reliability"] = 0.5
+			result["reliability_delta"] = 0.0
 		if version < 7:
 			raw.raid.erase("notification_seen_keys")
 		if version < 6:
@@ -241,6 +245,9 @@ func _strip_worker_fields(value: Variant, version: int) -> void:
 		for child: Variant in value:
 			_strip_worker_fields(child, version)
 	elif value is Dictionary:
+		# Versions 1–8 also stored this retired field on both resource types.
+		if value.get("class") in ["CitizenData", "WorkerData"]:
+			value.fields["reliability"] = 0.5
 		if value.get("class") == "WorkerData":
 			if version < 8:
 				value.fields.erase("physical_approach")

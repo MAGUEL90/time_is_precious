@@ -233,7 +233,6 @@ func _create_fixture_people() -> void:
 	resident.employment_status = CitizenData.EmploymentStatus.HIRED
 	resident.profession = WorkerData.Profession.LABORER
 	resident.satisfaction = 0.5
-	resident.reliability = 0.5
 	CitizenManager.add_citizen(resident)
 
 	var worker: WorkerData = WorkerData.new()
@@ -241,7 +240,6 @@ func _create_fixture_people() -> void:
 	worker.display_name = "Clothing Test"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.satisfaction = 0.5
-	worker.reliability = 0.5
 	WorkerDatabase.workers_by_id[TEST_ID] = worker
 
 

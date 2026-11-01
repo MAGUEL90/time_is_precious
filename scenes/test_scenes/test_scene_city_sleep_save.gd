@@ -3,6 +3,7 @@ extends "res://scenes/test_scenes/test_scene_city_save_economy.gd"
 const SLEEP_SAVE_PATH: String = "user://city_sleep_save_test/checkpoint.json"
 const SAVE_STATE: Script = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
 const SAVE_VALUES: Script = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const LEGACY_RELIABILITY: Script = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 var mode: String = "roundtrip"
 
 func _run() -> void:
@@ -135,7 +136,7 @@ func _run() -> void:
 	v3_raw.date_palms = v3_palms
 	v3.schema_version = 3
 	_strip_post_v3_owner_fields(v3_raw)
-	v3.state = v3_codec.encode(v3_raw)
+	v3.state = LEGACY_RELIABILITY.encode_city(v3_codec, v3_raw)
 	_strip_post_v3_worker_fields(v3.state)
 	var v3_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
 	v3_file.store_string(JSON.stringify(v3, "", true, true))
@@ -154,7 +155,7 @@ func _run() -> void:
 	legacy_raw.erase("pickup_sources")
 	legacy.schema_version = 2
 	_strip_post_v3_owner_fields(legacy_raw)
-	legacy.state = codec.encode(legacy_raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, legacy_raw)
 	_strip_post_v3_worker_fields(legacy.state)
 	var legacy_file := FileAccess.open(SLEEP_SAVE_PATH, FileAccess.WRITE)
 	legacy_file.store_string(JSON.stringify(legacy, "", true, true))

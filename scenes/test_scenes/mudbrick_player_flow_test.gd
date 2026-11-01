@@ -83,7 +83,6 @@ func _prepare_fixture() -> void:
 	worker.display_name = "MVP Laborer"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.satisfaction = 0.5
-	worker.reliability = 0.9
 	WorkerDatabase.workers_by_id[worker.worker_id] = worker
 	# Two recipes, plus existing yard requirements. Finished bricks are never seeded.
 	for item_id: String in JOB.inputs:
@@ -162,7 +161,6 @@ func _construct_workshop() -> void:
 	player.global_position = workshop.get_node("InteractableComponent").global_position + Vector2(0, 4)
 	# The isolated fixture retains deterministic production conditions after three days.
 	worker.satisfaction = 0.5
-	worker.reliability = 0.9
 
 
 func _open_workshop() -> void:
@@ -224,8 +222,6 @@ func _shape_wet_bricks() -> void:
 		await _capture("mvp-active-work-progress.png")
 		progress.close_panel()
 		progress.queue_free()
-	# Keep the real worker success rules; a fixed test RNG makes the two runs repeatable.
-	seed(42)
 	TimeComponentManager.advance_minutes(JOB.base_duration_minutes)
 	await _frames(3)
 	_expect(WorkShopStorage.get_held_item_quantity("wet_mudbrick") == 20,

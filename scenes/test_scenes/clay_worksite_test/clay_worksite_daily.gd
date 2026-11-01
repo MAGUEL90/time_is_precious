@@ -6,6 +6,8 @@ signal gathered(id: String, quantity: int)
 const SHIFT_START: int = 7 * 60
 const SHIFT_END: int = 15 * 60
 const DAILY_LIMIT: int = SHIFT_END - SHIFT_START
+# Keep accumulated decimal work stable across long shifts and save/continue.
+const PROGRESS_PRECISION: float = 0.000000001
 var sites: Dictionary = {}
 var jobs: Dictionary = {}
 var selected: Dictionary = {}
@@ -328,19 +330,27 @@ func tick() -> void:
 					continue
 				if interval < arrival_time(site_id, id, day):
 					continue
-				if session.stock <= 0 or int(minutes_by_worker.get(id, 0)) >= DAILY_LIMIT:
+				if session.stock <= 0 or session.minutes_per_unit <= 0.0 or int(minutes_by_worker.get(id, 0)) >= DAILY_LIMIT:
 					continue
 				minutes_by_worker[id] = int(minutes_by_worker.get(id, 0)) + 1
-				job.progress[id] = float(job.progress.get(id, 0)) + 1.0
-				if float(job.progress[id]) >= session.minutes_per_unit:
-					job.progress[id] -= session.minutes_per_unit
-					session.stock -= 1
-					job.units += 1
-					job.stats[id].output += 1
+				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+				var multiplier: float = worker.get_satisfaction_work_multiplier() if worker != null else 1.0
+				# Item-by-item gathering carries partial work through the shift. Unlike
+				# WorkManager's rounded batch, an incomplete final item is not awarded.
+				var progress: float = snappedf(float(job.progress.get(id, 0)) + multiplier, PROGRESS_PRECISION)
+				var gathered_units: int = mini(floori(progress / session.minutes_per_unit), session.stock)
+				if gathered_units > 0:
+					progress = snappedf(progress - gathered_units * session.minutes_per_unit, PROGRESS_PRECISION)
+					session.stock -= gathered_units
+					job.progress[id] = 0.0 if session.stock <= 0 else progress
+					job.units += gathered_units
+					job.stats[id].output += gathered_units
 					if not job.stats[id].days.has(day):
 						job.stats[id].days.append(day)
-					gathered.emit(id, 1)
+					gathered.emit(id, gathered_units)
 					_settle(site_id)
+				else:
+					job.progress[id] = progress
 			if session.stock <= 0 or minute == SHIFT_END - 1:
 				_settle(site_id)
 				for id: String in job.ids:

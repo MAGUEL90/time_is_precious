@@ -1125,14 +1125,12 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 		check_icon.visible = evaluated and met
 		status.text = ("Met" if met else "Missing") if evaluated else "-"
 		status.modulate = (Color(0.7, 1.0, 0.6) if met else Color(1.0, 0.55, 0.45)) if evaluated else Color(0.85, 0.8, 0.65)
-	for metric: String in ["Satisfaction", "Reliability"]:
-		var key: String = metric.to_lower()
-		var bar: TextureProgressBar = visuals.get_node(metric + "Bar")
-		var label: Label = visuals.get_node(metric + "Label")
-		bar.value = clampf(float(needs.get(key, 0.0)), 0.0, 1.0) * 100.0
-		bar.tint_progress = Color(0.7, 1.0, 0.6) if key == "satisfaction" else Color(0.6, 0.85, 1.0)
-		bar.visible = needs.has(key)
-		label.text = ("%s: %d%%  %s" % [metric, roundi(bar.value), _format_daily_delta(needs.get(key + "_delta", 0.0)) if evaluated else ""]).strip_edges() if needs.has(key) else metric + ": -"
+	var bar: TextureProgressBar = visuals.get_node("SatisfactionBar")
+	var label: Label = visuals.get_node("SatisfactionLabel")
+	bar.value = clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0
+	bar.tint_progress = Color(0.7, 1.0, 0.6)
+	bar.visible = needs.has("satisfaction")
+	label.text = ("Satisfaction: %d%%  %s" % [roundi(bar.value), _format_daily_delta(needs.get("satisfaction_delta", 0.0)) if evaluated else ""]).strip_edges() if needs.has("satisfaction") else "Satisfaction: -"
 	if reset_scroll and is_instance_valid(details_scroll):
 		details_scroll.scroll_vertical = 0
 
@@ -1148,14 +1146,12 @@ func _format_details_text(row: Dictionary) -> String:
 	if not needs_value is Dictionary:
 		lines.append("Daily needs: Not evaluated yet")
 		lines.append("Satisfaction: Not evaluated yet")
-		lines.append("Reliability: Not evaluated yet")
 		return "\n".join(lines)
 
 	var needs: Dictionary = needs_value
 	if not bool(needs.get("evaluated", false)):
 		lines.append("Daily needs: Not evaluated yet")
 		lines.append(_format_current_metric("Satisfaction", needs, "satisfaction"))
-		lines.append(_format_current_metric("Reliability", needs, "reliability"))
 		return "\n".join(lines)
 
 	var day: int = int(needs.get("day", -1))
@@ -1180,7 +1176,6 @@ func _format_details_text(row: Dictionary) -> String:
 	else:
 		lines.append("Reason: All needs met.")
 	lines.append("Satisfaction: %d%% (%s)" % [roundi(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("satisfaction_delta", 0.0))])
-	lines.append("Reliability: %d%% (%s)" % [roundi(clampf(float(needs.get("reliability", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("reliability_delta", 0.0))])
 	return "\n".join(lines)
 
 

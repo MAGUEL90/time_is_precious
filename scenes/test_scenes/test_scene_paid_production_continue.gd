@@ -3,7 +3,7 @@ extends Node
 ## Test-owned startup resources and construction; New Game, payroll, production,
 ## checkpointing, and Continue all use their normal owners and callbacks. Fixture
 ## assumptions: clear weather is explicitly granted, construction time is jumped
-## to its completion boundary, and seed(42) fixes the production success roll.
+## to its completion boundary.
 const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
 const JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 const CHECKPOINT_PATH: String = "user://paid_production_continue/checkpoint.json"
@@ -211,8 +211,6 @@ func _continue_shape_and_write_drying(city: Node, player: Player, store: Node) -
 	var order: WorkOrder = WorkManager.active_orders.values()[0] as WorkOrder
 	_check(order.worker_id == LABORER_ID and order.job_id == JOB.job_id,
 		"The continued WorkOrder still belongs to the authored Laborer and Shape recipe.")
-	# Keep the existing worker success rule while fixing only the fixture RNG roll.
-	seed(42)
 	TimeComponentManager.advance_minutes(maxi(order.end_time_total_minutes - _now(), 1))
 	_check(WorkManager.active_orders.is_empty() and not worker.is_working(),
 		"The continued Shape WorkOrder completes and releases the worker.")

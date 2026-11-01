@@ -52,6 +52,7 @@ func _run() -> void:
 		worker.display_name = ids[index]
 		worker.profession = WorkerData.Profession.LABORER if index == 0 else WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
+	_check_worker_summary_displays()
 	fixture.city_tools.add_tool_unit("hammer_a", "stone_hammer", "Stone Hammer A")
 	fixture.city_tools.add_tool_unit("hammer_b", "stone_hammer", "Stone Hammer B")
 	fixture.city_tools.add_tool_unit("glove_a", "basic_glove", "Basic Glove")
@@ -411,6 +412,35 @@ func _run() -> void:
 	print("WorkerControlTest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)
 
+func _check_worker_summary_displays() -> void:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(ids[0])
+	var original_satisfaction: float = worker.satisfaction
+	worker.satisfaction = 0.63
+	var old_hub: WorkerHubUI = preload("res://scenes/ui/worker_hub_ui/worker_hub_ui.tscn").instantiate()
+	add_child(old_hub)
+	old_hub.open()
+	var found_hub_worker: bool = false
+	for button: Button in old_hub.worker_list.get_children():
+		if button.text.begins_with("Name: " + ids[0]):
+			found_hub_worker = true
+			_expect(button.text.contains("SAT: 63%") and not button.text.contains("REL"),
+				"Worker Hub summary shows current Satisfaction without Reliability.")
+	_expect(found_hub_worker, "Worker Hub summary contains the fixture worker.")
+	old_hub.close()
+	old_hub.free()
+
+	var inventory: InventoryUI = fixture.get_node("InventoryUI")
+	inventory.open_inventory()
+	var found_inventory_worker: bool = false
+	for label: Label in inventory.worker_list.get_children():
+		if label.text.begins_with(ids[0] + " - "):
+			found_inventory_worker = true
+			_expect(label.text.contains("SAT 63%") and not label.text.contains("REL"),
+				"Inventory worker summary shows current Satisfaction without Reliability.")
+	_expect(found_inventory_worker, "Inventory summary contains the fixture worker.")
+	inventory.close_inventory()
+	worker.satisfaction = original_satisfaction
+
 func _check_needs_details() -> void:
 	var hub = fixture.worker_control
 	var worker: WorkerData = WorkerDatabase.get_worker_data(ids[0])
@@ -426,14 +456,14 @@ func _check_needs_details() -> void:
 	CitizenNeedsManager.needs_changed.emit()
 	_expect(hub.details_label.text.contains("Not evaluated yet") and not hub.details_label.text.contains("(-"),
 		"A worker without a daily result shows unknown needs, not an invented penalty.")
+	_expect(not hub.details_label.text.contains("Reliability"), "Unevaluated Details does not expose Reliability.")
 	await _capture("worker-needs-unknown.png")
 	# Daily arithmetic is covered by CityClothingNeedsTest; these controlled results
 	# exercise the real summary -> management row -> visible Details signal path.
 	CitizenNeedsManager.last_needs_results[ids[0]] = {
 		"evaluated": true, "day": TimeComponentManager.current_day,
 		"food": true, "clothing": true, "shelter": true, "clothing_days_left": 7,
-		"satisfaction": 0.99, "reliability": 0.99,
-		"satisfaction_delta": 0.01, "reliability_delta": 0.01, "missing": []
+		"satisfaction": 0.99, "satisfaction_delta": 0.01, "missing": []
 	}
 	CitizenNeedsManager.needs_changed.emit()
 	_expect(hub.details_label.text.contains("Food: Met") and hub.details_label.text.contains("Clothing: Met")
@@ -441,21 +471,21 @@ func _check_needs_details() -> void:
 		"An already-open Details popup refreshes all three needs and clothing validity from the signal.")
 	_expect(hub.details_label.text.contains("99% (+1%)") and hub.details_label.text.contains("All needs met"),
 		"Details displays the actual clamped daily change, not an assumed full bonus.")
+	_expect(not hub.details_label.text.contains("Reliability"), "Fulfilled Details does not expose Reliability.")
 	await _capture("worker-needs-met.png")
 	_check_details_bounds()
 	hub.details_scroll.scroll_vertical = 9999
 	await _capture("worker-needs-met-effects.png")
 	var last_result: Dictionary = CitizenNeedsManager.last_needs_results[ids[0]]
 	last_result.merge({"food": false, "clothing": false, "shelter": false,
-		"clothing_days_left": 0, "satisfaction": 0.45, "reliability": 0.45,
-		"satisfaction_delta": -0.05, "reliability_delta": -0.05,
+		"clothing_days_left": 0, "satisfaction": 0.45, "satisfaction_delta": -0.05,
 		"missing": ["Food", "Clothing", "Shelter"]}, true)
 	worker.display_name = "A very long worker name that must remain inside the Details header"
 	CitizenNeedsManager.needs_changed.emit()
 	_expect(hub.details_header_label.text == worker.display_name and hub.details_label.text.contains("Missing Food, Clothing, Shelter"),
 		"Long names and every missing need are retained in the current Details result.")
-	_expect(hub.details_label.text.contains("Satisfaction: 45% (-5%)") and hub.details_label.text.contains("Reliability: 45% (-5%)"),
-		"Details displays the approved satisfaction penalty and the unchanged reliability penalty.")
+	_expect(hub.details_label.text.contains("Satisfaction: 45% (-5%)") and not hub.details_label.text.contains("Reliability"),
+		"Details displays the Satisfaction penalty without Reliability.")
 	hub.details_scroll.scroll_vertical = 0
 	await _capture("worker-needs-missing-top.png")
 	_check_details_bounds()
@@ -493,13 +523,14 @@ func _check_details_bounds() -> void:
 	var visuals: VBoxContainer = hub.details_scroll.get_node("Visuals")
 	_expect(visuals.is_visible_in_tree() and not hub.details_label.visible,
 		"Visual worker details replace the full text block.")
-	for metric: String in ["Satisfaction", "Reliability"]:
-		var bar: TextureProgressBar = visuals.get_node(metric + "Bar")
-		var label: Label = visuals.get_node(metric + "Label")
-		_expect(bar.is_visible_in_tree() and label.text.contains("%d%%" % roundi(bar.value)),
-			"Visible metric bar and percentage agree: " + metric)
-		_expect(hub.details_window.get_global_rect().encloses(bar.get_global_rect()),
-			"Metric bar fits inside the worker popup: " + metric)
+	var bar: TextureProgressBar = visuals.get_node("SatisfactionBar")
+	var label: Label = visuals.get_node("SatisfactionLabel")
+	_expect(bar.is_visible_in_tree() and label.text.contains("%d%%" % roundi(bar.value)),
+		"Visible Satisfaction bar and percentage agree.")
+	_expect(hub.details_window.get_global_rect().encloses(bar.get_global_rect()),
+		"Satisfaction bar fits inside the worker popup.")
+	_expect(visuals.find_child("Reliability*", true, false) == null,
+		"Worker Details contains no Reliability label or bar.")
 	for need: String in ["Food", "Clothing", "Shelter"]:
 		var status: Label = visuals.get_node("Needs/" + need + "/Status")
 		var check_icon: TextureRect = visuals.get_node("Needs/" + need + "/MetIcon")

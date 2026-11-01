@@ -135,7 +135,6 @@ func _write_checkpoint(city: Node, store: Node) -> void:
 	if primary_citizen == null or reserved_citizen == null:
 		return
 	primary_citizen.satisfaction = 0.63
-	primary_citizen.reliability = 0.77
 	primary_citizen.food_fulfilled = true
 	primary_citizen.clothing_fulfilled = false
 	primary_citizen.shelter_fulfilled = true

@@ -15,7 +15,7 @@ const MAX_INTEGER_TEXT_LENGTH: int = 20
 
 const OBJECT_FIELDS: Dictionary = {
 	"CitizenData": [
-		"citizen_id", "display_name", "satisfaction", "reliability",
+		"citizen_id", "display_name", "satisfaction",
 		"food_fulfilled", "clothing_fulfilled", "shelter_fulfilled", "experience",
 		"visual_profile", "population_status", "employment_status", "profession",
 	],
@@ -23,7 +23,7 @@ const OBJECT_FIELDS: Dictionary = {
 		"worker_id", "display_name", "profession", "profession_xp", "current_order_id", "physical_approach",
 		"current_job_id", "current_work_status", "profession_star", "efficiency",
 		"payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day", "payroll_contract_days", "payroll_paid_start_minute",
-		"reliability", "wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
+		"wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
 		"shelter_fulfilled", "satisfaction",
 	],
 	"VisualProfile": ["skin_tone", "expression", "hair_style", "clothes_id", "accessory"],
@@ -45,6 +45,7 @@ const CONTRACT_FIELDS: Array[String] = ["payroll_contract_days", "payroll_paid_s
 var allow_legacy_contract_fields: bool = false
 var allow_legacy_worker_fields: bool = false
 var allow_legacy_approach_field: bool = false
+var allow_legacy_reliability_field: bool = false
 var error: String = ""
 
 
@@ -301,6 +302,8 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		_fail("Object field map exceeds the %d item limit." % MAX_COLLECTION_SIZE)
 		return null
 	var allowed_fields: Array = OBJECT_FIELDS[type_name].duplicate()
+	if allow_legacy_reliability_field and type_name in ["CitizenData", "WorkerData"]:
+		allowed_fields.append("reliability")
 	if allow_legacy_approach_field and type_name == "WorkerData":
 		allowed_fields.erase("physical_approach")
 	if allow_legacy_worker_fields and type_name == "WorkerData":
@@ -324,6 +327,13 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		var decoded_field: Variant = _decode_value(field_data[field_name], depth + 1)
 		if not error.is_empty():
 			return null
+		if field_name == "reliability" and type_name in ["CitizenData", "WorkerData"]:
+			# Versions through 9 stored this float. Preserve the old CitizenData
+			# bounds; WorkerData previously accepted any finite float.
+			if typeof(decoded_field) != TYPE_FLOAT or not is_finite(decoded_field) or (type_name == "CitizenData" and (decoded_field < 0.0 or decoded_field > 1.0)):
+				_fail("Invalid legacy %s.reliability." % type_name)
+				return null
+			continue
 		var prepared_field: Variant = _prepare_object_field(instance, type_name, field_name, decoded_field)
 		if not error.is_empty():
 			return null

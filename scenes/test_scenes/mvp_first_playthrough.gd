@@ -71,7 +71,6 @@ func measure(stage: String) -> void:
 		"workshop_stock": WorkShopStorage.items.duplicate(), "held": WorkShopStorage.get_storage_state().get("held_lots", [])}
 	if worker != null:
 		row["worker_satisfaction"] = worker.get_resolved_satisfaction()
-		row["worker_reliability"] = worker.get_resolved_reliability()
 	if plot != null:
 		row["construction"] = plot.construction.phase
 	measurements.append(row)

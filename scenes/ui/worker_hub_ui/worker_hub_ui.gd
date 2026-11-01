@@ -72,12 +72,11 @@ func _refresh_worker_lists() -> void:
 			continue
 		var worker_data: WorkerData = worker as WorkerData
 		var button_list: Button = Button.new()
-		button_list.text = "Name: %s\nProfession: %s\nStatus: %s\nSAT: %d%%, REL: %d%% " % [
+		button_list.text = "Name: %s\nProfession: %s\nStatus: %s\nSAT: %d%% " % [
 			worker_data.get_resolved_display_name(),
 			_get_worker_profession_name(worker_data.profession),
 			_get_worker_status_text(worker_data),
-			roundi(worker_data.get_resolved_satisfaction() * 100.0),
-			roundi(worker_data.get_resolved_reliability() * 100.0)
+			roundi(worker_data.get_resolved_satisfaction() * 100.0)
 		]
 		button_list.pressed.connect(_on_worker_selected.bind(worker_data))
 

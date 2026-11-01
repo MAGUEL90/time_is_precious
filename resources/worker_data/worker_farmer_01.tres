@@ -10,7 +10,6 @@ profession = 4
 profession_xp = 0
 profession_star = 1
 efficiency = 1.0
-reliability = 1.0
 wage_shekel_per_day = 1
 food_fulfilled = false
 clothing_fulfilled = false

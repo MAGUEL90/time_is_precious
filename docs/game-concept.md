@@ -305,7 +305,6 @@ Regular workers are defined by:
 - profession experience
 - profession star level
 - efficiency
-- reliability
 - wages
 - tools
 - satisfaction
@@ -358,10 +357,9 @@ This creates a strong design message:
 
 ### 9.5 Worker and Worksite MVP Decisions — 2026-09-13
 
-These are the approved rules for the current worker/worksite MVP. The wider needs,
-satisfaction, reliability, profession-star and team-synergy direction remains future work
-for this loop. This section records design decisions; implementation and integration status
-belong in the project roadmap and task reports.
+These are the approved rules for the current worker/worksite MVP. Further profession-star
+and team-synergy development remains future work. This section records design decisions;
+implementation and integration status belong in the project roadmap and task reports.
 
 #### Daily assignment and completed work
 
@@ -426,7 +424,7 @@ belong in the project roadmap and task reports.
 - Productive days counts distinct days with at least one completed contribution. It is a
   display statistic, not assignment duration and not an XP multiplier.
 - The MVP accumulates XP without automatic level/star increases. Thresholds, balancing and
-  satisfaction/reliability challenges require later decisions; no new penalties or multipliers
+  additional satisfaction challenges require later decisions; no new penalties or multipliers
   are implied by this contribution rule.
 
 ## 10. Worker Parameters
@@ -437,7 +435,6 @@ Current minimum direction for regular workers:
 - `profession_xp`
 - `profession_star`
 - `efficiency`
-- `reliability`
 - `assigned_workplace`
 - `wage`
 - `food_fulfilled`
@@ -482,16 +479,20 @@ Recommended escalation:
 
 1. satisfaction falls
 2. output drops
-3. reliability falls
-4. workers reject assignments more often
-5. absence / skipping work
-6. theft
-7. leaving the city
-8. unrest
-9. riot
+3. workers reject assignments more often
+4. absence / skipping work
+5. theft
+6. leaving the city
+7. unrest
+8. riot
 
-For MVP, satisfaction and light output or reliability impact are enough.
+For MVP, Satisfaction is the condition-based modifier for worker output; Reliability is
+not an active worker or citizen stat.
 Riot can come later after the basic worker loop is stable.
+
+The existing output multipliers are 0.85 below 40% Satisfaction, 1.0 from 40% to below
+75%, and 1.05 from 75% onward. Workshop batches round their result; daily gathering
+applies the multiplier to productive time and grants only completed items.
 
 ## 13. Work Output Rules
 
@@ -560,7 +561,6 @@ The player controls:
 Wages should mainly affect:
 
 - willingness to work
-- reliability
 - retention
 - satisfaction over time
 
@@ -1024,7 +1024,7 @@ These are still intentionally open:
 - how exactly food supply values should be balanced per item
 - how clothing quality and durability should affect clothing supply
 - how shelter quality is represented in early prototype
-- what exact formula connects wages to reliability and retention
+- what exact formula connects wages to retention
 - tool durability, repair, combined equipment effects, and additional role/worksite requirement lists
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
@@ -1109,7 +1109,7 @@ The player becomes remembered as someone who rebuilt the city for its people.
 #### Collapse Ending
 
 The player repeatedly fails to maintain food, clothing, shelter, wages, or stability.
-Satisfaction falls, reliability drops, workers leave, theft rises, unrest grows, and the city eventually collapses.
+Satisfaction falls, workers leave, theft rises, unrest grows, and the city eventually collapses.
 
 This ending should feel earned through ignored warnings, not sudden punishment.
 The city should collapse gradually because the player failed to respond to visible signals.

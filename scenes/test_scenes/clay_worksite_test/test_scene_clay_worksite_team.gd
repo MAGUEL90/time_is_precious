@@ -161,17 +161,21 @@ func _run() -> void:
 	await _capture("hourly.png")
 	panel.close_button.pressed.emit()
 	get_tree().paused = true
-	# Large stock allows a full shift: exactly 480 minutes and 48 clay per worker.
+	# Large stock allows a full shift. Daily needs may have changed Satisfaction
+	# during the preceding days, so use the live rate for this fixture's yield.
 	TimeComponentManager.advance_minutes(16 * 60)
 	site.stock = 1000
 	schedule.toggle(&"ClaySiteA", ids[0])
 	schedule.start(&"ClaySiteA", fixture._drop_daily_output.bind(fixture.get_node("WorksiteMarkers/ClaySiteA")))
 	TimeComponentManager.advance_minutes(24 * 60)
 	site.stock = 1000
+	var multiplier: float = WorkerDatabase.get_worker_data(ids[0]).get_satisfaction_work_multiplier()
 	var hourly: Dictionary = site.execute(180, fixture.player, fixture, fixture._drop_output)
-	_expect(hourly.units == 18 and schedule.minutes_by_worker[ids[0]] == 180 and site.stock == 964, "One Player and one Daily worker share capacity, stock, and elapsed time.")
+	var worker_first_three_hours: int = floori(180.0 * multiplier / site.minutes_per_unit + 0.000000001)
+	_expect(hourly.units == 18 and schedule.minutes_by_worker[ids[0]] == 180 and site.stock == 1000 - 18 - worker_first_three_hours, "One Player and one Daily worker share capacity, stock, and elapsed time.")
 	TimeComponentManager.advance_minutes(5 * 60)
-	_expect(schedule.minutes_by_worker[ids[0]] == 480 and site.stock == 934, "Full worker shift is eight hours, with separate Player output accounted once.")
+	var worker_full_shift: int = floori(480.0 * multiplier / site.minutes_per_unit + 0.000000001)
+	_expect(schedule.minutes_by_worker[ids[0]] == 480 and site.stock == 1000 - 18 - worker_full_shift, "Full worker shift is eight hours, with separate Player output accounted once.")
 	# Moving an exhausted worker does not reset their daily ledger or extend the shift.
 	schedule.withdraw(&"ClaySiteA", ids[0])
 	schedule.toggle(&"ClaySiteB", ids[0])
@@ -236,8 +240,11 @@ func _run() -> void:
 		and int(schedule.jobs[&"ClaySiteA"].starts[ids[1]]) == schedule.now(),
 		"Added worker joins the same shift at the assignment minute.")
 	var stock_before: int = site.stock
+	var first_multiplier: float = WorkerDatabase.get_worker_data(ids[0]).get_satisfaction_work_multiplier()
+	var second_multiplier: float = WorkerDatabase.get_worker_data(ids[1]).get_satisfaction_work_multiplier()
 	TimeComponentManager.advance_minutes(9)
-	_expect(site.stock == stock_before - 1, "Only completed post-assignment work produces output.")
+	var completed: int = floori(10.0 * first_multiplier / site.minutes_per_unit + 0.000000001) + floori(9.0 * second_multiplier / site.minutes_per_unit + 0.000000001)
+	_expect(site.stock == stock_before - completed, "Only completed post-assignment work produces output.")
 	get_tree().paused = false
 	fixture.queue_free()
 	await get_tree().process_frame

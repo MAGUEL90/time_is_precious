@@ -1,19 +1,19 @@
 extends RefCounted
 
-## Version 1 of the isolated clay-worksite prototype save, not a global game save.
+## Isolated clay-worksite prototype save, not a global game save.
 ## Runtime callbacks, node paths, resources and UI drafts never enter the file.
-const VERSION: int = 1
+const VERSION: int = 2
 const SCENARIO: String = "clay_worksite_mvp"
 const WORKER_FIELDS: Dictionary = {
 	"worker_id": "id", "display_name": "text", "profession": [0, 5],
 	"profession_xp": "count", "profession_star": [1, 3],
-	"efficiency": [0.0, 2.0], "reliability": [0.0, 1.0],
+	"efficiency": [0.0, 2.0],
 	"wage_shekel_per_day": "count", "food_fulfilled": "bool",
 	"clothing_fulfilled": "bool", "shelter_fulfilled": "bool", "satisfaction": [0.0, 1.0]
 }
 const CITIZEN_FIELDS: Dictionary = {
 	"citizen_id": "id", "display_name": "text", "satisfaction": [0.0, 1.0],
-	"reliability": [0.0, 1.0], "food_fulfilled": "bool", "clothing_fulfilled": "bool",
+	"food_fulfilled": "bool", "clothing_fulfilled": "bool",
 	"shelter_fulfilled": "bool", "experience": [0.0, 1000000000.0],
 	"population_status": [0, 3], "employment_status": [0, 3], "profession": [0, 5]
 }
@@ -112,7 +112,7 @@ func restore(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	for site_id: String in data.jobs:
 		var job: Dictionary = data.jobs[site_id].duplicate(true)
 		job.units = int(job.units)
-		job.progress = _int_values(job.progress)
+		job.progress = job.progress.duplicate(true)
 		job.starts = _int_values(job.starts)
 		for id: String in job.stats:
 			job.stats[id].output = int(job.stats[id].output)
@@ -216,7 +216,7 @@ func restore(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 
 func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	error = ""
-	if not data is Dictionary or not _check(data.get("schema_version"), [VERSION, VERSION]) or not _check(data.get("scenario"), "text") or data.scenario != SCENARIO:
+	if not data is Dictionary or not _check(data.get("schema_version"), [1, VERSION]) or not _check(data.get("scenario"), "text") or data.scenario != SCENARIO:
 		return _fail("Unsupported save version or scenario.")
 	var root_fields: Dictionary = {"schema_version": "count", "scenario": "text", "clock": "map",
 		"workers": "map", "dismissed": "map", "citizens": "map", "tools": "map", "storages": "map",
@@ -230,15 +230,21 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	var day: int = int(data.clock.day)
 	var now: int = day * 1440 + int(data.clock.hour) * 60 + int(data.clock.minute)
 	var known: Dictionary = {}
+	var legacy: bool = int(data.schema_version) == 1
 	for group: String in ["workers", "dismissed"]:
 		for id in data[group]:
-			if not _check(id, "id") or known.has(id) or not _record(data[group][id], WORKER_FIELDS, group):
+			var fields: Dictionary = WORKER_FIELDS.duplicate()
+			if legacy:
+				fields.reliability = [0.0, 1.0]
+			if not _check(id, "id") or known.has(id) or not _record(data[group][id], fields, group):
 				return _fail("Invalid or duplicate worker: " + str(id))
 			if data[group][id].worker_id != id:
 				return _fail("Worker ID mismatch.")
 			known[id] = data[group][id]
 	for id in data.citizens:
 		var fields: Dictionary = CITIZEN_FIELDS.duplicate()
+		if legacy:
+			fields.reliability = [0.0, 1.0]
 		fields.profile = "map"
 		if not _check(id, "id") or not _record(data.citizens[id], fields, "citizen"):
 			return false
@@ -286,14 +292,18 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 			if not _check(id, "id") or not data.workers.has(id) or assignments.has(id):
 				return _fail("Assigned worker missing or duplicated.")
 			assignments[id] = site_id
-			if not _check(job.starts.get(id), "count") or int(job.starts[id]) % 1440 != 420 or int(job.starts[id]) > (day + 1) * 1440 + 420:
+			# An assignment can start at any minute during the current shift or
+			# be scheduled for 07:00 on the next workday.
+			if not _check(job.starts.get(id), "count") or int(job.starts[id]) % 1440 < fixture.daily.SHIFT_START or int(job.starts[id]) % 1440 >= fixture.daily.SHIFT_END or int(job.starts[id]) > (day + 1) * 1440 + fixture.daily.SHIFT_START:
 				return _fail("Invalid assignment start.")
 			if not _record(job.stats.get(id), {"days": "days", "output": "count"}, "job stats") or not _valid_days(job.stats[id].days, day):
 				return _fail("Invalid productive days.")
 			if data.workers[id].profession == WorkerData.Profession.HAULER and (not data.routes.has(id) or not carts.has(id)):
 				return _fail("Assigned Hauler has no route or exclusive cart.")
 		for id in job.progress:
-			if not job.ids.has(id) or not _check(job.progress[id], [0, 9]):
+			var progress: Variant = job.progress[id]
+			var minutes_per_unit: float = float(fixture.sites[StringName(site_id)].minutes_per_unit)
+			if not job.ids.has(id) or not _check(progress, [0.0, minutes_per_unit]) or float(progress) >= minutes_per_unit:
 				return _fail("Invalid partial gathering progress.")
 	for id in data.routes:
 		if not assignments.has(id) or data.workers[id].profession != WorkerData.Profession.HAULER or not _record(data.routes[id], ROUTE_FIELDS, "route"):

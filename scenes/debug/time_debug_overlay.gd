@@ -13,7 +13,6 @@ const DRYING_YARD_UPGRADE_LEVELS: Array[int] = [1, 2]
 const DRYING_YARD_OUTPUT_ITEM_ID: String = "sun_dried_mudbrick"
 const PERSONAL_SHEKEL_TARGET: int = 100
 const WORKER_GUARD_SATISFACTION: float = 0.5
-const WORKER_GUARD_RELIABILITY: float = 0.9
 const DEBUG_INVENTORY_CAPACITY: float = 500.0
 const INVENTORY_BASE_META: StringName = &"debug_inventory_base_capacity"
 
@@ -364,11 +363,9 @@ func _restore_hired_worker_performance() -> void:
 			continue
 		var worker: WorkerData = worker_value as WorkerData
 		worker.satisfaction = WORKER_GUARD_SATISFACTION
-		worker.reliability = WORKER_GUARD_RELIABILITY
 		var citizen: CitizenData = worker.get_linked_citizen()
 		if citizen != null:
 			citizen.satisfaction = WORKER_GUARD_SATISFACTION
-			citizen.reliability = WORKER_GUARD_RELIABILITY
 
 func _on_time_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
 	if worker_guard_enabled:
