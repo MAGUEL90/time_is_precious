@@ -6,7 +6,9 @@ const CONSTRUCTION_STATE: Script = preload("res://scenes/workshop_plot/workshop_
 const WORKSHOP: PackedScene = preload("res://scenes/workshop/workshop.tscn")
 const HAND_ICON: Texture2D = preload("res://assets/ui/ui_icon/hand_job_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
+const OPEN_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_0.png")
 const BUILT_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_1.png")
+const OPEN_BOARD: Texture2D = preload("res://assets/objects/object_board_0.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
 const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
 const WORKER_DUST_SCRIPT: Script = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
@@ -26,6 +28,8 @@ var _arrived_worker_tasks: Dictionary = {}
 var _previous_construction_phase: String = ""
 var _completion_bar_remaining: float = 0.0
 var _inactive_bar_material: ShaderMaterial
+var _desired_plot_monitoring: bool = true
+var _plot_monitoring_sync_queued: bool = false
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -223,22 +227,31 @@ func _on_replacement_requested(ids: Array[String]) -> void:
 
 func _sync_construction() -> void:
 	_sync_build_progress()
+	var built: bool = construction.phase == "built"
 	$ToBeClean.visible = construction.phase in ["uncleared", "clearing"]
-	$TableResources.visible = construction.phase == "built"
+	$FinishedClayWorkshop.visible = built
+	$TableResources.visible = built
+	# Keep the existing recipe preview above the new ground-sorted artwork.
+	$TableResources.z_index = 1 if built else 0
 	$InteractableLabelComponent/HammerIcon.texture = HAND_ICON if construction.phase in ["uncleared", "clearing"] else HAMMER_ICON
-	if construction.phase == "built":
+	for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
+		art.texture = BUILT_PLOT if built else OPEN_PLOT
+		art.visible = not built
+	$Board.texture = BUILT_BOARD if built else OPEN_BOARD
+	_set_plot_monitoring(not built)
+	if built:
 		close_menu()
 		interactable_label_component.hide()
-		interaction_area.set_deferred("monitoring", false)
 		if is_instance_valid(player):
 			player._on_interactable_deactivated(self)
-		# Regions retain the complete authored texture while sorting rear wall,
-		# side posts and table at their own ground contact points.
-		for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
-			art.texture = BUILT_PLOT
-		$Board.texture = BUILT_BOARD
 		$Label.text = ""
-		if not has_node("BuiltWorkshop"):
+		var old_backend: WorkShop = get_node_or_null("BuiltWorkshop") as WorkShop
+		if old_backend != null and old_backend.is_queued_for_deletion():
+			# Save/Continue can restore a built phase while the previous view is
+			# still queued for removal. Recreate it once that node exits the tree.
+			if not old_backend.tree_exited.is_connected(_on_retired_workshop_exited):
+				old_backend.tree_exited.connect(_on_retired_workshop_exited, CONNECT_ONE_SHOT)
+		elif old_backend == null:
 			var workshop: WorkShop = WORKSHOP.instantiate()
 			workshop.name = "BuiltWorkshop"
 			workshop.set_meta("interaction_highlight_root", self)
@@ -251,12 +264,43 @@ func _sync_construction() -> void:
 			prompt.size = Vector2(16, 16)
 			add_child(workshop)
 			_show_table_resource(workshop)
-	elif construction.phase == "clearing":
-		$Label.text = "No worker" if construction.worker_ids.is_empty() and not construction.clearing_by_player else ("Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing")
-	elif construction.phase == "building":
-		$Label.text = "No workers" if construction.worker_ids.is_empty() else ("Contract expired" if construction._all_workers_payroll_blocked() else "Building")
 	else:
-		$Label.text = ""
+		_retire_built_workshop()
+		if construction.phase == "clearing":
+			$Label.text = "No worker" if construction.worker_ids.is_empty() and not construction.clearing_by_player else ("Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing")
+		elif construction.phase == "building":
+			$Label.text = "No workers" if construction.worker_ids.is_empty() else ("Contract expired" if construction._all_workers_payroll_blocked() else "Building")
+		else:
+			$Label.text = ""
+
+
+func _retire_built_workshop() -> void:
+	var workshop: WorkShop = get_node_or_null("BuiltWorkshop") as WorkShop
+	if workshop == null or workshop.is_queued_for_deletion():
+		return
+	if is_instance_valid(workshop.player_reff):
+		workshop.player_reff._on_interactable_deactivated(workshop)
+	workshop.interactable_label_component.hide()
+	workshop.interactable_component.set_deferred("monitoring", false)
+	workshop.queue_free()
+
+
+func _set_plot_monitoring(enabled: bool) -> void:
+	_desired_plot_monitoring = enabled
+	if not _plot_monitoring_sync_queued and interaction_area.monitoring != enabled:
+		_plot_monitoring_sync_queued = true
+		_apply_plot_monitoring.call_deferred()
+
+
+func _apply_plot_monitoring() -> void:
+	_plot_monitoring_sync_queued = false
+	if is_inside_tree() and is_instance_valid(interaction_area) and interaction_area.monitoring != _desired_plot_monitoring:
+		interaction_area.monitoring = _desired_plot_monitoring
+
+
+func _on_retired_workshop_exited() -> void:
+	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(construction) and construction.phase == "built":
+		_sync_construction.call_deferred()
 
 func _sync_build_progress() -> void:
 	var completed: bool = (

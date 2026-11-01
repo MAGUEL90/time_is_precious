@@ -242,13 +242,19 @@ func _assert_legacy_migrations() -> void:
 			var restored: WorkerData = arrival_snapshot.prepared.workers.workers_by_id[ARRIVAL_WORKER]
 			var expected_approach: Dictionary = WorkerDatabase.get_worker_data(ARRIVAL_WORKER).physical_approach if version == 8 else {}
 			_expect(restored.physical_approach == expected_approach and restored.current_order_id == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).current_order_id, "Legacy active task preserves its version's approach and reservation.")
-			_expect(arrival_snapshot.prepared.inventory.items == raw.inventory.items and arrival_snapshot.prepared.plots == _migrated_plots(raw.plots), "Legacy migration preserves inventory and construction progress.")
+			_expect(arrival_snapshot.prepared.inventory.items == raw.inventory.items and arrival_snapshot.prepared.plots == _migrated_plots(raw.plots, raw.clock), "Legacy migration preserves inventory and construction progress.")
 
-func _migrated_plots(source: Dictionary) -> Dictionary:
+func _migrated_plots(source: Dictionary, clock: Dictionary) -> Dictionary:
 	var result: Dictionary = source.duplicate(true)
 	for plot: Dictionary in result.values():
 		if not plot.has("payroll_work_remainder"):
 			plot["payroll_work_remainder"] = 0
+	# Before schema 12 there was no house. Migration adds its default with the
+	# saved clock cursor, which may differ from today's untouched idle cursor.
+	var house_id: String = "WorkshopConstruction_" + "citizen_house_1".sha256_text()
+	if result.has(house_id):
+		_expect(result[house_id].phase == "uncleared", "The historical fixture has a fresh house.")
+		result[house_id]._latest_time = int(clock.current_day) * 1440 + int(clock.current_hour) * 60 + int(clock.current_minute)
 	return result
 
 func _strip_worker_fields(value: Variant, version: int) -> void:

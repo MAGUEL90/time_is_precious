@@ -2,8 +2,8 @@
 
 [ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_plot"]
 [ext_resource type="Script" path="res://scenes/citizen_house_plot/citizen_house_plot.gd" id="2_house"]
-[ext_resource type="Texture2D" path="res://assets/objects/house_level_0.png" id="3_site"]
-[ext_resource type="Texture2D" path="res://assets/objects/house_level_1.png" id="4_house"]
+[ext_resource type="Texture2D" path="res://assets/objects/house_construction_site.png" id="3_site"]
+[ext_resource type="Texture2D" path="res://assets/objects/house_level_0.png" id="4_house"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_house"]
 size = Vector2(38, 20)
@@ -20,7 +20,7 @@ texture = ExtResource("3_site")
 
 [node name="FinishedHouse" type="Sprite2D" parent="."]
 visible = false
-position = Vector2(0, -4)
+position = Vector2(0, -8)
 texture_filter = 1
 texture = ExtResource("4_house")
 
