@@ -185,9 +185,6 @@ func _make_condition_hover_label(title: String, at: Vector2) -> Label:
 	var label: Label = _make_status_label(title)
 	label.position = at
 	label.size = Vector2(38, 10)
-	label.add_theme_color_override("font_shadow_color", Color(0.12, 0.08, 0.04, 1.0))
-	label.add_theme_constant_override("shadow_offset_x", 1)
-	label.add_theme_constant_override("shadow_offset_y", 1)
 	label.hide()
 	$Root.add_child(label)
 	return label
