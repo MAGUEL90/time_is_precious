@@ -17,6 +17,7 @@ case, use the same fresh directory for its phases and run one engine at a time.
 
 | Scene | Coverage / arguments |
 | --- | --- |
+| `test_scene_multi_day_needs_journey.tscn` | Real New Game/Job Board, clearing, construction shifts, shortage and resignation, replacement, ten-day recovery and paid rehire through three Start Menu processes: `-- --needs-journey-phase=write`, `read`, `verify` |
 | `workshop_shift_resignation_test.tscn` | Construction and clearing shifts, midnight resignation, replacement, physical departure and return, conservation |
 | `workshop_resignation_shift_test.tscn` | Shaping shift, zero/pending eligibility, replacement, unlocated legacy work and transactional callbacks |
 | `workshop_resignation_continue_test.tscn` | Real city checkpoint: `-- --workshop-resignation-phase=write`, `read`, `finish` in three processes |
@@ -27,6 +28,14 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `test_scene_passive_drying_shift.tscn` | Real passive drying across 15:00 and midnight without a worker |
 | `test_scene_applicant_eligibility.tscn`, `test_scene_idle_resignation.tscn`, `test_scene_idle_resignation_save.tscn` | Applicant threshold, prepaid contract forfeiture, recovery, rehire and idle Continue |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
+
+The multi-day needs journey is a controlled fixture, not an unassisted run. It
+grants wallet funds and construction materials, seeds the first hired worker at
+10% Satisfaction, and supplies clothing, shelter and later food. Player needs
+are disabled during its accelerated citizen-needs timeline. The player is placed
+at interaction points and worker presence is driven manually while the clock is
+held; this does not measure real-time travel. In the current game, normal sources
+for clothing and shelter have not yet been established.
 
 ## Prepaid worker contracts (2026-10-23)
 
@@ -244,9 +253,12 @@ For deterministic mid-work persistence coverage, run
 `test_scene_paid_production_continue.tscn` in three separate Godot 4.5.1 processes
 with `-- --production-phase=write`, `continue-shape`, and `continue-dry`, sharing
 fresh isolated XDG data/config/cache paths. This is explicitly a fixture: money,
-materials, clear weather, construction clock placement and production RNG seed
-are test-owned. It verifies pending-worker rejection, exact mid-Shape/mid-Drying
-Continue, distinct payroll/fee balances, and no duplicate output or fee entries.
+materials, food, clothing, shelter and clear weather are test-owned. It buys a
+nine-day contract from the wallet, drives physical arrivals and daily shifts, and
+uses the player's food and sleep APIs with needs enabled. It verifies an unfunded
+hire, rejection of a legacy worker awaiting payment, mid-Shape/mid-Drying
+Continue, distinct city/wallet balances, and no duplicate output or fee entries.
+It is not an unassisted player journey.
 It refuses an existing checkpoint instead of deleting it.
 
 ### Seven-day renewal and payroll pause
@@ -299,12 +311,13 @@ UI evidence, the transient workshop-selection limitation and exact results.
 uses separate Godot4.5.1 processes with one initially empty isolated XDG data
 folder. It distinguishes a transient idle selector from actual worker reservations,
 checks capture/prepare do not mutate the live selection, and verifies direct
-Worker Hub dismissal after Continue. This is a fixture, not an earned-income run.
+Worker Hub dismissal after Continue. The fixture buys prepaid three- and six-day
+contracts and probes the historical v6 shape; it is not an earned-income run.
 
 The dismissal journey above now fires directly after Continue: no workshop
 reselect/release workaround. Old earned checkpoints may differ only in the explicit
 ASSIGNED → HIRED repair for an idle worker with no persistent reservation. New
-snapshots omit that transient status consistently; schema stays v6. See
+snapshots omit that transient status consistently; the current schema is v11. See
 `docs/task_reports/workshop-idle-assignment-2026-10-22.md` for this fix's evidence.
 
 ### Payroll UI readability review
@@ -327,9 +340,11 @@ signal reentry, and compatibility with legacy physical coin receipts.
 `clay_worksite_test/test_scene_city_storage_supply_flow.tscn` also covers the
 physical selector, stale confirmation, access loss, and unchanged item filters.
 
-The older `test_scene_city_food_ui.tscn` is incompatible with the current UI:
-it expects the hidden physical City Supply side panel and ignores two authored
-startup applicants in its consumer count. It is not current UI acceptance evidence.
+`clay_worksite_test/test_scene_city_food_ui.tscn` uses the current ContentScene:
+it opens physical City Storage with E, deposits supplies through its controls,
+and checks the City Hub Food, Clothing and Shelter summaries. It disables the
+two authored startup applicants in this fixture to isolate its consumer counts;
+normal startup applicants remain covered by the main-map tests.
 
 ### Payroll cash-flow balance samples
 

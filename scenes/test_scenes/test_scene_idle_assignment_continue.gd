@@ -2,15 +2,18 @@ extends Node
 ## Real New Game/Continue coverage for transient idle workshop assignment canonicalization.
 const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
 const VALUES: Script = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const LEGACY: Script = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 const WORKER_MANAGEMENT: Script = preload("res://scenes/test_scenes/clay_worksite_test/clay_worker_management.gd")
 const JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
 const CHECKPOINT_PATH: String = "user://idle_assignment_continue/checkpoint.json"
 const PRIMARY_ID: String = "initial_workshop_laborer"
 const RESERVED_ID: String = "initial_worksite_hauler"
-const PERIOD_DAYS: int = 7
+const LEGACY_PERIOD_DAYS: int = 7
 const PRIMARY_RATE: int = 1
 const RESERVED_RATE: int = 2
-const WALLET_GRANT: int = 3
+const PRIMARY_CONTRACT_DAYS: int = 3
+const RESERVED_CONTRACT_DAYS: int = 6
+const WALLET_GRANT: int = 8
 const CITY_DEPOSIT: int = 2
 const INGREDIENT_GRANT: Dictionary = {"clay_lump": 3, "straw_bundle": 3, "water_jar": 3}
 
@@ -112,20 +115,39 @@ func _write_checkpoint(city: Node, store: Node) -> void:
 	TimeComponentManager.current_minute = 0
 	TimeComponentManager._timer = 0.0
 	TimeComponentManager.emit_time_signal()
-	WorkManager._last_total_minutes = _current_total_minutes()
+	# A state-only clock jump does not emit minute_changed; synchronize the
+	# unassigned worksite's ledger before capturing a current-schema save.
+	city.get_node("YSortWorld/WorkerRuntime").daily.tick()
+	_check(WorkManager._last_total_minutes == _current_total_minutes()
+		and ProcessManager._last_total_minutes == _current_total_minutes()
+		and city.get_node("YSortWorld/WorkerRuntime").daily.last_tick == _current_total_minutes(),
+		"The fixture's work, process and worksite cursors match its clock.")
 	Inventory.add_item("shekel", WALLET_GRANT)
 	_check(CityStockManager.deposit_wallet_shekel(CITY_DEPOSIT)
 		and Inventory.items.get("shekel", 0) == WALLET_GRANT - CITY_DEPOSIT
 		and CityStockManager.treasury_shekel == CITY_DEPOSIT,
 		"The fixture explicitly splits its wallet grant and city deposit.")
-	var primary: WorkerData = WorkerDatabase.hire_applicant(PRIMARY_ID, 17)
-	var reserved: WorkerData = WorkerDatabase.hire_applicant(RESERVED_ID, 8)
+	var primary_quote: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, PRIMARY_CONTRACT_DAYS)
+	var reserved_quote: int = WorkerDatabase.get_contract_price(WorkerData.Profession.HAULER, RESERVED_CONTRACT_DAYS)
+	_check(primary_quote == 1 and reserved_quote == 4,
+		"The fixture quotes its distinct three- and six-day prepaid contracts.")
+	var wallet_before_hires: int = int(Inventory.items.get("shekel", 0))
+	var primary: WorkerData = WorkerDatabase.hire_applicant(PRIMARY_ID, 17, PRIMARY_CONTRACT_DAYS)
+	_check(primary != null and int(Inventory.items.get("shekel", 0)) == wallet_before_hires - primary_quote,
+		"The Laborer's real upfront contract debits the personal wallet once.")
+	var reserved: WorkerData = WorkerDatabase.hire_applicant(RESERVED_ID, 8, RESERVED_CONTRACT_DAYS)
 	_check(primary != null and reserved != null,
 		"Fixture hires the authored Laborer and Hauler through WorkerDatabase.")
+	_check(reserved != null and int(Inventory.items.get("shekel", 0)) == wallet_before_hires - primary_quote - reserved_quote
+		and CityStockManager.treasury_shekel == CITY_DEPOSIT,
+		"The Hauler's real upfront contract debits the wallet once and leaves city funds unchanged.")
 	if primary == null or reserved == null:
 		return
-	_grant_paid_period(primary, PRIMARY_RATE)
-	_grant_paid_period(reserved, RESERVED_RATE)
+	_check(primary.payroll_contract_days == PRIMARY_CONTRACT_DAYS and reserved.payroll_contract_days == RESERVED_CONTRACT_DAYS
+		and primary.payroll_paid_start_minute == _current_total_minutes()
+		and reserved.payroll_paid_start_minute == _current_total_minutes()
+		and not primary.is_payroll_blocked() and not reserved.is_payroll_blocked(),
+		"Both real contracts preserve their paid start and permit assignment now.")
 	primary.profession_xp = 17
 	reserved.profession_xp = 8
 	var primary_citizen: CitizenData = primary.get_linked_citizen()
@@ -207,16 +229,7 @@ func _write_checkpoint(city: Node, store: Node) -> void:
 	var serialized_expected: Variant = JSON.parse_string(JSON.stringify(captured, "\t", true, true))
 	_check(disk is Dictionary and serialized_expected is Dictionary
 		and _snapshot_difference(serialized_expected, disk, "$.checkpoint").is_empty(),
-		"The persisted v6 document exactly matches the canonical New Game capture.")
-
-
-func _grant_paid_period(worker: WorkerData, rate: int) -> void:
-	# Explicit fixture-only payroll entitlement; no clock settlement or gameplay rate is changed.
-	worker.payroll_start_day = 2
-	worker.payroll_paid_from_day = 2
-	worker.payroll_paid_until_day = 2 + PERIOD_DAYS - 1
-	worker.payroll_period_rate = rate
-	worker.payroll_last_attempt_day = 2
+		"The persisted current-schema document exactly matches the canonical New Game capture.")
 
 
 func _test_v6_prepare_probe(
@@ -229,16 +242,48 @@ func _test_v6_prepare_probe(
 ) -> void:
 	var legacy_document: Dictionary = captured.duplicate(true)
 	var legacy_raw: Dictionary = values.decode(legacy_document.state)
-	# This is the stale v6 shape written before the correction: an idle draft remained ASSIGNED.
+	legacy_document.schema_version = 6
+	legacy_raw.player["focus"] = 0.75
+	legacy_raw.raid.erase("notification_seen_keys")
+	# Version 6 recorded seven-day payroll periods, before prepaid contract and
+	# physical-approach fields existed. Set those historical values on the
+	# detached workers; the live prepaid contracts remain untouched.
+	for id: String in [PRIMARY_ID, RESERVED_ID]:
+		var old_worker: WorkerData = legacy_raw.workers.workers_by_id[id]
+		old_worker.payroll_paid_until_day = old_worker.payroll_paid_from_day + LEGACY_PERIOD_DAYS - 1
+		old_worker.payroll_contract_days = 0
+		old_worker.payroll_paid_start_minute = -1
+		old_worker.payroll_period_rate = PRIMARY_RATE if id == PRIMARY_ID else RESERVED_RATE
 	legacy_raw.citizens.citizens_by_id[PRIMARY_ID].employment_status = CitizenData.EmploymentStatus.ASSIGNED
-	# Advance only the probe's document clock beyond the active order's paid period.
-	# The live world remains frozen and unchanged; the running order is therefore a payroll-paused preservation case.
 	var paused_worker: WorkerData = legacy_raw.workers.workers_by_id[RESERVED_ID]
+	var old_total: int = int(legacy_raw.clock.current_day) * 1440 + int(legacy_raw.clock.current_hour) * 60 + int(legacy_raw.clock.current_minute)
 	legacy_raw.clock.current_day = paused_worker.payroll_paid_until_day + 1
-	legacy_raw.clock.current_hour = 8
+	legacy_raw.clock.current_hour = 9
 	legacy_raw.clock.current_minute = 0
-	legacy_document.state = values.encode(legacy_raw)
-	_check(values.error.is_empty(), "Encode an old v6-shaped assigned-idle probe.")
+	var probe_total: int = int(legacy_raw.clock.current_day) * 1440 + 9 * 60
+	var offset: int = probe_total - old_total
+	legacy_raw.work._last_total_minutes = probe_total
+	legacy_raw.process._last_total_minutes = probe_total
+	legacy_raw.worksites.ledger.last_tick = probe_total
+	legacy_raw.worksites.ledger.stock_day = legacy_raw.clock.current_day
+	legacy_raw.worksites.ledger.day = legacy_raw.clock.current_day
+	legacy_raw.worksites.ledger.minutes.clear()
+	for order: WorkOrder in legacy_raw.work.active_orders.values():
+		order.start_time_total_minutes += offset
+		order.end_time_total_minutes += offset
+	legacy_document.state = LEGACY.encode_city(values, legacy_raw)
+	var legacy_workers: Array = LEGACY.city_objects(legacy_document.state, "WorkerData")
+	for object: Dictionary in legacy_workers:
+		object.fields.erase("physical_approach")
+		for field: String in VALUES.CONTRACT_FIELDS:
+			object.fields.erase(field)
+	var v6_shape: bool = not legacy_workers.is_empty()
+	for object: Dictionary in legacy_workers:
+		v6_shape = v6_shape and object.fields.has("reliability") and not object.fields.has("physical_approach") \
+			and not object.fields.has("resignation_pending") and not object.fields.has("payroll_contract_days") \
+			and not object.fields.has("payroll_paid_start_minute")
+	_check(values.error.is_empty() and legacy_document.schema_version == 6 and v6_shape,
+		"Encode a genuine v6 document with its historical worker fields.")
 	var supplied_document: Dictionary = legacy_document.duplicate(true)
 	var live_primary_before: Variant = values.encode(primary.get_linked_citizen())
 	var live_primary_worker_before: Variant = values.encode(primary)
@@ -259,11 +304,14 @@ func _test_v6_prepare_probe(
 			and prepared_order_worker.current_work_status == WorkerData.WorkStatus.WORKING
 			and prepared_order_worker.payroll_paid_until_day < prepared.clock.current_day,
 			"Prepare keeps a payroll-paused reserved worker ASSIGNED.")
+		_check(prepared.work._last_total_minutes == probe_total and prepared.process._last_total_minutes == probe_total
+			and prepared.worksites.ledger.last_tick == probe_total and prepared.worksites.ledger.stock_day == prepared.clock.current_day,
+			"The historical probe keeps its clock and work cursors synchronized.")
 		_check(_citizen_equal_except_employment(primary.get_linked_citizen(), prepared_primary, values)
 			and _snapshot_difference(values.encode(reserved.get_linked_citizen()), values.encode(prepared_reserved), "$reserved_citizen").is_empty()
-			and _snapshot_difference(values.encode(primary), values.encode(prepared.workers.workers_by_id[PRIMARY_ID]), "$primary_worker").is_empty()
-			and _snapshot_difference(values.encode(reserved), values.encode(prepared_order_worker), "$reserved_worker").is_empty(),
-			"Prepare changes only the idle citizen's employment status; citizen details and both payroll records remain exact.")
+			and _snapshot_difference(values.encode(legacy_raw.workers.workers_by_id[PRIMARY_ID]), values.encode(prepared.workers.workers_by_id[PRIMARY_ID]), "$primary_worker").is_empty()
+			and _snapshot_difference(values.encode(legacy_raw.workers.workers_by_id[RESERVED_ID]), values.encode(prepared_order_worker), "$reserved_worker").is_empty(),
+			"Prepare changes only the idle citizen's employment status and retains both historical payroll records, identity and XP.")
 		_check(prepared.stock.treasury_shekel == city_cash_before
 			and prepared.inventory.items == wallet_before,
 			"Prepare preserves the explicitly granted city and wallet balances.")

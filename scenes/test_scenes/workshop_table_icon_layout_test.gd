@@ -37,6 +37,8 @@ func _run() -> void:
 	var visuals: Node2D = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
 	visuals.set_process(false)
 	content.get_node("TimeDebugOverlay").set_process(false)
+	# Let the real Player finish its deferred cursor setup before teardown.
+	await get_tree().process_frame
 	_expect(not slots.visible, "Preview icons stay hidden on an uncleared plot.")
 	var transforms: Array[Transform2D] = []
 	for icon: Sprite2D in slots.get_children():
@@ -67,6 +69,7 @@ func _run() -> void:
 	job.inputs.clear()
 	plot._show_table_resource(workshop)
 	_expect(not slots.visible, "A recipe without inputs hides its material icons.")
-	content.free()
+	content.queue_free()
+	await get_tree().process_frame
 	print("WorkshopTableIconLayoutTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)

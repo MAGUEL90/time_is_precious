@@ -11,6 +11,7 @@ const FIXTURE_RATES: Dictionary = {
 }
 
 var failures: int = 0
+var content: Node
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -30,10 +31,13 @@ func _run() -> void:
 	Inventory.items.clear()
 	Inventory.items["shekel"] = 100
 	CityStockManager.treasury_shekel = 0
-	var content: Node = CONTENT_SCENE.instantiate()
+	content = CONTENT_SCENE.instantiate()
 	add_child(content)
 	await get_tree().process_frame
 	content.get_node("TimeDebugOverlay").set_process(false)
+	var player: Player = content.get_node("YSortWorld/Player")
+	# Begin this employment fixture rested while keeping normal needs enabled.
+	player.fatigue = player.min_fatigue
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.current_day = 200
 	TimeComponentManager.current_hour = 10
@@ -46,7 +50,7 @@ func _run() -> void:
 	_expect(laborer_citizen != null and laborer_citizen.profession == WorkerData.Profession.LABORER,
 		"ContentScene retains its initial Laborer applicant.")
 	if hauler_citizen == null or laborer_citizen == null:
-		_finish()
+		await _finish()
 		return
 
 	hauler_citizen.satisfaction = 0.8
@@ -60,7 +64,7 @@ func _run() -> void:
 		and Inventory.items.get("shekel", 0) == wallet_before_hauler - 2,
 		"The fixture pays the Hauler's three-day contract up front from the personal wallet.")
 	if hauler == null:
-		_finish()
+		await _finish()
 		return
 	hauler.profession_xp = EARNED_PROFESSION_XP
 	_expect(WorkerDatabase.dismiss_worker(HAULER_ID), "The hired Hauler can be dismissed before the daily application pass.")
@@ -76,7 +80,7 @@ func _run() -> void:
 		and Inventory.items.get("shekel", 0) == wallet_before_laborer - 1,
 		"The fixture pays the Laborer's three-day contract up front from the personal wallet.")
 	if ineligible_worker == null:
-		_finish()
+		await _finish()
 		return
 	laborer_citizen.satisfaction = 0.1
 	_expect(WorkerDatabase.dismiss_worker(LABORER_ID), "The low-satisfaction Laborer can be dismissed.")
@@ -95,6 +99,7 @@ func _run() -> void:
 	var previous_day: int = TimeComponentManager.current_day
 	var minutes_to_midnight: int = 1440 - TimeComponentManager.current_hour * 60 - TimeComponentManager.current_minute
 	TimeComponentManager.advance_minutes(minutes_to_midnight)
+	_expect(not player.is_collapsing, "The employment-only fixture does not interrupt the midnight pass with collapse.")
 	_expect(TimeComponentManager.current_day == previous_day + 1 and TimeComponentManager.current_hour == 0,
 		"The actual game clock crosses midnight and starts the daily needs/application pass.")
 	_expect(is_equal_approx(hauler_citizen.satisfaction, 0.75),
@@ -135,7 +140,7 @@ func _run() -> void:
 		"Rehiring starts a fresh prepaid contract and charges the current three-day package again.")
 	_expect(hauler_citizen.employment_status == CitizenData.EmploymentStatus.HIRED,
 		"Successful rehire updates the linked citizen's employment status.")
-	_finish()
+	await _finish()
 
 func _is_applicant(citizen_id: String) -> bool:
 	for applicant: CitizenData in CitizenManager.get_all_applicants():
@@ -144,5 +149,8 @@ func _is_applicant(citizen_id: String) -> bool:
 	return false
 
 func _finish() -> void:
+	if is_instance_valid(content):
+		content.queue_free()
+		await get_tree().process_frame
 	print("WorkerRehireRegressionTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
