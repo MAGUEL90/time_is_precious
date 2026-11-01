@@ -129,6 +129,7 @@ func _test_eating_and_sleep(player: Player) -> void:
 	player.fatigue = 0.0
 	await inventory_ui._execute_use_item("date_cluster", 1)
 	_expect(Inventory.items.get("date_cluster") == 1, "Eating with no possible effect does not consume another date.")
+	await _test_full_belly_food_rule(player, inventory_ui)
 	player.hunger = 0.0
 	player.fatigue = 0.8
 	player.last_sleep_day = -1
@@ -143,6 +144,78 @@ func _test_eating_and_sleep(player: Player) -> void:
 	_expect(player.sleep() and is_equal_approx(player.fatigue, 0.6375) and is_equal_approx(player.hunger, 1.0), "Hungry sleep keeps the existing reduced recovery and Hunger cap.")
 	inventory_ui.free()
 	Inventory.items.assign(original_inventory)
+
+func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI) -> void:
+	var foods: Array[String] = ["date_cluster", "fresh_curd_cheese", "orchard_apple", "pan_fried_egg", "barley_bread", "village_cheese", "fresh_loaf", "roasted_drumstick"]
+	Inventory.items.clear()
+	for item_id: String in foods:
+		Inventory.items[item_id] = 3
+	Inventory.items_changed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var original_counts: Dictionary = Inventory.items.duplicate(true)
+	var success_events: Array = []
+	inventory_ui.consume_item_success.connect(func(_id, _name, _energy, _hunger, _old, _new, _pos, _rect): success_events.append(true))
+	var old_feedback: String = inventory_ui.action_feedback_label.text
+	player.hunger = player.min_hunger
+	player.fatigue = 0.5
+	for item_id: String in foods:
+		_expect(not inventory_ui._can_use_item(ItemDatabase.get_item_data(item_id)), "Full Belly disables use of " + item_id)
+		await inventory_ui._execute_use_item(item_id, 1)
+	_expect(Inventory.items == original_counts and is_equal_approx(player.fatigue, 0.5) and player.hunger == player.min_hunger and success_events.is_empty(), "All foods leave counts, Belly and Energy unchanged when Belly is full.")
+	_expect(inventory_ui.action_feedback_label.text == old_feedback, "Rejecting a full-Belly attempt adds no feedback text.")
+
+	inventory_ui.open_inventory()
+	await get_tree().process_frame
+	var date_slot: ItemSlot
+	for child: Node in inventory_ui.grid.get_children():
+		var slot: ItemSlot = child as ItemSlot
+		if slot != null and slot._item_id == "date_cluster" and not slot.is_queued_for_deletion():
+			date_slot = slot
+			break
+	_expect(is_instance_valid(date_slot), "The full-Belly UI contains the date slot.")
+	if is_instance_valid(date_slot):
+		inventory_ui._on_item_slot_clicked("date_cluster", 3, date_slot)
+		_expect(is_instance_valid(inventory_ui.active_option_panel) and inventory_ui.active_option_panel.use_button.disabled, "The food Use button is disabled when Belly is full.")
+	inventory_ui.close_inventory()
+	await get_tree().process_frame
+
+	for attempt in range(3):
+		await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(Inventory.items == original_counts and is_equal_approx(player.fatigue, 0.5) and success_events.is_empty(), "Repeated attempts with low Energy do not consume food or restore Energy.")
+	player.fatigue = player.min_fatigue
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(Inventory.items == original_counts and player.fatigue == player.min_fatigue and success_events.is_empty(), "Food is also preserved when both meters are full.")
+
+	player.hunger = player.min_hunger + 0.001
+	player.fatigue = 0.5
+	_expect(inventory_ui._can_use_item(ItemDatabase.get_item_data("date_cluster")), "Food remains usable just below full Belly.")
+	await inventory_ui._execute_use_item("date_cluster", 3)
+	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "A nearly full Belly consumes only one item, clamps, and gains its normal Energy.")
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "Another attempt after filling Belly has no effect.")
+
+	Inventory.items["date_cluster"] = 5
+	player.hunger = 0.1
+	player.fatigue = 0.5
+	await inventory_ui._execute_use_item("date_cluster", 5)
+	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.47) and Inventory.items.get("date_cluster") == 2, "A batch stops exactly when Belly becomes full.")
+	player.hunger = 0.5
+	player.fatigue = 0.5
+	await inventory_ui._execute_use_item("roasted_drumstick", 1)
+	_expect(is_equal_approx(player.hunger, 0.35) and is_equal_approx(player.fatigue, 0.47) and Inventory.items.get("roasted_drumstick") == 2, "Drumstick retains its existing Belly and Energy effects.")
+	player.hunger = 0.08
+	player.fatigue = player.min_fatigue
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(is_equal_approx(player.hunger, 0.04) and player.fatigue == player.min_fatigue and Inventory.items.get("date_cluster") == 1, "A hungry player can eat even with full Energy.")
+
+	var old_min_hunger: float = player.min_hunger
+	player.min_hunger = 0.2
+	player.hunger = player.min_hunger
+	player.fatigue = 0.5
+	await inventory_ui._execute_use_item("date_cluster", 1)
+	_expect(Inventory.items.get("date_cluster") == 1 and is_equal_approx(player.fatigue, 0.5), "Fullness follows the player's configured minimum Hunger.")
+	player.min_hunger = old_min_hunger
 
 func _expect(condition: bool, message: String) -> void:
 	if not condition:

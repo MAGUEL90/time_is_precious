@@ -448,7 +448,13 @@ func _can_use_item(item_data: ItemData) -> bool:
 	if item_data.category != ItemEnums.ItemCategory.CONSUMABLE:
 		return false
 
+	if _is_belly_full():
+		return false
+
 	return item_data.fatigue_reduction > 0.0 or item_data.hunger_reduction > 0.0
+
+func _is_belly_full() -> bool:
+	return player_ref != null and player_ref.hunger <= player_ref.min_hunger
 
 # Action confirmation
 
@@ -593,6 +599,9 @@ func _execute_use_item(item_id: String, quantity: int) -> void:
 	if item_data == null:
 		return
 
+	if item_data.category == ItemEnums.ItemCategory.CONSUMABLE and _is_belly_full():
+		return
+
 	if not _can_use_item(item_data):
 		_show_inventory_feedback("Cannot use %s" % item_data.display_name, true)
 		return
@@ -607,6 +616,8 @@ func _execute_use_item(item_id: String, quantity: int) -> void:
 	var total_hunger_reduction: float = 0.0
 
 	for i in range(requested_quantity):
+		if _is_belly_full():
+			break
 		var changed: bool = false
 		var before_fatigue: float = player_ref.fatigue
 		if player_ref.reduce_fatigue(item_data.fatigue_reduction):
