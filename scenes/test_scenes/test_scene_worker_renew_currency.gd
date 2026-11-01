@@ -120,7 +120,27 @@ func _expect_contract_range_geometry(expected: Array[Rect2], state_name: String)
 	for index: int in range(actual.size()):
 		_expect(actual[index].position.is_equal_approx(expected[index].position)
 			and actual[index].size.is_equal_approx(expected[index].size),
-			"%s keeps the Contract panel, range row, arrow and price/actions geometry stable (control %d)." % [state_name, index])
+			"%s keeps Contract geometry stable (control %d; expected %s, got %s)." % [state_name, index, expected[index], actual[index]])
+
+func _capture_worker_renewal_state(worker: WorkerData) -> Dictionary:
+	return {
+		"start_day": worker.payroll_start_day,
+		"paid_from_day": worker.payroll_paid_from_day,
+		"paid_until_day": worker.payroll_paid_until_day,
+		"contract_days": worker.payroll_contract_days,
+		"paid_start_minute": worker.payroll_paid_start_minute,
+		"period_rate": worker.payroll_period_rate,
+		"last_attempt_day": worker.payroll_last_attempt_day,
+	}
+
+func _restore_worker_renewal_state(worker: WorkerData, saved: Dictionary) -> void:
+	worker.payroll_start_day = int(saved["start_day"])
+	worker.payroll_paid_from_day = int(saved["paid_from_day"])
+	worker.payroll_paid_until_day = int(saved["paid_until_day"])
+	worker.payroll_contract_days = int(saved["contract_days"])
+	worker.payroll_paid_start_minute = int(saved["paid_start_minute"])
+	worker.payroll_period_rate = int(saved["period_rate"])
+	worker.payroll_last_attempt_day = int(saved["last_attempt_day"])
 
 func _capture_contract_range_content_geometry() -> Array[Rect2]:
 	var panel_position: Vector2 = hub.contract_window.get_global_rect().position
@@ -218,6 +238,9 @@ func _exercise_contract_range_case(worker: WorkerData, state_name: String, curre
 		"%s %dD preview matches the exclusive expiry after successful renewal." % [state_name, days])
 	_expect(Inventory.items.get("shekel", 0) == wallet_before_renew - renewal_price,
 		"%s %dD renewal charges the official price once." % [state_name, days])
+	# These date-matrix cases validate the transaction only; the primary UI path
+	# below exercises and observes the success animation.
+	hub._stop_renew_success_animation()
 
 	worker.payroll_start_day = int(saved_worker["start_day"])
 	worker.payroll_paid_from_day = int(saved_worker["paid_from_day"])
@@ -666,6 +689,7 @@ func _run() -> void:
 		and Inventory.items.get("shekel", 0) == 18 and worker.payroll_paid_until_day == original_end,
 		"A changed quote is shown and requires a fresh Renew click before payment.")
 	_expect(hub.contract_feedback_label.text == "Price updated; review and renew.", "A changed quote has a clear review message.")
+	_expect(hub._renew_success_tween == null, "Reviewing a changed quote does not start the success animation.")
 	await _expect_contract_popup_fits("Price updated")
 	await _capture("worker-contract-price-updated")
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER] = 5
@@ -674,18 +698,124 @@ func _run() -> void:
 	_expect(hub.renew_price_label.text == "Price: 10" and Inventory.items.get("shekel", 0) == 18
 		and worker.payroll_paid_until_day == original_end,
 		"A changed worker profession updates the quote from current WorkerData and requires review before payment.")
+	_select_duration(3)
+	_select_duration(6)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	_expect(not hub.contract_feedback_label.visible,
+		"Changing duration clears the price review before measuring the success layout.")
+	var expected_primary_current_day: String = hub.contract_new_day_label.text
+	var primary_label_base_modulate: Color = hub.contract_current_day_label.modulate
+	_expect(hub._renew_success_tween == null, "No success animation is active before a renewal succeeds.")
 	await _click_button(hub.manage_renew_button)
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"Clicking Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
 	_expect(hub.manage_renew_button.disabled, "A completed renewal disables Renew.")
+	_expect(hub.contract_current_day_label.text == expected_primary_current_day,
+		"Successful renewal moves the previewed expiry into the Current label.")
+	_expect(not hub.contract_feedback_label.visible and hub.contract_feedback_label.text.is_empty()
+		and hub._renew_feedback_text.is_empty(),
+		"Successful renewal clears feedback instead of showing a success message.")
+	var primary_tween: Tween = hub._renew_success_tween
+	_expect(primary_tween != null and primary_tween.is_running(), "A successful payment starts the short label animation.")
+	hub.manage_renew_button.pressed.emit()
+	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6
+		and hub._renew_success_tween == primary_tween,
+		"A repeated Renew event during the animation cannot charge, extend, or restart it.")
 	buttons[2].grab_focus()
 	await _press_tab()
 	_expect(hub.contract_close_button.has_focus(), "Tab moves from 9D past disabled Renew to Close.")
+	var saw_success_green: bool = false
+	var primary_success_geometry: Array[Rect2] = []
+	var primary_success_label_position: Vector2 = hub.contract_current_day_label.position
+	var success_sample_frames: int = 0
+	while primary_tween != null and primary_tween.is_running() and success_sample_frames < 60 and not saw_success_green:
+		await get_tree().process_frame
+		success_sample_frames += 1
+		var current_label_color: Color = hub.contract_current_day_label.modulate
+		if current_label_color.g >= 0.70 and current_label_color.r < 0.45 and current_label_color.b < 0.5:
+			saw_success_green = true
+			_expect(current_label_color.g > current_label_color.r and current_label_color.g > current_label_color.b,
+				"The Current label visibly reaches its green success color.")
+			await get_tree().process_frame
+			await get_tree().process_frame
+			primary_success_geometry = _capture_contract_range_geometry()
+			primary_success_label_position = hub.contract_current_day_label.position
+			await _capture("worker-contract-renew-success-green")
+	_expect(saw_success_green, "The success tween reaches a green phase while it is running.")
+	var finish_sample_frames: int = 0
+	while primary_tween != null and primary_tween.is_running() and finish_sample_frames < 60:
+		await get_tree().process_frame
+		finish_sample_frames += 1
+	_expect(hub._renew_success_tween == null
+		and hub.contract_current_day_label.position.is_equal_approx(primary_success_label_position)
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"The success animation returns the Current label to its settled white color and position.")
+	await _capture("worker-contract-renew-success-restored")
+	_expect_contract_range_geometry(primary_success_geometry, "Successful renewal after animation")
+
+	# Exercise closing and reopening while a second real renewal animation runs.
+	var primary_worker_state: Dictionary = _capture_worker_renewal_state(worker)
+	var primary_wallet: int = int(Inventory.items.get("shekel", 0))
+	_select_duration(3)
+	var expected_reopened_current_day: String = hub.contract_new_day_label.text
+	var close_test_end_before: int = worker.payroll_paid_until_day
+	var close_test_price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	hub.manage_renew_button.pressed.emit()
-	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
-		"A repeated Renew click cannot charge or extend the same selection twice.")
+	var close_test_tween: Tween = hub._renew_success_tween
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var close_test_base_position: Vector2 = hub.contract_current_day_label.position
+	_expect(worker.payroll_paid_until_day == close_test_end_before + 3
+		and Inventory.items.get("shekel", 0) == primary_wallet - close_test_price
+		and close_test_tween != null and close_test_tween.is_running(),
+		"A second successful renewal is animating before Contract is closed.")
+	hub.contract_close_button.pressed.emit()
+	_expect(not hub.contract_window.visible and hub._renew_success_tween == null
+		and hub.contract_current_day_label.position.is_equal_approx(close_test_base_position)
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"Closing Contract stops and resets an in-progress success animation.")
+	hub.manage_contract_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(hub.contract_window.visible and hub._renew_success_tween == null
+		and hub.contract_current_day_label.position.is_equal_approx(close_test_base_position)
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate)
+		and hub.contract_current_day_label.text == expected_reopened_current_day,
+		"Reopening Contract shows the renewed date without replaying the stopped animation.")
+	_restore_worker_renewal_state(worker, primary_worker_state)
+	Inventory.items["shekel"] = primary_wallet
+	hub._update_contract_controls(_worker_rows()[0])
+
+	# A duration change during a third success stops only the animation.
+	_select_duration(6)
+	var duration_test_base_position: Vector2 = hub.contract_current_day_label.position
+	var duration_test_end_before: int = worker.payroll_paid_until_day
+	var duration_test_price: int = WorkerDatabase.get_contract_price(worker.profession, 6)
+	Inventory.items["shekel"] = maxi(int(Inventory.items.get("shekel", 0)), duration_test_price + 1)
+	var duration_test_wallet_before: int = int(Inventory.items.get("shekel", 0))
+	hub.manage_renew_button.pressed.emit()
+	var duration_test_tween: Tween = hub._renew_success_tween
+	var duration_test_end_after: int = worker.payroll_paid_until_day
+	var duration_test_wallet_after: int = int(Inventory.items.get("shekel", 0))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	duration_test_base_position = hub.contract_current_day_label.position
+	_expect(duration_test_tween != null and duration_test_tween.is_running()
+		and duration_test_end_after == duration_test_end_before + 6
+		and duration_test_wallet_after == duration_test_wallet_before - duration_test_price,
+		"The duration-cancel case begins with exactly one successful renewal.")
+	_select_duration(9)
+	_expect(hub._renew_success_tween == null
+		and hub.contract_current_day_label.position.is_equal_approx(duration_test_base_position)
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"Changing duration stops and resets an in-progress success animation.")
+	_expect(worker.payroll_paid_until_day == duration_test_end_after
+		and Inventory.items.get("shekel", 0) == duration_test_wallet_after,
+		"Changing duration after success does not repeat the transaction.")
+	_restore_worker_renewal_state(worker, primary_worker_state)
+	Inventory.items["shekel"] = primary_wallet
+	hub._update_contract_controls(_worker_rows()[0])
 	_select_duration(3)
 	Inventory.items["shekel"] = 1
 	var paid_end_after_renewal: int = worker.payroll_paid_until_day
@@ -693,6 +823,9 @@ func _run() -> void:
 	_expect(Inventory.items.get("shekel", 0) == 1 and worker.payroll_paid_until_day == paid_end_after_renewal
 		and hub.contract_window.visible and hub.contract_feedback_label.text == "Not enough funds.",
 		"Insufficient funds leave the contract and wallet unchanged and show a clear error.")
+	_expect(hub._renew_success_tween == null
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"Insufficient funds leave the Current label white and do not start an animation.")
 	await _expect_contract_popup_fits("Not enough funds")
 	await _capture("worker-contract-not-enough-funds")
 	Inventory.items["shekel"] = 8

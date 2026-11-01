@@ -81,6 +81,7 @@ const FIRE_FEEDBACK_LABEL_HEIGHT: float = 16.0
 const FIRE_FEEDBACK_PANEL_GAP: float = 1.0
 const FIRE_FEEDBACK_VIEWPORT_MARGIN: float = 2.0
 const FIRE_FEEDBACK_HUB_LABEL_HEIGHT: float = 8.0
+const RENEW_SUCCESS_GREEN: Color = Color(0.25, 0.75, 0.3, 1.0)
 
 var _active_tab: String = "status"
 var _selected_worker_id: String = ""
@@ -93,6 +94,8 @@ var _contract_day_button_group: ButtonGroup
 var _displayed_contract_price: int = 0
 var _renew_completed_for_selection: bool = false
 var _renew_request_active: bool = false
+var _renew_success_tween: Tween
+var _renew_success_original_modulate: Color = Color.WHITE
 var _manage_worker_id: String = ""
 var _manage_source_button: Button
 var _active_tool_slot: String = ""
@@ -154,6 +157,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	_stop_renew_success_animation()
 	_disconnect_needs_refresh_signal()
 	_restore_pause()
 
@@ -777,6 +781,7 @@ func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
+	_stop_renew_success_animation()
 	_hide_fire_block_feedback()
 	_renew_feedback_text = ""
 	_manage_worker_id = worker_id
@@ -842,6 +847,7 @@ func _show_manage_contract() -> void:
 	if row.is_empty():
 		_close_manage()
 		return
+	_stop_renew_success_animation()
 	_hide_fire_block_feedback()
 	_selected_contract_days = WorkerDatabase.CONTRACT_DAYS[0] if not WorkerDatabase.CONTRACT_DAYS.is_empty() else 3
 	_renew_feedback_text = ""
@@ -871,6 +877,7 @@ func _on_contract_days_selected(days: int) -> void:
 	if days not in WorkerDatabase.CONTRACT_DAYS or _manage_worker_id.is_empty():
 		return
 	if days != _selected_contract_days:
+		_stop_renew_success_animation()
 		_renew_completed_for_selection = false
 		_renew_feedback_text = ""
 	_selected_contract_days = days
@@ -976,6 +983,7 @@ func _profession_from_row(row: Dictionary) -> WorkerData.Profession:
 func _request_manage_renew() -> void:
 	if not contract_window.visible or _manage_worker_id.is_empty() or _renew_request_active or _renew_completed_for_selection:
 		return
+	_stop_renew_success_animation()
 	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if row.is_empty():
 		return
@@ -995,13 +1003,39 @@ func _request_manage_renew() -> void:
 	_renew_request_active = false
 	if success:
 		_renew_completed_for_selection = true
-		var worker: WorkerData = WorkerDatabase.get_worker_data(_manage_worker_id)
-		_renew_feedback_text = "Renewed through Day %d." % worker.payroll_paid_until_day if worker != null else "Renewal paid."
+		_renew_feedback_text = ""
 	else:
 		_renew_feedback_text = "Not enough funds." if not Inventory.has_item("shekel", price) else "Renewal failed; check contract."
 	row = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if not row.is_empty():
 		_update_contract_controls(row)
+		if success and contract_window.visible:
+			_play_renew_success_animation()
+
+
+func _play_renew_success_animation() -> void:
+	_stop_renew_success_animation()
+	_renew_success_original_modulate = contract_current_day_label.modulate
+	_renew_success_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_renew_success_tween.tween_property(contract_current_day_label, "modulate", RENEW_SUCCESS_GREEN, 0.16)
+	_renew_success_tween.tween_interval(0.10)
+	_renew_success_tween.tween_property(contract_current_day_label, "modulate", _renew_success_original_modulate, 0.20)
+	_renew_success_tween.tween_callback(_finish_renew_success_animation)
+
+
+func _finish_renew_success_animation() -> void:
+	contract_current_day_label.modulate = _renew_success_original_modulate
+	_renew_success_tween = null
+
+
+func _stop_renew_success_animation() -> void:
+	if _renew_success_tween == null:
+		return
+	if _renew_success_tween.is_valid():
+		_renew_success_tween.kill()
+	_renew_success_tween = null
+	if is_instance_valid(contract_current_day_label):
+		contract_current_day_label.modulate = _renew_success_original_modulate
 
 
 func _show_manage_details() -> void:
@@ -1151,6 +1185,7 @@ func _close_details() -> void:
 
 
 func _close_manage() -> void:
+	_stop_renew_success_animation()
 	_hide_fire_block_feedback()
 	details_window.hide()
 	contract_window.hide()
@@ -1162,6 +1197,7 @@ func _close_manage() -> void:
 func _close_contract() -> void:
 	if not contract_window.visible:
 		return
+	_stop_renew_success_animation()
 	contract_window.hide()
 	if _manage_worker_id.is_empty():
 		_close_manage()
