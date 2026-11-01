@@ -11,6 +11,8 @@ var status: String = ""
 var last_error: String = ""
 var _observed_path: String = ""
 var _busy: bool = false
+var _unsafe_legacy_time_error: String = ""
+var _checkpoint_read_error: String = ""
 var parked_worksite: Node
 var city_plots: Dictionary = {}
 var city_drops: Array = []
@@ -43,10 +45,11 @@ func save_checkpoint() -> bool:
 	_busy = true
 	# Observe an existing slot before the first replacement, without applying it.
 	if _observed_path != disk.path:
-		disk.read_snapshot(_validate)
+		_read_checkpoint_slot()
+		if not _checkpoint_read_error.is_empty() and _checkpoint_read_error != "missing":
+			_observed_path = ""
+			return _failed(_checkpoint_read_error)
 		_observed_path = disk.path
-		if not disk.error.is_empty() and disk.error != "missing":
-			return _failed(disk.error)
 	var document: Dictionary = snapshot.capture(map)
 	if document.is_empty():
 		return _failed(snapshot.error)
@@ -64,7 +67,10 @@ func load_checkpoint() -> bool:
 	if not _can_run():
 		return false
 	_busy = true
-	var document: Dictionary = disk.read_snapshot(_validate)
+	var document: Dictionary = _read_checkpoint_slot()
+	if not _checkpoint_read_error.is_empty():
+		_observed_path = ""
+		return _failed(_checkpoint_read_error)
 	_observed_path = disk.path
 	if document.is_empty():
 		return _failed(disk.error)
@@ -91,8 +97,28 @@ func load_checkpoint() -> bool:
 	changed.emit()
 	return true
 
+func _read_checkpoint_slot() -> Dictionary:
+	_unsafe_legacy_time_error = ""
+	var document: Dictionary = disk.read_snapshot(_validate)
+	# A later save rotates every managed file, including candidates that the
+	# ordinary reader did not select. Do not overwrite a still-ambiguous v10
+	# recovery candidate merely because another file was usable.
+	var inspection_error: String = disk.inspect_recovery_candidates(_validate)
+	if not disk.observation_is_current():
+		_checkpoint_read_error = "changed"
+	elif not inspection_error.is_empty():
+		_checkpoint_read_error = inspection_error
+	elif not _unsafe_legacy_time_error.is_empty():
+		_checkpoint_read_error = _unsafe_legacy_time_error
+	else:
+		_checkpoint_read_error = disk.error
+	return document
+
 func _validate(document: Dictionary) -> bool:
-	return snapshot.prepare(document, map)
+	var valid: bool = snapshot.prepare(document, map)
+	if not valid and snapshot.error.begins_with(SNAPSHOT.LEGACY_TIME_ERROR_PREFIX) and _unsafe_legacy_time_error.is_empty():
+		_unsafe_legacy_time_error = snapshot.error
+	return valid
 
 func _can_run() -> bool:
 	if _busy:

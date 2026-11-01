@@ -5,6 +5,7 @@ extends RefCounted
 const DEFAULT_PATH: String = "user://city_save/checkpoint_v1.json"
 const MAX_FILE_BYTES: int = 8 * 1024 * 1024
 const MAX_JSON_NESTING: int = 128
+const HASH_CHUNK_BYTES: int = 64 * 1024
 
 var path: String = DEFAULT_PATH
 var error: String = ""
@@ -31,19 +32,28 @@ func read_snapshot(validator: Callable) -> Dictionary:
 		error = "invalid_validator"
 		return {}
 	if FileAccess.file_exists(path):
-		var primary: Dictionary = _read_candidate(path, validator)
+		var primary: Dictionary = _checked_candidate(path, validator)
 		if not bool(primary.get("ok", false)):
 			error = str(primary.get("error", "invalid"))
 			return {}
 		_write_permitted = true
 		return primary["snapshot"]
+	if bool(_observed_files[path].get("present", false)):
+		error = "changed"
+		return {}
 
 	var found_candidate: bool = false
 	for source: String in [path + ".tmp", path + ".pending", path + ".bak"]:
 		if not FileAccess.file_exists(source):
+			if bool(_observed_files[source].get("present", false)):
+				error = "changed"
+				return {}
 			continue
 		found_candidate = true
-		var recovery: Dictionary = _read_candidate(source, validator)
+		var recovery: Dictionary = _checked_candidate(source, validator)
+		if recovery.get("error") in ["read_failed", "changed"]:
+			error = recovery.error
+			return {}
 		if bool(recovery.get("ok", false)):
 			_write_permitted = true
 			return recovery["snapshot"]
@@ -53,6 +63,37 @@ func read_snapshot(validator: Callable) -> Dictionary:
 	error = "missing"
 	_write_permitted = true
 	return {}
+
+## Inspect every recovery candidate without changing the observed slot or the
+## selected snapshot. The caller can record any validation-specific concern.
+func inspect_recovery_candidates(validator: Callable) -> String:
+	if not validator.is_valid():
+		return "invalid_validator"
+	if not _observation_ready or not _observation_hashes_valid:
+		return "changed"
+	for source: String in [path + ".tmp", path + ".pending", path + ".bak"]:
+		var present: bool = FileAccess.file_exists(source)
+		if present != bool(_observed_files[source].get("present", false)):
+			return "changed"
+		if present:
+			var result: Dictionary = _checked_candidate(source, validator)
+			if result.get("error") in ["read_failed", "changed"]:
+				return result.error
+	return ""
+
+func observation_is_current() -> bool:
+	return _observation_ready and _matches_observation()
+
+func _checked_candidate(source: String, validator: Callable) -> Dictionary:
+	var observed: Dictionary = _observed_files.get(source, {})
+	if not _observation_hashes_valid or not bool(observed.get("present", false)):
+		return {"ok": false, "error": "changed"}
+	var result: Dictionary = _read_candidate(source, validator)
+	if result.get("error") == "read_failed":
+		return result
+	if str(result.get("digest", "")) != str(observed.get("digest", "")):
+		return {"ok": false, "error": "changed"}
+	return result
 
 ## Existing files may only be replaced after a successful read in this helper
 ## instance. The read records hashes for all managed files so external edits
@@ -179,27 +220,36 @@ func _matches_primary_and_backup() -> bool:
 func _read_candidate(source: String, validator: Callable) -> Dictionary:
 	var file := FileAccess.open(source, FileAccess.READ)
 	if file == null:
-		return {"ok": false, "error": "invalid"}
+		return {"ok": false, "error": "read_failed"}
 	var length: int = file.get_length()
 	if length > MAX_FILE_BYTES:
+		# Confirm the rejected candidate is the observed file without loading an
+		# oversized buffer; otherwise a replaced file could be silently skipped.
+		var oversized_digest: String = _digest_open_file(file, length)
 		file.close()
-		return {"ok": false, "error": "size_limit"}
+		if oversized_digest.is_empty():
+			return {"ok": false, "error": "read_failed"}
+		return {"ok": false, "error": "size_limit", "digest": oversized_digest}
 	var bytes: PackedByteArray = file.get_buffer(length)
+	var read_error: Error = file.get_error()
 	file.close()
-	if bytes.size() != length:
-		return {"ok": false, "error": "invalid"}
+	if bytes.size() != length or read_error not in [OK, ERR_FILE_EOF]:
+		return {"ok": false, "error": "read_failed"}
+	var digest: String = _digest_bytes(bytes)
+	if digest.is_empty():
+		return {"ok": false, "error": "read_failed"}
 	var json := JSON.new()
 	if json.parse(bytes.get_string_from_utf8()) != OK or typeof(json.data) != TYPE_DICTIONARY:
-		return {"ok": false, "error": "invalid"}
+		return {"ok": false, "error": "invalid", "digest": digest}
 	if not _is_json_value(json.data):
-		return {"ok": false, "error": "invalid"}
+		return {"ok": false, "error": "invalid", "digest": digest}
 	var validation: Variant = validator.call(json.data)
 	if typeof(validation) != TYPE_BOOL or not validation:
-		return {"ok": false, "error": "unsupported"}
+		return {"ok": false, "error": "unsupported", "digest": digest}
 	return {
 		"ok": true,
 		"snapshot": json.data,
-		"digest": _digest_bytes(bytes)
+		"digest": digest
 	}
 
 func _write_text(destination: String, contents: String) -> bool:
@@ -219,7 +269,23 @@ func _digest_bytes(bytes: PackedByteArray) -> String:
 	var hashing := HashingContext.new()
 	if hashing.start(HashingContext.HASH_SHA256) != OK:
 		return ""
-	hashing.update(bytes)
+	if hashing.update(bytes) != OK:
+		return ""
+	return hashing.finish().hex_encode()
+
+func _digest_open_file(file: FileAccess, length: int) -> String:
+	var hashing := HashingContext.new()
+	if hashing.start(HashingContext.HASH_SHA256) != OK:
+		return ""
+	var remaining: int = length
+	while remaining > 0:
+		var requested: int = mini(remaining, HASH_CHUNK_BYTES)
+		var chunk: PackedByteArray = file.get_buffer(requested)
+		if chunk.size() != requested or file.get_error() not in [OK, ERR_FILE_EOF] or hashing.update(chunk) != OK:
+			return ""
+		remaining -= chunk.size()
+	if file.get_length() != length:
+		return ""
 	return hashing.finish().hex_encode()
 
 func _is_json_value(value: Variant, depth: int = 0) -> bool:

@@ -4,6 +4,21 @@ const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
 const MAX_FILE_BYTES: int = 8 * 1024 * 1024
 const MAX_JSON_NESTING: int = 128
 
+class FailedRecoveryRead:
+	extends "res://scenes/new_scenes/save_game/city_save_file.gd"
+	func _read_candidate(source: String, validator: Callable) -> Dictionary:
+		if source == path + ".tmp":
+			return {"ok": false, "error": "read_failed"}
+		return super._read_candidate(source, validator)
+
+class ChangedRecoveryRead:
+	extends "res://scenes/new_scenes/save_game/city_save_file.gd"
+	func _read_candidate(source: String, validator: Callable) -> Dictionary:
+		var result: Dictionary = super._read_candidate(source, validator)
+		if source == path + ".tmp" and result.has("digest"):
+			result.digest = "different bytes during read"
+		return result
+
 var failures: int = 0
 var test_root: String = ""
 
@@ -18,6 +33,7 @@ func _run() -> void:
 	_test_size_limit()
 	_test_external_change()
 	_test_recovery()
+	_test_recovery_read_failure()
 	_cleanup()
 	print("CitySaveFileTest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)
@@ -96,6 +112,20 @@ func _test_size_limit() -> void:
 	var oversized_snapshot: Dictionary = {"schema_version": 1, "counter": 1, "items": ["x".repeat(MAX_FILE_BYTES)]}
 	_expect(not oversized_write.write_snapshot(oversized_snapshot, _validator) and oversized_write.error == "size_limit", "Writes above 8 MiB are rejected before creating a save.")
 	_expect(not oversized_write.exists(), "An oversized snapshot is not published.")
+	var valid: Dictionary = {"schema_version": 1, "counter": 6, "items": []}
+	var sidecar = _helper("oversized_sidecar.json")
+	_write_raw(sidecar.path, JSON.stringify(valid))
+	var sidecar_file := FileAccess.open(sidecar.path + ".tmp", FileAccess.WRITE)
+	sidecar_file.store_buffer(oversized)
+	sidecar_file.close()
+	_expect(_snapshot_matches(sidecar.read_snapshot(_validator), valid), "A valid primary remains readable beside an oversized sidecar.")
+	_expect(sidecar.inspect_recovery_candidates(_validator).is_empty() and sidecar.observation_is_current(),
+		"A confirmed oversized sidecar is skipped after its streamed digest matches the observation.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(sidecar.path))
+	_write_raw(sidecar.path + ".bak", JSON.stringify(valid))
+	sidecar = _helper("oversized_sidecar.json")
+	_expect(_snapshot_matches(sidecar.read_snapshot(_validator), valid), "A confirmed oversized temporary file does not block a valid backup.")
+	_expect(sidecar.inspect_recovery_candidates(_validator).is_empty(), "Recovery can inspect and skip the oversized candidate safely.")
 
 func _test_external_change() -> void:
 	var helper = _helper("external.json")
@@ -104,8 +134,10 @@ func _test_external_change() -> void:
 	_expect(helper.write_snapshot(original, _validator), "Initial external-change snapshot writes: " + helper.error)
 	var session = _helper("external.json")
 	_expect(_snapshot_matches(session.read_snapshot(_validator), original), "Second session observes the primary: " + session.error)
+	_expect(session.observation_is_current(), "An unchanged observation remains current.")
 	var external: String = JSON.stringify({"schema_version": 1, "counter": 99, "items": []})
 	_write_raw(session.path, external)
+	_expect(not session.observation_is_current(), "An external change invalidates the observed slot before loading or writing.")
 	var attempted: Dictionary = {"schema_version": 1, "counter": 2, "items": []}
 	_expect(not session.write_snapshot(attempted, _validator) and session.error == "changed", "A changed primary blocks a stale session write.")
 	_expect(_read_text(session.path) == external, "External primary contents are preserved byte for byte.")
@@ -124,6 +156,38 @@ func _test_recovery() -> void:
 	_write_raw(temp_helper.path + ".tmp", JSON.stringify(temp_data))
 	_expect(_snapshot_matches(temp_helper.read_snapshot(_validator), temp_data), "A missing primary recovers from a valid temporary snapshot: " + temp_helper.error)
 	_expect(temp_helper.error.is_empty(), "Successful temporary recovery clears the error string.")
+
+func _test_recovery_read_failure() -> void:
+	var helper = FailedRecoveryRead.new()
+	helper.path = _path("read_failure.json")
+	var valid: Dictionary = {"schema_version": 1, "counter": 33, "items": []}
+	var text: String = JSON.stringify(valid)
+	_write_raw(helper.path, text)
+	_write_raw(helper.path + ".tmp", text)
+	_write_raw(helper.path + ".bak", text)
+	_expect(_snapshot_matches(helper.read_snapshot(_validator), valid), "A valid primary is selected before the simulated sidecar failure.")
+	_expect(helper.inspect_recovery_candidates(_validator) == "read_failed" and helper.observation_is_current(),
+		"A failed sidecar read is reported even if the observed file hashes have not changed.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(helper.path))
+	helper = FailedRecoveryRead.new()
+	helper.path = _path("read_failure.json")
+	_expect(helper.read_snapshot(_validator).is_empty() and helper.error == "read_failed",
+		"A transient recovery read failure does not fall through to an older backup.")
+	_expect(not helper.write_snapshot(valid, _validator), "A failed recovery read cannot authorize a write.")
+	_expect(_read_text(helper.path + ".tmp") == text and _read_text(helper.path + ".bak") == text,
+		"The unread recovery candidate and backup are both preserved.")
+	_write_raw(helper.path, text)
+	var changed = ChangedRecoveryRead.new()
+	changed.path = helper.path
+	_expect(_snapshot_matches(changed.read_snapshot(_validator), valid), "The primary can be observed before a simulated sidecar race.")
+	_expect(changed.inspect_recovery_candidates(_validator) == "changed" and changed.observation_is_current(),
+		"The scanned bytes must match the observed hash even if the file is restored afterward.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(changed.path))
+	changed = ChangedRecoveryRead.new()
+	changed.path = helper.path
+	_expect(changed.read_snapshot(_validator).is_empty() and changed.error == "changed",
+		"A different recovery buffer is not silently skipped for the older backup.")
+	_expect(not changed.write_snapshot(valid, _validator), "A recovery race cannot authorize a write.")
 
 func _helper(filename: String):
 	var helper = SAVE_FILE.new()
@@ -168,9 +232,11 @@ func _cleanup() -> void:
 		"rejected.json", "rejected.json.bak", "rejected.json.tmp", "rejected.json.pending",
 		"oversized.json", "oversized.json.bak", "oversized.json.tmp", "oversized.json.pending",
 		"oversized_write.json", "oversized_write.json.bak", "oversized_write.json.tmp", "oversized_write.json.pending",
+		"oversized_sidecar.json", "oversized_sidecar.json.bak", "oversized_sidecar.json.tmp", "oversized_sidecar.json.pending",
 		"external.json", "external.json.bak", "external.json.tmp", "external.json.pending",
 		"recover_backup.json", "recover_backup.json.bak", "recover_backup.json.tmp", "recover_backup.json.pending",
-		"recover_temp.json", "recover_temp.json.bak", "recover_temp.json.tmp", "recover_temp.json.pending"
+		"recover_temp.json", "recover_temp.json.bak", "recover_temp.json.tmp", "recover_temp.json.pending",
+		"read_failure.json", "read_failure.json.bak", "read_failure.json.tmp", "read_failure.json.pending"
 	]:
 		var absolute: String = ProjectSettings.globalize_path(_path(filename))
 		if FileAccess.file_exists(_path(filename)):

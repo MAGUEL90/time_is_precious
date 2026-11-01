@@ -7,6 +7,7 @@ const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
 const VERSION: int = 11
+const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 const GROUPS: Dictionary = {
 	"clock": ["current_day", "current_hour", "current_minute", "current_weather", "_timer"],
@@ -240,15 +241,22 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		# Legacy files cannot describe newly registered sources. Initialize only
 		# those missing histories on apply; never infer depletion from Inventory.
 		raw["pickup_sources"] = migrated
+	if version == 10 and not _valid_settled_time_cursors(raw):
+		# A legacy snapshot can be captured during clock dispatch. Its saved
+		# state cannot tell whether an out-of-step consumer has already applied
+		# that minute, so replaying or dropping the interval would be guesswork.
+		# Check after the other legacy validations so a corrupt recovery candidate
+		# can still be skipped in favor of a valid older backup.
+		error = LEGACY_TIME_ERROR_PREFIX + " " + error
+		return false
 	_without_transient_worker_assignments(raw)
 	prepared = raw
 	return true
 
 
 func _valid_settled_time_cursors(raw: Dictionary) -> bool:
-	# Current checkpoints are captured only outside a clock dispatch. A future
-	# cursor or a cursor behind the clock would otherwise create work or drying
-	# merely by loading and emitting the saved time again.
+	# A future cursor or a cursor behind the clock can otherwise create or skip
+	# work or drying merely by loading and emitting the saved time again.
 	var clock: Dictionary = raw.clock
 	var now: int = clock.current_day * 1440 + clock.current_hour * 60 + clock.current_minute
 	var work_cursor: int = raw.work._last_total_minutes

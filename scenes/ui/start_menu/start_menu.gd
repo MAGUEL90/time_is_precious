@@ -103,7 +103,10 @@ func _continue_game() -> void:
 	# Validation requires an idle, unpaused map. No frame elapses before loading.
 	get_tree().paused = false
 	if not store.load_checkpoint():
-		_fail("Could not load this save. You can retry or start a new game. The existing save is unchanged.")
+		if store.last_error.begins_with(store.snapshot.LEGACY_TIME_ERROR_PREFIX):
+			_fail("This save has inconsistent time data and cannot be safely loaded. Your save is unchanged.")
+		else:
+			_fail("Could not load this save. You can retry or start a new game. The existing save is unchanged.")
 		return
 	# Home saves use the existing fade and scene handoff. That path freezes the
 	# clock/raid itself until restoration completes; the menu blocks player input.
