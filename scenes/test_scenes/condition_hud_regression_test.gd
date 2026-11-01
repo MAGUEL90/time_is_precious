@@ -16,28 +16,37 @@ func _run() -> void:
 	add_child(hud)
 	await get_tree().process_frame
 	_expect(hud.fatigue_bar.value == 80 and hud.hunger_bar.value == 90, "Both bars must display remaining healthy condition.")
-	_expect(not hud.status_drawer.visible, "Healthy initial HUD must be closed.")
+	_expect(not hud.status_drawer.visible, "The EXP drawer must start closed.")
 	_expect(hud.find_child("ConditionHelp", true, false) == null and hud.find_child("ConditionAlert", true, false) == null, "HUD must not create help notes or text alerts.")
-	_expect(hud.status_drawer.get_node("StatusNames").get_child(0).text == "Energy", "Fatigue must be presented as Energy.")
-	_expect(hud.status_drawer.get_node("StatusNames").get_child(1).text == "Satiety", "Hunger must be presented as Satiety.")
-	_expect(hud.status_drawer.get_node("StatusNames").get_child_count() == 3 and hud.status_drawer.get_node("IndicatorRow").get_child_count() == 3, "The drawer shows Energy, Satiety and EXP only.")
-	_expect(hud.status_drawer.get_node("IndicatorRow").get_node_or_null("FocusIndicator") == null, "There is no Focus indicator.")
-	player.fatigue_warning_threshold = 0.65
-	player.fatigue = 0.65
+	_expect(hud.fatigue_label.text == "Energy" and hud.hunger_label.text == "Belly", "The two hover labels use the approved names.")
+	_expect(not hud.fatigue_label.visible and not hud.hunger_label.visible, "Condition names start hidden.")
+	_expect(hud.status_drawer.get_node("StatusNames").get_child_count() == 1 and hud.status_drawer.get_node("IndicatorRow").get_child_count() == 1, "The Tab drawer retains EXP only.")
+	_expect(hud.get_node("Root/ConditionRow").get_child_count() == 2, "Only Energy and Belly appear in the top row.")
+	player.fatigue = 0.79
 	player.condition_changed.emit()
 	await get_tree().process_frame
-	_expect(hud.fatigue_indicator.modulate == hud.CONDITION_WARNING_COLOR, "HUD must follow the player's configured severity.")
+	_expect(hud.fatigue_bar.modulate == Color.WHITE and not hud.condition_tweens.has(hud.fatigue_bar), "Energy above 20 percent is normal.")
+	player.fatigue = 0.80
 	player.condition_changed.emit()
-	await get_tree().process_frame
-	_expect(hud.find_child("ConditionAlert", true, false) == null, "Condition updates must not create text alerts.")
-	player.fatigue = 0.91
+	_expect(hud.fatigue_bar.modulate == hud.CONDITION_CRITICAL_COLOR and hud.condition_tweens.has(hud.fatigue_bar), "At 20 percent Energy the bar begins the red warning.")
+	var energy_tween: Tween = hud.condition_tweens[hud.fatigue_bar]
+	energy_tween.custom_step(hud.CONDITION_BLINK_HALF_PERIOD * 0.5)
+	_expect(not hud.fatigue_bar.modulate.is_equal_approx(hud.CONDITION_CRITICAL_COLOR), "The critical Energy bar changes color slowly.")
+	player.fatigue = 1.0
+	player.hunger = 1.0
 	player.condition_changed.emit()
-	await get_tree().process_frame
-	_expect(hud.fatigue_indicator.modulate == hud.CONDITION_CRITICAL_COLOR, "Critical color must match player critical severity.")
+	_expect(hud.fatigue_bar.value == 0 and hud.hunger_bar.value == 0 and hud.fatigue_bar.tint_under == hud.CONDITION_CRITICAL_TRACK_TINT and hud.hunger_bar.tint_under == hud.CONDITION_CRITICAL_TRACK_TINT and hud.condition_tweens[hud.fatigue_bar] == energy_tween and hud.condition_tweens.has(hud.hunger_bar), "Both empty tracks warn, without restarting Energy's existing blink.")
 	player.fatigue = 0.2
+	player.hunger = 0.1
 	player.condition_changed.emit()
 	await get_tree().process_frame
-	_expect(hud.fatigue_indicator.modulate == hud.CONDITION_NORMAL_COLOR, "Recovery must restore the normal color.")
+	_expect(hud.fatigue_bar.modulate == Color.WHITE and hud.hunger_bar.modulate == Color.WHITE and hud.fatigue_bar.tint_under == Color.WHITE and hud.hunger_bar.tint_under == Color.WHITE and hud.condition_tweens.is_empty(), "Recovery stops the warning and restores both normal bars.")
+	player.hunger = 0.80
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value == 20 and hud.condition_tweens.has(hud.hunger_bar) and not hud.condition_tweens.has(hud.fatigue_bar), "Belly starts its own warning at 20 percent.")
+	player.hunger = 0.79
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.modulate == Color.WHITE and not hud.condition_tweens.has(hud.hunger_bar), "Belly above 20 percent returns to normal.")
 	var before_hunger: float = player.hunger
 	var before_fatigue: float = player.fatigue
 	player.on_minute_changed(1)
@@ -67,7 +76,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	var names: HBoxContainer = hud.status_drawer.get_node("StatusNames")
 	var indicators: HBoxContainer = hud.status_drawer.get_node("IndicatorRow")
-	for index: int in range(3):
+	for index: int in range(1):
 		var name_label: Control = names.get_child(index) as Control
 		var indicator: Control = indicators.get_child(index) as Control
 		_expect(is_equal_approx(name_label.global_position.x, indicator.global_position.x), "Each status label remains aligned with its indicator.")

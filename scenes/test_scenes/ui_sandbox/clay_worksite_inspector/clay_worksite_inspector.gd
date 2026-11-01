@@ -315,10 +315,10 @@ func _refresh_preview() -> void:
 	status_label.visible = not status_label.text.is_empty()
 	if not includes_player:
 		energy_label.text = "Energy --"
-		satiety_label.text = "Satiety --"
+		satiety_label.text = "Belly --"
 		return
 	energy_label.text = "Energy --"
-	satiety_label.text = "Satiety --"
+	satiety_label.text = "Belly --"
 	if not is_instance_valid(_player_ref):
 		return
 	# Forecast normal awake clock drain only. Fixture debug settings may suppress live needs.
@@ -331,7 +331,7 @@ func _refresh_preview() -> void:
 		energy_label.text = "Energy -%.0f%%" % (energy_used / fatigue_span * 100.0)
 	if hunger_span > 0.0:
 		var satiety_used: float = 0.0 if _player_ref.debug_disable_player_needs else maxf(_player_ref.hunger_increase_per_min * minutes, 0.0)
-		satiety_label.text = "Satiety -%.0f%%" % (satiety_used / hunger_span * 100.0)
+		satiety_label.text = "Belly -%.0f%%" % (satiety_used / hunger_span * 100.0)
 
 func _show_daily_duration(plan: Dictionary) -> void:
 	var label: Label = $Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel

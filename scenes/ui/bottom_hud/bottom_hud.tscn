@@ -53,6 +53,28 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="ConditionRow" type="HBoxContainer" parent="Root"]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 3.0
+offset_right = 82.0
+offset_bottom = 19.0
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="FatigueIndicator" parent="Root/ConditionRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/ConditionRow/FatigueIndicator" index="0"]
+mouse_filter = 1
+
+[node name="HungerIndicator" parent="Root/ConditionRow" instance=ExtResource("1_amamv")]
+layout_mode = 2
+
+[node name="Icon" parent="Root/ConditionRow/HungerIndicator" index="0"]
+mouse_filter = 1
+texture = SubResource("AtlasTexture_xx5ha")
+
 [node name="StatusDrawer" type="Control" parent="Root"]
 layout_mode = 1
 anchors_preset = 7
@@ -60,9 +82,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -59.0
+offset_left = -19.0
 offset_top = -60.0
-offset_right = 59.0
+offset_right = 19.0
 offset_bottom = -44.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -77,15 +99,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 2
-
-[node name="FatigueIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
-layout_mode = 2
-
-[node name="HungerIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
-layout_mode = 2
-
-[node name="Icon" parent="Root/StatusDrawer/IndicatorRow/HungerIndicator" index="0"]
-texture = SubResource("AtlasTexture_xx5ha")
 
 [node name="ExperienceIndicator" parent="Root/StatusDrawer/IndicatorRow" instance=ExtResource("1_amamv")]
 layout_mode = 2
@@ -167,8 +180,8 @@ layout_mode = 2
 [node name="Icon" parent="Root/BottomBar/SlotMargin/SlotRow/StatusButton7" index="0"]
 texture = SubResource("AtlasTexture_ric74")
 
-[editable path="Root/StatusDrawer/IndicatorRow/FatigueIndicator"]
-[editable path="Root/StatusDrawer/IndicatorRow/HungerIndicator"]
+[editable path="Root/ConditionRow/FatigueIndicator"]
+[editable path="Root/ConditionRow/HungerIndicator"]
 [editable path="Root/StatusDrawer/IndicatorRow/ExperienceIndicator"]
 [editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton2"]
 [editable path="Root/BottomBar/SlotMargin/SlotRow/StatusButton3"]
