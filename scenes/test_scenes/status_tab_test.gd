@@ -38,6 +38,48 @@ func click(at: Vector2) -> void:
 	get_viewport().push_input(event, true)
 	await get_tree().process_frame
 
+func frame_image() -> Image:
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	return get_viewport().get_texture().get_image()
+
+func bar_pixel_changes(first: Image, second: Image, bar: TextureProgressBar) -> int:
+	var rect: Rect2i = Rect2i(bar.get_global_rect())
+	var count: int = 0
+	for x in range(rect.position.x, rect.end.x):
+		for y in range(rect.position.y, rect.end.y):
+			if first.get_pixel(x, y) != second.get_pixel(x, y):
+				count += 1
+	return count
+
+func check_pixel_endpoints(hud: Node, player: Player) -> void:
+	var original_hunger: float = player.hunger
+	var original_fatigue: float = player.fatigue
+	player.hunger = player.min_hunger
+	player.fatigue = player.min_fatigue
+	player.condition_changed.emit()
+	var full: Image = await frame_image()
+	player.hunger = player.min_hunger + (player.max_hunger - player.min_hunger) * 0.001
+	player.fatigue = player.min_fatigue + (player.max_fatigue - player.min_fatigue) * 0.001
+	player.condition_changed.emit()
+	var near_full: Image = await frame_image()
+	check(bar_pixel_changes(full, near_full, hud.hunger_bar) > 0 and bar_pixel_changes(full, near_full, hud.fatigue_bar) > 0, "Both nearly full bars differ visibly from full")
+	player.hunger = player.max_hunger
+	player.fatigue = player.max_fatigue
+	player.condition_changed.emit()
+	for bar: TextureProgressBar in [hud.hunger_bar, hud.fatigue_bar]:
+		hud.condition_tweens[bar].pause()
+		bar.modulate = hud.CONDITION_CRITICAL_COLOR
+	var empty: Image = await frame_image()
+	player.hunger = player.max_hunger - (player.max_hunger - player.min_hunger) * 0.001
+	player.fatigue = player.max_fatigue - (player.max_fatigue - player.min_fatigue) * 0.001
+	player.condition_changed.emit()
+	var near_empty: Image = await frame_image()
+	check(bar_pixel_changes(empty, near_empty, hud.hunger_bar) > 0 and bar_pixel_changes(empty, near_empty, hud.fatigue_bar) > 0, "Both nearly empty bars differ visibly from empty")
+	player.hunger = original_hunger
+	player.fatigue = original_fatigue
+	player.condition_changed.emit()
+
 func _ready() -> void:
 	call_deferred("run")
 
@@ -56,6 +98,8 @@ func run() -> void:
 		var top_bar: Control = map.get_node("TopHUD/Root/Bar")
 		check(not hud.fatigue_indicator.get_global_rect().intersects(top_bar.get_global_rect()) and not hud.hunger_indicator.get_global_rect().intersects(top_bar.get_global_rect()), "Condition indicators do not overlap the time and weather bar")
 		check(absf(hud.fatigue_indicator.global_position.y - top_bar.global_position.y) <= 1.0, "Condition indicators align with the top bar")
+		if DisplayServer.get_name() != "headless":
+			await check_pixel_endpoints(hud, player)
 		await move_mouse(Vector2(399, 224))
 		await move_mouse(hud.fatigue_indicator.get_node("Icon").get_global_rect().get_center())
 		check(hud.fatigue_label.visible and not hud.hunger_label.visible, "Hovering the Energy icon shows only Energy")

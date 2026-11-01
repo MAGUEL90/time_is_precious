@@ -24,3 +24,12 @@ emits a warning while checking preservation of an invalid checkpoint.
 `CityFoodUITest` failed while opening the physical storage interaction; the
 same failure was reproduced on the clean starting commit under the same
 Godot version. Human gameplay and other platforms have not been tested.
+
+## Display follow-up
+
+The Belly and Energy bars reserve their full and empty appearances for the
+actual condition bounds. Their existing narrow texture requires at least one
+visible pixel of difference near each endpoint. This is a display projection;
+food eligibility, values and the existing critical-warning threshold are
+unchanged. Godot 4.5.1 tests covered exact and near endpoints, eating/rejection,
+warning boundaries and the rendered pixels at 400×225 with integer scaling.

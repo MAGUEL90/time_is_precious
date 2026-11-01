@@ -22,7 +22,32 @@ func _run() -> void:
 	_expect(not hud.fatigue_label.visible and not hud.hunger_label.visible, "Condition names start hidden.")
 	_expect(hud.status_drawer.get_node("StatusNames").get_child_count() == 1 and hud.status_drawer.get_node("IndicatorRow").get_child_count() == 1, "The Tab drawer retains EXP only.")
 	_expect(hud.get_node("Root/ConditionRow").get_child_count() == 2, "Only Energy and Belly appear in the top row.")
-	player.fatigue = 0.79
+	player.fatigue = 0.001
+	player.hunger = 0.001
+	player.condition_changed.emit()
+	_expect(hud.fatigue_bar.value < 100 and hud.hunger_bar.value < 100, "Neither bar displays full while its condition is above the minimum.")
+	player.fatigue = 0.0
+	player.hunger = 0.0
+	player.condition_changed.emit()
+	_expect(hud.fatigue_bar.value == 100 and hud.hunger_bar.value == 100, "Both bars display full exactly at the minimum.")
+	player.fatigue = 0.999
+	player.hunger = 0.999
+	player.condition_changed.emit()
+	_expect(hud.fatigue_bar.value > 0 and hud.hunger_bar.value > 0, "Neither bar displays empty before its condition reaches the maximum.")
+	player.min_hunger = 0.2
+	player.max_hunger = 0.8
+	player.hunger = player.min_hunger
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value == 100, "Full Belly reflects a configured minimum.")
+	player.hunger = player.min_hunger + 0.001
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value < 100, "Configured bounds still distinguish a slightly hungry player.")
+	player.hunger = player.max_hunger
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value == 0, "Empty Belly reflects a configured maximum.")
+	player.min_hunger = 0.0
+	player.max_hunger = 1.0
+	player.fatigue = 0.799
 	player.condition_changed.emit()
 	await get_tree().process_frame
 	_expect(hud.fatigue_bar.modulate == Color.WHITE and not hud.condition_tweens.has(hud.fatigue_bar), "Energy above 20 percent is normal.")
@@ -44,7 +69,7 @@ func _run() -> void:
 	player.hunger = 0.80
 	player.condition_changed.emit()
 	_expect(hud.hunger_bar.value == 20 and hud.condition_tweens.has(hud.hunger_bar) and not hud.condition_tweens.has(hud.fatigue_bar), "Belly starts its own warning at 20 percent.")
-	player.hunger = 0.79
+	player.hunger = 0.799
 	player.condition_changed.emit()
 	_expect(hud.hunger_bar.modulate == Color.WHITE and not hud.condition_tweens.has(hud.hunger_bar), "Belly above 20 percent returns to normal.")
 	var before_hunger: float = player.hunger
@@ -93,7 +118,7 @@ func _run() -> void:
 	_expect(not hud.visible and not hud.status_drawer.visible, "Nightmare must hide all condition UI.")
 	hud._on_nightmare_active_changed(false)
 	_expect(hud.visible and not hud.status_drawer.visible, "Return must restore the HUD without a stuck drawer.")
-	await _test_eating_and_sleep(player)
+	await _test_eating_and_sleep(player, hud)
 	if "--capture-hud" in OS.get_cmdline_user_args():
 		hud._animate_drawer(hud.DRAWER_OPEN_Y, 0.0)
 		hud.drawer_tween.custom_step(1.0)
@@ -110,7 +135,7 @@ func _run() -> void:
 	print("ConditionHUDRegressionTest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)
 
-func _test_eating_and_sleep(player: Player) -> void:
+func _test_eating_and_sleep(player: Player, hud: Node) -> void:
 	get_tree().paused = false
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -129,7 +154,7 @@ func _test_eating_and_sleep(player: Player) -> void:
 	player.fatigue = 0.0
 	await inventory_ui._execute_use_item("date_cluster", 1)
 	_expect(Inventory.items.get("date_cluster") == 1, "Eating with no possible effect does not consume another date.")
-	await _test_full_belly_food_rule(player, inventory_ui)
+	await _test_full_belly_food_rule(player, inventory_ui, hud)
 	player.hunger = 0.0
 	player.fatigue = 0.8
 	player.last_sleep_day = -1
@@ -145,7 +170,7 @@ func _test_eating_and_sleep(player: Player) -> void:
 	inventory_ui.free()
 	Inventory.items.assign(original_inventory)
 
-func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI) -> void:
+func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI, hud: Node) -> void:
 	var foods: Array[String] = ["date_cluster", "fresh_curd_cheese", "orchard_apple", "pan_fried_egg", "barley_bread", "village_cheese", "fresh_loaf", "roasted_drumstick"]
 	Inventory.items.clear()
 	for item_id: String in foods:
@@ -159,6 +184,8 @@ func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI) -> vo
 	var old_feedback: String = inventory_ui.action_feedback_label.text
 	player.hunger = player.min_hunger
 	player.fatigue = 0.5
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value == 100, "A full Belly is displayed as full before food is rejected.")
 	for item_id: String in foods:
 		_expect(not inventory_ui._can_use_item(ItemDatabase.get_item_data(item_id)), "Full Belly disables use of " + item_id)
 		await inventory_ui._execute_use_item(item_id, 1)
@@ -189,9 +216,12 @@ func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI) -> vo
 
 	player.hunger = player.min_hunger + 0.001
 	player.fatigue = 0.5
+	player.condition_changed.emit()
+	_expect(hud.hunger_bar.value < 100, "A slightly hungry player does not see a full Belly bar.")
 	_expect(inventory_ui._can_use_item(ItemDatabase.get_item_data("date_cluster")), "Food remains usable just below full Belly.")
 	await inventory_ui._execute_use_item("date_cluster", 3)
 	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "A nearly full Belly consumes only one item, clamps, and gains its normal Energy.")
+	_expect(hud.hunger_bar.value == 100 and not inventory_ui._can_use_item(ItemDatabase.get_item_data("date_cluster")), "The bar becomes full exactly when another food is disallowed.")
 	await inventory_ui._execute_use_item("date_cluster", 1)
 	_expect(is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "Another attempt after filling Belly has no effect.")
 

@@ -125,15 +125,29 @@ func _on_condition_changed() -> void:
 	var fatigue_remaining: int = 100 - player_ref.get_fatigue_percent()
 	var hunger_remaining: int = 100 - player_ref.get_hunger_percent()
 
-	_update_condition_bar(fatigue_bar, fatigue_remaining)
-	_update_condition_bar(hunger_bar, hunger_remaining)
+	var fatigue_display: int = _condition_display_percent(fatigue_bar, player_ref.fatigue, player_ref.min_fatigue, player_ref.max_fatigue)
+	var hunger_display: int = _condition_display_percent(hunger_bar, player_ref.hunger, player_ref.min_hunger, player_ref.max_hunger)
+	_update_condition_bar(fatigue_bar, fatigue_remaining, fatigue_display)
+	_update_condition_bar(hunger_bar, hunger_remaining, hunger_display)
+
+func _condition_display_percent(bar: TextureProgressBar, value: float, minimum: float, maximum: float) -> int:
+	if value <= minimum:
+		return 100
+	if value >= maximum:
+		return 0
+	var fraction_used: float = (value - minimum) / (maximum - minimum)
+	# Keep one visible fill pixel and one empty pixel between the exact endpoints.
+	var bar_width: float = maxf(bar.size.x, bar.custom_minimum_size.x)
+	var fill_width: float = maxf(bar_width - bar.stretch_margin_left - bar.stretch_margin_right, 1.0)
+	var edge_percent: int = clampi(ceili(100.0 / fill_width), 1, 49)
+	return clampi(100 - int(fraction_used * 100.0), edge_percent, 100 - edge_percent)
 
 func _on_experience_changed() -> void:
 	experience_bar.max_value = player_ref.experience_required
 	experience_bar.value = player_ref.current_experience
 
-func _update_condition_bar(bar: TextureProgressBar, remaining: int) -> void:
-	bar.value = remaining
+func _update_condition_bar(bar: TextureProgressBar, remaining: int, displayed: int) -> void:
+	bar.value = displayed
 	if remaining > CONDITION_WARNING_REMAINING_PERCENT:
 		bar.tint_under = Color.WHITE
 		if condition_tweens.has(bar):
