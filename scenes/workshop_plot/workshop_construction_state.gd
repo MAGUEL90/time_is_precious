@@ -8,6 +8,10 @@ const REQUIREMENTS: Dictionary = {"wood_log": 6, "clay_lump": 12, "reed_bundle":
 const SOLO_MINUTES: int = 3 * 24 * 60
 const ORDER_ID: String = "construction:main_workshop"
 const MAX_WORKER_CAPACITY: int = 10000
+const CITIZEN_HOUSE_ORDER_ID: String = "construction:citizen_house_1"
+const CITIZEN_HOUSE_REQUIREMENTS: Dictionary = {"wood_log": 4, "clay_lump": 8, "reed_bundle": 6}
+const CITIZEN_HOUSE_SOLO_MINUTES: int = 2880
+const CITIZEN_HOUSE_SHELTER_CAPACITY: int = 3
 
 const CLEARING_MINUTES: int = 180
 const SHIFT_START: int = 7 * 60
@@ -39,8 +43,24 @@ func _ready() -> void:
 	WorkerDatabase.payroll_changed.connect(_refresh_payroll_status)
 	_latest_time = _now()
 
+func is_citizen_house() -> bool:
+	return order_id == CITIZEN_HOUSE_ORDER_ID
+
 func get_requirements() -> Dictionary:
-	return REQUIREMENTS.duplicate()
+	return (CITIZEN_HOUSE_REQUIREMENTS if is_citizen_house() else REQUIREMENTS).duplicate()
+
+func get_solo_minutes() -> int:
+	return CITIZEN_HOUSE_SOLO_MINUTES if is_citizen_house() else SOLO_MINUTES
+
+func _worker_job_label(clearing: bool) -> String:
+	if is_citizen_house():
+		return "Clear House Site" if clearing else "Build House"
+	return "Clear Workshop Site" if clearing else "Build Workshop"
+
+func _has_shelter_room() -> bool:
+	if not is_citizen_house():
+		return true
+	return CityStockManager.shelter_capacity >= 0 and CityStockManager.shelter_capacity <= CityStockManager.MAX_SHELTER_CAPACITY - CITIZEN_HOUSE_SHELTER_CAPACITY
 
 func _now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
@@ -90,17 +110,23 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		message = "Select available workers."
 	elif selected_ids.size() > MAX_WORKER_CAPACITY:
 		message = "Too many workers selected."
-	for id: String in REQUIREMENTS:
-		if not Inventory.has_item(id, int(REQUIREMENTS[id])) and message.is_empty():
+	var requirements: Dictionary = get_requirements()
+	for id: String in requirements:
+		if not Inventory.has_item(id, int(requirements[id])) and message.is_empty():
 			message = "Missing materials in Inventory."
+	if phase == "empty" and not _has_shelter_room() and message.is_empty():
+		message = "Shelter capacity is full."
 	if phase != "empty":
-		message = "Clear the site first." if phase in ["uncleared", "clearing"] else ("Construction in progress." if phase == "building" else "Workshop ready.")
+		message = "Clear the site first." if phase in ["uncleared", "clearing"] else ("Construction in progress." if phase == "building" else ("House ready." if is_citizen_house() else "Workshop ready."))
 	var payroll_blocked: bool = phase == "building" and _all_workers_payroll_blocked()
+	var shelter_blocked: bool = phase == "building" and is_citizen_house() and _remaining_work_units() <= 1 and not _has_shelter_room()
 	if payroll_blocked:
 		message = "Contract expired - renew in Worker Hub."
+	elif shelter_blocked:
+		message = "Shelter capacity is full; construction paused."
 	elif _starting:
 		message = "Starting construction."
-	var duration: int = ceili(float(SOLO_MINUTES) / selected_ids.size()) if not selected_ids.is_empty() else 0
+	var duration: int = ceili(float(get_solo_minutes()) / selected_ids.size()) if not selected_ids.is_empty() else 0
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "building" else 0
 	var progress: float = 0.0
 	if phase == "building":
@@ -108,7 +134,10 @@ func get_preview(selected_ids: Array[String]) -> Dictionary:
 		progress = clampf(1.0 - float(_remaining_work_units()) / float(total_units), 0.0, 1.0)
 	elif phase == "built":
 		progress = 1.0
-	return {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
+	var preview: Dictionary = {"phase": phase, "can_start": message.is_empty(), "message": message, "duration_minutes": duration, "remaining_minutes": remaining, "progress_ratio": progress, "worker_count": worker_ids.size() if phase != "empty" else selected_ids.size(), "payroll_blocked": payroll_blocked}
+	if is_citizen_house():
+		preview["shelter_blocked"] = shelter_blocked
+	return preview
 
 func start_build(selected_ids: Array[String]) -> Dictionary:
 	var preview: Dictionary = get_preview(selected_ids)
@@ -121,11 +150,12 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 			_release_workers(reserved)
 			_finish_transaction()
 			return {"success": false, "message": "Worker availability changed."}
-		WorkerDatabase.get_worker_data(id).start_work(order_id, "Build Workshop")
+		WorkerDatabase.get_worker_data(id).start_work(order_id, _worker_job_label(false))
 		reserved.append(id)
+	var requirements: Dictionary = get_requirements()
 	var consumed: Dictionary = {}
-	for id: String in REQUIREMENTS:
-		var quantity: int = int(REQUIREMENTS[id])
+	for id: String in requirements:
+		var quantity: int = int(requirements[id])
 		if not Inventory.remove_item(id, quantity):
 			for consumed_id: String in consumed:
 				Inventory.add_item(consumed_id, int(consumed[consumed_id]))
@@ -133,13 +163,23 @@ func start_build(selected_ids: Array[String]) -> Dictionary:
 			_finish_transaction()
 			return {"success": false, "message": "Materials changed; construction was not started."}
 		consumed[id] = quantity
+	# Inventory removal emits callbacks. Capacity must still fit the entire house
+	# after those callbacks, before committing either the team or its materials.
+	if not _has_shelter_room():
+		for consumed_id: String in consumed:
+			Inventory.add_item(consumed_id, int(consumed[consumed_id]))
+		_release_workers(reserved)
+		_finish_transaction()
+		return {"success": false, "message": "Shelter capacity is full; construction was not started."}
 	worker_ids = reserved
 	worker_capacity = reserved.size()
-	payroll_work_remainder = 0
 	started_at = _now()
 	_latest_time = started_at
 	completes_at = started_at + int(preview.duration_minutes)
-	work_total_units = int(preview.duration_minutes) * worker_capacity
+	work_total_units = CITIZEN_HOUSE_SOLO_MINUTES if is_citizen_house() else int(preview.duration_minutes) * worker_capacity
+	# House work is exactly 2880 worker-minutes even if the team size does not
+	# divide it evenly. Existing workshops keep their original rounded total.
+	payroll_work_remainder = int(preview.duration_minutes) * worker_capacity - work_total_units
 	phase = "building"
 	_initialize_approaches()
 	changed.emit()
@@ -180,15 +220,42 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 				if presence == null:
 					presence = load("res://scenes/workshop_plot/workshop_worker_presence.gd")
 				presence.end_shift_for_worker(worker, "plot", order_id + ":" + phase, order_id)
+		# If other activity fills shelter after the start, retain one uncompleted
+		# worker-minute until all three places fit. This also keeps the existing
+		# active-construction save invariant (positive remaining work).
+		if phase == "building" and is_citizen_house() and not worker_ids.is_empty() and worked >= completes_at - _latest_time and not _has_shelter_room():
+			worked = maxi(completes_at - _latest_time - 1, 0)
+			payroll_work_remainder = worker_ids.size() - 1
 		started_at += elapsed - worked
 		completes_at += elapsed - worked
 	_latest_time = next_time
 	if _latest_time >= completes_at:
+		var house_completed: bool = phase == "building" and is_citizen_house()
+		if house_completed and not _has_shelter_room():
+			# Defensive boundary guard: never publish a partial shelter bonus even
+			# if an unusual caller presented an already-complete active state.
+			var adjustment: int = _latest_time - completes_at + 1
+			started_at += adjustment
+			completes_at += adjustment
+			payroll_work_remainder = maxi(0, worker_ids.size() - 1)
+			changed.emit()
+			return
+		var owns_transaction: bool = house_completed and not _starting
+		if owns_transaction:
+			_starting = true
 		phase = "empty" if phase == "clearing" else "built"
+		if house_completed:
+			# The room check above prevents CityStockManager's clamping from ever
+			# applying a partial bonus. The phase changes before callbacks can see it.
+			CityStockManager.add_shelter_capacity(CITIZEN_HOUSE_SHELTER_CAPACITY)
 		payroll_work_remainder = 0
 		clearing_remaining = 0
 		clearing_by_player = false
 		_release_workers(worker_ids)
+		changed.emit()
+		if owns_transaction:
+			_finish_transaction()
+		return
 	changed.emit()
 
 func _all_workers_payroll_blocked() -> bool:
@@ -338,7 +405,7 @@ func add_replacement_workers(ids: Array[String]) -> Dictionary:
 			_finish_transaction()
 			return {"success": false, "message": "Worker availability changed."}
 		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
-		worker.start_work(order_id, "Clear Workshop Site" if phase == "clearing" else "Build Workshop")
+		worker.start_work(order_id, _worker_job_label(phase == "clearing"))
 		reserved.append(id)
 	if not _rebase_team(worker_ids.size() + reserved.size()):
 		_release_workers(reserved)
@@ -366,11 +433,13 @@ func get_clearing_preview(ids: Array[String], use_player: bool) -> Dictionary:
 	var message: String = ""
 	if phase != "uncleared":
 		message = "Clearing in progress." if phase == "clearing" else "Site is already clear."
+	elif is_citizen_house() and use_player:
+		message = "Assign a worker to clear this site."
 	elif use_player and not ids.is_empty():
 		message = "Choose player or one worker."
 	elif not use_player:
 		if ids.size() != 1:
-			message = "Assign player or one worker."
+			message = "Assign one worker." if is_citizen_house() else "Assign player or one worker."
 		else:
 			message = _worker_reason(ids[0])
 	var payroll_blocked: bool = phase == "clearing" and not clearing_by_player and _all_workers_payroll_blocked()
@@ -393,7 +462,7 @@ func start_clearing(ids: Array[String], use_player: bool) -> Dictionary:
 		if not WorkerDatabase.assign_worker(ids[0]):
 			_finish_transaction()
 			return {"success": false, "message": "Worker unavailable."}
-		WorkerDatabase.get_worker_data(ids[0]).start_work(order_id, "Clear Workshop Site")
+		WorkerDatabase.get_worker_data(ids[0]).start_work(order_id, _worker_job_label(true))
 	worker_ids = ids.duplicate()
 	worker_capacity = 1
 	work_total_units = CLEARING_MINUTES

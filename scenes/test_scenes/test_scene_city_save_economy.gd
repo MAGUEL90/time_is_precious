@@ -290,11 +290,11 @@ func _test_v10_migration(original: Dictionary) -> void:
 	var migrated_state: Dictionary = store.snapshot.capture(content)
 	_expect(store.save_checkpoint(), "A later explicit save upgrades the v10 checkpoint: " + store.last_error)
 	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
-	_expect(upgraded.get("schema_version") == 11 and FileAccess.get_file_as_bytes(CHECKPOINT_PATH + ".bak") == legacy_bytes,
-		"The upgraded v11 checkpoint keeps the exact v10 source bytes in its normal backup.")
+	_expect(upgraded.get("schema_version") == store.snapshot.VERSION and FileAccess.get_file_as_bytes(CHECKPOINT_PATH + ".bak") == legacy_bytes,
+		"The upgraded checkpoint keeps the exact v10 source bytes in its normal backup.")
 	var upgraded_files: Dictionary = _migration_files()
 	_expect(store.load_checkpoint() and store.load_checkpoint() and _same_snapshot(migrated_state, store.snapshot.capture(content))
-		and _migration_files() == upgraded_files, "The upgraded v11 checkpoint loads repeatedly without changing state or files: " + store.last_error)
+		and _migration_files() == upgraded_files, "The upgraded checkpoint loads repeatedly without changing state or files: " + store.last_error)
 	_test_shift_sentinel_boundary(current)
 	var remaining_before: int = plot.completes_at - plot._latest_time
 	TimeComponentManager.advance_minutes(1)
@@ -312,7 +312,8 @@ func _test_shift_sentinel_boundary(current: Dictionary) -> void:
 	departing.physical_approach.arrival_minute = WorkerData.PLOT_DEPARTURE_PENDING
 	departing.current_work_status = WorkerData.WorkStatus.TRAVELLING
 	var v11: Dictionary = current.duplicate(true)
-	v11.state = values.encode(boundary_raw)
+	v11.schema_version = 11
+	v11.state = MIGRATION_FIXTURE.encode_v11(values, boundary_raw)
 	var sentinel: Dictionary = store.snapshot.capture(content)
 	_expect(store.snapshot.prepare(v11, content), "The shift-departure sentinel validates in v11: " + store.snapshot.error)
 	var v10: Dictionary = current.duplicate(true)
@@ -355,7 +356,10 @@ func _test_v10_clearing(original: Dictionary, plot_id: String) -> void:
 
 func _test_malformed_v11(current: Dictionary, raw: Dictionary, plot_id: String) -> void:
 	var sentinel: Dictionary = store.snapshot.capture(content)
-	var baseline_valid: bool = store.snapshot.prepare(current, content)
+	var v11: Dictionary = current.duplicate(true)
+	v11.schema_version = 11
+	v11.state = MIGRATION_FIXTURE.encode_v11(MIGRATION_VALUES.new(), raw)
+	var baseline_valid: bool = store.snapshot.prepare(v11, content)
 	_expect(baseline_valid, "The unmodified v11 source validates before corruption probes: " + store.snapshot.error)
 	if not baseline_valid:
 		return
@@ -382,8 +386,8 @@ func _test_malformed_v11(current: Dictionary, raw: Dictionary, plot_id: String) 
 			"process_cursor_behind": bad_raw.process._last_total_minutes = clock_minute - 1
 			"plot_cursor_ahead": bad_raw.plots[plot_id]._latest_time = clock_minute + 1
 			"plot_cursor_behind": bad_raw.plots[plot_id]._latest_time = clock_minute - 1
-		var bad: Dictionary = current.duplicate(true)
-		bad.state = MIGRATION_VALUES.new().encode(bad_raw)
+		var bad: Dictionary = v11.duplicate(true)
+		bad.state = MIGRATION_FIXTURE.encode_v11(MIGRATION_VALUES.new(), bad_raw)
 		if invalid_case.begins_with("worker_pending"):
 			for object: Dictionary in MIGRATION_FIXTURE.city_objects(bad.state, "WorkerData"):
 				if object.fields.worker_id == PRODUCTION_ID:

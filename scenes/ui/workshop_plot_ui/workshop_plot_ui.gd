@@ -78,6 +78,11 @@ func _ready() -> void:
 	progress_footer.move_child(replacement_button, 0)
 
 func _on_player_selected(selected: bool) -> void:
+	if _is_citizen_house():
+		_use_player = false
+		player_button.set_pressed_no_signal(false)
+		_refresh_view()
+		return
 	_use_player = selected
 	if selected:
 		_selected_worker_ids.clear()
@@ -213,15 +218,21 @@ func _refresh_view() -> void:
 
 	var was_showing_progress: bool = progress_page.visible
 	var phase: String = _get_phase()
+	var is_house: bool = _is_citizen_house()
+	if is_house:
+		_use_player = false
 	var clearing: bool = phase in ["uncleared", "clearing"]
 	var show_requirements: bool = phase in ["empty", "uncleared"]
 	replacement_button.visible = phase in ["building", "clearing"] and is_instance_valid(_construction) and _construction.get_replacement_slots() > 0
 	materials_list.visible = not clearing
 	requirements_page.get_node("MaterialsTitle").visible = not clearing
-	player_button.visible = phase == "uncleared"
+	player_button.visible = phase == "uncleared" and not is_house
 	player_button.set_pressed_no_signal(_use_player)
-	build_button.text = "Start Cleaning" if clearing else "Build"
-	$Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel.text = "CLEAR SITE" if clearing else "BUILD WORKSHOP"
+	build_button.text = "Start Cleaning" if clearing else ("Build House" if is_house else "Build")
+	if is_house:
+		$Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel.text = "CLEAR HOUSE SITE" if clearing else "BUILD HOUSE"
+	else:
+		$Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel.text = "CLEAR SITE" if clearing else "BUILD WORKSHOP"
 	$Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader/BuildersTitle.text = "Cleaner" if clearing else "Builder team"
 	requirements_page.visible = show_requirements
 	progress_page.visible = not show_requirements
@@ -243,6 +254,10 @@ func _get_phase() -> String:
 	return str(_construction.get("phase"))
 
 
+func _is_citizen_house() -> bool:
+	return is_instance_valid(_construction) and _construction.has_method("is_citizen_house") and bool(_construction.call("is_citizen_house"))
+
+
 func _get_requirements() -> Dictionary:
 	if not is_instance_valid(_construction) or not _construction.has_method("get_requirements"):
 		return {}
@@ -262,7 +277,7 @@ func _get_preview() -> Dictionary:
 		return {"message": "Construction is unavailable.", "can_start": false}
 	var selected_ids: Array[String] = _selected_worker_ids.duplicate()
 	if _get_phase() in ["uncleared", "clearing"]:
-		return _construction.get_clearing_preview(selected_ids, _use_player)
+		return _construction.get_clearing_preview(selected_ids, _use_player and not _is_citizen_house())
 	var result: Variant = _construction.call("get_preview", selected_ids)
 	return result if result is Dictionary else {"message": "Preview is unavailable.", "can_start": false}
 
@@ -475,8 +490,11 @@ func _refresh_preview() -> void:
 		duration_label.text = "-"
 	else:
 		var worker_word: String = "builder" if selected_count == 1 else "builders"
+		if _get_phase() == "uncleared" and _is_citizen_house():
+			worker_word = "worker" if selected_count == 1 else "workers"
+		var duration_text: String = _format_work_duration(duration) + " work" if _is_citizen_house() else _format_duration(duration, false)
 		duration_label.text = "%s, %d %s" % [
-			_format_duration(duration, false),
+			duration_text,
 			selected_count,
 			worker_word
 		]
@@ -503,13 +521,16 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 	var worker_count: int = int(preview.get("worker_count", 0))
 	progress_bar.value = progress * 100.0
 	if phase in ["building", "clearing"]:
-		progress_title.text = ("Clearing: %d%%" if phase == "clearing" else "Construction: %d%%") % roundi(progress * 100.0)
-		remaining_label.text = "Work left: %s" % _format_duration(remaining, true)
+		if _is_citizen_house():
+			progress_title.text = ("House clearing: %d%%" if phase == "clearing" else "House construction: %d%%") % roundi(progress * 100.0)
+		else:
+			progress_title.text = ("Clearing: %d%%" if phase == "clearing" else "Construction: %d%%") % roundi(progress * 100.0)
+		remaining_label.text = "Work left: %s" % (_format_work_duration(remaining) if _is_citizen_house() else _format_duration(remaining, true))
 		if worker_count == 0 and not _construction.clearing_by_player:
 			remaining_label.text = "Paused: assign workers"
 	else:
 		progress_bar.value = 100.0
-		progress_title.text = "Workshop construction complete"
+		progress_title.text = "House construction complete" if _is_citizen_house() else "Workshop construction complete"
 		remaining_label.text = "Remaining: complete"
 	team_label.text = "%d %s on the construction team" % [
 		worker_count,
@@ -523,8 +544,15 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 			team_label.text = "Off shift: return at 07:00"
 	if bool(preview.get("payroll_blocked", false)):
 		team_label.text = str(preview.get("message", "Contract expired - renew in Worker Hub."))
+	elif bool(preview.get("shelter_blocked", false)):
+		team_label.text = str(preview.get("message", "Shelter capacity is full; construction paused."))
 	if not _status_override.is_empty():
 		team_label.text = _status_override
+
+
+func _format_work_duration(total_minutes: int) -> String:
+	var minutes: int = maxi(total_minutes, 0)
+	return "%dh %dm" % [int(minutes / 60), minutes % 60]
 
 
 func _format_duration(total_minutes: int, include_zero_units: bool) -> String:
@@ -572,7 +600,7 @@ func _on_build_pressed() -> void:
 	if build_button.disabled:
 		return
 	if _get_phase() == "uncleared":
-		clearing_requested.emit(_selected_worker_ids.duplicate(), _use_player)
+		clearing_requested.emit(_selected_worker_ids.duplicate(), _use_player and not _is_citizen_house())
 		return
 	if _get_phase() != "empty":
 		return

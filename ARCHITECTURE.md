@@ -45,8 +45,15 @@ Satisfaction resigns and forfeits the remaining prepaid contract; unfinished
 work can be continued by a replacement. A Hauler carrying a load completes that
 delivery before departure. The original citizen and worker progression remain,
 and a returning applicant must recover to the existing 50% threshold; rehiring
-requires a newly paid contract. Current city checkpoints use schema v11 and accept earlier schemas;
+requires a newly paid contract. Current city checkpoints use schema v12 and accept earlier schemas;
 they retain pending work and delivery state without rewriting old files on load.
+
+The authored citizen-house plot shares the construction state and worker-presence
+rules with workshop plots. A worker clears it before construction; on completion
+the persistent construction state adds three places to the existing city shelter
+capacity once. Checkpoints through v11 acquire an untouched, uncleared house plot
+without changing their saved shelter capacity. House materials and work duration
+are provisional. The initial applicant and supply bootstrap remains separate work.
 
 Earlier fixed-team and uninterrupted-construction descriptions below represent
 prior checkpoints. The Game Director's 2026-11-01 shift and resignation decisions

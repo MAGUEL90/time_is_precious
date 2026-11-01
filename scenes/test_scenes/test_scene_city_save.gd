@@ -671,4 +671,4 @@ func _test_reliability_migration(current: Dictionary, raw: Dictionary) -> void:
 	_expect(upgraded.schema_version == CODEC.VERSION and fields_absent and not upgraded_raw.needs.last_needs_results[id].has("reliability_delta"), "The upgraded checkpoint omits every retired Reliability field.")
 	_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded checkpoint loads repeatedly.")
 	_write_text(CHECKPOINT_PATH, JSON.stringify(current, "", true, true))
-	_expect(store.load_checkpoint() and sentinel == store.snapshot.capture(content), "The original checkpoint restores after the migration test.")
+	_expect(store.load_checkpoint() and current == store.snapshot.capture(content), "The original checkpoint restores after the migration test.")

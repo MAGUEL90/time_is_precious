@@ -41,7 +41,7 @@ func _run() -> void:
 
 	# Save the settled current world through the production disk boundary.
 	var saved: bool = store.save_checkpoint()
-	_expect(saved, "The real v11 fixture saves: " + store.last_error)
+	_expect(saved, "The current fixture saves: " + store.last_error)
 	if not saved:
 		await _finish_skew_test()
 		return
@@ -49,9 +49,9 @@ func _run() -> void:
 	var current: Dictionary = JSON.parse_string(current_bytes.get_string_from_utf8())
 	var current_raw: Dictionary = MIGRATION_VALUES.new().decode(current.state)
 	var before: Dictionary = store.snapshot.capture(content)
-	_expect(current.schema_version == 11 and _settled_active(current_raw),
+	_expect(current.schema_version == store.snapshot.VERSION and _settled_active(current_raw),
 		"The current control has a live shaping order, drying batch, building plot, and settled cursors.")
-	_assert_valid_continue(current_bytes, before, "v11")
+	_assert_valid_continue(current_bytes, before, "current")
 
 	# Starting from the same real state, construct the exact older field shape.
 	var legacy: Dictionary = _legacy_document(current, current_raw)
@@ -70,10 +70,16 @@ func _run() -> void:
 		source_is_legacy = source_is_legacy and not route.has("resigning")
 	source_is_legacy = source_is_legacy and legacy_raw.worksites.schema_version == 1 \
 		and not legacy_raw.worksites.has("pending_output") and not legacy_raw.worksites.has("pending_progress")
+	source_is_legacy = source_is_legacy and not legacy_raw.plots.has("WorkshopConstruction_" + "citizen_house_1".sha256_text())
 	_expect(source_is_legacy, "The synthesized v10 control uses only historical worker, plot, and worksite fields.")
-	_assert_valid_continue(legacy_bytes, before, "v10")
+	var migrated_expected: Dictionary = before.duplicate(true)
+	var migrated_raw: Dictionary = current_raw.duplicate(true)
+	var house_id: String = "WorkshopConstruction_" + "citizen_house_1".sha256_text()
+	migrated_raw.plots[house_id]._latest_time = int(migrated_raw.clock.current_day) * 1440 + int(migrated_raw.clock.current_hour) * 60 + int(migrated_raw.clock.current_minute)
+	migrated_expected.state = MIGRATION_VALUES.new().encode(migrated_raw)
+	_assert_valid_continue(legacy_bytes, migrated_expected, "v10")
 	_test_active_cursor_skew(current, current_raw)
-	_test_recovery_cursor_skew(current, current_raw, legacy_bytes, before)
+	_test_recovery_cursor_skew(current, current_raw, legacy_bytes, migrated_expected)
 	await _finish_skew_test()
 
 func _hire_builder() -> bool:

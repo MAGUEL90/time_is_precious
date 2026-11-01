@@ -13,6 +13,8 @@ static func encode_city(codec: RefCounted, raw: Dictionary) -> Variant:
 ## Version 10 predates the construction team and deferred-resignation fields.
 static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
+	# Versions through 11 predate the authored citizen-house plot.
+	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
 	for plot: Dictionary in legacy.plots.values():
 		plot.erase("worker_capacity")
 		plot.erase("work_total_units")
@@ -24,6 +26,12 @@ static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
 	var encoded: Variant = codec.encode(legacy)
 	_remove_resignation_fields(encoded)
 	return encoded
+
+## Version 11 has the prior worker/worksite fields, but no house plot.
+static func encode_v11(codec: RefCounted, raw: Dictionary) -> Variant:
+	var legacy: Dictionary = raw.duplicate(true)
+	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
+	return codec.encode(legacy)
 
 static func _remove_resignation_fields(value: Variant) -> void:
 	if value is Dictionary:
