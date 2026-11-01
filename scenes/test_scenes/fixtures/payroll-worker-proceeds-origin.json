@@ -1,0 +1,2909 @@
+{
+	"location": "home",
+	"scenario": "city_mvp",
+	"schema_version": 8,
+	"state": {
+		"$type": "dictionary",
+		"entries": [
+			[
+				"clock",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"current_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"current_hour",
+							{
+								"$type": "int",
+								"value": "7"
+							}
+						],
+						[
+							"current_minute",
+							{
+								"$type": "int",
+								"value": "38"
+							}
+						],
+						[
+							"current_weather",
+							"cloudy"
+						],
+						[
+							"_timer",
+							0.850000000000003975
+						]
+					]
+				}
+			],
+			[
+				"player",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"global_position",
+							{
+								"$type": "vector2",
+								"x": 28.3333396911621094,
+								"y": -50.4999732971191406
+							}
+						],
+						[
+							"fatigue",
+							0.00100000000000000002
+						],
+						[
+							"hunger",
+							0.458000000000006957
+						],
+						[
+							"focus",
+							0.999500000000000055
+						],
+						[
+							"current_experience",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"last_sleep_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"last_collapse_day",
+							{
+								"$type": "int",
+								"value": "-1"
+							}
+						],
+						[
+							"total_collapse_count",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						]
+					]
+				}
+			],
+			[
+				"inventory",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"items",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"wood_log",
+										{
+											"$type": "int",
+											"value": "4"
+										}
+									],
+									[
+										"shekel",
+										{
+											"$type": "int",
+											"value": "6"
+										}
+									],
+									[
+										"date_cluster",
+										{
+											"$type": "int",
+											"value": "13"
+										}
+									]
+								]
+							}
+						],
+						[
+							"max_load",
+							100.0
+						]
+					]
+				}
+			],
+			[
+				"city_storage",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"items",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"date_cluster",
+										{
+											"$type": "int",
+											"value": "2"
+										}
+									]
+								]
+							}
+						],
+						[
+							"units",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_worksite_cart",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"tool_id",
+													"cart"
+												],
+												[
+													"name",
+													"Cart"
+												],
+												[
+													"worker_id",
+													""
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"food_portions",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"_unit_sequence",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						]
+					]
+				}
+			],
+			[
+				"stock",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"food_supply",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"clothing_supply",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"treasury_shekel",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"shelter_capacity",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						]
+					]
+				}
+			],
+			[
+				"citizens",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"citizens_by_id",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_workshop_laborer",
+										{
+											"$type": "object",
+											"class": "CitizenData",
+											"fields": {
+												"citizen_id": "initial_workshop_laborer",
+												"clothing_fulfilled": false,
+												"display_name": "Workshop Laborer",
+												"employment_status": {
+													"$type": "int",
+													"value": "2"
+												},
+												"experience": 0.0,
+												"food_fulfilled": true,
+												"population_status": {
+													"$type": "int",
+													"value": "1"
+												},
+												"profession": {
+													"$type": "int",
+													"value": "1"
+												},
+												"reliability": 0.699999999999999734,
+												"satisfaction": 0.200000000000000067,
+												"shelter_fulfilled": false,
+												"visual_profile": null
+											}
+										}
+									],
+									[
+										"initial_worksite_hauler",
+										{
+											"$type": "object",
+											"class": "CitizenData",
+											"fields": {
+												"citizen_id": "initial_worksite_hauler",
+												"clothing_fulfilled": false,
+												"display_name": "Worksite Hauler",
+												"employment_status": {
+													"$type": "int",
+													"value": "1"
+												},
+												"experience": 0.0,
+												"food_fulfilled": true,
+												"population_status": {
+													"$type": "int",
+													"value": "1"
+												},
+												"profession": {
+													"$type": "int",
+													"value": "3"
+												},
+												"reliability": 0.699999999999999734,
+												"satisfaction": 0.200000000000000067,
+												"shelter_fulfilled": false,
+												"visual_profile": null
+											}
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"workers",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"workers_by_id",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_workshop_laborer",
+										{
+											"$type": "object",
+											"class": "WorkerData",
+											"fields": {
+												"clothing_fulfilled": false,
+												"current_job_id": "clay_daily",
+												"current_order_id": "daily_-9223371446665866929_WoodSite",
+												"current_work_status": {
+													"$type": "int",
+													"value": "4"
+												},
+												"display_name": "Workshop Laborer",
+												"efficiency": 1.0,
+												"food_fulfilled": false,
+												"payroll_contract_days": {
+													"$type": "int",
+													"value": "3"
+												},
+												"payroll_last_attempt_day": {
+													"$type": "int",
+													"value": "5"
+												},
+												"payroll_paid_from_day": {
+													"$type": "int",
+													"value": "5"
+												},
+												"payroll_paid_start_minute": {
+													"$type": "int",
+													"value": "7947"
+												},
+												"payroll_paid_until_day": {
+													"$type": "int",
+													"value": "8"
+												},
+												"payroll_period_rate": {
+													"$type": "int",
+													"value": "1"
+												},
+												"payroll_start_day": {
+													"$type": "int",
+													"value": "5"
+												},
+												"physical_approach": {
+													"$type": "dictionary",
+													"entries": [
+														[
+															"kind",
+															"site"
+														],
+														[
+															"task",
+															"daily_-9223371446665866929_WoodSite:1943:5"
+														],
+														[
+															"owner",
+															"WoodSite"
+														],
+														[
+															"position",
+															{
+																"$type": "vector2",
+																"x": 61.4170570373535156,
+																"y": -174.473098754882812
+															}
+														],
+														[
+															"target",
+															{
+																"$type": "vector2",
+																"x": -82.0,
+																"y": -135.5
+															}
+														],
+														[
+															"arrived",
+															true
+														],
+														[
+															"arrival_minute",
+															{
+																"$type": "int",
+																"value": "7954"
+															}
+														]
+													]
+												},
+												"profession": {
+													"$type": "int",
+													"value": "1"
+												},
+												"profession_star": {
+													"$type": "int",
+													"value": "1"
+												},
+												"profession_xp": {
+													"$type": "int",
+													"value": "95"
+												},
+												"reliability": 1.0,
+												"satisfaction": 0.5,
+												"shelter_fulfilled": false,
+												"wage_shekel_per_day": {
+													"$type": "int",
+													"value": "1"
+												},
+												"worker_id": "initial_workshop_laborer"
+											}
+										}
+									]
+								]
+							}
+						],
+						[
+							"dismissed_workers",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						]
+					]
+				}
+			],
+			[
+				"needs",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"last_food_fulfilled_count",
+							{
+								"$type": "int",
+								"value": "2"
+							}
+						],
+						[
+							"last_food_unfulfilled_count",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"last_clothing_fulfilled_count",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"last_clothing_unfulfilled_count",
+							{
+								"$type": "int",
+								"value": "2"
+							}
+						],
+						[
+							"last_shelter_capacity_fulfilled_count",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"last_shelter_capacity_unfulfilled_count",
+							{
+								"$type": "int",
+								"value": "2"
+							}
+						],
+						[
+							"last_processed_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"last_food_processed_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"last_clothing_processed_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"clothing_allocations",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"last_needs_results",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_workshop_laborer",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"evaluated",
+													true
+												],
+												[
+													"day",
+													{
+														"$type": "int",
+														"value": "6"
+													}
+												],
+												[
+													"food",
+													true
+												],
+												[
+													"clothing",
+													false
+												],
+												[
+													"shelter",
+													false
+												],
+												[
+													"clothing_days_left",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"satisfaction",
+													0.200000000000000067
+												],
+												[
+													"reliability",
+													0.699999999999999734
+												],
+												[
+													"satisfaction_delta",
+													-0.0499999999999999889
+												],
+												[
+													"reliability_delta",
+													-0.0500000000000000444
+												],
+												[
+													"missing",
+													{
+														"$type": "array",
+														"items": [
+															"Clothing",
+															"Shelter"
+														]
+													}
+												]
+											]
+										}
+									],
+									[
+										"initial_worksite_hauler",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"evaluated",
+													true
+												],
+												[
+													"day",
+													{
+														"$type": "int",
+														"value": "6"
+													}
+												],
+												[
+													"food",
+													true
+												],
+												[
+													"clothing",
+													false
+												],
+												[
+													"shelter",
+													false
+												],
+												[
+													"clothing_days_left",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"satisfaction",
+													0.200000000000000067
+												],
+												[
+													"reliability",
+													0.699999999999999734
+												],
+												[
+													"satisfaction_delta",
+													-0.0499999999999999889
+												],
+												[
+													"reliability_delta",
+													-0.0500000000000000444
+												],
+												[
+													"missing",
+													{
+														"$type": "array",
+														"items": [
+															"Clothing",
+															"Shelter"
+														]
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"immigration",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"pending_immigrants",
+							{
+								"$type": "array",
+								"items": []
+							}
+						],
+						[
+							"immigration_pressure",
+							0.0179999999999999986
+						]
+					]
+				}
+			],
+			[
+				"generator",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"counter_id",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						]
+					]
+				}
+			],
+			[
+				"dialogue",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"intro_seen",
+							false
+						]
+					]
+				}
+			],
+			[
+				"workshop_storage",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"items",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"claimable_outputs",
+							{
+								"$type": "array",
+								"items": []
+							}
+						],
+						[
+							"unpaid_claims_ledger",
+							{
+								"$type": "array",
+								"items": []
+							}
+						],
+						[
+							"max_load",
+							50.0
+						],
+						[
+							"_next_fee_sequence",
+							{
+								"$type": "int",
+								"value": "1"
+							}
+						],
+						[
+							"_next_output_lot_sequence",
+							{
+								"$type": "int",
+								"value": "1"
+							}
+						],
+						[
+							"output_lots",
+							{
+								"$type": "array",
+								"items": []
+							}
+						]
+					]
+				}
+			],
+			[
+				"work",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"active_orders",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"service_fee_by_order",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"service_fee_currency_by_order",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"_last_total_minutes",
+							{
+								"$type": "int",
+								"value": "9098"
+							}
+						]
+					]
+				}
+			],
+			[
+				"process",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"stations",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"current_weather_key",
+							"cloudy"
+						],
+						[
+							"_last_total_minutes",
+							{
+								"$type": "int",
+								"value": "9098"
+							}
+						],
+						[
+							"_auto_pull_batch_size",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						]
+					]
+				}
+			],
+			[
+				"facilities",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"facility_levels",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"drying_yard",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"city",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"level",
+							{
+								"$type": "int",
+								"value": "1"
+							}
+						],
+						[
+							"progress",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"last_daily",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"day",
+										{
+											"$type": "int",
+											"value": "6"
+										}
+									],
+									[
+										"food",
+										{
+											"$type": "int",
+											"value": "5"
+										}
+									],
+									[
+										"clothing",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"satisfaction",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"wall",
+										{
+											"$type": "int",
+											"value": "-5"
+										}
+									],
+									[
+										{
+											"$type": "string_name",
+											"value": "total"
+										},
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										{
+											"$type": "string_name",
+											"value": "applied"
+										},
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						],
+						[
+							"last_event",
+							""
+						],
+						[
+							"last_awarded_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						],
+						[
+							"_last_breach_id",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						]
+					]
+				}
+			],
+			[
+				"raid",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"notification_seen_keys",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"phase",
+							"unbuilt"
+						],
+						[
+							"wall_hp",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"wall_level",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"watchtower_built",
+							false
+						],
+						[
+							"_work_base_max_hp",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_latest_minute",
+							{
+								"$type": "int",
+								"value": "9098"
+							}
+						],
+						[
+							"_attack_at",
+							{
+								"$type": "int",
+								"value": "-1"
+							}
+						],
+						[
+							"_departure_at",
+							{
+								"$type": "int",
+								"value": "-1"
+							}
+						],
+						[
+							"_party",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"_expedition_sequence",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_composition_stage",
+							{
+								"$type": "string_name",
+								"value": "early"
+							}
+						],
+						[
+							"_elapsed",
+							0.0
+						],
+						[
+							"_hits",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_start_hp",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_attack_strength",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_report",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"_report_sequence",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_work_kind",
+							""
+						],
+						[
+							"_work_remaining",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_work_total",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_work_restore_hp",
+							{
+								"$type": "int",
+								"value": "0"
+							}
+						],
+						[
+							"_work_paid",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"last_work_message",
+							""
+						],
+						[
+							"_breach_at",
+							-1.0
+						],
+						[
+							"_next_loot_at",
+							0.0
+						],
+						[
+							"_loot_weight",
+							0.0
+						],
+						[
+							"_stolen",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"_retreat_reason",
+							""
+						],
+						[
+							"_breach_losses",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						]
+					]
+				}
+			],
+			[
+				"merchant",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"_stock",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"clay_lump",
+										{
+											"$type": "int",
+											"value": "12"
+										}
+									],
+									[
+										"straw_bundle",
+										{
+											"$type": "int",
+											"value": "12"
+										}
+									],
+									[
+										"water_jar",
+										{
+											"$type": "int",
+											"value": "12"
+										}
+									],
+									[
+										"wood_log",
+										{
+											"$type": "int",
+											"value": "8"
+										}
+									],
+									[
+										"stone_hammer",
+										{
+											"$type": "int",
+											"value": "2"
+										}
+									],
+									[
+										"sun_dried_mudbrick",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						],
+						[
+							"_offers",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"clay_lump",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"clay_lump"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "12"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "2"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												]
+											]
+										}
+									],
+									[
+										"straw_bundle",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"straw_bundle"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "12"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "2"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												]
+											]
+										}
+									],
+									[
+										"water_jar",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"water_jar"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "12"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "2"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												]
+											]
+										}
+									],
+									[
+										"wood_log",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"wood_log"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "8"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "4"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "2"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "4"
+													}
+												]
+											]
+										}
+									],
+									[
+										"stone_hammer",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"stone_hammer"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "2"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "15"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												]
+											]
+										}
+									],
+									[
+										"sun_dried_mudbrick",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"sun_dried_mudbrick"
+												],
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"buy_price",
+													{
+														"$type": "int",
+														"value": "6"
+													}
+												],
+												[
+													"sell_price",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"requested",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"_demand",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"clay_lump",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"straw_bundle",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"water_jar",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"wood_log",
+										{
+											"$type": "int",
+											"value": "4"
+										}
+									],
+									[
+										"stone_hammer",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"sun_dried_mudbrick",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						],
+						[
+							"_budget",
+							{
+								"$type": "int",
+								"value": "120"
+							}
+						],
+						[
+							"_visit_day",
+							{
+								"$type": "int",
+								"value": "4"
+							}
+						],
+						[
+							"_latest_minute",
+							{
+								"$type": "int",
+								"value": "9098"
+							}
+						],
+						[
+							"_present",
+							false
+						]
+					]
+				}
+			],
+			[
+				"rng",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"raid",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"seed",
+										{
+											"$type": "int",
+											"value": "7630052266724014797"
+										}
+									],
+									[
+										"state",
+										{
+											"$type": "int",
+											"value": "-3561400750867553637"
+										}
+									]
+								]
+							}
+						],
+						[
+							"merchant",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"seed",
+										{
+											"$type": "int",
+											"value": "7757646113895135886"
+										}
+									],
+									[
+										"state",
+										{
+											"$type": "int",
+											"value": "2494737424407776878"
+										}
+									]
+								]
+							}
+						],
+						[
+							"immigration",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"seed",
+										{
+											"$type": "int",
+											"value": "-6747459107520352748"
+										}
+									],
+									[
+										"state",
+										{
+											"$type": "int",
+											"value": "-2374693403023397038"
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"plots",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"MainWorkshopConstruction",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"order_id",
+										"construction:main_workshop"
+									],
+									[
+										"phase",
+										"uncleared"
+									],
+									[
+										"clearing_remaining",
+										{
+											"$type": "int",
+											"value": "180"
+										}
+									],
+									[
+										"clearing_by_player",
+										false
+									],
+									[
+										"worker_ids",
+										{
+											"$type": "array",
+											"items": []
+										}
+									],
+									[
+										"started_at",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"completes_at",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"_latest_time",
+										{
+											"$type": "int",
+											"value": "600"
+										}
+									],
+									[
+										"payroll_work_remainder",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						],
+						[
+							"WorkshopConstruction_201b4bf232cc5cf3deb941f057902437b8fc0688c255b79d84fb8dc92284d06d",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"order_id",
+										"construction:workshop_2"
+									],
+									[
+										"phase",
+										"uncleared"
+									],
+									[
+										"clearing_remaining",
+										{
+											"$type": "int",
+											"value": "180"
+										}
+									],
+									[
+										"clearing_by_player",
+										false
+									],
+									[
+										"worker_ids",
+										{
+											"$type": "array",
+											"items": []
+										}
+									],
+									[
+										"started_at",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"completes_at",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"_latest_time",
+										{
+											"$type": "int",
+											"value": "600"
+										}
+									],
+									[
+										"payroll_work_remainder",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"work_sources",
+				{
+					"$type": "dictionary",
+					"entries": []
+				}
+			],
+			[
+				"work_outputs",
+				{
+					"$type": "dictionary",
+					"entries": []
+				}
+			],
+			[
+				"order_plots",
+				{
+					"$type": "dictionary",
+					"entries": []
+				}
+			],
+			[
+				"initial_cart_supplied",
+				true
+			],
+			[
+				"city_drops",
+				{
+					"$type": "array",
+					"items": []
+				}
+			],
+			[
+				"pickup_sources",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"DatePalm_0f028b3a427ce0b45e7a8da91aaea2f0e3eac1de579eba23c5bbe2e35a99eff5",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												false,
+												false,
+												false
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "28"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "82988000093128503"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "-4320870820832590205"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"DatePalm_7fb07b431c178d81c2ad522944a8bd5ce43d176e181cf105532cbb649db1e4d9",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												true,
+												true,
+												true
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "5296181748459139995"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "-495026211129843272"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"DatePalm_302acc81e3b7a9649b3ed33aaaf38ce517e4fd279eebff021a8f0eed31d4cdb0",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												true,
+												true,
+												true
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "-7616086067767543209"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "-8387111399047122924"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"DatePalm_13fd86bb81603a12f6a12e0933bac54aa4d4e4b565cc6930d94b2d60389c7d68",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												true,
+												true,
+												true
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "2813753565752733691"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "-3598899245597024362"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"DatePalm_3393aaa355f07874646c982ece8032b7bfbe1e48c6c1c68d7a36c9d6b49febe1",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												true,
+												true,
+												true
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "0"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "-3423844724619304231"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "-3832645766580556691"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"DatePalm_9fa8794e06746c01d03caa8b8da37218844c78a547ecfbce99012f5bf3e241bd",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"available",
+										{
+											"$type": "array",
+											"items": [
+												false,
+												false,
+												false
+											]
+										}
+									],
+									[
+										"remaining_minutes",
+										{
+											"$type": "int",
+											"value": "280"
+										}
+									],
+									[
+										"rng",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"seed",
+													{
+														"$type": "int",
+														"value": "2755523251180101108"
+													}
+												],
+												[
+													"state",
+													{
+														"$type": "int",
+														"value": "6783590243532116287"
+													}
+												]
+											]
+										}
+									],
+									[
+										"config",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"item_id",
+													"date_cluster"
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "3"
+													}
+												],
+												[
+													"refill_enabled",
+													true
+												],
+												[
+													"refill_min_hours",
+													{
+														"$type": "int",
+														"value": "1"
+													}
+												],
+												[
+													"refill_max_hours",
+													{
+														"$type": "int",
+														"value": "18"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						]
+					]
+				}
+			],
+			[
+				"worksites",
+				{
+					"$type": "dictionary",
+					"entries": [
+						[
+							"schema_version",
+							{
+								"$type": "int",
+								"value": "1"
+							}
+						],
+						[
+							"sites",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"ClaySiteA",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "72"
+													}
+												]
+											]
+										}
+									],
+									[
+										"WoodSite",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "72"
+													}
+												]
+											]
+										}
+									],
+									[
+										"ReedSite",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "72"
+													}
+												]
+											]
+										}
+									],
+									[
+										"StrawSite",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "72"
+													}
+												]
+											]
+										}
+									],
+									[
+										"WaterSite",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"stock",
+													{
+														"$type": "int",
+														"value": "72"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"storages",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"ClayStorage",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													false
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "96"
+													}
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									],
+									[
+										"WoodStorage",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													false
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "96"
+													}
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									],
+									[
+										"ReedStorage",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													false
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "96"
+													}
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									],
+									[
+										"StrawStorage",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													false
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "96"
+													}
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									],
+									[
+										"WaterStorage",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													false
+												],
+												[
+													"quantity",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"capacity",
+													{
+														"$type": "int",
+														"value": "96"
+													}
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									],
+									[
+										"CityStorageArea/DeliveryPoint",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"shared",
+													true
+												],
+												[
+													"accepting",
+													true
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"jobs",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"WoodSite",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"ids",
+													{
+														"$type": "array",
+														"items": [
+															"initial_workshop_laborer"
+														]
+													}
+												],
+												[
+													"order",
+													"daily_-9223371446665866929_WoodSite"
+												],
+												[
+													"units",
+													{
+														"$type": "int",
+														"value": "0"
+													}
+												],
+												[
+													"progress",
+													{
+														"$type": "dictionary",
+														"entries": []
+													}
+												],
+												[
+													"starts",
+													{
+														"$type": "dictionary",
+														"entries": [
+															[
+																"initial_workshop_laborer",
+																{
+																	"$type": "int",
+																	"value": "1943"
+																}
+															]
+														]
+													}
+												],
+												[
+													"stats",
+													{
+														"$type": "dictionary",
+														"entries": [
+															[
+																"initial_workshop_laborer",
+																{
+																	"$type": "dictionary",
+																	"entries": [
+																		[
+																			"days",
+																			{
+																				"$type": "array",
+																				"items": [
+																					{
+																						"$type": "int",
+																						"value": "1"
+																					},
+																					{
+																						"$type": "int",
+																						"value": "2"
+																					},
+																					{
+																						"$type": "int",
+																						"value": "3"
+																					},
+																					{
+																						"$type": "int",
+																						"value": "4"
+																					},
+																					{
+																						"$type": "int",
+																						"value": "5"
+																					}
+																				]
+																			}
+																		],
+																		[
+																			"output",
+																			{
+																				"$type": "int",
+																				"value": "95"
+																			}
+																		]
+																	]
+																}
+															]
+														]
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"ledger",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"day",
+										{
+											"$type": "int",
+											"value": "6"
+										}
+									],
+									[
+										"last_tick",
+										{
+											"$type": "int",
+											"value": "9098"
+										}
+									],
+									[
+										"stock_day",
+										{
+											"$type": "int",
+											"value": "6"
+										}
+									],
+									[
+										"minutes",
+										{
+											"$type": "dictionary",
+											"entries": []
+										}
+									],
+									[
+										"rng_seed",
+										{
+											"$type": "int",
+											"value": "-4587889857555685441"
+										}
+									],
+									[
+										"rng_state",
+										{
+											"$type": "int",
+											"value": "7622308344180453157"
+										}
+									]
+								]
+							}
+						],
+						[
+							"contributions",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_workshop_laborer",
+										{
+											"$type": "int",
+											"value": "95"
+										}
+									]
+								]
+							}
+						],
+						[
+							"productive_days",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"initial_workshop_laborer",
+										{
+											"$type": "array",
+											"items": [
+												{
+													"$type": "int",
+													"value": "1"
+												},
+												{
+													"$type": "int",
+													"value": "2"
+												},
+												{
+													"$type": "int",
+													"value": "3"
+												},
+												{
+													"$type": "int",
+													"value": "4"
+												},
+												{
+													"$type": "int",
+													"value": "5"
+												}
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"routes",
+							{
+								"$type": "dictionary",
+								"entries": []
+							}
+						],
+						[
+							"ground",
+							{
+								"$type": "array",
+								"items": [
+									{
+										"$type": "dictionary",
+										"entries": [
+											[
+												"item_id",
+												"wood_log"
+											],
+											[
+												"quantity",
+												{
+													"$type": "int",
+													"value": "95"
+												}
+											],
+											[
+												"position",
+												{
+													"$type": "vector2",
+													"x": -72.0,
+													"y": 24.0
+												}
+											],
+											[
+												"site_id",
+												"WoodSite"
+											]
+										]
+									}
+								]
+							}
+						],
+						[
+							"worker_journeys",
+							{
+								"$type": "dictionary",
+								"entries": [
+									[
+										"WoodSite:initial_workshop_laborer:6",
+										{
+											"$type": "dictionary",
+											"entries": [
+												[
+													"origin",
+													{
+														"$type": "vector2",
+														"x": 61.4170570373535156,
+														"y": -190.473098754882812
+													}
+												],
+												[
+													"target",
+													{
+														"$type": "vector2",
+														"x": -82.0,
+														"y": -151.5
+													}
+												],
+												[
+													"start",
+													9045.13818511962927
+												],
+												[
+													"arrival",
+													{
+														"$type": "int",
+														"value": "9060"
+													}
+												]
+											]
+										}
+									]
+								]
+							}
+						],
+						[
+							"journey_cache_day",
+							{
+								"$type": "int",
+								"value": "6"
+							}
+						]
+					]
+				}
+			]
+		]
+	}
+}

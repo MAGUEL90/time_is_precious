@@ -51,8 +51,11 @@ func _run() -> void:
 	await _key(KEY_K)
 	_expect(not hub.visible and not get_tree().paused, "Second K closes Worker Hub and resumes the world.")
 	var startup: Node = content.get_node("YSortWorld/InitialWorksites")
-	WorkerDatabase.hire_applicant(startup.APPLICANT_ID)
-	WorkerDatabase.hire_applicant(startup.HAULER_APPLICANT_ID)
+	# This UI fixture funds exactly the two three-day contracts it needs.
+	var funds: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3) + WorkerDatabase.get_contract_price(WorkerData.Profession.HAULER, 3)
+	Inventory.add_item("shekel", funds)
+	_expect(WorkerDatabase.hire_applicant(startup.APPLICANT_ID) != null, "Fixture hires the Laborer through the paid contract API.")
+	_expect(WorkerDatabase.hire_applicant(startup.HAULER_APPLICANT_ID) != null, "Fixture hires the Hauler through the paid contract API.")
 	await _key(KEY_K)
 	_expect(hub.visible and hub.status_list.get_child_count() == 2, "K reopens with both hired workers.")
 	await _capture("worker-hub-k-hired.png")

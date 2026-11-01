@@ -25,6 +25,10 @@ Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and
 | `test_scene_contract_continue.tscn` | Fixture: separate processes with `-- --contract-phase=write`, `read`, `readrenew`, `legacy-read`, `legacy-renew-read`, `assignment-write`, `assignment-read` in that order |
 | `test_scene_contract_journey.tscn` | Normal New Game journey with active needs and earned income: `-- --journey-phase=write`, then `read` in separate processes |
 | `test_scene_contract_ui_review.tscn` | Continue the earned journey checkpoint; `-- --contract-ui-phase=prepare`, `capture` (rendered), `write`, `read`; see driver for checkpoint paths |
+| `test_scene_content_prepaid_ui.tscn` | Job Board candidate selection, 3/6/9 confirmation, cancellation, quote changes, focus and atomic batch payment |
+| `test_scene_job_board_closed_feedback.tscn` | Actual-map E interaction at 07:59/08:00/16:59/17:00, feedback animation/restart and unchanged E position; optional rendered frames via `TIP_JOB_BOARD_ANIMATION_DIR` |
+| `test_scene_worker_renew_currency.tscn` | Renewal price icon/layout, confirmation/cancellation, changed-quote reconfirmation and Fire confirmation |
+| `test_scene_worker_idle_progress.tscn` | Expiry and renewal stop dust and gray progress until physical return; `-- --idle-phase=roundtrip`, or `write` then `read` in separate processes for Continue. Rendered runs can save frames via `TIP_DUST_ANIMATION_DIR` and screenshots via `TIP_MVP_CAPTURE_DIR` |
 
 Older seven-day city-payroll fixtures/journeys document the superseded rules;
 they are not acceptance tests for wallet contracts. Older next-day commute/
@@ -38,6 +42,7 @@ See `docs/task_reports/prepaid-worker-contracts-2026-10-23.md` for evidence and 
 | `main_map_worker_hub_test.tscn` | Current `WorkerRuntime`, K/J modal controls and pause release |
 | `main_map_hauler_start_test.tscn` | Current-map hiring, Cart equipment ownership, reload and dismissal |
 | `debug_production_flow_test.tscn` | Current-map construction and two production cycles using explicit debug supplies |
+| `workshop_label_presentation_test.tscn` | BUILD WORKSHOP margins, keyboard Cancel, worker scrolling, building labels, contract-expiry feedback and completed-workshop E; optional rendered captures via `TIP_MVP_CAPTURE_DIR` |
 | `mudbrick_production_chain_integration_test.tscn` | Held output, rejected empty-wallet payment, fee payment, drying and overdue fees |
 | `population_employment_integration_test.tscn` | Population/employment separation and worker lifecycle |
 

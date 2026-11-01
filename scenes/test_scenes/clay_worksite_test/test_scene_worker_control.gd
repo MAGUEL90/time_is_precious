@@ -12,6 +12,31 @@ func _expect(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 
+func _expect_fire_dialog_layout(state_name: String, expected_extra_text: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var panel: NinePatchRect = fixture.worker_control._confirmation_overlay.find_child(
+		"ConfirmDiscardPanel", true, false) as NinePatchRect
+	var label: Label = fixture.worker_control._confirm_label
+	var panel_rect: Rect2 = panel.get_global_rect() if panel != null else Rect2()
+	var label_rect: Rect2 = label.get_global_rect()
+	var no_rect: Rect2 = fixture.worker_control._confirm_no_button.get_global_rect()
+	var yes_rect: Rect2 = fixture.worker_control._confirm_yes_button.get_global_rect()
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
+	_expect(panel != null and panel.custom_minimum_size == Vector2(160, 80)
+		and panel.size == Vector2(160, 80), "%s Fire panel uses the compact 160x80 size." % state_name)
+	_expect(panel_rect.encloses(label_rect) and panel_rect.encloses(no_rect) and panel_rect.encloses(yes_rect)
+		and viewport_rect.encloses(panel_rect), "%s Fire content and controls fit inside the panel and viewport." % state_name)
+	_expect(label.get_theme_font_size("font_size") == 6
+		and label.get_line_count() <= label.get_visible_line_count()
+		and label_rect.end.y <= no_rect.position.y,
+		"%s Fire text stays readable at pixel font 6 without clipping or overlapping buttons." % state_name)
+	_expect(label.text.contains("Their assignment will end.")
+		and label.text.contains("Tools return to City Storage.")
+		and label.text.contains(expected_extra_text), "%s Fire keeps its expected information." % state_name)
+	_expect(fixture.worker_control._confirm_no_button.text == "No"
+		and fixture.worker_control._confirm_yes_button.text == "Yes", "%s Fire retains No and Yes." % state_name)
+
 func _run() -> void:
 	fixture = preload("res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.tscn").instantiate()
 	fixture.prepare_nightmare_test = false
@@ -79,7 +104,31 @@ func _run() -> void:
 	_expect(fixture.worker_control.status_list.get_parent().get_v_scroll_bar().size.x <= 4.0, "Status scrollbar stays at four logical pixels.")
 	_expect(fixture.worker_control.find_child("FooterCloseButton", true, false) == null, "Only the top close control remains.")
 	fixture.worker_control._show_manage(ids[0])
+	await get_tree().process_frame
+	await get_tree().process_frame
 	_expect(fixture.worker_control.manage_fire_button.disabled and not fixture.worker_control.manage_goto_button.disabled, "Working enables Go to and disables Fire.")
+	var manage_margin: MarginContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin")
+	_expect(fixture.worker_control.manage_window.size.y <= 86.0 and manage_margin.get_theme_constant("margin_top") == 6,
+		"Compact Manage panel removes the large blank area above its four actions.")
+	fixture.worker_control._request_manage_fire()
+	var fire_feedback_rect: Rect2 = fixture.worker_control._fire_block_feedback.get_global_rect()
+	var hub_rect: Rect2 = fixture.worker_control.window.get_global_rect()
+	var status_scroll_rect: Rect2 = fixture.worker_control.status_list.get_parent().get_global_rect()
+	var feedback_covers_button: bool = false
+	for node: Node in fixture.worker_control.find_children("*", "BaseButton", true, false):
+		var interactive_button: Control = node as Control
+		if is_instance_valid(interactive_button) and interactive_button.is_visible_in_tree() \
+			and fire_feedback_rect.intersects(interactive_button.get_global_rect()):
+			feedback_covers_button = true
+	_expect(fixture.worker_control._fire_block_feedback.visible
+		and fire_feedback_rect.position.y >= status_scroll_rect.end.y + 1.0
+		and fire_feedback_rect.end.y <= hub_rect.end.y - 7.0
+		and absf(fire_feedback_rect.get_center().x - hub_rect.get_center().x) <= 0.5
+		and fixture.worker_control._fire_block_feedback.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		and not feedback_covers_button,
+		"Fire reason fits inside Worker Hub without covering controls (visible=%s feedback=%s hub=%s scroll=%s covers_button=%s)." % [
+			fixture.worker_control._fire_block_feedback.visible, fire_feedback_rect, hub_rect, status_scroll_rect, feedback_covers_button])
+	fixture.worker_control._hide_fire_block_feedback()
 	fixture.worker_control.manage_details_button.pressed.emit()
 	_expect(fixture.worker_control.details_label.text.contains("Productive days:") and fixture.worker_control.details_label.text.contains("Wage:"), "Details exposes requested worker data.")
 	await _capture("worker-hub-details.png")
@@ -228,7 +277,27 @@ func _run() -> void:
 	_expect(not fixture.worker_control.manage_fire_button.disabled and fixture.worker_control.manage_goto_button.disabled, "Idle enables Fire and disables Go to.")
 	await _capture("worker-hub-manage.png")
 	_expect(fixture.worker_control.window.visible and fixture.worker_control.manage_window.visible, "Manage is a popup over the Status list.")
-	_expect(fixture.worker_control.manage_window.size.x <= 100 and fixture.worker_control.manage_window.size.y <= 90, "Manage fits three compact actions.")
+	var manage_rect: Rect2 = fixture.worker_control.manage_window.get_global_rect()
+	var manage_actions: VBoxContainer = fixture.worker_control.get_node("Root/ManageWindow/Margin/MainVBox/Actions")
+	var action_names: Array[String] = []
+	var first_action_size: Vector2 = fixture.worker_control.manage_fire_button.size
+	for action: Node in manage_actions.get_children():
+		action_names.append(action.name)
+		var action_button: Button = action as Button
+		if action_button != null:
+			_expect(action_button.size == first_action_size, "%s uses the shared Manage button dimensions." % action.name)
+	var contract_text_width: float = fixture.worker_control.manage_contract_button.get_theme_font("font").get_string_size(
+		"Contract", HORIZONTAL_ALIGNMENT_LEFT, -1, fixture.worker_control.manage_contract_button.get_theme_font_size("font_size")).x
+	_expect(get_viewport().get_visible_rect().encloses(manage_rect)
+		and manage_rect.encloses(fixture.worker_control.manage_fire_button.get_global_rect())
+		and manage_rect.encloses(fixture.worker_control.manage_contract_button.get_global_rect())
+		and first_action_size.x > contract_text_width
+		and first_action_size.x - contract_text_width <= 12.0
+		and manage_rect.size.x <= 64.0 and manage_rect.size.y <= 100.0
+		and action_names == ["FireButton", "GotoButton", "DetailsButton", "ContractButton"]
+		and fixture.worker_control.manage_goto_button.text == "Go To"
+		and not fixture.worker_control.contract_window.visible,
+		"Compact Manage buttons share a size slightly wider than Contract, stay ordered, and fit the viewport.")
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true
@@ -238,11 +307,53 @@ func _run() -> void:
 	fixture.worker_control._show_manage(ids[1])
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	_expect(fixture.worker_control._confirmation_overlay.visible and WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "Fire asks before dismissing worker.")
-	_expect(fixture.worker_control._confirm_label.text.contains("Unused pay is not refunded.")
-		and fixture.worker_control._confirm_label.text.contains("remain."), "Fire explains prepaid time forfeiture before Yes.")
+	_expect(fixture.worker_control._confirm_label.text.contains("Their assignment will end.")
+		and fixture.worker_control._confirm_label.text.contains("Tools return to City Storage.")
+		and fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
+		and not fixture.worker_control._confirm_label.text.contains("Paid through Day")
+		and not fixture.worker_control._confirm_label.text.contains(" remain."),
+		"Fire keeps assignment, tool-return, and no-refund information without dynamic payroll rows.")
+	await _expect_fire_dialog_layout("Active prepaid", "Unused payment is not refunded.")
 	await _capture("worker-hub-remove.png")
 	fixture.worker_control._confirm_no_button.pressed.emit()
 	_expect(WorkerDatabase.get_worker_data(ids[1]).is_reserved(), "No preserves assignment.")
+	var paid_from_day: int = prepaid.payroll_paid_from_day
+	prepaid.payroll_paid_from_day = -1
+	fixture.worker_control.manage_fire_button.pressed.emit()
+	await _expect_fire_dialog_layout("Unpaid", "No payment made yet.")
+	fixture.worker_control._confirm_no_button.pressed.emit()
+	_expect(WorkerDatabase.has_worker_data(ids[1]) and Inventory.items.get("shekel", 0) == wallet_before_fire
+		and CityStockManager.treasury_shekel == treasury_before_fire, "No preserves unpaid worker and both balances.")
+	prepaid.payroll_paid_from_day = paid_from_day
+	var original_day: int = TimeComponentManager.current_day
+	var original_hour: int = TimeComponentManager.current_hour
+	var original_minute: int = TimeComponentManager.current_minute
+	var paid_until_day: int = prepaid.payroll_paid_until_day
+	var payroll_start_day: int = prepaid.payroll_start_day
+	prepaid.payroll_paid_from_day = WorkerDatabase.MAX_CONTRACT_DAY - 6
+	prepaid.payroll_paid_until_day = WorkerDatabase.MAX_CONTRACT_DAY
+	prepaid.payroll_start_day = WorkerDatabase.MAX_CONTRACT_DAY - 6
+	TimeComponentManager.current_day = WorkerDatabase.MAX_CONTRACT_DAY + 2
+	TimeComponentManager.current_hour = 12
+	TimeComponentManager.current_minute = 0
+	fixture.worker_control.manage_fire_button.pressed.emit()
+	prepaid.payroll_paid_from_day = paid_from_day
+	prepaid.payroll_paid_until_day = paid_until_day
+	prepaid.payroll_start_day = payroll_start_day
+	TimeComponentManager.current_day = original_day
+	TimeComponentManager.current_hour = original_hour
+	TimeComponentManager.current_minute = original_minute
+	_expect(fixture.worker_control._confirm_label.text.contains("Contract expired after Day %d." % WorkerDatabase.MAX_CONTRACT_DAY)
+		and fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded.")
+		and not fixture.worker_control._confirm_label.text.contains("Paid through Day")
+		and not fixture.worker_control._confirm_label.text.contains(" remain."),
+		"Expired Fire keeps the max-day expiry and no-refund notice without paid-time rows.")
+	await _expect_fire_dialog_layout("Expired at max day", "Contract expired after Day %d." % WorkerDatabase.MAX_CONTRACT_DAY)
+	_expect(fixture.worker_control._confirm_label.text.contains("Unused payment is not refunded."),
+		"Expired Fire keeps its no-refund notice.")
+	fixture.worker_control._confirm_no_button.pressed.emit()
+	_expect(WorkerDatabase.has_worker_data(ids[1]) and Inventory.items.get("shekel", 0) == wallet_before_fire
+		and CityStockManager.treasury_shekel == treasury_before_fire, "No preserves expired worker and both balances.")
 	fixture.worker_control.manage_fire_button.pressed.emit()
 	var escape := InputEventAction.new()
 	escape.action = "ui_cancel"
@@ -272,8 +383,13 @@ func _run() -> void:
 	citizen.employment_status = CitizenData.EmploymentStatus.APPLICANT
 	citizen.profession = WorkerData.Profession.LABORER
 	CitizenManager.add_citizen(citizen)
+	var contract_price: int = WorkerDatabase.get_contract_price(citizen.profession, 3)
+	_expect(contract_price > 0, "The linked-citizen fixture has an available prepaid contract.")
+	Inventory.add_item("shekel", contract_price * 2) # Fixture funding for hire and rehire.
+	var wallet_before_hire: int = int(Inventory.items.get("shekel", 0))
 	var hired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id, 2)
-	_expect(hired != null, "Linked applicant can be hired during Job Board hours.")
+	_expect(hired != null and int(Inventory.items.get("shekel", 0)) == wallet_before_hire - contract_price,
+		"Linked applicant is hired during Job Board hours with one prepaid wallet debit.")
 	if hired == null:
 		get_tree().quit(1)
 		return
@@ -284,8 +400,11 @@ func _run() -> void:
 	hired.finish_work("test_busy")
 	_expect(WorkerDatabase.dismiss_worker(hired.worker_id) and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED, "Dismissal updates linked citizen employment.")
 	citizen.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	var wallet_before_rehire: int = int(Inventory.items.get("shekel", 0))
 	var rehired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id, 3)
-	_expect(rehired == hired and rehired.profession_xp == 9 and rehired.profession_star == 2 and rehired.wage_shekel_per_day == 3, "Rehire preserves progression and accepts the new wage.")
+	_expect(rehired == hired and rehired.profession_xp == 9 and rehired.profession_star == 2
+		and rehired.wage_shekel_per_day == 3 and int(Inventory.items.get("shekel", 0)) == wallet_before_rehire - contract_price,
+		"Rehire preserves progression and charges its new prepaid contract once.")
 	WorkerDatabase.workers_by_id.erase(citizen.citizen_id)
 	WorkerDatabase.dismissed_workers.erase(citizen.citizen_id)
 	CitizenManager.citizens_by_id.erase(citizen.citizen_id)

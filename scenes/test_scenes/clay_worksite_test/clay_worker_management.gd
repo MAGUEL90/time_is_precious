@@ -33,6 +33,26 @@ func is_active(id: String) -> bool:
 		return true
 	return worker.is_reserved() and assigned_site(id).is_empty()
 
+func fire_block_reason(id: String) -> String:
+	"""Explain the existing Fire guard without changing its decision."""
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if worker == null:
+		return "Worker unavailable."
+	if worker.current_work_status == WorkerData.WorkStatus.WORKING:
+		return "Working now"
+	if schedule.hauling != null and schedule.hauling.routes.has(id):
+		var route: Dictionary = schedule.hauling.routes[id]
+		if str(route.get("phase", "idle")) != "idle":
+			return "Hauler trip"
+	if worker.current_work_status == WorkerData.WorkStatus.TRAVELLING:
+		return "Travelling"
+	var citizen: CitizenData = worker.get_linked_citizen()
+	if citizen != null and citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED:
+		return "Workshop assigned"
+	if worker.is_reserved():
+		return "Job reserved"
+	return ""
+
 func fire(id: String) -> String:
 	if WorkerDatabase.get_worker_data(id) == null:
 		return "Worker unavailable."
@@ -133,6 +153,7 @@ func rows() -> Array[Dictionary]:
 		var reason: String = lock_reason(id)
 		var finishing: bool = schedule.hauling != null and schedule.hauling.routes.has(id) and schedule.hauling.routes[id].removing
 		var working: bool = is_active(id)
+		var fire_reason: String = fire_block_reason(id)
 		var citizen: CitizenData = worker.get_linked_citizen()
 		var profile: VisualProfile = citizen.visual_profile if citizen != null and citizen.visual_profile != null else VisualProfile.new()
 		if citizen == null or citizen.visual_profile == null:
@@ -150,6 +171,7 @@ func rows() -> Array[Dictionary]:
 			"can_remove": not site_id.is_empty() and not finishing, "tools_locked": not reason.is_empty(), "lock_reason": reason,
 			"assigned": worker.is_reserved(), "needs": _get_worker_needs_summary(worker)})
 		result[-1].merge({"working": working, "can_fire": not working and not workshop_assigned,
+			"fire_block_reason": fire_reason,
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,
 				"hair_style": profile.hair_style, "accessory": profile.accessory},
 			"can_goto": working and not site_id.is_empty(),
@@ -172,8 +194,7 @@ func _dismissal_payroll_warning(worker: WorkerData) -> String:
 	var remaining: int = maxi(0, expires - schedule.now())
 	if remaining == 0:
 		return "Contract expired after Day %d. Unused payment is not refunded." % worker.payroll_paid_until_day
-	return "Paid through Day %d.\n%d d %02d h %02d m remain.\nUnused payment is not refunded." % [worker.payroll_paid_until_day,
-		remaining / 1440, (remaining % 1440) / 60, remaining % 60]
+	return "Unused payment is not refunded."
 
 func _wage_text(worker: WorkerData) -> String:
 	if worker.payroll_start_day < 0:

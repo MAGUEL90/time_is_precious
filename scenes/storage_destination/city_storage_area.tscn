@@ -42,6 +42,7 @@ position = Vector2(0, -19)
 shape = SubResource("BuildingShape")
 
 [node name="Label" type="Label" parent="."]
+visible = false
 offset_left = -48.0
 offset_top = -82.0
 offset_right = 48.0

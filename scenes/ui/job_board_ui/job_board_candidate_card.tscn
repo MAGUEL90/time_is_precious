@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/job_board_ui/job_board_candidate_card.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_card"]
@@ -38,13 +38,24 @@ content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
 
-[sub_resource type="StyleBoxTexture" id="Focus_style"]
+[sub_resource type="StyleBoxTexture" id="Check_hover_style"]
 texture = SubResource("Check_focus")
-draw_center = false
 texture_margin_left = 1.0
 texture_margin_top = 1.0
 texture_margin_right = 1.0
 texture_margin_bottom = 1.0
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxTexture" id="Focus_style"]
+texture = SubResource("Check_focus")
+draw_center = false
+texture_margin_left = 2.0
+texture_margin_top = 2.0
+texture_margin_right = 2.0
+texture_margin_bottom = 2.0
 
 [node name="CandidateCard" type="NinePatchRect"]
 custom_minimum_size = Vector2(312, 60)
@@ -96,7 +107,8 @@ offset_right = 306.0
 offset_bottom = 22.0
 toggle_mode = true
 theme_override_styles/normal = SubResource("Check_style")
-theme_override_styles/hover = SubResource("Check_style")
+theme_override_styles/hover = SubResource("Check_hover_style")
+theme_override_styles/hover_pressed = SubResource("Check_hover_style")
 theme_override_styles/pressed = SubResource("Check_style")
 theme_override_styles/disabled = SubResource("Check_style")
 theme_override_styles/focus = SubResource("Focus_style")
@@ -168,7 +180,7 @@ offset_bottom = 57.0
 theme_override_fonts/font = ExtResource("8_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
-text = "Prepaid"
+text = "Hire"
 mouse_filter = 2
 
 [node name="WageValue" type="Label" parent="Details"]
@@ -181,7 +193,6 @@ theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
 text = ""
 mouse_filter = 2
-tooltip_text = "Full package price for the selected contract duration, paid from your wallet."
 
 [node name="SatisfactionLabel" type="Label" parent="Details"]
 offset_left = 0.0
@@ -232,6 +243,7 @@ stretch_margin_bottom = 3
 mouse_filter = 2
 
 [node name="ShekelIcon" type="TextureRect" parent="Details"]
+accessibility_name = "Shekel"
 offset_left = 159.0
 offset_top = 44.0
 offset_right = 167.0

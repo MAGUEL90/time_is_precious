@@ -1,0 +1,16 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+   at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MAIN_FIRE_BEFORE {"actor_meta":"initial_workshop_laborer","actor_script":"res://scenes/worker_visual/base_worker_visual.gd","actor_visible":true,"city_cash":0,"day":6,"ground":95,"hour":15,"id":"initial_workshop_laborer","is_citizen_actor":false,"minute":5,"partial":null,"wallet":6}
+REAL_MAP_CONTRACT {"city_cash":0,"end_after":11,"end_before":8,"price":1,"wallet_after":5,"wallet_before":6}
+MAIN_FIRE_AFTER {"actor_exists":false,"actor_meta":"","actor_visible":false,"archived":true,"assignment_present":false,"citizen_actors_preserved":true,"citizen_status":0,"city_cash":0,"ground":95,"hired":false,"other_worker_preserved":true,"presentation_clean":true,"wallet":5}
+MVP_MEASURE {"clothing_missing":2,"dried":0,"earned":0,"eaten":0,"fatigue":0.0,"focus":1.0,"food":{"consumer_count":2,"daily_need":2,"days_remaining":0,"points":0,"portion_points":0},"harvested":0,"held":[],"hunger":0.42,"inventory":{"date_cluster":13,"shekel":5,"wood_log":4},"minute":10920,"paid":0,"shaped":0,"sleeps":1,"sold_bricks":0,"sold_wood":0,"stage":"sleep_checkpoint","walked_pixels":139.99983561039,"workshop_stock":{}}
+REHIRE {"minute":10920,"price":1,"satisfaction_before":0.15,"satisfaction_fixture":0.5,"wallet_after":4,"wallet_before":5}
+MVP_MEASURE {"clothing_missing":2,"construction":"uncleared","dried":0,"earned":0,"eaten":0,"fatigue":0.0,"focus":1.0,"food":{"consumer_count":2,"daily_need":2,"days_remaining":0,"points":0,"portion_points":0},"harvested":0,"held":[],"hunger":0.42,"inventory":{"date_cluster":13,"shekel":4,"wood_log":4},"minute":10920,"paid":0,"shaped":0,"sleeps":1,"sold_bricks":0,"sold_wood":0,"stage":"assigned","walked_pixels":346.665946245193,"worker_reliability":0.65,"worker_satisfaction":0.5,"workshop_stock":{}}
+NEW_ASSIGNMENT {"approach":{"arrival_minute":-1,"arrived":false,"kind":"site","owner":"WoodSite","position":"(-9.017597, -83.63599)","target":"(-82.0, -135.5)","task":"daily_-9223371578014689081_WoodSite:10920:7"},"minute":10920,"old_actor_id":389063641919,"shift_end":900,"shift_start":420,"site_stock":72}
+VISUAL_OBSERVED {"actor_created":true,"approach":{"arrival_minute":10920,"arrived":true,"kind":"site","owner":"WoodSite","position":"(-82.0, -135.5)","target":"(-82.0, -135.5)","task":"daily_-9223371578014689081_WoodSite:10920:7"},"current_status":1,"distance_px":89.7173980772495,"minute":10920,"new_instance":true,"visible":true,"visible_samples":284,"walk_animation_seen":true,"work_animation_seen":true,"work_frames":[0,1]}
+FIRE_REHIRE_ASSIGNMENT_WORK PASS
+MAIN_FIRE_SAVE PASS

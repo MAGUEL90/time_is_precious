@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://byn62k7nrayc7"]
+[gd_scene load_steps=21 format=3 uid="uid://byn62k7nrayc7"]
 
 [ext_resource type="Script" uid="uid://cdia61myyxbw3" path="res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
@@ -15,6 +15,7 @@
 [ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="detail_3"]
 [ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="detail_4"]
 [ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="detail_coin"]
+[ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="contract_arrow"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_window"]
 atlas = ExtResource("3_window")
@@ -422,7 +423,7 @@ layout_mode = 2
 
 [node name="ManageWindow" type="NinePatchRect" parent="Root"]
 visible = false
-custom_minimum_size = Vector2(104, 112)
+custom_minimum_size = Vector2(52, 82)
 layout_mode = 0
 mouse_filter = 0
 texture = SubResource("AtlasTexture_simple")
@@ -455,47 +456,210 @@ size_flags_vertical = 3
 theme_override_constants/separation = 2
 
 [node name="FireButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(82, 16)
+custom_minimum_size = Vector2(40, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Fire"
 
 [node name="GotoButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(82, 16)
+custom_minimum_size = Vector2(40, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
-text = "Go to"
+text = "Go To"
 
 [node name="DetailsButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
-custom_minimum_size = Vector2(82, 16)
+custom_minimum_size = Vector2(40, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Details"
 
-[node name="RenewDaysOption" type="OptionButton" parent="Root/ManageWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(82, 16)
+[node name="ContractButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox/Actions"]
+custom_minimum_size = Vector2(40, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
+text = "Contract"
 
-[node name="RenewPriceLabel" type="Label" parent="Root/ManageWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(84, 8)
+[node name="ContractWindow" type="NinePatchRect" parent="Root"]
+visible = false
+custom_minimum_size = Vector2(104, 84)
+layout_mode = 0
+mouse_filter = 0
+texture = SubResource("AtlasTexture_simple")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/ContractWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/ContractWindow/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="HeaderLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
+text = "Contract"
+horizontal_alignment = 1
+
+[node name="ContractDays" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 2
+
+[node name="Days3Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton16"
+theme_override_font_sizes/font_size = 6
+alignment = 1
+text = "3D"
+toggle_mode = true
+metadata/contract_days = 3
+
+[node name="Days6Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton16"
+theme_override_font_sizes/font_size = 6
+alignment = 1
+text = "6D"
+toggle_mode = true
+metadata/contract_days = 6
+
+[node name="Days9Button" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractDays"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"WorkshopSquareButton16"
+theme_override_font_sizes/font_size = 6
+alignment = 1
+text = "9D"
+toggle_mode = true
+metadata/contract_days = 9
+
+[node name="RenewPriceRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="RenewPriceLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox/RenewPriceRow"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
 text = "Price: -"
 horizontal_alignment = 1
-autowrap_mode = 3
+vertical_alignment = 1
+autowrap_mode = 0
+clip_text = true
 
-[node name="RenewButton" type="Button" parent="Root/ManageWindow/Margin/MainVBox"]
-custom_minimum_size = Vector2(82, 16)
+[node name="ShekelIcon" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/RenewPriceRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+accessibility_name = "Shekel"
+texture = ExtResource("detail_coin")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FeedbackLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.8, 0.22, 0.16, 1)
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+visible = false
+
+[node name="ContractActions" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="RenewButton" type="Button" parent="Root/ContractWindow/Margin/MainVBox/ContractActions"]
+custom_minimum_size = Vector2(36, 16)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Renew"
+
+[node name="ContractRangeRow" type="HBoxContainer" parent="Root/ContractWindow/Margin/MainVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="CurrentDayLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Day -"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="ArrowIcon" type="TextureRect" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("contract_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NewDayLabel" type="Label" parent="Root/ContractWindow/Margin/MainVBox/ContractRangeRow"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Day -"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="CloseButton" parent="Root/ContractWindow" instance=ExtResource("4_close")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -13.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = 13.0
+grow_horizontal = 0
+focus_mode = 2
+accessibility_name = "Close"
 
 [node name="DetailsWindow" type="NinePatchRect" parent="Root"]
 custom_minimum_size = Vector2(208, 208)

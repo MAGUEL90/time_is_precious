@@ -114,7 +114,9 @@ func _check_storage_presentation() -> void:
 	state["max_capacity"] = 300.0
 	state["held_lots"] = [{"lot_id": "presentation_fixture", "items": {"stone": 1}}]
 	storage.refresh_storage(state)
-	_expect(storage.capacity_label.text == "40/300" and storage.capacity_icon.tooltip_text == "Load 40 / 300", "Capacity refresh updates both numbers and tooltip.")
+	_expect(storage.capacity_label.text == "40/300" and storage.capacity_icon.tooltip_text.is_empty() and storage.capacity_icon.accessibility_name == "Load 40 / 300", "Capacity refresh updates the numbers and accessible name without a tooltip.")
+	for control: Control in storage.find_children("*", "Control", true, false):
+		_expect(control.tooltip_text.is_empty(), "Workshop Storage control has no hover tooltip: " + str(control.get_path()))
 	_expect(not storage.empty_held_output.visible and storage.held_grid.get_parent().visible, "Held output replaces the empty presentation.")
 	storage.show_payment_result(false, "Fixture payment declined.", state)
 	_expect(storage.feedback_label.visible and storage.feedback_label.text == "Fixture payment declined.", "Transaction errors remain visible after helper removal.")

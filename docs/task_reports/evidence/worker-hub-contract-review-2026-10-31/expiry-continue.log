@@ -1,0 +1,8 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+   at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+ExpiredNoticeDiagnostic {"city_treasury_shekel":0,"clock_minute":6181,"fingerprint_sources":{"merchant":"","raid":"","workers":{}},"label":"read-continued","merchant_present":false,"mode":"single","notice_emergency":false,"notification_color":"ffffffff","notification_color_components":[1.0,1.0,1.0,1.0],"notification_popup_open":false,"phase":"read","raid_phase":"unbuilt","seen_keys":{},"unread_notification":false,"wallet_shekel":2,"workers":[{"blocked":false,"contract_days":3,"id":"initial_workshop_laborer","name":"Workshop Laborer","paid_end_minute":11940,"paid_from_day":4,"paid_start_minute":6180,"paid_until_day":7,"status":"normal"}]}
+ExpiredNoticeRegression single read: PASS (0 failures)

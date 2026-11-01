@@ -208,7 +208,7 @@ func _refresh_status() -> void:
 		[]
 	)
 
-	capacity_icon.tooltip_text = "Load %.0f / %.0f" % [used_capacity, max_capacity]
+	capacity_icon.accessibility_name = "Load %.0f / %.0f" % [used_capacity, max_capacity]
 	capacity_label.text = "%.0f/%.0f" % [used_capacity, max_capacity]
 	pending_label.text = (
 		"Pending Delivery: %d - free storage space" % pending_count

@@ -1,0 +1,9 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:364)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+MVP_MEASURE {"clothing_missing":2,"dried":0,"earned":0,"eaten":0,"fatigue":0.001,"focus":0.9995,"food":{"consumer_count":2,"daily_need":2,"days_remaining":2,"points":4,"portion_points":0},"harvested":0,"held":[],"hunger":0.449000000000013,"inventory":{"date_cluster":7,"shekel":10,"wood_log":2},"minute":16729,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"continued","walked_pixels":0.0,"worker_reliability":0.45,"worker_satisfaction":0.01,"workshop_stock":{}}
+MVP_MEASURE {"clothing_missing":2,"construction":"uncleared","dried":0,"earned":0,"eaten":12,"fatigue":0.0045,"focus":0.989000000000001,"food":{"consumer_count":2,"daily_need":2,"days_remaining":2,"points":4,"portion_points":0},"harvested":12,"held":[],"hunger":0.0110000000000133,"inventory":{"date_cluster":7,"shekel":10,"wood_log":2},"minute":16771,"paid":0,"shaped":0,"sleeps":0,"sold_bricks":0,"sold_wood":0,"stage":"continued_city","walked_pixels":1317.50046122074,"worker_reliability":0.45,"worker_satisfaction":0.01,"workshop_stock":{}}
+ContractJourney read: PASS

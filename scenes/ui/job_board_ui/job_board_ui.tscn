@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://d2m4ct6uaigm0"]
+[gd_scene load_steps=13 format=3 uid="uid://d2m4ct6uaigm0"]
 
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1_theme"]
 [ext_resource type="Script" path="res://scenes/ui/job_board_ui/job_board_ui.gd" id="2_script"]
@@ -7,6 +7,8 @@
 [ext_resource type="FontFile" path="res://assets/font/pixel_rpg.ttf" id="5_font"]
 [ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="6_close"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/separator_icon_2.png" id="7_focus"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="8_coin"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/city_wallet_icon.png" id="9_wallet"]
 
 [sub_resource type="AtlasTexture" id="Window"]
 atlas = ExtResource("3_frame")
@@ -52,6 +54,171 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+[node name="HireConfirmLayer" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 0
+
+[node name="Dim" type="ColorRect" parent="Root/HireConfirmLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.48)
+mouse_filter = 0
+
+[node name="ConfirmationPanel" type="NinePatchRect" parent="Root/HireConfirmLayer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -127.0
+offset_top = -87.0
+offset_right = 127.0
+offset_bottom = 87.0
+texture_filter = 1
+mouse_filter = 0
+texture = SubResource("Window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+
+[node name="ConfirmationTitle" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 12.0
+offset_top = 14.0
+offset_right = 242.0
+offset_bottom = 30.0
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "CHOOSE CONTRACT"
+horizontal_alignment = 1
+mouse_filter = 2
+
+[node name="SelectedHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 20.0
+offset_top = 33.0
+offset_right = 128.0
+offset_bottom = 43.0
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Selected candidates"
+mouse_filter = 2
+
+[node name="SelectedNamesScroll" type="ScrollContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 20.0
+offset_top = 46.0
+offset_right = 163.0
+offset_bottom = 107.0
+clip_contents = true
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+mouse_filter = 1
+
+[node name="SelectedNames" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel/SelectedNamesScroll"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="DurationHeading" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 150.0
+offset_top = 33.0
+offset_right = 248.0
+offset_bottom = 43.0
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Contract length"
+horizontal_alignment = 1
+mouse_filter = 2
+
+[node name="DurationButtons" type="VBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 150.0
+offset_top = 46.0
+offset_right = 248.0
+offset_bottom = 108.0
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="ConfirmQuoteRow" type="HBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 12.0
+offset_top = 111.0
+offset_right = 242.0
+offset_bottom = 123.0
+alignment = 1
+theme_override_constants/separation = 3
+mouse_filter = 2
+
+[node name="ConfirmQuoteLabel" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Total"
+mouse_filter = 2
+clip_text = true
+
+[node name="ConfirmQuoteIcon" type="TextureRect" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+accessibility_name = "Shekel"
+texture = ExtResource("8_coin")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 1
+
+[node name="ConfirmQuoteAmount" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmQuoteRow"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = ""
+mouse_filter = 1
+clip_text = true
+
+[node name="ConfirmationFeedbackLabel" type="Label" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 12.0
+offset_top = 125.0
+offset_right = 242.0
+offset_bottom = 139.0
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+mouse_filter = 2
+
+[node name="ConfirmationActions" type="HBoxContainer" parent="Root/HireConfirmLayer/ConfirmationPanel"]
+offset_left = 36.0
+offset_top = 140.0
+offset_right = 218.0
+offset_bottom = 158.0
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="CancelHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
+custom_minimum_size = Vector2(42, 17)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
+
+[node name="ConfirmHireButton" type="Button" parent="Root/HireConfirmLayer/ConfirmationPanel/ConfirmationActions"]
+custom_minimum_size = Vector2(42, 17)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Confirm"
+
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
 custom_minimum_size = Vector2(368, 221)
 layout_mode = 2
@@ -80,9 +247,9 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="TitleLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = -3.0
+offset_top = 0.0
 offset_right = 336.0
-offset_bottom = 17.0
+offset_bottom = 20.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(1, 0.941176, 0.772549, 1)
@@ -95,10 +262,10 @@ visible = false
 focus_mode = 0
 
 [node name="CandidateScroll" type="ScrollContainer" parent="Root/Center/Window/Margin/MainVBox"]
-offset_left = 12.0
-offset_top = 27.0
-offset_right = 336.0
-offset_bottom = 127.0
+offset_left = 6.0
+offset_top = 26.0
+offset_right = 330.0
+offset_bottom = 150.0
 clip_contents = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 1
@@ -111,9 +278,9 @@ theme_override_constants/separation = 4
 
 [node name="EmptyStatePanel" type="NinePatchRect" parent="Root/Center/Window/Margin/MainVBox"]
 offset_left = 12.0
-offset_top = 27.0
+offset_top = 26.0
 offset_right = 324.0
-offset_bottom = 86.0
+offset_bottom = 150.0
 texture = SubResource("Empty")
 patch_margin_left = 4
 patch_margin_top = 4
@@ -125,7 +292,7 @@ mouse_filter = 2
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 304.0
-offset_bottom = 56.0
+offset_bottom = 116.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.368627, 0.27451, 0.188235, 1)
@@ -150,49 +317,78 @@ theme_override_styles/focus = SubResource("Focus")
 text = "Hire"
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = 158.0
+offset_top = 152.0
 offset_right = 336.0
-offset_bottom = 168.0
+offset_bottom = 167.0
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
 horizontal_alignment = 1
 mouse_filter = 2
 
-[node name="WalletLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = 15.0
-offset_right = 336.0
-offset_bottom = 25.0
+[node name="WalletRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+offset_left = 204.0
+offset_top = 170.0
+offset_right = 324.0
+offset_bottom = 186.0
+alignment = 2
+theme_override_constants/separation = 3
+
+[node name="WalletIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+accessibility_name = "Wallet"
+texture = ExtResource("9_wallet")
+expand_mode = 1
+stretch_mode = 3
+mouse_filter = 1
+
+[node name="WalletCurrencyIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+accessibility_name = "Shekel"
+texture = ExtResource("8_coin")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 1
+
+[node name="WalletLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/WalletRow"]
+layout_mode = 2
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 6
-horizontal_alignment = 1
-mouse_filter = 2
+mouse_filter = 1
 
-[node name="ContractRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+[node name="QuoteRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
+visible = false
 offset_top = 130.0
 offset_right = 336.0
-offset_bottom = 146.0
+offset_bottom = 142.0
 alignment = 1
-
-[node name="ContractLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/ContractRow"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 6
-text = "Contract: "
-
-[node name="ContractDaysOption" type="OptionButton" parent="Root/Center/Window/Margin/MainVBox/ContractRow"]
-custom_minimum_size = Vector2(72, 16)
-layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-
-[node name="QuoteLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox"]
-offset_top = 147.0
-offset_right = 336.0
-offset_bottom = 157.0
-theme_override_fonts/font = ExtResource("5_font")
-theme_override_font_sizes/font_size = 6
-horizontal_alignment = 1
+theme_override_constants/separation = 3
 mouse_filter = 2
+
+[node name="QuoteLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/QuoteRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+text = "Select candidates to see total"
+mouse_filter = 2
+
+[node name="QuoteIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/QuoteRow"]
+visible = false
+custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
+accessibility_name = "Shekel"
+texture = ExtResource("8_coin")
+expand_mode = 1
+stretch_mode = 4
+mouse_filter = 1
+
+[node name="QuoteAmount" type="Label" parent="Root/Center/Window/Margin/MainVBox/QuoteRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 6
+text = ""
+mouse_filter = 1
 
 [node name="CloseButton" parent="Root/Center/Window" instance=ExtResource("6_close")]
 offset_left = 344.0
@@ -200,7 +396,6 @@ offset_top = 14.0
 offset_right = 352.0
 offset_bottom = 22.0
 focus_mode = 2
-tooltip_text = "Close (Esc)"
 
 [node name="RefreshTimer" type="Timer" parent="."]
 wait_time = 0.2

@@ -1,0 +1,129 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+[godot-mcp-runtime] Listening on 127.0.0.1:9877
+ERROR: Observed output matches authored rate and 72-unit stock cap for ClaySiteA at 07:00 (expected 48, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for ClaySiteA at 08:01 (expected 41, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for ClaySiteA at 14:00 (expected 6, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Next-day 07:00 assignment produces its first full unit after 10 work minutes for ClaySiteA.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:197)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WoodSite at 07:00 (expected 24, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WoodSite at 08:01 (expected 20, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WoodSite at 14:00 (expected 3, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Next-day 07:00 assignment produces its first full unit after 20 work minutes for WoodSite.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:197)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for ReedSite at 07:00 (expected 64, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for ReedSite at 08:01 (expected 55, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for ReedSite at 14:00 (expected 8, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Next-day 07:00 assignment produces its first full unit after 8 work minutes for ReedSite.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:197)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for StrawSite at 07:00 (expected 48, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for StrawSite at 08:01 (expected 41, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for StrawSite at 14:00 (expected 6, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Next-day 07:00 assignment produces its first full unit after 10 work minutes for StrawSite.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:197)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WaterSite at 07:00 (expected 72, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WaterSite at 08:01 (expected 72, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Observed output matches authored rate and 72-unit stock cap for WaterSite at 14:00 (expected 12, got 0).
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:182)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Next-day 07:00 assignment produces its first full unit after 5 work minutes for WaterSite.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run_case (res://scenes/test_scenes/test_scene_contract_output_sample.gd:197)
+       [2] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:80)
+ERROR: Sentinel requires all 20 site/time cases to complete; completed 0.
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://scenes/test_scenes/test_scene_contract_output_sample.gd:38)
+       [1] _run (res://scenes/test_scenes/test_scene_contract_output_sample.gd:83)
+ContractOutputSample: FAIL cases=0/20 results=user://contract_output_sample/results.json

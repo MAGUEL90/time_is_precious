@@ -103,15 +103,20 @@ func _has_dust_activity() -> bool:
 		var task_key: String = construction.order_id + ":" + construction.phase
 		for worker_id: String in construction.worker_ids:
 			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
-			if worker != null and not worker.is_payroll_blocked() and str(_arrived_worker_tasks.get(worker_id, "")) == task_key:
+			if (
+				worker != null
+				and not worker.is_payroll_blocked()
+				and str(_arrived_worker_tasks.get(worker_id, "")) == task_key
+				and _worker_is_at_plot_task(worker, task_key)
+			):
 				return true
-	for order: WorkOrder in WorkManager.active_orders.values():
-		var worker: WorkerData = WorkerDatabase.get_worker_data(order.worker_id)
-		if worker != null and worker.is_payroll_blocked():
-			continue
-		if order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id and str(_arrived_worker_tasks.get(order.worker_id, "")) == order.order_id:
-			return true
 	return false
+
+func _worker_is_at_plot_task(worker: WorkerData, task_key: String) -> bool:
+	# Empty approach data denotes the established legacy inside-plot state.
+	if worker.physical_approach.is_empty():
+		return true
+	return worker.matches_physical_approach("plot", task_key, construction.order_id) and worker.physical_approach.arrived
 
 @onready var interaction_area: Area2D = $InteractableComponent
 @onready var interactable_label_component: TextureRect = $InteractableLabelComponent
@@ -213,7 +218,7 @@ func _sync_construction() -> void:
 		for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
 			art.texture = BUILT_PLOT
 		$Board.texture = BUILT_BOARD
-		$Label.text = "Workshop"
+		$Label.text = ""
 		if not has_node("BuiltWorkshop"):
 			var workshop: WorkShop = WORKSHOP.instantiate()
 			workshop.name = "BuiltWorkshop"
@@ -232,7 +237,7 @@ func _sync_construction() -> void:
 	elif construction.phase == "building":
 		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
 	else:
-		$Label.text = "" if construction.phase == "uncleared" else "Workshop Site"
+		$Label.text = ""
 
 func _sync_build_progress() -> void:
 	var completed: bool = (

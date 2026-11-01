@@ -2,9 +2,11 @@ extends Node
 
 ## Controlled output fixture; this is not a normal player journey or balance claim.
 ## It loads the actual content scene, pays each fixture Laborer through WorkerDatabase,
-## disables commute and player needs to isolate authored worksite capacity, and records
-## the observed daily stats and site-stock deltas. Authored rates, natural stock bounds, and caps are untouched;
-## each independent day case restores the authored 72-unit opening stock.
+## advances the native physical approach in controlled frame-sized steps, and measures
+## output from each worker's recorded arrival through the real shift close. Player needs
+## are disabled for this controlled fixture.
+## Authored rates, natural stock bounds, and caps are untouched; each measured shift starts
+## with its authored 72-unit stock.
 
 const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
 const RESULTS_DIR: String = "user://contract_output_sample"
@@ -20,6 +22,8 @@ const SAMPLE_CASES: Array[Dictionary] = [
 const SITE_IDS: Array[StringName] = [&"ClaySiteA", &"WoodSite", &"ReedSite", &"StrawSite", &"WaterSite"]
 const EXPECTED_CASE_COUNT: int = 20
 const FIXTURE_BASE_DAY: int = 120
+const PHYSICAL_FRAME_STEP_SECONDS: float = 0.1
+const MAX_PHYSICAL_APPROACH_FRAMES: int = 120000
 
 var failures: int = 0
 var completed_case_count: int = 0
@@ -56,8 +60,16 @@ func _run() -> void:
 		_finish()
 		return
 	_check(runtime.sites.size() == SITE_IDS.size(), "The actual main map exposes all five authored resource sites.")
-	# These are fixture-only isolation controls. No gathering rate, stock, or worksite cap is edited.
-	runtime.enable_worker_commute = false
+	# The fixture drives the actual WorkerVisuals physical approach; do not bypass arrival gating.
+	_check(runtime.enable_worker_commute, "Native worker commute remains enabled for measured arrival.")
+	var visuals: Node = runtime.get_node_or_null("WorkerVisuals")
+	_check(visuals != null, "The actual content scene exposes native WorkerVisuals for physical arrival.")
+	if visuals == null:
+		_finish()
+		return
+	# Drive movement deterministically below, with one game minute per configured real-time minute.
+	visuals.set_process(false)
+	# These fixture-only player controls do not alter gathering rates, stock, or worksite caps.
 	player.debug_disable_player_needs = true
 	player.debug_disable_fatigue = true
 
@@ -168,44 +180,69 @@ func _run_case(runtime: Node, site_id: StringName, sample_case: Dictionary, case
 		"Assignment at %s starts on the expected workday for %s (expected %d, got %d)." % [label, site_id, expected_start, actual_start])
 
 	var minutes_per_unit: float = float(session.minutes_per_unit)
-	var available_same_day: int = maxi(0, 15 * 60 - requested_minute) if requested_minute < 15 * 60 else 0
-	var expected_same_day_output: int = mini(72, floori(float(available_same_day) / minutes_per_unit))
-	var followup_next_day_minutes: int = 0
-	var output_at_case_end: int = 0
-	var output_after_nextday_start: int = 0
-	if requested_minute < 15 * 60:
-		TimeComponentManager.advance_minutes(available_same_day)
-		output_at_case_end = int(schedule.jobs[site_id].stats[worker_id].output)
-		_check(_now() == case_day * 1440 + 15 * 60, "Shift measurement ends at 15:00 for " + str(site_id))
-		_check(int(schedule.minutes_by_worker.get(worker_id, 0)) <= available_same_day,
-			"Recorded worker minutes do not exceed the shift for " + str(site_id))
-		_check(output_at_case_end == expected_same_day_output,
-			"Observed output matches authored rate and 72-unit stock cap for %s at %s (expected %d, got %d)." % [site_id, label, expected_same_day_output, output_at_case_end])
-	else:
-		output_at_case_end = int(schedule.jobs[site_id].stats[worker_id].output)
-		_check(output_at_case_end == 0 and session.stock == 72,
+	var assignment_day_output: int = 0
+	var measurement_day: int = case_day if requested_minute < 15 * 60 else case_day + 1
+	var measurement_start: int = expected_start
+	var measurement_close: int = measurement_day * 1440 + 15 * 60
+	var physical_arrival: Dictionary
+	var output_at_arrival: int = -1
+	var stock_at_arrival: int = -1
+	if requested_minute == 15 * 60:
+		assignment_day_output = int(schedule.jobs[site_id].stats[worker_id].output)
+		_check(assignment_day_output == 0 and session.stock == 72,
 			"15:00 assignment produces nothing on its assignment day for " + str(site_id))
-		_set_clock(case_day + 1, 7, 0)
-		schedule.last_tick = _now()
-		_check(int(schedule.jobs[site_id].starts[worker_id]) == (case_day + 1) * 1440 + 7 * 60,
+		_check(int(schedule.jobs[site_id].starts[worker_id]) == measurement_start,
 			"15:00 assignment remains scheduled for next-day 07:00 for " + str(site_id))
+		# Let the real schedule's pre-shift departure time arrive. Off-shift clock ticks
+		# cannot grant production, and no arrival state is written by the fixture.
+		var next_day_route: Dictionary = runtime.worker_journey(site_id, worker_id, measurement_day)
+		var route_start: int = floori(float(next_day_route.get("start", measurement_close)))
+		_check(route_start >= _now() and route_start < measurement_start,
+			"Next-day physical journey starts before its scheduled 07:00 opening for " + str(site_id))
+		if route_start >= _now() and route_start < measurement_start:
+			TimeComponentManager.advance_minutes(route_start - _now())
 		_check(int(schedule.jobs[site_id].stats[worker_id].output) == 0 and session.stock == 72,
-			"No output appears merely from placing the fixture clock at next-day 07:00 for " + str(site_id))
-		followup_next_day_minutes = ceili(minutes_per_unit)
-		TimeComponentManager.advance_minutes(followup_next_day_minutes)
-		output_after_nextday_start = int(schedule.jobs[site_id].stats[worker_id].output)
-		_check(output_after_nextday_start == 1,
-			"Next-day 07:00 assignment produces its first full unit after %d work minutes for %s." % [followup_next_day_minutes, str(site_id)])
+			"Off-shift arrival preparation produces nothing before next-day work for " + str(site_id))
+		physical_arrival = _drive_physical_arrival(runtime, worker_id, measurement_close)
+		output_at_arrival = int(physical_arrival.get("output_at_arrival", -1))
+		stock_at_arrival = int(physical_arrival.get("stock_at_arrival", -1))
+		if _now() < measurement_start:
+			TimeComponentManager.advance_minutes(measurement_start - _now())
+		_check(int(schedule.jobs[site_id].stats[worker_id].output) == 0 and session.stock == 72,
+			"Waiting at next-day 07:00 cannot produce output without elapsed work minutes for " + str(site_id))
+	else:
+		physical_arrival = _drive_physical_arrival(runtime, worker_id, measurement_close)
+		output_at_arrival = int(physical_arrival.get("output_at_arrival", -1))
+		stock_at_arrival = int(physical_arrival.get("stock_at_arrival", -1))
 
+	var arrival_minute: int = int(physical_arrival.get("arrival_minute", -1))
+	_check(arrival_minute >= 0 and arrival_minute <= measurement_close,
+		"Native physical approach records a real arrival before shift close for %s at %s (got %d)." % [site_id, label, arrival_minute])
+	_check(output_at_arrival == 0 and stock_at_arrival == 72,
+		"No output exists at the instant of physical arrival for " + str(site_id))
+	var effective_work_start: int = maxi(maxi(arrival_minute, measurement_start), measurement_day * 1440 + 7 * 60)
+	var available_shift_minutes: int = maxi(0, measurement_close - effective_work_start)
+	var expected_shift_output: int = mini(72, floori(float(available_shift_minutes) / minutes_per_unit))
+	if _now() < measurement_close:
+		TimeComponentManager.advance_minutes(measurement_close - _now())
+	var observed_shift_output: int = int(schedule.jobs[site_id].stats[worker_id].output)
 	var stock_after: int = session.stock
-	var observed_output: int = int(schedule.jobs[site_id].stats[worker_id].output)
 	var worker_minutes: int = int(schedule.minutes_by_worker.get(worker_id, 0))
 	var stock_delta: int = 72 - stock_after
+	_check(_now() == measurement_close, "Measured shift ends at 15:00 for " + str(site_id))
+	_check(observed_shift_output == expected_shift_output,
+		"Observed output from actual arrival through 15:00 matches authored rate and stock cap for %s at %s (expected %d, got %d)." % [site_id, label, expected_shift_output, observed_shift_output])
 	_check(stock_after >= 0 and stock_after <= 72,
 		"Site stock remains within the nonnegative 72-unit daily cap for " + str(site_id))
-	_check(stock_delta == observed_output,
-		"Daily stats output equals the actual site-stock delta for " + str(site_id))
-	_check(worker_minutes <= 480, "Per-worker ledger stays within the 480-minute daily limit for " + str(site_id))
+	_check(stock_delta == observed_shift_output,
+		"Measured-shift stats output equals the actual 72-unit stock delta for " + str(site_id))
+	_check(worker_minutes <= available_shift_minutes and worker_minutes <= 480,
+		"Recorded worker minutes do not exceed arrival-to-close time or the 480-minute shift for " + str(site_id))
+	var expected_worker_minutes: int = mini(available_shift_minutes, ceili(72.0 * minutes_per_unit))
+	_check(worker_minutes == expected_worker_minutes,
+		"Recorded minutes stop at the earlier of shift close and stock depletion for " + str(site_id))
+	if requested_minute < 15 * 60:
+		assignment_day_output = observed_shift_output
 
 	var sample: Dictionary = {
 		"case": case_index,
@@ -221,19 +258,23 @@ func _run_case(runtime: Node, site_id: StringName, sample_case: Dictionary, case
 		"wallet_after_payment": wallet_after,
 		"contract_paid_start_minute": worker.payroll_paid_start_minute,
 		"scheduled_start_global_minute": actual_start,
+		"physical_arrival_global_minute": arrival_minute,
+		"physical_arrival_position": worker.physical_approach.position,
 		"minutes_per_unit": minutes_per_unit,
 		"authored_daily_stock_cap": 72,
 		"initial_stock": 72,
-		"available_same_day_shift_minutes": available_same_day,
-		"expected_same_day_output_units": expected_same_day_output,
-		"observed_same_day_output_units": output_at_case_end,
-		"observed_output_at_case_end_units": observed_output,
-		"followup_nextday_work_minutes": followup_next_day_minutes,
-		"output_after_nextday_start_units": output_after_nextday_start,
+		"measured_shift_day": measurement_day,
+		"effective_work_start_global_minute": effective_work_start,
+		"available_shift_minutes_from_physical_arrival": available_shift_minutes,
+		"expected_output_units_for_measured_shift": expected_shift_output,
+		"observed_output_units_for_measured_shift": observed_shift_output,
+		"observed_assignment_day_output_units": assignment_day_output,
+		"output_at_physical_arrival_units": output_at_arrival,
+		"stock_at_physical_arrival": stock_at_arrival,
 		"actual_worker_minutes_recorded": worker_minutes,
 		"stock_after_case": stock_after,
 		"stock_delta_units": stock_delta,
-		"commute_disabled_for_isolation": true,
+		"commute_enabled_for_physical_arrival_measurement": true,
 		"player_needs_and_fatigue_disabled_for_isolation": true,
 		"complete": failures == failures_before,
 	}
@@ -244,6 +285,36 @@ func _run_case(runtime: Node, site_id: StringName, sample_case: Dictionary, case
 	# Capture first, then release the isolated worker and its standing assignment.
 	schedule.withdraw(site_id, worker_id)
 	WorkerDatabase.workers_by_id.erase(worker_id)
+
+
+func _drive_physical_arrival(runtime: Node, worker_id: String, deadline: int) -> Dictionary:
+	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
+	var visuals: Node = runtime.get_node("WorkerVisuals")
+	var schedule = runtime.daily
+	if worker == null or worker.physical_approach.is_empty():
+		return {"arrival_minute": -1, "output_at_arrival": -1, "stock_at_arrival": -1}
+	var seconds_per_minute: float = maxf(TimeComponentManager.seconds_per_minute, 0.001)
+	var measured_output_at_arrival: int = -1
+	var measured_stock_at_arrival: int = -1
+	var elapsed_frames: int = 0
+	var site_id: StringName = StringName(worker.physical_approach.owner)
+	while not worker.physical_approach.arrived and _now() < deadline and elapsed_frames < MAX_PHYSICAL_APPROACH_FRAMES:
+		var elapsed_in_game_minute: float = 0.0
+		while elapsed_in_game_minute < seconds_per_minute and elapsed_frames < MAX_PHYSICAL_APPROACH_FRAMES:
+			var frame_seconds: float = minf(PHYSICAL_FRAME_STEP_SECONDS, seconds_per_minute - elapsed_in_game_minute)
+			visuals._process(frame_seconds)
+			elapsed_in_game_minute += frame_seconds
+			elapsed_frames += 1
+			if worker.physical_approach.arrived and measured_output_at_arrival < 0:
+				measured_output_at_arrival = int(schedule.jobs[site_id].stats.get(worker_id, {}).get("output", 0))
+				measured_stock_at_arrival = int(runtime.sites[site_id].stock)
+		TimeComponentManager.advance_minutes(1)
+	return {
+		"arrival_minute": int(worker.physical_approach.get("arrival_minute", -1)) if worker.physical_approach.arrived else -1,
+		"output_at_arrival": measured_output_at_arrival,
+		"stock_at_arrival": measured_stock_at_arrival,
+		"elapsed_visual_frames": elapsed_frames,
+	}
 
 
 func _set_clock(day: int, hour: int, minute: int) -> void:
@@ -271,11 +342,11 @@ func _finish() -> void:
 	var status: String = "PASS" if failures == 0 and completed_case_count == EXPECTED_CASE_COUNT and results.size() == EXPECTED_CASE_COUNT else "FAIL"
 	var document: Dictionary = {
 		"status": status,
-		"scope": "Controlled actual-content-site fixture; not a normal player journey or an economy-balance claim.",
+		"scope": "Controlled actual-content-site fixture using native physical arrival records; not a normal player journey or an economy-balance claim.",
 		"scene": "res://scenes/content_scene/content_scene.tscn",
 		"laborer_contract_days": CONTRACT_DAYS,
 		"laborer_wallet_price_shekel": LABORER_PACKAGE_PRICE,
-		"commute_disabled_for_isolation": true,
+		"commute_enabled_for_physical_arrival_measurement": true,
 		"player_needs_and_fatigue_disabled_for_isolation": true,
 		"authored_stock_cap": 72,
 		"expected_case_count": EXPECTED_CASE_COUNT,

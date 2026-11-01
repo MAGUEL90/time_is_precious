@@ -27,6 +27,7 @@ func _run() -> void:
 		return
 	ui.applicant_list.select(target)
 	ui.hire_button.pressed.emit()
+	ui.confirm_hire_button.pressed.emit()
 	print("ROSTER AFTER HIRE: ", state.get_worker_options())
 	var found: bool = false
 	for option in state.get_worker_options():
