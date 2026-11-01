@@ -107,12 +107,8 @@ func _run() -> void:
 			"Only the player wallet pays the exact manual six-day renewal price")
 		_expect(renewed_until == old_until + 6 and worker.payroll_contract_days == 6,
 			"Early renewal preserves Naram's remaining time and adds exactly six days")
-		_expect(hub.manage_renew_button.disabled, "A completed Contract selection cannot be renewed a second time")
-		hub.manage_renew_button.pressed.emit()
-		await _frames()
-		_expect(Inventory.items.get("shekel", 0) == wallet_after_renew
-			and worker.payroll_paid_until_day == renewed_until,
-			"Repeated stale Renew input never charges or extends the six-day contract twice")
+		_expect(hub.manage_renew_button.disabled == (wallet_after_renew < renewal_price),
+			"Renew availability after payment follows the player's remaining balance for six days")
 		await _capture("naram-renewed")
 		_expect(hub.contract_window.position.is_equal_approx(contract_position), "Contract popup remains anchored to the selected roster row after renewal")
 		_expect(hub.contract_window.get_global_rect().encloses(hub.manage_renew_button.get_global_rect()), "Renew button stays inside the resized Contract frame")

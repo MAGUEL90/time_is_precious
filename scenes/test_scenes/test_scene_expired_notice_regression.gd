@@ -331,12 +331,9 @@ func _renew_through_hub(hub: WorkerControlUI, worker_id: String, ui: RaidUI, mer
 		"The final Renew action renews %s through the real Worker Hub path." % worker_id)
 	_check(int(Inventory.items.get("shekel", 0)) == wallet_before - expected_price,
 		"The confirmed renewal charges exactly the displayed price from the wallet.")
-	_check(hub.manage_renew_button.disabled, "A successful renewal cannot be applied twice for the same duration.")
-	hub.manage_renew_button.pressed.emit()
-	worker = WorkerDatabase.get_worker_data(worker_id)
-	_check(int(Inventory.items.get("shekel", 0)) == wallet_before - expected_price
-		and worker != null and worker.payroll_paid_until_day == TimeComponentManager.current_day + CONTRACT_DAYS,
-		"Repeated stale Renew input cannot charge or extend %s twice." % worker_id)
+	var wallet_after_renew: int = int(Inventory.items.get("shekel", 0))
+	_check(hub.manage_renew_button.disabled == (wallet_after_renew < expected_price),
+		"Renew availability after payment follows the remaining balance for %s." % worker_id)
 	_check(ui.notifications_popup.visible == false, "Renewal leaves the notification popup closed.")
 	_record(label + "-immediate", ui, merchant, raid_state)
 	if mode == "multi" and worker_id == worker_ids[0]:

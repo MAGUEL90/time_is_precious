@@ -5,6 +5,10 @@ const WORKER_ID: String = "renew_currency_fixture"
 const REVIEW_WORKER_NAME: String = "Naram"
 var failures: int = 0
 var hub: WorkerControlUI
+var settlement_reentry_attempted: bool = false
+var settlement_callback_count: int = 0
+var settlement_guard_held: bool = false
+var settlement_guard_after_attempt: bool = false
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -142,6 +146,19 @@ func _restore_worker_renewal_state(worker: WorkerData, saved: Dictionary) -> voi
 	worker.payroll_period_rate = int(saved["period_rate"])
 	worker.payroll_last_attempt_day = int(saved["last_attempt_day"])
 
+func _attempt_reentrant_renew_during_settlement() -> void:
+	settlement_callback_count += 1
+	if settlement_reentry_attempted:
+		return
+	settlement_reentry_attempted = true
+	# Exercise the public close/reopen path while the outer renewal is settling.
+	# The nested pressed event must still be rejected by the in-flight request guard.
+	hub.contract_close_button.pressed.emit()
+	hub.manage_contract_button.pressed.emit()
+	settlement_guard_held = hub._renew_request_active and hub.manage_renew_button.disabled
+	hub.manage_renew_button.pressed.emit()
+	settlement_guard_after_attempt = hub._renew_request_active
+
 func _capture_contract_range_content_geometry() -> Array[Rect2]:
 	var panel_position: Vector2 = hub.contract_window.get_global_rect().position
 	var controls: Array[Control] = [
@@ -198,7 +215,6 @@ func _exercise_contract_range_case(worker: WorkerData, state_name: String, curre
 	var had_wallet: bool = Inventory.items.has("shekel")
 	var saved_wallet: int = int(Inventory.items.get("shekel", 0))
 	var saved_selection: int = hub._selected_contract_days
-	var saved_completed: bool = hub._renew_completed_for_selection
 	var saved_request_active: bool = hub._renew_request_active
 	var saved_feedback: String = hub._renew_feedback_text
 	var saved_contract_visible: bool = hub.contract_window.visible
@@ -257,7 +273,6 @@ func _exercise_contract_range_case(worker: WorkerData, state_name: String, curre
 	else:
 		Inventory.items.erase("shekel")
 	hub._selected_contract_days = saved_selection
-	hub._renew_completed_for_selection = saved_completed
 	hub._renew_feedback_text = saved_feedback
 	hub._renew_request_active = saved_request_active
 	hub._update_contract_day_selection()
@@ -706,11 +721,26 @@ func _run() -> void:
 		"Changing duration clears the price review before measuring the success layout.")
 	var expected_primary_current_day: String = hub.contract_new_day_label.text
 	var primary_label_base_modulate: Color = hub.contract_current_day_label.modulate
+	var treasury_before_primary_renewal: int = CityStockManager.treasury_shekel
 	_expect(hub._renew_success_tween == null, "No success animation is active before a renewal succeeds.")
+	settlement_reentry_attempted = false
+	settlement_callback_count = 0
+	settlement_guard_held = false
+	settlement_guard_after_attempt = false
+	WorkerDatabase.payroll_settling.connect(_attempt_reentrant_renew_during_settlement)
 	await _click_button(hub.manage_renew_button)
+	WorkerDatabase.payroll_settling.disconnect(_attempt_reentrant_renew_during_settlement)
+	_expect(settlement_reentry_attempted and settlement_callback_count == 1
+		and settlement_guard_held and settlement_guard_after_attempt
+		and hub.contract_window.visible and hub._selected_contract_days == 3
+		and not hub._renew_request_active,
+		"A real payroll_settling callback closes and reopens Contract, attempts Renew once, and preserves then releases the request guard.")
 	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6,
 		"Clicking Renew pays the reviewed actual-profession price once and extends the selected six-day term.")
-	_expect(hub.manage_renew_button.disabled, "A completed renewal disables Renew.")
+	_expect(CityStockManager.treasury_shekel == treasury_before_primary_renewal,
+		"Renew deducts from the player wallet without reducing the city treasury.")
+	_expect(not hub.manage_renew_button.disabled,
+		"After reopening, Renew remains available when the player's wallet covers the selected three-day price.")
 	_expect(hub.contract_current_day_label.text == expected_primary_current_day,
 		"Successful renewal moves the previewed expiry into the Current label.")
 	_expect(not hub.contract_feedback_label.visible and hub.contract_feedback_label.text.is_empty()
@@ -718,13 +748,11 @@ func _run() -> void:
 		"Successful renewal clears feedback instead of showing a success message.")
 	var primary_tween: Tween = hub._renew_success_tween
 	_expect(primary_tween != null and primary_tween.is_running(), "A successful payment starts the short label animation.")
-	hub.manage_renew_button.pressed.emit()
-	_expect(Inventory.items.get("shekel", 0) == 8 and worker.payroll_paid_until_day == original_end + 6
-		and hub._renew_success_tween == primary_tween,
-		"A repeated Renew event during the animation cannot charge, extend, or restart it.")
 	buttons[2].grab_focus()
 	await _press_tab()
-	_expect(hub.contract_close_button.has_focus(), "Tab moves from 9D past disabled Renew to Close.")
+	_expect(hub.manage_renew_button.has_focus(), "Tab moves from 9D to Renew when the player's wallet covers the quote.")
+	await _press_tab()
+	_expect(hub.contract_close_button.has_focus(), "Tab moves from Renew to Close.")
 	var saw_success_green: bool = false
 	var primary_success_geometry: Array[Rect2] = []
 	var primary_success_label_position: Vector2 = hub.contract_current_day_label.position
@@ -785,6 +813,100 @@ func _run() -> void:
 		"Reopening Contract shows the renewed date without replaying the stopped animation.")
 	_restore_worker_renewal_state(worker, primary_worker_state)
 	Inventory.items["shekel"] = primary_wallet
+	Inventory.items_changed.emit()
+	hub._update_contract_controls(_worker_rows()[0])
+
+	# Two separate mouse clicks on the same 3D choice must create two renewals.
+	_select_duration(3)
+	var repeat_price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
+	var repeat_end_before: int = worker.payroll_paid_until_day
+	var repeat_city_before: int = CityStockManager.treasury_shekel
+	var repeat_base_position: Vector2 = hub.contract_current_day_label.position
+	var repeat_geometry: Array[Rect2] = _capture_contract_range_geometry()
+	Inventory.items["shekel"] = repeat_price * 2
+	Inventory.items_changed.emit()
+	_expect(not hub.manage_renew_button.disabled and hub._selected_contract_days == 3,
+		"A wallet with two 3D fees enables Renew while 3D stays selected.")
+	await _click_button(hub.manage_renew_button)
+	var first_repeat_tween: Tween = hub._renew_success_tween
+	_expect(Inventory.items.get("shekel", 0) == repeat_price
+		and worker.payroll_paid_until_day == repeat_end_before + 3
+		and not hub.manage_renew_button.disabled and hub._selected_contract_days == 3,
+		"The first separate 3D click charges one fee, extends by three days, and leaves one exact fee available.")
+	await _click_button(hub.manage_renew_button)
+	var second_repeat_tween: Tween = hub._renew_success_tween
+	_expect(Inventory.items.get("shekel", 0) == 0
+		and worker.payroll_paid_until_day == repeat_end_before + 6
+		and hub._selected_contract_days == 3 and hub.contract_day_buttons[0].button_pressed
+		and hub.manage_renew_button.disabled
+		and CityStockManager.treasury_shekel == repeat_city_before,
+		"A second separate 3D click charges the second fee, adds three more days, preserves selection, and leaves the city treasury unchanged.")
+	_expect(first_repeat_tween != null and not first_repeat_tween.is_running()
+		and second_repeat_tween != null and second_repeat_tween.is_running(),
+		"A repeated successful renewal cleanly replaces the first success animation.")
+	var repeat_animation_frames: int = 0
+	while second_repeat_tween != null and second_repeat_tween.is_running() and repeat_animation_frames < 60:
+		await get_tree().process_frame
+		repeat_animation_frames += 1
+	_expect(hub._renew_success_tween == null
+		and hub.contract_current_day_label.position.is_equal_approx(repeat_base_position)
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"The second 3D success animation finishes at the original label position and color.")
+	_expect_contract_range_geometry(repeat_geometry, "Two repeated 3D renewals")
+	_restore_worker_renewal_state(worker, primary_worker_state)
+	Inventory.items["shekel"] = primary_wallet
+	Inventory.items_changed.emit()
+	hub._update_contract_controls(_worker_rows()[0])
+
+	# Exactly one fee buys exactly one renewal. Balance changes refresh availability.
+	_select_duration(3)
+	var exact_price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
+	var exact_end_before: int = worker.payroll_paid_until_day
+	var exact_city_before: int = CityStockManager.treasury_shekel
+	CityStockManager.treasury_shekel = maxi(exact_city_before, exact_price * 10)
+	var funded_city_treasury: int = CityStockManager.treasury_shekel
+	Inventory.items["shekel"] = exact_price
+	Inventory.items_changed.emit()
+	_expect(not hub.manage_renew_button.disabled,
+		"A wallet holding exactly one three-day fee enables Renew.")
+	await _click_button(hub.manage_renew_button)
+	_expect(Inventory.items.get("shekel", 0) == 0
+		and worker.payroll_paid_until_day == exact_end_before + 3
+		and hub.manage_renew_button.disabled
+		and CityStockManager.treasury_shekel == funded_city_treasury,
+		"A balance of exactly one fee buys one 3D renewal, leaves Renew disabled, and does not charge the city.")
+	var exact_animation: Tween = hub._renew_success_tween
+	var exact_animation_frames: int = 0
+	while exact_animation != null and exact_animation.is_running() and exact_animation_frames < 60:
+		await get_tree().process_frame
+		exact_animation_frames += 1
+	_expect(hub._renew_success_tween == null
+		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
+		"The exact-balance success animation also restores the Current label.")
+	Inventory.items["shekel"] = exact_price - 1
+	Inventory.items_changed.emit()
+	_expect(hub.manage_renew_button.disabled,
+		"A wallet below the fee keeps Renew disabled even when the city treasury is funded.")
+	var insufficient_end: int = worker.payroll_paid_until_day
+	await _click_button(hub.manage_renew_button)
+	_expect(int(Inventory.items.get("shekel", 0)) == exact_price - 1
+		and worker.payroll_paid_until_day == insufficient_end
+		and CityStockManager.treasury_shekel == funded_city_treasury,
+		"A disabled or stale Renew input cannot charge an insufficient wallet or the funded city.")
+	Inventory.items["shekel"] = exact_price
+	Inventory.items_changed.emit()
+	_expect(not hub.manage_renew_button.disabled,
+		"Adding enough player funds and emitting items_changed enables Renew again.")
+	WorkerDatabase.workers_by_id.erase(WORKER_ID)
+	Inventory.items_changed.emit()
+	_expect(hub.manage_renew_button.disabled, "Renew is disabled when the worker is no longer valid.")
+	WorkerDatabase.workers_by_id[WORKER_ID] = worker
+	Inventory.items_changed.emit()
+	_expect(not hub.manage_renew_button.disabled, "Renew is available again when the funded worker is valid.")
+	CityStockManager.treasury_shekel = exact_city_before
+	_restore_worker_renewal_state(worker, primary_worker_state)
+	Inventory.items["shekel"] = primary_wallet
+	Inventory.items_changed.emit()
 	hub._update_contract_controls(_worker_rows()[0])
 
 	# A duration change during a third success stops only the animation.
@@ -818,6 +940,8 @@ func _run() -> void:
 	hub._update_contract_controls(_worker_rows()[0])
 	_select_duration(3)
 	Inventory.items["shekel"] = 1
+	_expect(not hub.manage_renew_button.disabled,
+		"Without an inventory change signal, the preexisting funded button can still be clicked during a balance race.")
 	var paid_end_after_renewal: int = worker.payroll_paid_until_day
 	hub.manage_renew_button.pressed.emit()
 	_expect(Inventory.items.get("shekel", 0) == 1 and worker.payroll_paid_until_day == paid_end_after_renewal
@@ -826,21 +950,21 @@ func _run() -> void:
 	_expect(hub._renew_success_tween == null
 		and hub.contract_current_day_label.modulate.is_equal_approx(primary_label_base_modulate),
 		"Insufficient funds leave the Current label white and do not start an animation.")
+	Inventory.items_changed.emit()
+	_expect(hub.manage_renew_button.disabled,
+		"The inventory signal keeps Renew disabled while the player wallet is below the fee.")
 	await _expect_contract_popup_fits("Not enough funds")
 	await _capture("worker-contract-not-enough-funds")
 	Inventory.items["shekel"] = 8
-	_expect(not hub.manage_renew_button.disabled, "A failed payment keeps the contract open for a later retry.")
-	# Clear the existing failure message through normal duration choices before
-	# comparing geometry; hiding that message intentionally changes panel height.
-	_select_duration(6)
-	_select_duration(3)
+	Inventory.items_changed.emit()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_expect(not hub.contract_feedback_label.visible, "Changing duration clears the previous payment error.")
+	_expect(not hub.manage_renew_button.disabled and not hub.contract_feedback_label.visible
+		and hub._renew_feedback_text.is_empty(),
+		"Adding sufficient player funds and emitting items_changed clears the payment error and enables a retry.")
 	var saved_crafter_rate: int = int(WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER])
 	var saved_price_selection: int = hub._selected_contract_days
 	var saved_price_feedback: String = hub._renew_feedback_text
-	var saved_price_completed: bool = hub._renew_completed_for_selection
 	var saved_price_focus: Control = get_viewport().gui_get_focus_owner()
 	var wallet_before_price_width_checks: int = int(Inventory.items.get("shekel", 0))
 	var contract_end_before_price_width_checks: int = worker.payroll_paid_until_day
@@ -889,7 +1013,6 @@ func _run() -> void:
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER] = saved_crafter_rate
 	hub._selected_contract_days = saved_price_selection
 	hub._renew_feedback_text = saved_price_feedback
-	hub._renew_completed_for_selection = saved_price_completed
 	hub._update_contract_day_selection()
 	hub._update_contract_controls(_worker_rows()[0])
 	if is_instance_valid(saved_price_focus) and saved_price_focus.is_inside_tree():

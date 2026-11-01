@@ -360,14 +360,8 @@ func renew_expired() -> void:
 		and settlements.size() == signals_before + 1
 	_expect(renewal_observed, "Renew charges the wallet once and starts a new three-day period")
 	var wallet_after_renew: int = int(Inventory.items.get("shekel", 0))
-	var renewed_until: int = worker.payroll_paid_until_day
-	_expect(hub.manage_renew_button.disabled, "A completed selection cannot be renewed a second time")
-	hub.manage_renew_button.pressed.emit()
-	await _frames()
-	_expect(int(Inventory.items.get("shekel", 0)) == wallet_after_renew
-		and worker.payroll_paid_until_day == renewed_until
-		and settlements.size() == signals_before + 1,
-		"Repeated stale Renew input cannot charge or extend the contract twice")
+	_expect(hub.manage_renew_button.disabled == (wallet_after_renew < price),
+		"Renew availability after payment follows the player's remaining balance for three days")
 	await _capture("worker-renewed")
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Closing Worker Hub returns to the live world")

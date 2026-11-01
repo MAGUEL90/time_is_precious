@@ -196,15 +196,14 @@ func _check_unfunded_renew() -> void:
 	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
 	_expect(selected_days == 3 and hub.contract_window.visible and hub.renew_price_label.text == "Price: %d" % price
 		and hub.renew_price_icon.visible, "The unfunded quote still shows the exact three-day price.")
-	await press(hub.manage_renew_button)
-	insufficient_checked = int(Inventory.items.get("shekel", 0)) == 0 \
+	insufficient_checked = int(Inventory.items.get("shekel", 0)) == 0 and price > 0 \
+		and hub.manage_renew_button.disabled \
 		and CityStockManager.treasury_shekel == city_cash_after_isolation \
-		and worker.payroll_paid_until_day == old_until \
-		and hub.contract_feedback_label.text == "Not enough funds."
-	_expect(insufficient_checked, "Renew rejects an empty wallet despite city cash, without changing the contract.")
+		and worker.payroll_paid_until_day == old_until
+	_expect(insufficient_checked, "Insufficient wallet funds disable Renew despite city cash, without changing the contract.")
 	await _capture_proceeds("worker-insufficient-wallet")
 	await _press_input("open_worker_hub")
-	_expect(not hub.visible and not get_tree().paused, "Close Worker Hub after the failed renewal.")
+	_expect(not hub.visible and not get_tree().paused, "Close Worker Hub after the insufficient-funds check.")
 
 
 func _collect_worker_wood() -> void:
@@ -308,11 +307,8 @@ func _renew_from_proceeds(price: int) -> void:
 		and CityStockManager.treasury_shekel == cash_before and renewed_until == expected_until
 		and not worker.is_payroll_blocked(),
 		"Renew pays the three-day term once from worker-sale proceeds, not city cash.")
-	_expect(hub.manage_renew_button.disabled, "A completed renewal selection cannot be purchased twice.")
-	hub.manage_renew_button.pressed.emit()
-	await _frames()
-	_expect(int(Inventory.items.get("shekel", 0)) == wallet_after_renew and worker.payroll_paid_until_day == renewed_until,
-		"A repeated stale Renew input cannot charge or extend the contract twice.")
+	_expect(hub.manage_renew_button.disabled == (wallet_after_renew < price),
+		"Renew availability after payment follows the player's remaining balance for three days.")
 	await _press_input("open_worker_hub")
 	_expect(not hub.visible and not get_tree().paused, "Close Worker Hub after renewal.")
 	measure("worker_proceeds_renewed")

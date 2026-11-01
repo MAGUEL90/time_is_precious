@@ -92,7 +92,6 @@ var _selected_contract_days: int = 3
 var contract_day_buttons: Array[Button] = []
 var _contract_day_button_group: ButtonGroup
 var _displayed_contract_price: int = 0
-var _renew_completed_for_selection: bool = false
 var _renew_request_active: bool = false
 var _renew_success_tween: Tween
 var _renew_success_original_modulate: Color = Color.WHITE
@@ -137,6 +136,8 @@ func _ready() -> void:
 	manage_renew_button.pressed.connect(_request_manage_renew)
 	details_close_button.pressed.connect(_close_details)
 	_connect_needs_refresh_signal()
+	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_wallet_items_changed):
+		Inventory.items_changed.connect(_on_wallet_items_changed)
 	tools_hands_button.pressed.connect(_show_hands_picker)
 	city_storage_view.get_node("Close").pressed.connect(_close_tools_picker)
 	city_storage_list.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -159,6 +160,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	_stop_renew_success_animation()
 	_disconnect_needs_refresh_signal()
+	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_wallet_items_changed):
+		Inventory.items_changed.disconnect(_on_wallet_items_changed)
 	_restore_pause()
 
 
@@ -179,6 +182,18 @@ func _disconnect_needs_refresh_signal() -> void:
 func _on_needs_changed(_day: Variant = null) -> void:
 	if visible:
 		refresh()
+
+
+func _on_wallet_items_changed() -> void:
+	if not visible or not contract_window.visible or _manage_worker_id.is_empty():
+		return
+	if _renew_feedback_text == "Not enough funds." and _displayed_contract_price > 0 \
+			and Inventory.has_item("shekel", _displayed_contract_price):
+		_renew_feedback_text = ""
+		contract_feedback_label.text = ""
+		contract_feedback_label.hide()
+		_reposition_contract_after_layout()
+	_update_renew_button_state(WorkerDatabase.get_worker_data(_manage_worker_id), _displayed_contract_price)
 
 
 func _input(event: InputEvent) -> void:
@@ -265,8 +280,6 @@ func close() -> void:
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
 	_renew_feedback_text = ""
-	_renew_completed_for_selection = false
-	_renew_request_active = false
 	_manage_worker_id = ""
 	_close_manage()
 	_close_tools_picker()
@@ -852,8 +865,6 @@ func _show_manage_contract() -> void:
 	_selected_contract_days = WorkerDatabase.CONTRACT_DAYS[0] if not WorkerDatabase.CONTRACT_DAYS.is_empty() else 3
 	_renew_feedback_text = ""
 	_displayed_contract_price = 0
-	_renew_completed_for_selection = false
-	_renew_request_active = false
 	_update_contract_day_selection()
 	_update_contract_controls(row)
 	manage_window.hide()
@@ -878,7 +889,6 @@ func _on_contract_days_selected(days: int) -> void:
 		return
 	if days != _selected_contract_days:
 		_stop_renew_success_animation()
-		_renew_completed_for_selection = false
 		_renew_feedback_text = ""
 	_selected_contract_days = days
 	_update_contract_day_selection()
@@ -897,13 +907,18 @@ func _update_contract_controls(row: Dictionary) -> void:
 	renew_price_icon.visible = price > 0
 	contract_feedback_label.text = _renew_feedback_text
 	contract_feedback_label.visible = not _renew_feedback_text.is_empty()
+	_update_renew_button_state(worker, price)
+	if contract_window.visible:
+		_reposition_contract_after_layout()
+
+
+func _update_renew_button_state(worker: WorkerData, price: int) -> void:
 	var renew_had_focus: bool = manage_renew_button.has_focus()
-	manage_renew_button.disabled = price <= 0 or _renew_completed_for_selection or _renew_request_active
+	manage_renew_button.disabled = worker == null or price <= 0 or _renew_request_active \
+		or not Inventory.has_item("shekel", price)
 	_configure_contract_focus()
 	if manage_renew_button.disabled and renew_had_focus and not contract_day_buttons.is_empty():
 		contract_day_buttons.back().grab_focus()
-	if contract_window.visible:
-		_reposition_contract_after_layout()
 
 
 func _current_contract_expiry_day(worker: WorkerData) -> int:
@@ -981,10 +996,11 @@ func _profession_from_row(row: Dictionary) -> WorkerData.Profession:
 
 
 func _request_manage_renew() -> void:
-	if not contract_window.visible or _manage_worker_id.is_empty() or _renew_request_active or _renew_completed_for_selection:
+	if not contract_window.visible or _manage_worker_id.is_empty() or _renew_request_active:
 		return
 	_stop_renew_success_animation()
-	var row: Dictionary = _find_worker(_get_worker_rows(), _manage_worker_id)
+	var worker_id: String = _manage_worker_id
+	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
 	var days: int = _selected_contract_days
@@ -997,18 +1013,27 @@ func _request_manage_renew() -> void:
 		_renew_feedback_text = "Price updated; review and renew."
 		_update_contract_controls(row)
 		return
+	var renew_had_focus: bool = manage_renew_button.has_focus()
 	_renew_request_active = true
 	_update_contract_controls(row)
-	var success: bool = WorkerDatabase.renew_contract(_manage_worker_id, days)
+	var success: bool = WorkerDatabase.renew_contract(worker_id, days)
 	_renew_request_active = false
+	if not visible or not contract_window.visible:
+		return
+	if _manage_worker_id != worker_id:
+		row = _find_worker(_get_worker_rows(), _manage_worker_id)
+		if not row.is_empty():
+			_update_contract_controls(row)
+		return
 	if success:
-		_renew_completed_for_selection = true
 		_renew_feedback_text = ""
 	else:
 		_renew_feedback_text = "Not enough funds." if not Inventory.has_item("shekel", price) else "Renewal failed; check contract."
 	row = _find_worker(_get_worker_rows(), _manage_worker_id)
 	if not row.is_empty():
 		_update_contract_controls(row)
+		if renew_had_focus and not manage_renew_button.disabled:
+			manage_renew_button.grab_focus()
 		if success and contract_window.visible:
 			_play_renew_success_animation()
 
