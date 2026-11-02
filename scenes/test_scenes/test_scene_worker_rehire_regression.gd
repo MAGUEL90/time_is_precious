@@ -1,13 +1,12 @@
 extends Node
 
 const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
-const HAULER_ID: String = "initial_worksite_hauler"
+const RETURNING_ID: String = "initial_worksite_hauler" # Stable legacy ID, now a Laborer in New Game.
 const LABORER_ID: String = "initial_workshop_laborer"
 const FIRST_TIME_ID: String = "audit_first_time_applicant"
 const EARNED_PROFESSION_XP: int = 7
 const FIXTURE_RATES: Dictionary = {
 	WorkerData.Profession.LABORER: 1,
-	WorkerData.Profession.HAULER: 2,
 }
 
 var failures: int = 0
@@ -43,33 +42,33 @@ func _run() -> void:
 	TimeComponentManager.current_hour = 10
 	TimeComponentManager.current_minute = 0
 
-	var hauler_citizen: CitizenData = CitizenManager.get_citizen(HAULER_ID)
+	var returning_citizen: CitizenData = CitizenManager.get_citizen(RETURNING_ID)
 	var laborer_citizen: CitizenData = CitizenManager.get_citizen(LABORER_ID)
-	_expect(hauler_citizen != null and hauler_citizen.profession == WorkerData.Profession.HAULER,
-		"ContentScene registers its initial Hauler applicant with the Hauler profession.")
+	_expect(returning_citizen != null and returning_citizen.profession == WorkerData.Profession.LABORER,
+		"ContentScene registers its initial Laborer applicant with the Laborer profession.")
 	_expect(laborer_citizen != null and laborer_citizen.profession == WorkerData.Profession.LABORER,
 		"ContentScene retains its initial Laborer applicant.")
-	if hauler_citizen == null or laborer_citizen == null:
+	if returning_citizen == null or laborer_citizen == null:
 		await _finish()
 		return
 
-	hauler_citizen.satisfaction = 0.8
-	var wallet_before_hauler: int = Inventory.items.get("shekel", 0)
-	var hauler: WorkerData = WorkerDatabase.hire_applicant(HAULER_ID, 2)
-	_expect(hauler != null and hauler.profession == WorkerData.Profession.HAULER,
-		"The actual initial Hauler applicant is hired as a Hauler.")
-	_expect(hauler != null and hauler.payroll_paid_from_day == TimeComponentManager.current_day
-		and hauler.payroll_paid_until_day == TimeComponentManager.current_day + 3
-		and hauler.payroll_period_rate == 2
-		and Inventory.items.get("shekel", 0) == wallet_before_hauler - 2,
-		"The fixture pays the Hauler's three-day contract up front from the personal wallet.")
-	if hauler == null:
+	returning_citizen.satisfaction = 0.8
+	var wallet_before_returning: int = Inventory.items.get("shekel", 0)
+	var returning_worker: WorkerData = WorkerDatabase.hire_applicant(RETURNING_ID, 2)
+	_expect(returning_worker != null and returning_worker.profession == WorkerData.Profession.LABORER,
+		"The actual initial Laborer applicant is hired as a Laborer.")
+	_expect(returning_worker != null and returning_worker.payroll_paid_from_day == TimeComponentManager.current_day
+		and returning_worker.payroll_paid_until_day == TimeComponentManager.current_day + 3
+		and returning_worker.payroll_period_rate == 1
+		and Inventory.items.get("shekel", 0) == wallet_before_returning - 1,
+		"The fixture pays the Laborer's three-day contract up front from the personal wallet.")
+	if returning_worker == null:
 		await _finish()
 		return
-	hauler.profession_xp = EARNED_PROFESSION_XP
-	_expect(WorkerDatabase.dismiss_worker(HAULER_ID), "The hired Hauler can be dismissed before the daily application pass.")
-	_expect(Inventory.items.get("shekel", 0) == wallet_before_hauler - 2,
-		"Dismissing the prepaid Hauler gives no refund.")
+	returning_worker.profession_xp = EARNED_PROFESSION_XP
+	_expect(WorkerDatabase.dismiss_worker(RETURNING_ID), "The hired Laborer can be dismissed before the daily application pass.")
+	_expect(Inventory.items.get("shekel", 0) == wallet_before_returning - 1,
+		"Dismissing the prepaid Laborer gives no refund.")
 
 	var wallet_before_laborer: int = Inventory.items.get("shekel", 0)
 	var ineligible_worker: WorkerData = WorkerDatabase.hire_applicant(LABORER_ID, 1)
@@ -102,11 +101,11 @@ func _run() -> void:
 	_expect(not player.is_collapsing, "The employment-only fixture does not interrupt the midnight pass with collapse.")
 	_expect(TimeComponentManager.current_day == previous_day + 1 and TimeComponentManager.current_hour == 0,
 		"The actual game clock crosses midnight and starts the daily needs/application pass.")
-	_expect(is_equal_approx(hauler_citizen.satisfaction, 0.75),
-		"The seeded Hauler remains eligible after the unchanged daily needs adjustment to 0.75 satisfaction.")
-	_expect(hauler_citizen.employment_status == CitizenData.EmploymentStatus.APPLICANT
-		and hauler_citizen.profession == WorkerData.Profession.HAULER,
-		"Midnight reapplication preserves the dismissed citizen's Hauler profession.")
+	_expect(is_equal_approx(returning_citizen.satisfaction, 0.75),
+		"The seeded Laborer remains eligible after the unchanged daily needs adjustment to 0.75 satisfaction.")
+	_expect(returning_citizen.employment_status == CitizenData.EmploymentStatus.APPLICANT
+		and returning_citizen.profession == WorkerData.Profession.LABORER,
+		"Midnight reapplication preserves the dismissed citizen's Laborer profession.")
 	_expect(first_time_citizen.employment_status == CitizenData.EmploymentStatus.APPLICANT
 		and first_time_citizen.profession == WorkerData.Profession.LABORER,
 		"A first-time eligible citizen with no profession receives the existing Laborer default.")
@@ -118,7 +117,7 @@ func _run() -> void:
 	var duplicate_registration_count: int = CitizenManager.evaluate_daily_applications()
 	_expect(duplicate_registration_count == 0
 		and CitizenManager.get_all_applicants().size() == applicant_count
-		and _is_applicant(HAULER_ID)
+		and _is_applicant(RETURNING_ID)
 		and _is_applicant(FIRST_TIME_ID),
 		"A repeated daily evaluation does not create duplicate applicants or change their existing roles.")
 
@@ -126,19 +125,19 @@ func _run() -> void:
 	TimeComponentManager.current_hour = 10
 	TimeComponentManager.current_minute = 0
 	var wallet_before_rehire: int = Inventory.items.get("shekel", 0)
-	var rehired: WorkerData = WorkerDatabase.hire_applicant(HAULER_ID, 3)
-	_expect(rehired == hauler and rehired.worker_id == HAULER_ID,
+	var rehired: WorkerData = WorkerDatabase.hire_applicant(RETURNING_ID, 3)
+	_expect(rehired == returning_worker and rehired.worker_id == RETURNING_ID,
 		"Rehiring restores the same WorkerData object and worker ID.")
-	_expect(rehired != null and rehired.profession == WorkerData.Profession.HAULER
+	_expect(rehired != null and rehired.profession == WorkerData.Profession.LABORER
 		and rehired.profession_xp == EARNED_PROFESSION_XP,
-		"Rehiring preserves the Hauler role and previously earned profession XP.")
+		"Rehiring preserves the Laborer role and previously earned profession XP.")
 	_expect(rehired != null and rehired.payroll_start_day == TimeComponentManager.current_day
 		and rehired.payroll_paid_from_day == TimeComponentManager.current_day
 		and rehired.payroll_paid_until_day == TimeComponentManager.current_day + 3
-		and rehired.payroll_period_rate == 2
-		and Inventory.items.get("shekel", 0) == wallet_before_rehire - 2,
+		and rehired.payroll_period_rate == 1
+		and Inventory.items.get("shekel", 0) == wallet_before_rehire - 1,
 		"Rehiring starts a fresh prepaid contract and charges the current three-day package again.")
-	_expect(hauler_citizen.employment_status == CitizenData.EmploymentStatus.HIRED,
+	_expect(returning_citizen.employment_status == CitizenData.EmploymentStatus.HIRED,
 		"Successful rehire updates the linked citizen's employment status.")
 	await _finish()
 

@@ -435,7 +435,7 @@ func _quote_for_ids(citizen_ids: PackedStringArray, days: int) -> Dictionary:
 	var valid: bool = not citizen_ids.is_empty() and days in [3, 6, 9] and days in WorkerDatabase.CONTRACT_DAYS
 	for citizen_id: String in citizen_ids:
 		var citizen: CitizenData = _find_applicant(citizen_id)
-		if citizen == null:
+		if citizen == null or CitizenManager.get_citizen(citizen_id) != citizen or not citizen.can_be_hired() or not CitizenManager.is_profession_recruitable(citizen.profession):
 			valid = false
 			break
 		var price: int = WorkerDatabase.get_contract_price(citizen.profession, days)

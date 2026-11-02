@@ -112,7 +112,7 @@ func hire_applicant(
 	if citizen_data == null:
 		return null
 
-	if not citizen_data.can_be_hired():
+	if not citizen_data.can_be_hired() or not CitizenManager.is_profession_recruitable(citizen_data.profession):
 		return null
 
 	if has_worker_data(citizen_data.citizen_id):
@@ -159,7 +159,7 @@ func hire_applicants(
 			return hired
 		seen[clean_id] = true
 		var citizen: CitizenData = CitizenManager.get_citizen(clean_id)
-		if citizen == null or not citizen.can_be_hired() or has_worker_data(clean_id):
+		if citizen == null or not citizen.can_be_hired() or not CitizenManager.is_profession_recruitable(citizen.profession) or has_worker_data(clean_id):
 			return hired
 		var price: int = get_contract_price(citizen.profession, contract_days)
 		if price <= 0 or total > 9223372036854775807 - price:

@@ -501,6 +501,11 @@ func _hire_and_assign_team() -> bool:
 	runtime.daily.allow_haulers = true
 	var laborer: WorkerData = WorkerDatabase.hire_applicant(LABORER_ID, 4)
 	var hauler: WorkerData = WorkerDatabase.hire_applicant(HAULER_ID, 5)
+	# Reconstruct a paid legacy Hauler for this pre-removal delivery fixture;
+	# ordinary recruitment no longer creates Haulers.
+	if hauler != null:
+		hauler.profession = WorkerData.Profession.HAULER
+		CitizenManager.get_citizen(HAULER_ID).profession = WorkerData.Profession.HAULER
 	var applicant := CitizenData.new()
 	applicant.citizen_id = PRODUCTION_ID
 	applicant.display_name = "Workshop Laborer"
@@ -512,7 +517,7 @@ func _hire_and_assign_team() -> bool:
 	var registered: bool = CitizenManager.register_applicant(PRODUCTION_ID, WorkerData.Profession.LABORER)
 	var producer: WorkerData = WorkerDatabase.hire_applicant(PRODUCTION_ID, 6)
 	_expect(laborer != null and hauler != null and producer != null and registered,
-		"Three valid applicants become hired workers through the employment API.")
+		"Three paid hires are made before reconstructing the legacy Hauler.")
 	if laborer == null or hauler == null or producer == null or not registered:
 		return false
 	_expect(not Inventory.has_item("shekel", 1) and CityStockManager.treasury_shekel == 19,

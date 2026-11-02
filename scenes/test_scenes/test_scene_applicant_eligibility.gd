@@ -13,6 +13,8 @@ func _run() -> void:
 	_test_stale_single_hire_and_visibility()
 	_test_stale_batch_is_atomic()
 	_test_unemployed_recovery_and_paid_rehire()
+	_test_legacy_hauler_is_not_recruited()
+	_test_legacy_hauler_does_not_reapply()
 	print("ApplicantEligibilityTest: %s (%d checks failed)" % ["PASS" if failures == 0 else "FAIL", failures])
 	get_tree().quit(0 if failures == 0 else 1)
 
@@ -30,7 +32,7 @@ func _reset_fixture() -> void:
 	WorkerDatabase._payroll_settling = false
 	WorkerDatabase.workers_by_id.clear()
 	WorkerDatabase.dismissed_workers.clear()
-	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: FIXTURE_RATE}
+	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: FIXTURE_RATE, WorkerData.Profession.HAULER: FIXTURE_RATE}
 	CitizenManager.citizens_by_id.clear()
 	Inventory.items.clear()
 	Inventory.items["shekel"] = FIXTURE_WALLET
@@ -141,3 +143,44 @@ func _test_unemployed_recovery_and_paid_rehire() -> void:
 	_expect(WorkerDatabase.hire_applicant(resident.citizen_id) == null
 		and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - FIXTURE_RATE,
 		"A repeated hire neither succeeds nor charges again.")
+
+func _test_legacy_hauler_is_not_recruited() -> void:
+	_reset_fixture()
+	var laborer: CitizenData = _add_applicant("valid_laborer")
+	var legacy: CitizenData = _add_resident("legacy_hauler", 0.8)
+	legacy.profession = WorkerData.Profession.HAULER
+	legacy.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	_expect(legacy.can_be_hired() and WorkerDatabase.get_contract_price(legacy.profession, 3) == FIXTURE_RATE,
+		"The old applicant is otherwise eligible and its legacy contract price remains available.")
+	_expect(not CitizenManager.get_all_applicants().has(legacy) and CitizenManager.get_all_applicants().has(laborer),
+		"An old Hauler applicant stays in the population but is absent from the board list.")
+	_expect(WorkerDatabase.hire_applicant(legacy.citizen_id) == null,
+		"A direct single hire rejects an otherwise eligible legacy Hauler.")
+	for ids: PackedStringArray in [PackedStringArray([laborer.citizen_id, legacy.citizen_id]), PackedStringArray([legacy.citizen_id, laborer.citizen_id])]:
+		_expect(WorkerDatabase.hire_applicants(ids).is_empty(), "Mixed batches reject a Hauler in either order.")
+		_expect(Inventory.items.get("shekel", 0) == FIXTURE_WALLET and WorkerDatabase.workers_by_id.is_empty()
+			and laborer.employment_status == CitizenData.EmploymentStatus.APPLICANT
+			and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT,
+			"Rejected single and batch hires preserve funds, workers and both citizen records.")
+	var hired: Array[WorkerData] = WorkerDatabase.hire_applicants(PackedStringArray([laborer.citizen_id]))
+	_expect(hired.size() == 1 and hired[0].profession == WorkerData.Profession.LABORER
+		and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - FIXTURE_RATE,
+		"The normal Laborer hire still succeeds and charges exactly once.")
+
+func _test_legacy_hauler_does_not_reapply() -> void:
+	_reset_fixture()
+	var citizen: CitizenData = _add_resident("former_hauler", CitizenData.MIN_APPLICANT_SATISFACTION)
+	citizen.profession = WorkerData.Profession.HAULER
+	var archived := WorkerData.new()
+	archived.worker_id = citizen.citizen_id
+	archived.profession = WorkerData.Profession.HAULER
+	archived.profession_xp = 17
+	WorkerDatabase.dismissed_workers[citizen.citizen_id] = archived
+	_expect(not CitizenManager.register_applicant(citizen.citizen_id, WorkerData.Profession.HAULER),
+		"An old Hauler cannot register a new application directly.")
+	_expect(CitizenManager.evaluate_daily_applications() == 0 and CitizenManager.evaluate_daily_applications() == 0,
+		"Repeated daily evaluations do not re-register an old Hauler at 50%.")
+	_expect(citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+		and citizen.profession == WorkerData.Profession.HAULER and CitizenManager.get_citizen(citizen.citizen_id) == citizen
+		and WorkerDatabase.dismissed_workers.get(citizen.citizen_id) == archived and archived.profession_xp == 17,
+		"The former worker remains an unemployed citizen with the original profession and archived XP.")

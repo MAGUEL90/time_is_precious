@@ -150,12 +150,12 @@ func _run() -> void:
 	CitizenManager.citizens_by_id.clear()
 	WorkerDatabase.workers_by_id.clear()
 	WorkerDatabase.dismissed_workers.clear()
-	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.HAULER: 3}
+	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.CRAFTER: 3}
 	Inventory.items.clear()
 	CityStockManager.treasury_shekel = 987
 	var first_citizen: CitizenData = _seed("first", WorkerData.Profession.LABORER, 0.62)
 	first_citizen.display_name = "Naram"
-	var second_citizen: CitizenData = _seed("second", WorkerData.Profession.HAULER, 0.87)
+	var second_citizen: CitizenData = _seed("second", WorkerData.Profession.CRAFTER, 0.87)
 	second_citizen.display_name = "Lugal"
 	var long_name: String = "A Very Long Worker Name Preserved In The Save"
 	var long_candidate: CitizenData
@@ -303,7 +303,7 @@ func _run() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		_expect(board.cards[0].wage_label.text == str(2 * (option + 1)), "Laborer card shows its price without trailing duration text.")
-		_expect(board.cards[1].wage_label.text == str(3 * (option + 1)), "Hauler card shows its own profession price.")
+		_expect(board.cards[1].wage_label.text == str(3 * (option + 1)), "Crafter card shows its own profession price.")
 		_expect(board.confirm_quote_amount_label.text == str(2 * (option + 1)) and board.confirm_quote_icon.visible, "The quoted price and coin are visible before confirmation.")
 		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
 		_expect_confirmation_geometry(duration_and_quote_geometry, "%d-day selection keeps selector and quote geometry fixed" % days)
@@ -516,7 +516,7 @@ func _reset_backend() -> void:
 	WorkerDatabase.workers_by_id.clear()
 	WorkerDatabase.dismissed_workers.clear()
 	WorkerDatabase._payroll_settling = false
-	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.HAULER: 3}
+	WorkerDatabase.onboarding_period_rates = {WorkerData.Profession.LABORER: 2, WorkerData.Profession.CRAFTER: 3}
 	Inventory.items.clear()
 	TimeComponentManager.current_day = 100
 	TimeComponentManager.current_hour = 8
@@ -538,7 +538,7 @@ func _test_atomic_backend() -> void:
 	for days: int in WorkerDatabase.CONTRACT_DAYS:
 		_reset_backend()
 		_seed("a", WorkerData.Profession.LABORER, 0.5)
-		_seed("b", WorkerData.Profession.HAULER, 0.5)
+		_seed("b", WorkerData.Profession.CRAFTER, 0.5)
 		_seed("other", WorkerData.Profession.LABORER, 0.5)
 		Inventory.items["shekel"] = 5 * (days / 3) + 50
 		observed_ids = PackedStringArray(["a", "b"])
@@ -556,7 +556,7 @@ func _test_atomic_backend() -> void:
 		_expect(WorkerDatabase.hire_applicants(observed_ids, 1, days).is_empty() and Inventory.items.get("shekel", 0) == 50, "Repeated completed batch does not charge again.")
 	_reset_backend()
 	var a: CitizenData = _seed("a", WorkerData.Profession.LABORER, 0.5)
-	var b: CitizenData = _seed("b", WorkerData.Profession.HAULER, 0.5)
+	var b: CitizenData = _seed("b", WorkerData.Profession.CRAFTER, 0.5)
 	Inventory.items["shekel"] = 100
 	for ids: PackedStringArray in [PackedStringArray(), PackedStringArray(["a", "a"]), PackedStringArray(["a", " a "]), PackedStringArray(["a", "missing"])]:
 		_expect(WorkerDatabase.hire_applicants(ids).is_empty(), "Empty, duplicate, alias-duplicate and missing IDs reject the complete batch.")
@@ -565,9 +565,9 @@ func _test_atomic_backend() -> void:
 	b.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	_expect(WorkerDatabase.hire_applicants(PackedStringArray(["a", "b"])).is_empty(), "Unavailable member cancels the whole batch.")
 	b.employment_status = CitizenData.EmploymentStatus.APPLICANT
-	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.HAULER] = -1
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER] = -1
 	_expect(WorkerDatabase.hire_applicants(PackedStringArray(["a", "b"])).is_empty(), "Unpriced profession cancels the whole batch.")
-	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.HAULER] = 3
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER] = 3
 	TimeComponentManager.current_hour = 17
 	_expect(WorkerDatabase.hire_applicants(PackedStringArray(["a", "b"])).is_empty(), "Closed board rejects the entire batch.")
 	TimeComponentManager.current_hour = 8
@@ -575,13 +575,13 @@ func _test_atomic_backend() -> void:
 	_expect(WorkerDatabase.hire_applicants(PackedStringArray(["a", "b"])).is_empty(), "Day limit rejects before mutation.")
 	TimeComponentManager.current_day = 100
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 3000000000000000000
-	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.HAULER] = 3000000000000000000
+	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.CRAFTER] = 3000000000000000000
 	Inventory.items["shekel"] = 9223372036854775807
 	_expect(WorkerDatabase.hire_applicants(PackedStringArray(["a", "b"]), 1, 9).is_empty(), "Aggregate overflow rejects the entire batch.")
 	_expect(WorkerDatabase.workers_by_id.is_empty() and a.employment_status == CitizenData.EmploymentStatus.APPLICANT and Inventory.items.get("shekel", 0) == 9223372036854775807, "Invalid batches leave membership and wallet untouched.")
 	_reset_backend()
 	_seed("a", WorkerData.Profession.LABORER, 0.5)
-	_seed("b", WorkerData.Profession.HAULER, 0.5)
+	_seed("b", WorkerData.Profession.CRAFTER, 0.5)
 	var retained := WorkerData.new()
 	retained.worker_id = "a"
 	retained.profession_xp = 72

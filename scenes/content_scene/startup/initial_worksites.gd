@@ -14,7 +14,7 @@ func _ready() -> void:
 	if not enable_initial_applicant:
 		return
 	_register_applicant(APPLICANT_ID, LABORER_NAME, WorkerData.Profession.LABORER)
-	_register_applicant(HAULER_APPLICANT_ID, HAULER_NAME, WorkerData.Profession.HAULER)
+	_register_applicant(HAULER_APPLICANT_ID, HAULER_NAME, WorkerData.Profession.LABORER)
 	if enable_initial_cart:
 		_supply_initial_cart.call_deferred()
 

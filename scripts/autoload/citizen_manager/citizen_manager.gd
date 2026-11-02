@@ -95,6 +95,10 @@ func get_all_residents() -> Array[CitizenData]:
 
 # Employment lifecycle
 
+## Haulers from older saves remain citizens/workers, but cannot be recruited.
+func is_profession_recruitable(profession: WorkerData.Profession) -> bool:
+	return profession != WorkerData.Profession.NONE and profession != WorkerData.Profession.HAULER
+
 func register_applicant(
 	citizen_id: String,
 	profession: WorkerData.Profession
@@ -106,7 +110,7 @@ func register_applicant(
 	if not citizen_data.can_apply_for_work():
 		return false
 
-	if profession == WorkerData.Profession.NONE:
+	if not is_profession_recruitable(profession):
 		return false
 
 	citizen_data.profession = profession
@@ -137,7 +141,7 @@ func get_all_applicants() -> Array[CitizenData]:
 	var applicants: Array[CitizenData] = []
 
 	for citizen in citizens_by_id.values():
-		if not citizen.can_be_hired():
+		if not citizen.can_be_hired() or not is_profession_recruitable(citizen.profession):
 			continue
 
 		applicants.append(citizen)

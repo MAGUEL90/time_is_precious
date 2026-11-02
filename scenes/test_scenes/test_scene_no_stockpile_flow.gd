@@ -89,9 +89,13 @@ func _write_flow() -> void:
 	Inventory.add_item("shekel", 10) # Fixture funds; normal contract prices still apply.
 	var laborer: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 3)
 	var hauler: WorkerData = WorkerDatabase.hire_applicant(HAULER_ID, 3)
-	_expect(laborer != null and hauler != null and not laborer.is_payroll_blocked() and not hauler.is_payroll_blocked(), "Both authored applicants receive real paid contracts from fixture funds.")
+	_expect(laborer != null and hauler != null and not laborer.is_payroll_blocked() and not hauler.is_payroll_blocked(), "Both authored Laborers receive real paid contracts from fixture funds.")
 	if stopped:
 		return
+	# Model an already-hired legacy Hauler without making new Hauler recruitment
+	# available to gameplay. Old-save loading is tested separately with v12 data.
+	hauler.profession = WorkerData.Profession.HAULER
+	CitizenManager.get_citizen(HAULER_ID).profession = WorkerData.Profession.HAULER
 	_expect(city_tools.allocate("initial_worksite_cart", HAULER_ID), "The Hauler has the real city Cart before the policy check.")
 	var stock_before: int = int(runtime.sites[WOOD_SITE].stock)
 	var city_before: int = int(city_tools.items.get(WOOD, 0))

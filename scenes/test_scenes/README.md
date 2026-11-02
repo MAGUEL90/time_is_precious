@@ -27,6 +27,7 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `clay_worksite_test/test_scene_worksite_resignation.tscn` | Worksite reentry, pending delivery, tools, ground output and replacement progress |
 | `test_scene_passive_drying_shift.tscn` | Real passive drying across 15:00 and midnight without a worker |
 | `test_scene_applicant_eligibility.tscn`, `test_scene_idle_resignation.tscn`, `test_scene_idle_resignation_save.tscn` | Applicant threshold, prepaid contract forfeiture, recovery, rehire and idle Continue |
+| `test_scene_no_hauler_job_board.tscn` | Actual New Game, Job Board and Continue: `-- --job-board-case=new_write`, `new_read`, `legacy_applicant`, `legacy_worker`; use one fresh isolated profile, in that order |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
 
 The multi-day needs journey is a controlled fixture, not an unassisted run. It
