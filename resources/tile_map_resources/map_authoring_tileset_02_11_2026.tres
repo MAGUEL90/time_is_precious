@@ -1,10 +1,9 @@
-[gd_resource type="TileSet" load_steps=3 format=3]
+[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://bqjt5tuwqj8fs"]
 
-[ext_resource type="Texture2D" path="res://assets/temporer/tile_set/tile_set_base_new_02_11_2026_new.png" id="1_uqbq8"]
+[ext_resource type="Texture2D" uid="uid://bihu8uyaoaylt" path="res://assets/temporer/tile_set/tile_set_base_new_02_11_2026_new.png" id="1_uqbq8"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_opkun"]
 texture = ExtResource("1_uqbq8")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 1:0/0 = 0
 2:0/0 = 0
@@ -363,5 +362,4 @@ texture_region_size = Vector2i(16, 16)
 13:24/0 = 0
 
 [resource]
-tile_size = Vector2i(16, 16)
 sources/0 = SubResource("TileSetAtlasSource_opkun")
