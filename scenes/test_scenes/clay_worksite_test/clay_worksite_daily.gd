@@ -14,6 +14,8 @@ var sites: Dictionary = {}
 var jobs: Dictionary = {}
 var selected: Dictionary = {}
 var hauler_setups: Dictionary = {}
+# Content maps can restrict new assignments without interrupting existing routes.
+var allow_haulers: bool = true
 ## Completed output awaiting a successful ground drop, independent of workers.
 ## Entries contain a quantity and the transient worksite drop callback.
 var pending_output: Dictionary = {}
@@ -60,6 +62,8 @@ func start_reason(site_id: StringName) -> String:
 	var count: int = 0
 	for id: String in selected[site_id]:
 		if is_hauler(id):
+			if not allow_haulers:
+				return "Unavailable"
 			if not hauler_setups.has(id):
 				return "Choose Hauler storage and daily target."
 			count += 1
@@ -137,6 +141,8 @@ func unavailable(id: String) -> String:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 	if worker == null:
 		return "Unavailable"
+	if not allow_haulers and worker.profession == WorkerData.Profession.HAULER:
+		return "Unavailable"
 	if worker.resignation_pending:
 		return "Resigning"
 	if worker.is_payroll_blocked():
@@ -156,13 +162,15 @@ func toggle(site_id: StringName, id: String) -> bool:
 		ids.erase(id)
 		hauler_setups.erase(id)
 		return true
+	if not allow_haulers and is_hauler(id):
+		return false
 	if ids.size() + reserved_count(site_id) >= 2 or not unavailable(id).is_empty():
 		return false
 	ids.append(id)
 	return true
 
 func select_hauler(site_id: StringName, id: String, destination_path: NodePath, destination_name: String, daily_target: int) -> bool:
-	if not is_hauler(id) or destination_path.is_empty() or daily_target <= 0 or selected[site_id].has(id):
+	if not allow_haulers or not is_hauler(id) or destination_path.is_empty() or daily_target <= 0 or selected[site_id].has(id):
 		return false
 	if not toggle(site_id, id):
 		return false
@@ -290,6 +298,9 @@ func progress_rows(site_id: StringName) -> Array[Dictionary]:
 
 func start(site_id: StringName, drop: Callable) -> bool:
 	var ids: Array = selected[site_id]
+	for id: String in ids:
+		if not allow_haulers and is_hauler(id):
+			return false
 	if ids.is_empty() or sites[site_id].working or not start_reason(site_id).is_empty():
 		return false
 	var existing: Array = jobs[site_id].ids if jobs.has(site_id) else []

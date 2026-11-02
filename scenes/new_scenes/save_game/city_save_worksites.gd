@@ -3,13 +3,55 @@ extends RefCounted
 ## Scene-local snapshot adapter for the authored main-city worksite map.
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
-const SCHEMA_VERSION: int = 2
+const SCHEMA_VERSION: int = 3
+const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
 const MAX_POSITION: float = 1000000.0
 
 var error: String = ""
 var _restored_storage_notifications: Array[WeakRef] = []
+
+
+## An in-flight legacy delivery may finish once, without recreating a stockpile
+## or exposing a new destination in the worksite UI. If a retained City
+## Storage rejects it, leave the same cargo on the ground at its destination.
+class LegacyFinalDestination extends RefCounted:
+	var worksite_ref: WeakRef
+	var native_ref: WeakRef
+	var target: Vector2
+	var display_name: String = "Ground"
+	var receiving: bool = false
+	var credited: bool = true
+
+	func _init(worksite: Node, arrival: Vector2, native: Object = null) -> void:
+		worksite_ref = weakref(worksite)
+		target = arrival
+		if is_instance_valid(native):
+			native_ref = weakref(native)
+			display_name = str(native.display_name)
+
+	func get_arrival_position() -> Vector2:
+		return target
+
+	func awards_delivery_credit() -> bool:
+		return credited
+
+	func try_deliver_at_position(position: Vector2, cargo: Dictionary) -> bool:
+		if receiving or not position.is_equal_approx(target) or int(cargo.get("quantity", 0)) <= 0:
+			return false
+		receiving = true
+		var native: Object = native_ref.get_ref() if native_ref != null else null
+		if is_instance_valid(native) and bool(native.try_deliver_at_position(position, cargo)):
+			receiving = false
+			return true
+		# A rejected City Storage receipt never earned delivery XP previously.
+		credited = native_ref == null
+		var worksite: Node = worksite_ref.get_ref() as Node
+		var dropped: bool = is_instance_valid(worksite) and worksite.is_inside_tree() and not worksite.is_queued_for_deletion() \
+			and bool(worksite._drop_legacy_stockpile_output(int(cargo.quantity), worksite.get_node("GroundOutput").to_local(position), str(cargo.item_id)))
+		receiving = false
+		return dropped
 
 
 func capture(worksite: Node) -> Dictionary:
@@ -51,7 +93,8 @@ func capture(worksite: Node) -> Dictionary:
 	var routes: Dictionary = _capture_routes(worksite, endpoints)
 	if not error.is_empty():
 		return {}
-	var ground: Array = _capture_ground(worksite)
+	var ground: Array = _capture_ground(worksite, false)
+	var legacy_ground: Array = _capture_ground(worksite, true)
 	if not error.is_empty():
 		return {}
 	var journeys: Dictionary = _capture_journeys(worksite)
@@ -77,6 +120,7 @@ func capture(worksite: Node) -> Dictionary:
 		"productive_days": worksite.worker_management.productive_days.duplicate(true),
 		"routes": routes,
 		"ground": ground,
+		"legacy_ground": legacy_ground,
 		"worker_journeys": journeys,
 		"journey_cache_day": int(worksite.journey_cache_day),
 	}
@@ -91,18 +135,22 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		"schema_version", "sites", "storages", "jobs", "ledger", "contributions",
 		"productive_days", "routes", "ground", "worker_journeys", "journey_cache_day",
 	]
-	if data.get("schema_version") == SCHEMA_VERSION:
+	if typeof(data.get("schema_version")) == TYPE_INT and int(data.schema_version) >= 2:
 		expected_fields.append("pending_output")
 		expected_fields.append("pending_progress")
+	if typeof(data.get("schema_version")) == TYPE_INT and int(data.schema_version) >= 3:
+		expected_fields.append("legacy_ground")
 	if not _has_exact_keys(data, expected_fields):
 		return _fail("Invalid worksite snapshot fields.")
-	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, SCHEMA_VERSION]:
+	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, SCHEMA_VERSION]:
 		return _fail("Unsupported worksite snapshot version.")
 	for field: String in ["sites", "storages", "jobs", "ledger", "contributions", "productive_days", "routes", "worker_journeys"]:
 		if typeof(data[field]) != TYPE_DICTIONARY:
 			return _fail("Invalid worksite snapshot map: " + field)
 	if typeof(data.ground) != TYPE_ARRAY or data.ground.size() > 10000:
 		return _fail("Invalid worksite ground output list.")
+	if int(data.schema_version) >= 3 and (typeof(data.legacy_ground) != TYPE_ARRAY or data.legacy_ground.size() > 10000):
+		return _fail("Invalid legacy ground output list.")
 	if not _is_count(data.journey_cache_day, -1, MAX_DAY):
 		return _fail("Invalid worksite commute cache day.")
 
@@ -116,6 +164,16 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 			return _fail("Invalid worksite stock quantity.")
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
+	if int(data.schema_version) < 3:
+		# Old checkpoints describe the five authored destinations removed from
+		# the current map. Their positions are fixed data, never saved paths.
+		var legacy_count: int = 0
+		for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+			if data.storages.has(endpoint_id):
+				legacy_count += 1
+				endpoints[endpoint_id] = worksite.to_global(LEGACY_STOCKPILES.STOCKPILES[endpoint_id].position)
+		if legacy_count != LEGACY_STOCKPILES.STOCKPILES.size():
+			return _fail("Incomplete legacy stockpile registry.")
 	if not _same_keys(data.storages, endpoints):
 		return _fail("Authored storage registry differs from the saved city.")
 	if not _validate_storages(data.storages, worksite, endpoints):
@@ -140,10 +198,48 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		return false
 	if not _validate_routes(data.routes, data.jobs, workers, worksite, endpoints, site_ids, int(data.ledger.last_tick), int(data.schema_version)):
 		return false
-	if not _validate_ground(data.ground, worksite, site_ids):
+	if not _validate_ground(data.ground, worksite, site_ids, false):
+		return false
+	if int(data.schema_version) >= 3 and not _validate_ground(data.legacy_ground, worksite, site_ids, true):
 		return false
 	if not _validate_journeys(data.worker_journeys, all_workers, site_ids, int(data.journey_cache_day)):
 		return false
+	return true
+
+
+## Called only on a fully validated staged checkpoint, before applying it.
+## The original file stays untouched until the player's next successful save.
+func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
+	if int(data.schema_version) >= SCHEMA_VERSION:
+		return true
+	if not data.has("pending_output"):
+		data["pending_output"] = {}
+	if not data.has("pending_progress"):
+		data["pending_progress"] = {}
+	data["legacy_ground"] = []
+	for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+		if not data.storages.has(endpoint_id):
+			continue
+		var record: Dictionary = LEGACY_STOCKPILES.STOCKPILES[endpoint_id]
+		var amount: int = int(data.storages[endpoint_id].quantity)
+		if amount > 0:
+			data.legacy_ground.append({"item_id": str(record.item_id), "quantity": amount,
+				"position": worksite.get_node("GroundOutput").to_local(worksite.to_global(record.position)),
+				"site_id": ""})
+		data.storages.erase(endpoint_id)
+	for route: Dictionary in data.routes.values():
+		route["resigning"] = bool(route.get("resigning", false))
+		route["removing"] = true
+		route["legacy_final"] = true
+	data.schema_version = SCHEMA_VERSION
+	# The codec stores dictionary entries in order. Match the current capture
+	# shape so a staged migration and a later capture encode identically.
+	var ordered: Dictionary = {}
+	for key: String in ["schema_version", "sites", "storages", "jobs", "pending_output", "pending_progress", "ledger",
+		"contributions", "productive_days", "routes", "ground", "legacy_ground", "worker_journeys", "journey_cache_day"]:
+		ordered[key] = data[key]
+	data.clear()
+	data.merge(ordered)
 	return true
 
 
@@ -177,7 +273,10 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var restored_routes: Dictionary = {}
 	for worker_id: String in data.routes:
 		var saved_route: Dictionary = data.routes[worker_id]
-		var endpoint: StorageDestination = endpoints[str(saved_route.destination_id)]
+		var endpoint: Variant = endpoints.get(str(saved_route.destination_id))
+		var legacy_final: bool = bool(saved_route.get("legacy_final", false))
+		if legacy_final:
+			endpoint = LegacyFinalDestination.new(worksite, saved_route.target, endpoint)
 		var route: Dictionary = {
 			"id": worker_id,
 			"site_id": StringName(saved_route.site_id),
@@ -189,14 +288,15 @@ func restore(data: Dictionary, worksite: Node) -> void:
 			"start": int(saved_route.start),
 			"arrival": int(saved_route.arrival),
 			"direction": str(saved_route.direction),
-			"destination": endpoint if saved_route.phase != "idle" else null,
-			"destination_path": worksite.get_path_to(endpoint),
+			"destination": endpoint if saved_route.phase != "idle" or legacy_final else null,
+			"destination_path": NodePath(saved_route.destination_id),
 			"destination_name": endpoint.display_name,
 			"daily_target": int(saved_route.daily_target),
 			"delivery_day": int(saved_route.delivery_day),
 			"delivered_today": int(saved_route.delivered_today),
 			"removing": bool(saved_route.removing),
 			"resigning": bool(saved_route.get("resigning", false)),
+			"legacy_final": legacy_final,
 		}
 		restored_routes[worker_id] = route
 
@@ -254,6 +354,10 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var ground_output: Node = worksite.get_node("GroundOutput")
 	for pile: Node in ground_output.get_children():
 		pile.free()
+	for saved_pile: Dictionary in data.get("legacy_ground", []):
+		if not bool(worksite.call("_drop_legacy_stockpile_output", int(saved_pile.quantity), saved_pile.position, str(saved_pile.item_id))):
+			_fail("Validated legacy ground output could not be restored.")
+			return
 	for saved_pile: Dictionary in data.ground:
 		var callback: Callable = Callable()
 		if not str(saved_pile.site_id).is_empty():
@@ -329,7 +433,8 @@ func _capture_routes(worksite: Node, endpoints: Dictionary) -> Dictionary:
 		var worker_id: String = str(worker_id_value)
 		var route: Dictionary = worksite.hauling.routes[worker_id_value]
 		var destination_id: String = str(NodePath(route.get("destination_path", NodePath(""))))
-		if not endpoints.has(destination_id):
+		var legacy_final: bool = bool(route.get("legacy_final", false))
+		if not endpoints.has(destination_id) and not (legacy_final and LEGACY_STOCKPILES.STOCKPILES.has(destination_id)):
 			_fail("A Hauler uses a destination outside the authored storage choices.")
 			return {}
 		result[worker_id] = {
@@ -348,14 +453,17 @@ func _capture_routes(worksite: Node, endpoints: Dictionary) -> Dictionary:
 			"delivered_today": int(route.get("delivered_today", 0)),
 			"removing": bool(route.get("removing", false)),
 			"resigning": bool(route.get("resigning", false)),
+			"legacy_final": legacy_final,
 		}
 	return result
 
 
-func _capture_ground(worksite: Node) -> Array:
+func _capture_ground(worksite: Node, legacy: bool) -> Array:
 	var result: Array = []
 	for pile: Node in worksite.get_node("GroundOutput").get_children():
 		if not pile is PickUpItem or pile.is_queued_for_deletion() or pile.is_collecting:
+			continue
+		if bool(pile.get_meta("legacy_stockpile", false)) != legacy:
 			continue
 		result.append({
 			"item_id": str(pile.item_id),
@@ -445,6 +553,12 @@ func _validate_storages(data: Dictionary, worksite: Node, endpoints: Dictionary)
 		if typeof(record_value) != TYPE_DICTIONARY:
 			return _fail("Invalid authored storage endpoint record.")
 		var record: Dictionary = record_value
+		if typeof(endpoints[endpoint_id]) == TYPE_VECTOR2:
+			if not _has_exact_keys(record, ["shared", "quantity", "capacity", "accepting"]) or record.shared != false or typeof(record.shared) != TYPE_BOOL:
+				return _fail("Invalid legacy stockpile record.")
+			if not _is_count(record.quantity, 0, MAX_COUNT) or not _is_count(record.capacity, 1, MAX_COUNT) or record.quantity > record.capacity or typeof(record.accepting) != TYPE_BOOL:
+				return _fail("Invalid legacy stockpile quantity or capacity.")
+			continue
 		var endpoint: StorageDestination = endpoints[endpoint_id]
 		var storage: Node = endpoint.get_storage()
 		if storage == null or not is_instance_valid(storage):
@@ -607,6 +721,8 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 		]
 		if schema_version >= 2:
 			route_fields.append("resigning")
+		if schema_version >= 3:
+			route_fields.append("legacy_final")
 		if not _has_exact_keys(route, route_fields):
 			return _fail("Invalid Hauler route fields.")
 		if typeof(route.site_id) != TYPE_STRING or route.site_id != assigned[worker_id] or not site_ids.has(route.site_id):
@@ -628,7 +744,16 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 			return _fail("Invalid Hauler route times.")
 		if typeof(route.direction) != TYPE_STRING or not ["left", "right"].has(route.direction):
 			return _fail("Invalid Hauler route direction.")
-		if typeof(route.destination_id) != TYPE_STRING or not endpoints.has(route.destination_id):
+		var legacy_final: bool = false
+		if schema_version >= 3:
+			if typeof(route.legacy_final) != TYPE_BOOL:
+				return _fail("Invalid legacy final delivery state.")
+			legacy_final = route.legacy_final
+			if legacy_final and route.removing != true:
+				return _fail("A legacy final delivery must be withdrawing.")
+			if not worksite.daily.allow_haulers and not legacy_final:
+				return _fail("New worksite Hauler routes are unavailable.")
+		if typeof(route.destination_id) != TYPE_STRING or (not endpoints.has(route.destination_id) and not (legacy_final and LEGACY_STOCKPILES.STOCKPILES.has(route.destination_id))):
 			return _fail("Hauler destination is not an authored storage choice.")
 		var saved_day: int = floori(float(saved_time) / 1440.0)
 		if not _is_count(route.daily_target, 1, 9999999) or not _is_count(route.delivery_day, -1, saved_day) or not _is_count(route.delivered_today, 0, int(route.daily_target)):
@@ -641,8 +766,14 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 			return _fail("Invalid pending Hauler resignation state.")
 		if schema_version >= 2 and bool(route.resigning) != worker.resignation_pending:
 			return _fail("Hauler route and worker resignation state disagree.")
-		var endpoint: StorageDestination = endpoints[route.destination_id]
-		if route.phase != "idle" and not route.target.is_equal_approx(endpoint.get_arrival_position()):
+		var target: Vector2
+		if not endpoints.has(route.destination_id):
+			target = worksite.to_global(LEGACY_STOCKPILES.STOCKPILES[route.destination_id].position)
+		elif typeof(endpoints[route.destination_id]) == TYPE_VECTOR2:
+			target = endpoints[route.destination_id]
+		else:
+			target = endpoints[route.destination_id].get_arrival_position()
+		if route.phase != "idle" and not route.target.is_equal_approx(target):
 			return _fail("Hauler destination position no longer matches the authored endpoint.")
 	for worker_id: String in assigned:
 		var worker: WorkerData = workers.get(worker_id)
@@ -651,14 +782,17 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 	return true
 
 
-func _validate_ground(piles: Array, worksite: Node, site_ids: Dictionary) -> bool:
+func _validate_ground(piles: Array, worksite: Node, site_ids: Dictionary, legacy: bool) -> bool:
 	for pile: Variant in piles:
-		if not _has_exact_keys(pile, ["item_id", "quantity", "position", "site_id"]):
+		var fields: Array = ["item_id", "quantity", "position", "site_id"]
+		if not _has_exact_keys(pile, fields):
 			return _fail("Invalid ground output record.")
 		if not _valid_item_id(pile.item_id) or not _is_count(pile.quantity, 1, MAX_COUNT) or not _is_vector(pile.position):
 			return _fail("Unknown ground output item or invalid stack values.")
 		if typeof(pile.site_id) != TYPE_STRING:
 			return _fail("Invalid ground output worksite.")
+		if legacy and not pile.site_id.is_empty():
+			return _fail("Invalid legacy ground output kind.")
 		if not pile.site_id.is_empty():
 			if not site_ids.has(pile.site_id) or str(worksite.sites[StringName(pile.site_id)].item_id) != pile.item_id:
 				return _fail("Ground output refers to an unknown worksite or resource.")

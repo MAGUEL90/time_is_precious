@@ -1,6 +1,12 @@
 extends RefCounted
 
 ## Construct historical schemas without restoring retired runtime properties.
+const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
+
+static func _add_old_empty_stockpiles(worksites: Dictionary) -> void:
+	for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+		worksites.storages[endpoint_id] = {"shared": false, "quantity": 0, "capacity": 96, "accepting": true}
+
 static func encode_city(codec: RefCounted, raw: Dictionary) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
 	for result: Dictionary in legacy.needs.last_needs_results.values():
@@ -19,10 +25,15 @@ static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
 		plot.erase("worker_capacity")
 		plot.erase("work_total_units")
 	legacy.worksites.schema_version = 1
+	_add_old_empty_stockpiles(legacy.worksites)
 	legacy.worksites.erase("pending_output")
 	legacy.worksites.erase("pending_progress")
+	legacy.worksites.erase("legacy_ground")
 	for route: Dictionary in legacy.worksites.routes.values():
 		route.erase("resigning")
+		route.erase("legacy_final")
+	for pile: Dictionary in legacy.worksites.ground:
+		pile.erase("legacy_stockpile")
 	var encoded: Variant = codec.encode(legacy)
 	_remove_resignation_fields(encoded)
 	return encoded
@@ -31,6 +42,13 @@ static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
 static func encode_v11(codec: RefCounted, raw: Dictionary) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
 	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
+	legacy.worksites.schema_version = 2
+	_add_old_empty_stockpiles(legacy.worksites)
+	legacy.worksites.erase("legacy_ground")
+	for route: Dictionary in legacy.worksites.routes.values():
+		route.erase("legacy_final")
+	for pile: Dictionary in legacy.worksites.ground:
+		pile.erase("legacy_stockpile")
 	return codec.encode(legacy)
 
 static func _remove_resignation_fields(value: Variant) -> void:

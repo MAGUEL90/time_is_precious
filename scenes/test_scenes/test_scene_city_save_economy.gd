@@ -249,7 +249,9 @@ func _test_v10_migration(original: Dictionary) -> void:
 	for saved_plot: Dictionary in source_raw.plots.values():
 		source_shape_valid = source_shape_valid and not saved_plot.has("worker_capacity") and not saved_plot.has("work_total_units")
 	for route: Dictionary in source_raw.worksites.routes.values():
-		source_shape_valid = source_shape_valid and not route.has("resigning")
+		source_shape_valid = source_shape_valid and not route.has("resigning") and not route.has("legacy_final")
+	for pile: Dictionary in source_raw.worksites.ground:
+		source_shape_valid = source_shape_valid and not pile.has("legacy_stockpile")
 	_expect(source_shape_valid and source_raw.worksites.schema_version == 1 and not source_raw.worksites.has("pending_output")
 		and not source_raw.worksites.has("pending_progress"),
 		"The v10 source genuinely omits all v11 and nested worksite v2 fields.")
@@ -282,11 +284,12 @@ func _test_v10_migration(original: Dictionary) -> void:
 		and restored_plot.work_total_units == (old_plot.completes_at - old_plot.started_at) * old_plot.worker_ids.size(),
 		"Continue retains every old building field and reconstructs the original team capacity and total work.")
 	var restored_route: Dictionary = store.snapshot._sites.capture(runtime).routes[HAULER_ID]
-	old_route.erase("resigning")
-	restored_route.erase("resigning")
+	old_route["resigning"] = false
+	old_route["removing"] = true
+	old_route["legacy_final"] = true
 	_expect(_same_snapshot(restored_route, old_route) and not runtime.daily.hauling.routes[HAULER_ID].resigning
 		and runtime.daily.pending_output.is_empty() and runtime.daily.pending_progress.is_empty(),
-		"The old worksite restores its route and cargo with no pending delivery, output, or progress.")
+		"The old worksite retains its route and cargo for one final delivery, with no pending output or progress.")
 	var migrated_state: Dictionary = store.snapshot.capture(content)
 	_expect(store.save_checkpoint(), "A later explicit save upgrades the v10 checkpoint: " + store.last_error)
 	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
@@ -493,6 +496,9 @@ func _prepare_city_state() -> void:
 	CityStockManager.add_shelter_capacity(3)
 
 func _hire_and_assign_team() -> bool:
+	# This fixture explicitly constructs a pre-removal delivery scenario.
+	# Normal gameplay keeps new worksite Hauler assignments disabled.
+	runtime.daily.allow_haulers = true
 	var laborer: WorkerData = WorkerDatabase.hire_applicant(LABORER_ID, 4)
 	var hauler: WorkerData = WorkerDatabase.hire_applicant(HAULER_ID, 5)
 	var applicant := CitizenData.new()

@@ -7,7 +7,8 @@ const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
-const VERSION: int = 12
+const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
+const VERSION: int = 13
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -148,7 +149,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -255,7 +256,21 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		# can still be skipped in favor of a valid older backup.
 		error = LEGACY_TIME_ERROR_PREFIX + " " + error
 		return false
+	var migrated_worksites: bool = int(raw.worksites.schema_version) < _sites.SCHEMA_VERSION
+	if migrated_worksites:
+		if not _sites.migrate_legacy(raw.worksites, worksite(map)) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
+			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
+	if migrated_worksites:
+		# Do not apply a legacy state that cannot be written by the existing
+		# bounded codec/disk format. The original checkpoint remains untouched.
+		var next_values = VALUES.new()
+		var encoded: Variant = next_values.encode(raw)
+		if not next_values.error.is_empty():
+			return fail("Migrated checkpoint cannot be encoded. " + next_values.error)
+		var next_document: Dictionary = {"schema_version": VERSION, "scenario": "city_mvp", "location": prepared_location, "state": encoded}
+		if JSON.stringify(next_document, "\t", true, true).to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
+			return fail("Migrated checkpoint exceeds the existing save size limit.")
 	prepared = raw
 	return true
 

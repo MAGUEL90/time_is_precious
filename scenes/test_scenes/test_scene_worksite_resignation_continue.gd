@@ -23,6 +23,8 @@ func _run() -> void:
 	for _frame: int in range(2):
 		await get_tree().process_frame
 	runtime = content.get_node("YSortWorld/WorkerRuntime")
+	# Both processes explicitly exercise the pre-removal Hauler fixture.
+	runtime.daily.allow_haulers = true
 	city_storage = WorkStateRuntime.get_node("CityToolStorage")
 	wood_storage = runtime.get_node("CityStorageArea/DeliveryPoint")
 	store = WorkStateRuntime.get_node("CitySave")
@@ -92,16 +94,16 @@ func _test_write() -> void:
 	_expect(store.save_checkpoint(), "Save the pending real-city worksite: " + store.last_error)
 
 func _test_read() -> void:
-	var stockpile: Node = runtime.get_node("WoodStorage/Storage")
-	stockpile.changed.connect(_on_restored_stockpile_changed)
+	city_storage.changed.connect(_on_restored_city_storage_changed)
 	runtime.daily.resignation_ready.connect(func(id: String):
 		if id == HAULER_ID:
 			ready_notifications += 1
 	)
 	_expect(store.load_checkpoint(), "Continue the pending shipment in a fresh process: " + store.last_error)
+	city_storage.changed.disconnect(_on_restored_city_storage_changed)
 	var worker: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)
 	var route: Dictionary = runtime.hauling.routes.get(HAULER_ID, {})
-	_expect(restore_notifications == 1, "Storage observers run only after the route, worker and site progress are restored.")
+	_expect(restore_notifications == 1, "City Storage observers run only after the route, worker and site progress are restored.")
 	_expect(worker != null and worker.resignation_pending and bool(route.get("resigning", false))
 		and int(route.get("cargo", {}).get("quantity", 0)) == 3 and _wood_total() == 72,
 		"Continue restores the same pending cargo and worker without duplication.")
@@ -136,14 +138,14 @@ func _test_read() -> void:
 		and is_equal_approx(float(runtime.daily.jobs[WOOD_SITE].progress[PRODUCTION_ID]), PARTIAL),
 		"The replacement claims the restored partial item once.")
 
-func _on_restored_stockpile_changed() -> void:
+func _on_restored_city_storage_changed() -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)
 	var route: Dictionary = runtime.hauling.routes.get(HAULER_ID, {})
 	if worker != null and worker.resignation_pending and bool(route.get("resigning", false)) \
 		and int(route.get("cargo", {}).get("quantity", 0)) == 3 and runtime.daily.pending_progress.has(WOOD_SITE):
 		restore_notifications += 1
 	else:
-		_expect(false, "A stockpile restore observer saw incomplete or mixed worksite state.")
+		_expect(false, "A City Storage restore observer saw incomplete or mixed worksite state.")
 
 func _finish_resign_continue() -> void:
 	if is_instance_valid(content):

@@ -36,7 +36,7 @@ func _run() -> void:
 	if not _start_active_fixture():
 		await _finish_skew_test()
 		return
-	# Keep the Hauler's real route start strictly before both test ledger times.
+	# Settle the current worksite ledger before testing the clock boundaries.
 	_expect(TimeComponentManager.advance_minutes(1), "The active fixture advances one normal minute before saving.")
 
 	# Save the settled current world through the production disk boundary.
@@ -74,6 +74,9 @@ func _run() -> void:
 	_expect(source_is_legacy, "The synthesized v10 control uses only historical worker, plot, and worksite fields.")
 	var migrated_expected: Dictionary = before.duplicate(true)
 	var migrated_raw: Dictionary = current_raw.duplicate(true)
+	for route: Dictionary in migrated_raw.worksites.routes.values():
+		route.removing = true
+		route.legacy_final = true
 	var house_id: String = "WorkshopConstruction_" + "citizen_house_1".sha256_text()
 	migrated_raw.plots[house_id]._latest_time = int(migrated_raw.clock.current_day) * 1440 + int(migrated_raw.clock.current_hour) * 60 + int(migrated_raw.clock.current_minute)
 	migrated_expected.state = MIGRATION_VALUES.new().encode(migrated_raw)
@@ -157,7 +160,7 @@ func _settled_active(raw: Dictionary) -> bool:
 	return raw.work.active_orders.has(shaping_order_id) and station != null and station.slots[0] != null \
 		and raw.plots[skew_plot_id].phase == "building" and raw.plots[skew_plot_id]._latest_time == now \
 		and raw.work._last_total_minutes == now and raw.process._last_total_minutes == now \
-		and raw.worksites.ledger.last_tick == now and raw.worksites.routes[HAULER_ID].start < now
+		and raw.worksites.ledger.last_tick == now and not raw.worksites.routes.has(HAULER_ID)
 
 func _assert_valid_continue(bytes: PackedByteArray, expected: Dictionary, label: String) -> void:
 	_write_skew_bytes(bytes)

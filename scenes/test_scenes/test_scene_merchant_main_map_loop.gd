@@ -122,11 +122,9 @@ func _run() -> void:
 			_expect(row.stock == 10, "Two purchased clay are deducted from stock.")
 	merchant.menu.back_button.pressed.emit()
 	await _settle()
-	# Verify held stock and uncollected output survive another real home trip.
-	var storage: Node = runtime.get_node("WoodStorage").get_storage()
+	# Verify uncollected outputs survive another real home trip.
 	Inventory.remove_item("wood_log", 1)
-	storage.quantity = 1
-	storage.changed.emit()
+	_expect(runtime._drop_output_at(1, Vector2.ZERO, Callable(), "wood_log"), "Place the wood on the ground.")
 	var water = runtime.sites[&"WaterSite"]
 	water.toggle_participant("player")
 	water.execute(180, player, runtime)
@@ -137,9 +135,11 @@ func _run() -> void:
 	var water_stock: int = water.stock
 	await _door("YSortWorld/HomeDoor")
 	await _door("YSortWorld/ExitDoor")
-	_expect(runtime.get_node("WoodStorage").get_storage().quantity == 1, "Stockpile survives a scene round trip.")
 	_expect(runtime.sites[&"WaterSite"].stock == water_stock, "Round trip does not refill natural stock.")
-	_expect(runtime.get_node("GroundOutput").get_child_count() == 1 and runtime.get_node("GroundOutput").get_child(0).quantity == water_count, "Uncollected output survives without duplication.")
+	var ground: Dictionary = {}
+	for pile: Node in runtime.get_node("GroundOutput").get_children():
+		ground[str(pile.item_id)] = int(ground.get(str(pile.item_id), 0)) + int(pile.quantity)
+	_expect(ground == {"wood_log": 1, "water_jar": water_count}, "Both uncollected ground outputs survive without duplication.")
 	merchant = content.get_node("YSortWorld/TravelingMerchant")
 	_expect(not merchant.state.trade("wood_log", 1, false).ok and Inventory.items.get("shekel", 0) == 4 and merchant.state.get_budget() == 116, "Trip home does not reset merchant income quota or wallet.")
 	content.free()

@@ -26,14 +26,14 @@ func _run() -> void:
 	WorkerDatabase.get_worker_data(PRODUCTION_ID).profession_xp = 17
 	_select_house_path(test_root.path_join("player_house.json"))
 	var baseline: Dictionary = store.snapshot.capture(content)
-	_expect(store.snapshot.VERSION == 12 and store.snapshot.prepare(baseline, content),
-		"The unchanged v12 world validates before the player begins work.")
+	_expect(store.snapshot.VERSION == 13 and store.snapshot.prepare(baseline, content),
+		"The current world validates before the player begins work.")
 	var values = MIGRATION_VALUES.new()
 	var legacy: Dictionary = baseline.duplicate(true)
 	legacy.schema_version = 11
 	legacy.state = MIGRATION_FIXTURE.encode_v11(values, values.decode(baseline.state))
 	_expect(store.snapshot.prepare(legacy, content) and _same_snapshot(baseline, store.snapshot.capture(content)),
-		"A v11 control still prepares without mutating the live v12 world.")
+		"A v11 control still prepares without mutating the live world.")
 	_expect(store.save_checkpoint(), "An initial checkpoint saves before player work: " + store.last_error)
 	var initial_bytes: PackedByteArray = FileAccess.get_file_as_bytes(store.disk.path)
 	if not _test_player_cleaning(initial_bytes):

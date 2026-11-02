@@ -27,13 +27,8 @@ func _run() -> void:
 		await _assert_seed(read_raw.get("pickup_sources", {}))
 		var expected: Dictionary = read_document.duplicate(true)
 		if read_document.schema_version == 9:
-			# Normalize the nested v1 worksite defaults to the captured v2 shape.
+			# The staged load already contains the current nested worksite shape.
 			expected.schema_version = CODEC.VERSION
-			read_raw.worksites.schema_version = 2
-			read_raw.worksites.pending_output = {}
-			read_raw.worksites.pending_progress = {}
-			for route: Dictionary in read_raw.worksites.routes.values():
-				route.resigning = false
 			expected.state = VALUES.new().encode(read_raw)
 			for result: Dictionary in read_raw.needs.last_needs_results.values():
 				_expect(not result.has("reliability") and not result.has("reliability_delta"), "A genuine v9 ledger loads without retired fields.")

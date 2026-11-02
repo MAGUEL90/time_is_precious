@@ -42,6 +42,10 @@ func _run() -> void:
 	_expect(laborer != null and not laborer.physical_approach.is_empty() and laborer.physical_approach.arrived,
 		"The assigned Laborer physically reaches the Wood Site before producing.")
 	_expect(runtime.hauling.routes.has(HAULER_ID) and runtime.hauling.routes[HAULER_ID].cargo.quantity == 3, "A real Hauler is carrying three wood logs before the home visit.")
+	if runtime.hauling.routes.has(HAULER_ID):
+		# The fixture represents a pre-removal trip being finished once.
+		runtime.hauling.routes[HAULER_ID].legacy_final = true
+		runtime.hauling.routes[HAULER_ID].removing = true
 	city_storage.items["stone"] = 20
 	city_storage.items["wood_log"] = 5
 	_expect(state.request_wall_work(state.get_work_quote()), "Paid wall construction begins before sleep.")
@@ -87,7 +91,7 @@ func _run() -> void:
 		_finish_sleep_test()
 		return
 	_expect(state.wall_hp == 50 and state._work_kind.is_empty(), "Construction advances normally during sleep before saving.")
-	_expect(city_storage.items.get("wood_log", 0) == 3 and original_runtime.hauling.routes[HAULER_ID].cargo.quantity == 0, "The Hauler completes delivery while the city is offscreen.")
+	_expect(city_storage.items.get("wood_log", 0) == 3 and not original_runtime.hauling.routes.has(HAULER_ID), "The final Hauler delivery completes once while the city is offscreen.")
 	_expect(original_runtime._daily_output_count(WOOD_SITE) > 0, "Assigned workers continue producing during the real sleep time skip.")
 	var saved: String = FileAccess.get_file_as_string(SLEEP_SAVE_PATH)
 	var parsed: Dictionary = JSON.parse_string(saved)

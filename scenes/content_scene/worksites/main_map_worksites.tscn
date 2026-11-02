@@ -1,8 +1,7 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
-[ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/worksite_stockpile.tscn" id="3_storage"]
 [ext_resource type="PackedScene" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/resource_site_marker.gd" id="6_resource_site"]
@@ -21,13 +20,6 @@ y_sort_enabled = true
 script = ExtResource("1_runtime")
 player_path = NodePath("../Player")
 inventory_ui_path = NodePath("../../InventoryUI")
-storage_destinations = Dictionary[StringName, NodePath]({
-&"ClaySiteA": NodePath("ClayStorage"),
-&"WoodSite": NodePath("WoodStorage"),
-&"ReedSite": NodePath("ReedStorage"),
-&"StrawSite": NodePath("StrawStorage"),
-&"WaterSite": NodePath("WaterStorage")
-})
 
 [node name="WorksiteMarkers" type="Node2D" parent="."]
 y_sort_enabled = true
@@ -134,100 +126,6 @@ text = "Water Site"
 texture_filter = 1
 texture = ExtResource("icon_Water")
 
-[node name="ClayStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, -24)
-display_name = "Clay"
-
-[node name="Sprite2D" parent="ClayStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Clay")
-
-[node name="Label" parent="ClayStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Clay\n0 / 96"
-
-[node name="Storage" parent="ClayStorage" index="5"]
-compact_label = true
-
-[node name="WoodStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, 8)
-display_name = "Wood"
-
-[node name="Sprite2D" parent="WoodStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Wood")
-
-[node name="Label" parent="WoodStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Wood\n0 / 96"
-
-[node name="Storage" parent="WoodStorage" index="5"]
-item_id = "wood_log"
-compact_label = true
-
-[node name="ReedStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, 40)
-display_name = "Reed"
-
-[node name="Sprite2D" parent="ReedStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Reed")
-
-[node name="Label" parent="ReedStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Reed\n0 / 96"
-
-[node name="Storage" parent="ReedStorage" index="5"]
-item_id = "reed_bundle"
-compact_label = true
-
-[node name="StrawStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(24, -24)
-display_name = "Straw"
-
-[node name="Sprite2D" parent="StrawStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Straw")
-
-[node name="Label" parent="StrawStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Straw\n0 / 96"
-
-[node name="Storage" parent="StrawStorage" index="5"]
-item_id = "straw_bundle"
-compact_label = true
-
-[node name="WaterStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(24, 8)
-display_name = "Water"
-
-[node name="Sprite2D" parent="WaterStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Water")
-
-[node name="Label" parent="WaterStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Water\n0 / 96"
-
-[node name="Storage" parent="WaterStorage" index="5"]
-item_id = "water_jar"
-compact_label = true
-
 [node name="WorkerDeparture" type="Marker2D" parent="."]
 position = Vector2(0, 56)
 
@@ -288,8 +186,3 @@ position = Vector2(-120, 55)
 [editable path="WorksiteMarkers/ReedSite"]
 [editable path="WorksiteMarkers/StrawSite"]
 [editable path="WorksiteMarkers/WaterSite"]
-[editable path="ClayStorage"]
-[editable path="WoodStorage"]
-[editable path="ReedStorage"]
-[editable path="StrawStorage"]
-[editable path="WaterStorage"]

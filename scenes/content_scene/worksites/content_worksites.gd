@@ -11,6 +11,8 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
+const LEGACY_PICKUP = preload("res://scenes/content_scene/worksites/legacy_stockpile_pickup.gd")
 var navigation_map: WeakRef
 var navigation_phases: Dictionary = {}
 
@@ -41,6 +43,7 @@ func _ready() -> void:
 	daily.physical_arrival = _physical_site_arrival
 	daily.assignment_started = _begin_site_assignments
 	daily.assignment_released = _release_site_approach
+	daily.allow_haulers = false
 	super._ready()
 	for site: Node2D in $WorksiteMarkers.get_children():
 		RESOURCE_PRESENTATION.configure(site)
@@ -131,6 +134,28 @@ func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Ca
 		# Keep the count node/text for merging, pickup feedback and restored piles.
 		$GroundOutput.get_child(-1).get_node("QuantityLabel").hide()
 	return dropped
+
+## Legacy stockpile goods remain an ordinary world pile, but a large pile can
+## be collected in portions without becoming a worksite Hauler target.
+func _drop_legacy_stockpile_output(quantity: int, drop_position: Vector2, resource_id: String) -> bool:
+	if quantity <= 0 or is_queued_for_deletion() or not is_inside_tree():
+		return false
+	var drop: PickUpItem = PICKUP_SCENE.instantiate()
+	drop.set_script(LEGACY_PICKUP)
+	drop.item_id = resource_id
+	drop.quantity = quantity
+	drop.position = drop_position
+	drop.set_meta("legacy_stockpile", true)
+	var count_label := Label.new()
+	count_label.name = "QuantityLabel"
+	count_label.text = "x%d" % quantity
+	count_label.position = Vector2(-10, 4)
+	count_label.add_theme_font_size_override("font_size", 8)
+	count_label.hide()
+	drop.add_child(count_label)
+	$GroundOutput.add_child(drop)
+	drop.play_drop_spawn_feedback()
+	return true
 
 # Physical records use feet coordinates; the visual's art origin is 16px above.
 func worker_destination(site_id: StringName, id: String) -> Vector2:
@@ -232,7 +257,7 @@ func _exit_tree() -> void:
 		for drop: Node in $GroundOutput.get_children():
 			if not drop.is_queued_for_deletion() and not drop.is_collecting:
 				snapshot.ground.append({"item_id": drop.item_id, "quantity": drop.quantity, "position": drop.position,
-					"site": str(drop.get_meta("daily_site", ""))})
+					"site": str(drop.get_meta("daily_site", "")), "legacy_stockpile": bool(drop.get_meta("legacy_stockpile", false))})
 		for site_id: Variant in daily.pending_output:
 			snapshot.pending_output[str(site_id)] = int(daily.pending_output[site_id].quantity)
 		for site_id: Variant in daily.pending_progress:
@@ -253,8 +278,22 @@ func _restore_resource_stock() -> void:
 			var storage: Node = get_node(storage_destinations[id]).get_storage()
 			storage.quantity = int(snapshot.storages[id])
 			storage.changed.emit()
+	# An old in-memory scene handoff may still contain the former five piles.
+	# Consume each count only after its replacement ground pile is present.
+	for record: Dictionary in LEGACY_STOCKPILES.STOCKPILES.values():
+		var id := StringName(record.site_id)
+		if storage_destinations.has(id) or not snapshot.storages.has(id):
+			continue
+		var quantity: int = int(snapshot.storages[id])
+		if quantity == 0:
+			snapshot.storages.erase(id)
+		elif quantity > 0 and _drop_legacy_stockpile_output(quantity, $GroundOutput.to_local(to_global(record.position)), str(record.item_id)):
+			snapshot.storages.erase(id)
 	for entry: Dictionary in snapshot.ground:
 		var site_id := StringName(entry.site)
+		if bool(entry.get("legacy_stockpile", false)):
+			_drop_legacy_stockpile_output(entry.quantity, entry.position, entry.item_id)
+			continue
 		var callback := Callable()
 		if sites.has(site_id):
 			callback = _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))
