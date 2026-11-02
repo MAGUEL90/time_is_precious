@@ -4,3 +4,6 @@
 
 # Temporary scene saves left by the Godot editor.
 *.tscn*.tmp
+
+# Local scratch for temporary review artifacts only.
+/evidence/review-tmp/
