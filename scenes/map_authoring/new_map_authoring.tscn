@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="TileSet" path="res://resources/tile_map_resources/map_authoring_tileset_02_11_2026.tres" id="1_tiles"]
+
+[node name="NewMapAuthoring" type="Node2D"]
+
+[node name="Ground" type="Node2D" parent="."]
+
+[node name="Water" type="TileMapLayer" parent="Ground"]
+z_index = -30
+tile_set = ExtResource("1_tiles")
+
+[node name="Base" type="TileMapLayer" parent="Ground"]
+z_index = -20
+tile_set = ExtResource("1_tiles")
+
+[node name="Detail" type="TileMapLayer" parent="Ground"]
+z_index = -10
+tile_set = ExtResource("1_tiles")
+
+[node name="YSortWorld" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Objects" type="TileMapLayer" parent="YSortWorld"]
+y_sort_enabled = true
+tile_set = ExtResource("1_tiles")
