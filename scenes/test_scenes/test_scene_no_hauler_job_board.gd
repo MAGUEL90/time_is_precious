@@ -1,7 +1,10 @@
 extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 
 ## Real New Game/Continue and Job Board paths in an isolated profile.
-## The legacy checkpoints are synthetic v12 files, copied without modification.
+## The legacy checkpoints are synthetic v12 files. The legacy-worker case
+## clears an unrelated old-map laborer approach in a test-only copy so it can
+## exercise retained Hauler behavior on the new map. Unmodified old positions
+## are checked separately for safe rejection by the house migration fixture.
 const TEST_DIR: String = "user://no_hauler_job_board_test"
 const LABORER_ID: String = "initial_workshop_laborer"
 const SECOND_ID: String = "initial_worksite_hauler" # Stable ID in old and new games.
@@ -31,6 +34,18 @@ func _run() -> void:
 		var source_name: String = "stocked" if phase == "legacy_applicant" else "idle"
 		source_bytes = FileAccess.get_file_as_bytes(LEGACY_FIXTURES + source_name + ".json.gz").decompress_dynamic(1000000, FileAccess.COMPRESSION_GZIP)
 		_expect(not source_bytes.is_empty(), "The synthetic v12 save is readable.")
+		if phase == "legacy_worker" and not stopped:
+			var document: Variant = JSON.parse_string(source_bytes.get_string_from_utf8())
+			var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
+			var raw: Variant = codec.decode(document.state) if document is Dictionary else null
+			var laborer: WorkerData = raw.workers.workers_by_id.get(LABORER_ID) if raw is Dictionary else null
+			_expect(laborer != null and laborer.physical_approach.get("owner") == "WoodSite",
+				"The synthetic legacy-worker fixture has the expected unrelated old-map laborer route.")
+			if not stopped:
+				laborer.physical_approach = {}
+				document.state = codec.encode(raw)
+				_expect(codec.error.is_empty(), "The isolated legacy-worker test copy encodes.")
+				source_bytes = (JSON.stringify(document, "\t", true, true) + "\n").to_utf8_buffer()
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(TEST_DIR))
 		var file := FileAccess.open(save_path, FileAccess.WRITE)
 		_expect(file != null, "A separate legacy checkpoint copy can be created.")
@@ -207,13 +222,13 @@ func _legacy_applicant(source: PackedByteArray) -> void:
 
 func _legacy_worker(source: PackedByteArray) -> void:
 	var legacy: WorkerData = WorkerDatabase.get_worker_data(SECOND_ID)
-	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER, "An already-hired Hauler is restored from the actual old save.")
+	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER, "An already-hired Hauler is restored from the synthetic v12 worker copy.")
 	if stopped:
 		return
 	var previous_end: int = legacy.payroll_paid_until_day
 	var previous_xp: int = legacy.profession_xp
 	var previous_status: int = CitizenManager.get_citizen(SECOND_ID).employment_status
-	_expect(store.save_checkpoint() and FileAccess.get_file_as_bytes(store.disk.path + ".bak") == source and store.load_checkpoint(), "The old worker save upgrades without deleting its original backup.")
+	_expect(store.save_checkpoint() and FileAccess.get_file_as_bytes(store.disk.path + ".bak") == source and store.load_checkpoint(), "The synthetic worker copy upgrades while preserving its exact input as backup.")
 	legacy = WorkerDatabase.get_worker_data(SECOND_ID)
 	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.payroll_paid_until_day == previous_end and legacy.profession_xp == previous_xp and CitizenManager.get_citizen(SECOND_ID).employment_status == previous_status, "Save/Continue retains the existing Hauler, XP and paid contract.")
 	Inventory.add_item("shekel", 3) # Test-only funds for an existing worker renewal.

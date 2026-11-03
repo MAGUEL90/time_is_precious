@@ -10,10 +10,8 @@ config_version=5
 
 [application]
 
-config/name="time_is_precious_review_20261103"
+config/name="time_is_precious"
 run/main_scene="res://scenes/ui/start_menu/start_menu.tscn"
-config/use_custom_user_dir=true
-config/custom_user_dir_name="time_is_precious_review_20261103"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [autoload]
@@ -152,7 +150,7 @@ open_work_progress={
 
 [internationalization]
 
-locale/translations_pot_files=PackedStringArray("res://dialogue/game_dialogue_conversations/gabbi/gabbi.dialogue", "res://dialogue/game_dialogue_conversations/gal-sal/galsal.dialogue", "res://dialogue/game_dialogue_conversations/intro/intro.dialogue", "res://dialogue/game_dialogue_conversations/test.dialogue", "res://dialogue/game_dialogue_conversations/traveling_merchant.dialogue", "res://dialogue/game_dialogue_conversations/wall_caretaker.dialogue")
+locale/translations_pot_files=PackedStringArray("res://dialogue/game_dialogue_conversations/gabbi/gabbi.dialogue", "res://dialogue/game_dialogue_conversations/gal-sal/galsal.dialogue", "res://dialogue/game_dialogue_conversations/intro/intro.dialogue", "res://dialogue/game_dialogue_conversations/test.dialogue", "res://dialogue/game_dialogue_conversations/traveling_merchant.dialogue")
 
 [layer_names]
 

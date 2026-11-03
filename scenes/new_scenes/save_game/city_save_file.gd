@@ -2,7 +2,9 @@ extends RefCounted
 
 ## Small disk boundary for the city snapshot. Snapshot meaning and schema
 ## validation belong to the caller; this class only protects the JSON files.
-const DEFAULT_PATH: String = "user://city_save/checkpoint_v1.json"
+# The authored map uses its own slot because old saves can contain worker
+# destinations from the previous map. Never overwrite the previous city's slot.
+const DEFAULT_PATH: String = "user://city_save/authored_map/checkpoint_v1.json"
 const MAX_FILE_BYTES: int = 8 * 1024 * 1024
 const MAX_JSON_NESTING: int = 128
 const HASH_CHUNK_BYTES: int = 64 * 1024

@@ -1,6 +1,7 @@
 extends "res://scenes/test_scenes/test_scene_house_save_migration.gd"
 
-## Each case uses a real synthetic v11/v13 checkpoint produced at 7fab572.
+## Each case uses a synthetic checkpoint produced by the prior map. The new
+## map must reject old in-flight positions safely; compatible data can migrate.
 ## Additional house nodes exist only in this test scene, not in the authored map.
 const EXTRA_HOUSE: PackedScene = preload("res://scenes/citizen_house_plot/citizen_house_plot.tscn")
 const OLD_FIXTURES: String = "res://scenes/test_scenes/fixtures/legacy_houses_v13/"
@@ -14,6 +15,7 @@ const OLD_HASHES := {
 }
 var extra_states: Array[Node] = []
 var extra_keys: Array[String] = []
+const OLD_TARGET_CASES: Array[String] = ["clearing", "building", "built", "pre_house_v11", "outbound_v12"]
 
 func _run() -> void:
 	var fixture_case: String = ""
@@ -69,8 +71,10 @@ func _run() -> void:
 	_select_house_path(test_path)
 	_expect(not FileAccess.file_exists(test_path), "The test checkpoint is a new isolated file.")
 	_write_house_bytes(test_path, source)
-	if fixture_case == "clearing":
-		_test_moved_worker_targets(test_path, source)
+	if fixture_case in OLD_TARGET_CASES:
+		_test_incompatible_legacy(document, codec, test_path, source, fixture_case)
+		_finish_multi(fixture_case)
+		return
 	for attempt: int in range(2):
 		var ok: bool = store.load_checkpoint()
 		_expect(ok, "Old Continue succeeds (%d): %s / %s" % [attempt, store.last_error, store.snapshot.error])
@@ -151,7 +155,7 @@ func _run() -> void:
 			and second.phase == "building" and second._remaining_work_units() == remaining
 			and CityStockManager.shelter_capacity == capacity_after_work and _same_snapshot(Inventory.items, inventory_after_work),
 			"Repeated Continue preserves each house's partial work, inventory and shelter.")
-	if fixture_case == "clearing":
+	if fixture_case == "stocked_v12":
 		await _test_partial_houses_from_home(first, second, remaining, capacity_after_work, inventory_after_work)
 	_finish_multi(fixture_case)
 
@@ -161,29 +165,35 @@ func _hash_bytes(bytes: PackedByteArray) -> String:
 	hash.update(bytes)
 	return hash.finish().hex_encode()
 
-func _test_moved_worker_targets(path: String, source: PackedByteArray) -> void:
-	# This v13 fixture has one worker approaching WoodSite and another at the
-	# original house. These offsets exist only in the test; no map is relocated.
-	var marker: Node2D = runtime.get_node("WorksiteMarkers/WoodSite")
-	var original_site: Vector2 = marker.position
-	var original_house: Vector2 = house_state.worker_entry_position
+func _test_incompatible_legacy(document: Dictionary, codec: RefCounted, path: String, source: PackedByteArray, fixture_case: String) -> void:
+	# The historical target belongs to the old city. Loading or saving this
+	# fixture directly must not silently move workers or overwrite the files.
 	var live_before: Dictionary = store.snapshot.capture(content)
 	var files_before: Dictionary = _house_files(path)
-	for kind: String in ["site", "house"]:
-		if kind == "site":
-			marker.position = original_site + Vector2(64, 64)
-		else:
-			house_state.worker_entry_position = original_house + Vector2(64, 64)
+	for attempt: int in range(2):
 		var loaded: bool = store.load_checkpoint()
 		var validation_error: String = store.snapshot.error
 		var saved: bool = store.save_checkpoint()
-		marker.position = original_site
-		house_state.worker_entry_position = original_house
-		_expect(not loaded and not saved and validation_error == "Worker physical approach differs from its authored %s." % ("site" if kind == "site" else "plot"),
-			"A moved %s rejects the old worker destination instead of silently relocating it." % kind)
+		_expect(not loaded and not saved and validation_error == "Worker physical approach differs from its authored site.",
+			"An old worker destination is rejected without inferred relocation: " + fixture_case)
 		_expect(_house_files(path) == files_before and FileAccess.get_file_as_bytes(path) == source
 			and _same_snapshot(store.snapshot.capture(content), live_before),
-			"A rejected %s move preserves the checkpoint, recovery files and live state." % kind)
+			"The rejected old checkpoint and live state remain unchanged: " + fixture_case)
+	if fixture_case == "clearing":
+		# Probe the independent house-target guard using an in-memory test copy.
+		# This is not a migration and never changes the original checkpoint.
+		var candidate: Dictionary = document.duplicate(true)
+		var raw: Dictionary = codec.decode(candidate.state)
+		var worker: WorkerData = raw.workers.workers_by_id.get("initial_workshop_laborer")
+		_expect(worker != null and worker.physical_approach.get("owner") == "WoodSite", "The fixture includes its historical site worker.")
+		if worker != null and worker.physical_approach.get("owner") == "WoodSite":
+			worker.physical_approach.target = runtime.site_slot_destination(&"WoodSite", 0)
+			candidate.state = codec.encode(raw)
+			_expect(not store.snapshot.prepare(candidate, content)
+				and store.snapshot.error == "Worker physical approach differs from its authored plot.",
+				"A separately displaced house-worker target is also rejected.")
+			_expect(_house_files(path) == files_before and _same_snapshot(store.snapshot.capture(content), live_before),
+				"The in-memory diagnostic preserves the original checkpoint and live state.")
 
 func _test_partial_houses_from_home(first: Node, second: Node, remaining: int, capacity: int, inventory: Dictionary) -> void:
 	content.get_node("YSortWorld/HomeDoor")._on_body_entered(player)

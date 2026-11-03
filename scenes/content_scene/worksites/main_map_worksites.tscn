@@ -1,5 +1,7 @@
 [gd_scene load_steps=14 format=3]
 
+; Resource positions on the authored map are temporary, pending layout decisions.
+
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
 [ext_resource type="PackedScene" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]

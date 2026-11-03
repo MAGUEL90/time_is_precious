@@ -29,8 +29,10 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `test_scene_applicant_eligibility.tscn`, `test_scene_idle_resignation.tscn`, `test_scene_idle_resignation_save.tscn` | Applicant threshold, prepaid contract forfeiture, recovery, rehire and idle Continue |
 | `test_scene_no_hauler_job_board.tscn` | Actual New Game, Job Board and Continue: `-- --job-board-case=new_write`, `new_read`, `legacy_applicant`, `legacy_worker`; use one fresh isolated profile, in that order |
 | `test_scene_multi_house_runtime.tscn` | Independent house identities, construction, shelter completion and duplicate-ID guard |
-| `test_scene_multi_house_save_migration.tscn` | Isolated synthetic old-save cases: `-- --legacy-house-case=clearing`, `building`, `built`, `pre_house_v11`, `stocked_v12`, or `outbound_v12`; `clearing` also tests changed worker destinations and partial houses through home Continue |
+| `test_scene_multi_house_save_migration.tscn` | Synthetic old-save cases: `-- --legacy-house-case=clearing`, `building`, `built`, `pre_house_v11`, `stocked_v12`, or `outbound_v12`. Changed worker destinations are rejected without mutation; compatible `stocked_v12` also exercises partial houses through home Continue |
 | `test_scene_multi_house_needs_continue.tscn` | Two completed houses including home Continue, seven paid workers competing for six places, daily needs and repeated Continue |
+| `test_scene_review_default_save.tscn` | With `TIP_ISOLATED_DATA_ROOT` set to a fresh absolute data root, run `-- --review-save=write`, `read`, then `restart`; checks the distinct map slot and unchanged synthetic old save/recovery files |
+| `test_scene_review_resource_paths.tscn` | Actual player pickup and worker path clearance at each of the five temporary resource sites |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
 
 The multi-day needs journey is a controlled fixture, not an unassisted run. It
