@@ -40,6 +40,11 @@ var payroll_work_remainder: int = 0
 # Authored spatial binding survives the map being replaced by the home interior.
 # Save data validates approach targets against this value; it never supplies it.
 var worker_entry_position: Vector2 = Vector2.ZERO
+# Plot kind is authored by the view, never read from a checkpoint. Keep the
+# owner while the view is absent so offscreen construction retains its kind.
+var _plot_kind_bound: bool = false
+var _citizen_house_plot: bool = false
+var _active_plot_view: WeakRef
 
 func _ready() -> void:
 	TimeComponentManager.time_changed.connect(_on_time_changed)
@@ -48,7 +53,31 @@ func _ready() -> void:
 	_latest_time = _now()
 
 func is_citizen_house() -> bool:
+	if _plot_kind_bound:
+		return _citizen_house_plot
+	# Legacy standalone state fixtures predate authored plot-kind binding.
 	return order_id == CITIZEN_HOUSE_ORDER_ID
+
+
+func bind_plot_view(view: Node, citizen_house: bool) -> bool:
+	if not is_instance_valid(view) or not view.is_inside_tree():
+		return false
+	var current: Node = _active_plot_view.get_ref() as Node if _active_plot_view != null else null
+	if is_instance_valid(current) and current != view and current.is_inside_tree():
+		return false
+	# A retained owner must not silently become a different building after a
+	# scene handoff or when two authored plots use the same identity.
+	if _plot_kind_bound and _citizen_house_plot != citizen_house:
+		return false
+	_plot_kind_bound = true
+	_citizen_house_plot = citizen_house
+	_active_plot_view = weakref(view)
+	return true
+
+
+func unbind_plot_view(view: Node) -> void:
+	if _active_plot_view != null and _active_plot_view.get_ref() == view:
+		_active_plot_view = null
 
 func get_requirements() -> Dictionary:
 	return (CITIZEN_HOUSE_REQUIREMENTS if is_citizen_house() else REQUIREMENTS).duplicate()

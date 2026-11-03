@@ -30,6 +30,52 @@ var _completion_bar_remaining: float = 0.0
 var _inactive_bar_material: ShaderMaterial
 var _desired_plot_monitoring: bool = true
 var _plot_monitoring_sync_queued: bool = false
+var _plot_ready_once: bool = false
+
+
+## The view supplies the building kind; plot_id supplies only its identity.
+func is_citizen_house_plot() -> bool:
+	return false
+
+
+func _enter_tree() -> void:
+	# A parked/detached view can be reattached without another _ready() call.
+	if not _plot_ready_once or not is_instance_valid(construction):
+		return
+	if not construction.bind_plot_view(self, is_citizen_house_plot()):
+		var conflict: String = str(construction.order_id)
+		construction = null
+		_disable_conflicting_plot(conflict)
+		return
+	if not construction.changed.is_connected(_sync_construction):
+		construction.changed.connect(_sync_construction)
+	# Children enter the tree after their parent; refresh spatial data afterward.
+	_refresh_reentered_plot.call_deferred()
+
+
+func _refresh_reentered_plot() -> void:
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(construction):
+		return
+	construction.worker_entry_position = get_worker_entry_position()
+	_sync_construction()
+
+
+func _disable_conflicting_plot(identity: String) -> void:
+	push_warning("Duplicate or mismatched plot identity: " + identity)
+	remove_from_group("workshop_plots")
+	hide()
+	process_mode = Node.PROCESS_MODE_DISABLED
+	# A rejected view must not remain an invisible blocker or interactable.
+	var pending: Array[Node] = [self]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if node is CollisionObject2D:
+			node.set_deferred("collision_layer", 0)
+			node.set_deferred("collision_mask", 0)
+			if node is Area2D:
+				node.set_deferred("monitoring", false)
+				node.set_deferred("monitorable", false)
+		pending.append_array(node.get_children())
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -141,25 +187,33 @@ var _manual_clearing: bool = false
 signal clearing_finished
 
 func _ready() -> void:
+	_plot_ready_once = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_worker_dust_rng.randomize()
-	add_to_group("workshop_plots")
 	# The authored board anchors both construction and completed-workshop access.
 	interaction_area.position = $Board.position + $Board.offset
 	$InteractableComponent/CollisionShape2D.position = Vector2.ZERO
 	interactable_label_component.position = interaction_area.position + Vector2(-8, -26)
-	interaction_area.body_entered.connect(_on_body_entered)
-	interaction_area.body_exited.connect(_on_body_exited)
 	var identity: String = plot_id if not plot_id.is_empty() else str(name)
 	if identity == "WorkshopPlot":
 		identity = "main_workshop"
 	var state_name: String = "MainWorkshopConstruction" if identity == "main_workshop" else "WorkshopConstruction_" + identity.sha256_text()
-	construction = WorkStateRuntime.get_node_or_null(state_name)
-	if construction == null:
-		construction = CONSTRUCTION_STATE.new()
-		construction.name = state_name
-		construction.order_id = "construction:" + identity
-		WorkStateRuntime.add_child(construction)
+	var next_state: Node = WorkStateRuntime.get_node_or_null(state_name)
+	var created: bool = next_state == null
+	if created:
+		next_state = CONSTRUCTION_STATE.new()
+		next_state.name = state_name
+		next_state.order_id = "construction:" + identity
+		WorkStateRuntime.add_child(next_state)
+	if next_state.get_script() != CONSTRUCTION_STATE or str(next_state.order_id) != "construction:" + identity or not next_state.bind_plot_view(self, is_citizen_house_plot()):
+		if created:
+			next_state.free()
+		_disable_conflicting_plot(identity)
+		return
+	construction = next_state
+	add_to_group("workshop_plots")
+	interaction_area.body_entered.connect(_on_body_entered)
+	interaction_area.body_exited.connect(_on_body_exited)
 	construction.worker_entry_position = get_worker_entry_position()
 	construction.changed.connect(_sync_construction)
 	_sync_construction()
@@ -421,3 +475,7 @@ func _exit_tree() -> void:
 	close_menu()
 	if is_instance_valid(player) and player.is_inside_tree():
 		player._on_interactable_deactivated(self)
+	if is_instance_valid(construction):
+		if construction.changed.is_connected(_sync_construction):
+			construction.changed.disconnect(_sync_construction)
+		construction.unbind_plot_view(self)

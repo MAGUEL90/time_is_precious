@@ -8,7 +8,7 @@ const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
-const VERSION: int = 13
+const VERSION: int = 14
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -149,7 +149,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -214,6 +214,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 				plot["work_total_units"] = 0
 	if version < 12 and not _migrate_legacy_house(raw, map):
 		return false
+	if version < 14 and not _migrate_additional_houses(raw, map):
+		return false
 	if not raw.get("city_drops") is Array:
 		return fail("Missing dropped inventory items.")
 	for drop: Variant in raw.city_drops:
@@ -261,7 +263,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not _sites.migrate_legacy(raw.worksites, worksite(map)) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
-	if migrated_worksites:
+	if migrated_worksites or version < 14:
 		# Do not apply a legacy state that cannot be written by the existing
 		# bounded codec/disk format. The original checkpoint remains untouched.
 		var next_values = VALUES.new()
@@ -281,7 +283,7 @@ func _migrate_legacy_house(raw: Dictionary, map: Node) -> bool:
 	var old_ids: Array[String] = ["MainWorkshopConstruction", "WorkshopConstruction_" + "workshop_2".sha256_text()]
 	var house_id: String = "WorkshopConstruction_" + HOUSE_ID.sha256_text()
 	var authored: Dictionary = plots(map)
-	if raw.plots.size() != old_ids.size() or authored.size() != old_ids.size() + 1 or not authored.has(house_id):
+	if raw.plots.size() != old_ids.size() or not authored.has(house_id):
 		return fail("Legacy workshop layout differs.")
 	for id: String in old_ids:
 		if not raw.plots.has(id) or not authored.has(id) or not raw.plots[id] is Dictionary \
@@ -289,11 +291,35 @@ func _migrate_legacy_house(raw: Dictionary, map: Node) -> bool:
 			return fail("Legacy workshop layout differs.")
 	if authored[house_id].order_id != "construction:" + HOUSE_ID:
 		return fail("Citizen house layout differs.")
-	# Build defaults from authored constants and the saved clock, never from the
-	# current session's potentially built house. This only changes decoded data.
-	var saved_time: int = raw.clock.current_day * 1440 + raw.clock.current_hour * 60 + raw.clock.current_minute
-	raw.plots[house_id] = {
-		"order_id": "construction:" + HOUSE_ID,
+	raw.plots[house_id] = _new_house_record("construction:" + HOUSE_ID, raw.clock)
+	return true
+
+
+func _migrate_additional_houses(raw: Dictionary, map: Node) -> bool:
+	# Pre-v14 checkpoints have exactly the two original workshops and one house.
+	# New authored house identities are initialized only in this decoded copy.
+	var old_ids: Array[String] = ["MainWorkshopConstruction", "WorkshopConstruction_" + "workshop_2".sha256_text(), "WorkshopConstruction_" + HOUSE_ID.sha256_text()]
+	var authored: Dictionary = plots(map)
+	if raw.plots.size() != old_ids.size():
+		return fail("Legacy workshop layout differs.")
+	for id: String in old_ids:
+		if not raw.plots.has(id) or not authored.has(id) or not raw.plots[id] is Dictionary or raw.plots[id].get("order_id") != authored[id].order_id:
+			return fail("Legacy workshop layout differs.")
+	for id: String in authored:
+		if raw.plots.has(id):
+			continue
+		var state: Node = authored[id]
+		if not state.is_citizen_house():
+			return fail("New checkpoint plot is not an authored citizen house.")
+		raw.plots[id] = _new_house_record(state.order_id, raw.clock)
+	return true
+
+
+func _new_house_record(order_id: String, clock: Dictionary) -> Dictionary:
+	# Never use a potentially progressed live state or regrant saved shelter.
+	var saved_time: int = clock.current_day * 1440 + clock.current_hour * 60 + clock.current_minute
+	return {
+		"order_id": order_id,
 		"phase": "uncleared",
 		"clearing_remaining": CONSTRUCTION.CLEARING_MINUTES,
 		"clearing_by_player": false,
@@ -305,7 +331,6 @@ func _migrate_legacy_house(raw: Dictionary, map: Node) -> bool:
 		"_latest_time": saved_time,
 		"payroll_work_remainder": 0
 	}
-	return true
 
 
 func _valid_settled_time_cursors(raw: Dictionary) -> bool:
@@ -718,7 +743,7 @@ func _validate_work(raw: Dictionary, map: Node, version: int = 0) -> bool:
 				seen_team[worker_id] = true
 				var member: WorkerData = raw.workers.workers_by_id.get(worker_id)
 				var expected_job: String
-				if p.order_id == "construction:" + HOUSE_ID:
+				if plot_nodes[id].is_citizen_house():
 					expected_job = "Build House" if p.phase == "building" else "Clear House Site"
 				else:
 					expected_job = "Build Workshop" if p.phase == "building" else "Clear Workshop Site"

@@ -105,14 +105,14 @@ func _run() -> void:
 		_abort("Cannot write upgraded checkpoint: " + store.last_error)
 		return
 	var upgraded: Variant = JSON.parse_string(FileAccess.get_file_as_string(test_path))
-	_expect(upgraded is Dictionary and int(upgraded.get("schema_version", -1)) == 13, "Explicit Save writes schema 13.")
+	_expect(upgraded is Dictionary and int(upgraded.get("schema_version", -1)) == 14, "Explicit Save writes schema 14.")
 	_expect(FileAccess.get_file_as_bytes(test_path + ".bak") == original_bytes, "The first upgrade retains the exact old checkpoint in the backup.")
 	for attempt: int in range(2):
 		if not store.load_checkpoint():
 			_abort("Upgraded checkpoint failed to load: " + store.last_error)
 			return
 		ui.close_details()
-		_assert_initial_state("v13 load %d" % attempt)
+		_assert_initial_state("v%d load %d" % [store.snapshot.VERSION, attempt])
 		_expect(FileAccess.get_file_as_bytes(test_path + ".bak") == original_bytes, "Repeated Continue preserves the original backup.")
 	if failures == 0:
 		if fixture_case == "stocked":
@@ -190,7 +190,7 @@ func _test_final_route() -> void:
 			"The shipment is still carried just before its arrival.")
 		_assert_totals("before delivery")
 		if not store.save_checkpoint() or not store.load_checkpoint():
-			_expect(false, "The in-flight v13 route saves and Continues: " + store.last_error)
+			_expect(false, "The in-flight current-schema route saves and Continues: " + store.last_error)
 			return
 		ui.close_details()
 		_assert_totals("continued before delivery")

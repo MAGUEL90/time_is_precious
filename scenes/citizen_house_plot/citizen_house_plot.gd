@@ -4,10 +4,21 @@ extends "res://scenes/workshop_plot/workshop_plot.gd"
 ## The rubble itself is the interaction target; there is no keeper NPC.
 const HOUSE_FOOTPRINTS: Array[Rect2] = [Rect2(-19, -4, 38, 20)]
 var _manual_house_work: bool = false
+var _uses_authored_site_footprint: bool = false
+
+
+func is_citizen_house_plot() -> bool:
+	return true
 
 
 func get_built_footprints() -> Array[Rect2]:
 	return HOUSE_FOOTPRINTS
+
+
+func use_authored_site_footprint(enabled: bool) -> void:
+	_uses_authored_site_footprint = enabled
+	if is_inside_tree() and is_node_ready() and is_instance_valid(construction):
+		_sync_construction()
 
 
 func on_player_interact(interacting_player: Player) -> void:
@@ -110,8 +121,8 @@ func _sync_construction() -> void:
 	var built: bool = construction.phase == "built"
 	for path: String in ["Plot", "LeftWall", "LeftWallTop", "RightWall", "RightWallTop", "Table", "TableLegs", "TableResources", "Board"]:
 		get_node(path).hide()
-	$ToBeClean.visible = construction.phase in ["uncleared", "clearing"]
-	$SiteHouse.visible = construction.phase in ["empty", "building"]
+	$ToBeClean.visible = not _uses_authored_site_footprint and construction.phase in ["uncleared", "clearing"]
+	$SiteHouse.visible = not _uses_authored_site_footprint and construction.phase in ["empty", "building"]
 	$FinishedHouse.visible = built
 	$HouseBody/CollisionShape2D.set_deferred("disabled", not built)
 	interaction_area.position = Vector2(0, 8)

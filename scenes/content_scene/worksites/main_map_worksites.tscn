@@ -25,7 +25,7 @@ inventory_ui_path = NodePath("../../InventoryUI")
 y_sort_enabled = true
 
 [node name="ClaySiteA" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, -32)
+position = Vector2(-120, -23)
 
 [node name="Footprint" parent="WorksiteMarkers/ClaySiteA" index="0"]
 visible = false
@@ -44,7 +44,7 @@ position = Vector2(17, -7)
 texture = ExtResource("site_Clay")
 
 [node name="WoodSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, 0)
+position = Vector2(-120, 47)
 script = ExtResource("6_resource_site")
 item_id = "wood_log"
 minutes_per_unit = 20.0
@@ -65,7 +65,7 @@ position = Vector2(20, 0)
 texture = ExtResource("icon_Wood")
 
 [node name="ReedSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, 32)
+position = Vector2(-120, 77)
 script = ExtResource("6_resource_site")
 item_id = "reed_bundle"
 minutes_per_unit = 7.5
@@ -87,7 +87,7 @@ position = Vector2(0, -5)
 texture = ExtResource("site_Reed")
 
 [node name="StrawSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(72, -32)
+position = Vector2(120, 37)
 script = ExtResource("6_resource_site")
 item_id = "straw_bundle"
 minutes_per_unit = 10.0
@@ -107,7 +107,7 @@ texture_filter = 1
 texture = ExtResource("icon_Straw")
 
 [node name="WaterSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(72, 0)
+position = Vector2(120, 87)
 script = ExtResource("6_resource_site")
 item_id = "water_jar"
 minutes_per_unit = 5.0

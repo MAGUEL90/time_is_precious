@@ -56,6 +56,10 @@ func _run() -> void:
 func _test_player_and_worker_routes() -> void:
 	var shelter_before: int = CityStockManager.shelter_capacity
 	var initial_inventory: Dictionary = Inventory.items.duplicate(true)
+	var marker: Node2D = content.get_node("AuthoredMap/YSortWorld/ToBeClean1")
+	var footprint: TileMapLayer = content.get_node("AuthoredMap/Ground/Setelah Cleaning")
+	_expect(marker.visible and not house.get_node("ToBeClean").visible and footprint.get_used_cells().size() == 4,
+		"The authored rubble is visible only once, while its footprint is hidden before cleaning.")
 	_expect(not construction.get_clearing_preview([FIRST_ID] as Array[String], true).can_start,
 		"Player and worker cannot both be selected for the same manual cleaning.")
 	if not await _open_house_menu("house-player-rubble"):
@@ -127,6 +131,9 @@ func _test_player_and_worker_routes() -> void:
 	await house.clearing_finished
 	_expect(_now() - start == CLEARING_WORK and construction.phase == "empty",
 		"Player cleans for exactly 180 minutes at night without a worker shift.")
+	_expect(not marker.visible and not house.get_node("ToBeClean").visible and footprint.get_used_cells().size() == 13,
+		"Actual player cleaning removes the marker and reveals the nine authored footprint tiles.")
+	await _capture("house-player-cleaning-complete")
 	_expect(_needs_drained_once(start_hunger, start_fatigue, CLEARING_WORK)
 		and Inventory.items == initial_inventory and not player_worker.is_reserved(),
 		"Manual cleaning advances the existing Belly/Energy clock once without using material or worker.")
@@ -159,6 +166,8 @@ func _test_player_and_worker_routes() -> void:
 	_expect(_now() - start == 180 and construction.phase == "building" and remaining == HOUSE_WORK - 180
 		and construction.worker_ids.is_empty() and not construction.is_player_work_active(),
 		"One player build session performs exactly three hours of work across midnight and then pauses.")
+	_expect(not marker.visible and footprint.get_used_cells().size() == 13,
+		"The cleaned footprint stays visible while the paid house is being built.")
 	_expect(_needs_drained_once(start_hunger, start_fatigue, 180) and paid_once
 		and CityStockManager.shelter_capacity == shelter_before,
 		"The session charges normal time-based needs and each material once, without premature shelter.")
