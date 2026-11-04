@@ -13,8 +13,17 @@ var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const LEGACY_PICKUP = preload("res://scenes/content_scene/worksites/legacy_stockpile_pickup.gd")
+const WORKSHOP_BACKEND: PackedScene = preload("res://scenes/workshop/workshop.tscn")
 var navigation_map: WeakRef
 var navigation_phases: Dictionary = {}
+# The retained navigation copy can outlive the city scene. A phase change may
+# queue a collider change for a later frame, so its geometry is not yet usable
+# for an entire synchronous time skip.
+var navigation_geometry_phases: Dictionary = {}
+var navigation_refresh_pending: bool = false
+# Each template contains only the collision shapes whose enabled state changes
+# with that plot. It is captured while the authored city view is still alive.
+var navigation_plot_templates: Dictionary = {}
 
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
@@ -48,6 +57,10 @@ func _ready() -> void:
 	for site: Node2D in $WorksiteMarkers.get_children():
 		RESOURCE_PRESENTATION.configure(site)
 	_refresh_navigation()
+	# Other plot views may still have deferred their initial collider toggles.
+	# Recollect after those toggles before allowing simulated travel.
+	navigation_refresh_pending = true
+	_queue_navigation_after_colliders.call_deferred()
 	if retain_resource_stock:
 		_restore_resource_stock()
 	# Notes belong to the isolated fixture, not the content HUD.
@@ -82,32 +95,171 @@ func _refresh_navigation() -> void:
 	if map == null or (map != self and not map.is_ancestor_of(self)):
 		return
 	worksite_navigation.configure(map)
+	navigation_geometry_phases.clear()
+	navigation_plot_templates.clear()
 	_watch_navigation_changes(map)
 	var visuals: Node = get_node_or_null("WorkerVisuals")
 	if visuals != null:
 		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
+	navigation_refresh_pending = false
 
 func _watch_navigation_changes(node: Node) -> void:
-	if node.has_method("get_built_footprints") and node.construction != null:
+	if node.is_in_group("workshop_plots") and node.construction != null:
 		# Construction outlives a city plot while the player is at home. Bind its
 		# stable ID so a later signal never carries a freed Node argument.
-		var callback := Callable(self, "_queue_navigation_refresh").bind(node.get_instance_id())
+		var callback := Callable(self, "_queue_navigation_refresh").bind(node.construction.get_instance_id(), node.get_instance_id())
 		if not node.construction.changed.is_connected(callback):
 			node.construction.changed.connect(callback)
 		navigation_phases[node.get_instance_id()] = node.construction.phase
+		navigation_geometry_phases[node.construction.get_instance_id()] = node.construction.phase
+		navigation_plot_templates[node.construction.get_instance_id()] = _plot_navigation_template(node)
 	for child: Node in node.get_children():
 		_watch_navigation_changes(child)
 
-func _queue_navigation_refresh(plot_id: int) -> void:
+func can_simulate_plot_travel() -> bool:
+	if navigation_refresh_pending or navigation_geometry_phases.is_empty():
+		return false
+	for state_id: int in navigation_geometry_phases:
+		var state: Node = instance_from_id(state_id) as Node
+		if not is_instance_valid(state) or state.phase != navigation_geometry_phases[state_id]:
+			return false
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	if store != null and store.parked_worksite == self:
+		for state: Node in store.city_plots.values():
+			if not is_instance_valid(state) or not navigation_geometry_phases.has(state.get_instance_id()):
+				return false
+	else:
+		var map: Node = navigation_map.get_ref() if navigation_map != null else null
+		if not is_instance_valid(map) or not map.is_ancestor_of(self):
+			return false
+		for plot: Node in get_tree().get_nodes_in_group("workshop_plots"):
+			if map.is_ancestor_of(plot) and (not is_instance_valid(plot.construction) or not navigation_geometry_phases.has(plot.construction.get_instance_id())):
+				return false
+	return true
+
+func _queue_navigation_refresh(state_id: int, plot_id: int) -> void:
+	var state: Node = instance_from_id(state_id) as Node
+	if not is_instance_valid(state) or not navigation_geometry_phases.has(state_id):
+		return
+	var previous: String = str(navigation_geometry_phases[state_id])
+	if previous == state.phase:
+		return
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	if store != null and store.parked_worksite == self:
+		# The city view is gone. Its captured phase shapes can be swapped now,
+		# without waiting for a deferred physics update on freed scene nodes.
+		if _update_parked_plot_geometry(state_id, previous, state.phase):
+			navigation_geometry_phases[state_id] = state.phase
+		return
+	var template: Dictionary = navigation_plot_templates.get(state_id, {})
+	if not template.is_empty() and (previous == "built") == (state.phase == "built"):
+		# Known open phases share identical collision. Do not freeze unrelated
+		# workers just because cleaning began or the rubble was cleared.
+		navigation_geometry_phases[state_id] = state.phase
+		navigation_phases[plot_id] = state.phase
+		return
 	var plot: Node = instance_from_id(plot_id) as Node
 	if plot == null or not plot.is_inside_tree():
 		return
 	if navigation_phases.get(plot_id, "") == plot.construction.phase:
 		return
 	navigation_phases[plot_id] = plot.construction.phase
-	# Phase owners defer collider toggles; collect their final active geometry.
+	# Queue behind the phase owners' deferred collider toggles even when this
+	# callback happened to run before their own changed-signal callbacks.
+	navigation_refresh_pending = true
+	_queue_navigation_after_colliders.call_deferred()
+
+func _queue_navigation_after_colliders() -> void:
 	_refresh_navigation.call_deferred()
+
+func _plot_navigation_template(plot: Node) -> Dictionary:
+	if not plot is Node2D or not plot.has_method("is_citizen_house_plot"):
+		return {}
+	var plot_script: Script = plot.get_script() as Script
+	if plot_script == null:
+		return {}
+	var script_path: String = plot_script.resource_path
+	var open: Array[PackedVector2Array] = []
+	var built: Array[PackedVector2Array] = []
+	if script_path == "res://scenes/citizen_house_plot/citizen_house_plot.gd":
+		var house_shape: CollisionShape2D = plot.get_node_or_null("HouseBody/CollisionShape2D") as CollisionShape2D
+		if not _append_live_template_shape(house_shape, built):
+			return {}
+	elif script_path == "res://scenes/workshop_plot/keeper/workshop_keeper_plot.gd":
+		for shape: CollisionShape2D in plot._open_shapes:
+			if not _append_live_template_shape(shape, open):
+				return {}
+		for shape: CollisionShape2D in plot._built_shapes:
+			if not _append_live_template_shape(shape, built):
+				return {}
+		if not _append_workshop_backend_shape(plot, built):
+			return {}
+	elif script_path == "res://scenes/workshop_plot/workshop_plot.gd":
+		if not _append_workshop_backend_shape(plot, built):
+			return {}
+	else:
+		# Unknown plot subclasses can retain their previous conservative guard.
+		return {}
+	return {"open": open, "built": built}
+
+func _append_live_template_shape(shape: CollisionShape2D, destination: Array[PackedVector2Array]) -> bool:
+	if shape == null or shape.shape == null:
+		return false
+	var body: StaticBody2D = shape.get_parent() as StaticBody2D
+	if body == null:
+		return false
+	if body.collision_layer == 0:
+		return true
+	var polygons: Array[PackedVector2Array] = worksite_navigation.polygons_for_shape(shape.shape, shape.global_transform)
+	if polygons.is_empty():
+		return false # An unsupported or empty collider must not be ignored.
+	destination.append_array(polygons)
+	return true
+
+func _append_workshop_backend_shape(plot: Node2D, destination: Array[PackedVector2Array]) -> bool:
+	# The normal plot instantiates this backend with its default local transform.
+	# Inspect its detached shape without entering the tree or starting gameplay.
+	var backend: Node2D = WORKSHOP_BACKEND.instantiate() as Node2D
+	if backend == null:
+		return false
+	var body: StaticBody2D = backend.get_node_or_null("StaticBody2D") as StaticBody2D
+	var shape: CollisionShape2D = body.get_node_or_null("CollisionShape2D") as CollisionShape2D if body != null else null
+	if shape == null or shape.shape == null:
+		backend.free()
+		return false
+	if body.collision_layer == 0:
+		backend.free()
+		return true
+	var transform: Transform2D = plot.global_transform * backend.transform * body.transform * shape.transform
+	var polygons: Array[PackedVector2Array] = worksite_navigation.polygons_for_shape(shape.shape, transform)
+	backend.free()
+	if polygons.is_empty():
+		return false
+	destination.append_array(polygons)
+	return true
+
+func _update_parked_plot_geometry(state_id: int, previous: String, next: String) -> bool:
+	var template: Dictionary = navigation_plot_templates.get(state_id, {})
+	if template.is_empty():
+		return false
+	var old_key: String = "built" if previous == "built" else "open"
+	var new_key: String = "built" if next == "built" else "open"
+	if old_key == new_key:
+		return true
+	var polygons: Array[PackedVector2Array] = worksite_navigation.polygons.duplicate()
+	for polygon: PackedVector2Array in template[old_key]:
+		var index: int = polygons.find(polygon)
+		if index < 0:
+			return false # Never publish an uncertain collision snapshot.
+		polygons.remove_at(index)
+	polygons.append_array(template[new_key])
+	worksite_navigation.replace_polygons(polygons)
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		visuals.site_paths.clear()
+		visuals.plot_presence.states.clear()
+	return true
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if site.name != &"ReedSite":

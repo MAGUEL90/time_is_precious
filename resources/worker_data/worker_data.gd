@@ -170,14 +170,17 @@ func begin_physical_approach(kind: String, task: String, owner: String, position
 func matches_physical_approach(kind: String, task: String, owner: String) -> bool:
 	return physical_approach_valid(physical_approach) and not physical_approach.is_empty() and physical_approach.kind == kind and physical_approach.task == task and physical_approach.owner == owner
 
-func mark_physical_arrival(task: String) -> bool:
+func mark_physical_arrival(task: String, simulated_arrival_minute: int = -1) -> bool:
 	if not physical_approach_valid(physical_approach) or physical_approach.is_empty() or physical_approach.task != task or is_payroll_blocked():
 		return false
 	if physical_approach.position.distance_to(physical_approach.target) > 0.1:
 		return false
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	if simulated_arrival_minute >= 0 and simulated_arrival_minute != now + 1:
+		return false
 	if not physical_approach.arrived:
 		physical_approach.arrived = true
-		physical_approach.arrival_minute = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+		physical_approach.arrival_minute = simulated_arrival_minute if simulated_arrival_minute >= 0 else now
 	current_work_status = WorkStatus.WORKING
 	return true
 

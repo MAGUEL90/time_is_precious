@@ -1,6 +1,7 @@
 extends "res://scenes/test_scenes/test_scene_city_save_economy.gd"
 
 const SHIFT_CHECKPOINT: String = "user://workshop_shift_resignation_test/checkpoint.json"
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 const BUILDERS: Array[String] = ["shift_builder_1", "shift_builder_2", "shift_builder_3", "shift_builder_4", "shift_cleaner_1", "shift_cleaner_2", "shift_reentrant_builder", "shift_daily_builder_1", "shift_daily_builder_2"]
 
 class BlockedNavigation extends RefCounted:
@@ -328,7 +329,7 @@ func _drive_arrivals(visuals: Node2D, ids: Array[String]) -> void:
 				all_arrived = false
 		if all_arrived:
 			return
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 	_expect(false, "Assigned workers physically arrive: " + str(ids))
 
 func _test_route_obstruction(visuals: Node2D, worker: WorkerData) -> void:

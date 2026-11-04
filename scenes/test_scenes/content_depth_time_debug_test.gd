@@ -5,6 +5,9 @@ const COMPLETION_SPLASH: Script = preload("res://scenes/workshop_plot/constructi
 var failures: int = 0
 var player: Player
 var content: Node
+var observed_worker: WorkerData
+var observed_construction: Node
+var eligible_minutes: int = 0
 
 func _ready() -> void:
 	_run.call_deferred()
@@ -19,7 +22,9 @@ func _run() -> void:
 	TimeComponentManager.is_paused = false
 	TimeComponentManager.environment.color = Color.WHITE
 	content = CONTENT.instantiate()
-	add_child(content)
+	# Explicit time jumps simulate travel only for the active gameplay owner.
+	get_tree().root.add_child(content)
+	get_tree().current_scene = content
 	player = content.get_node("YSortWorld/Player")
 	# This fixture tests multi-day debug/construction and depth, not player collapse.
 	player.debug_disable_player_needs = true
@@ -35,10 +40,15 @@ func _run() -> void:
 	probe.position = Vector2(0, -12)
 	player.add_child(probe)
 	var plot = content.get_node("YSortWorld/WorkshopPlot")
-	var board: Sprite2D = plot.get_node("Board")
+	var second_plot = content.get_node("YSortWorld/WorkshopPlot2")
+	var board: Sprite2D = second_plot.get_node("Board")
+	var keeper: Node2D = plot.get_node("Craftsman")
 	var wall: Sprite2D = plot.get_node("LeftWall")
 	var job_board: Sprite2D = content.get_node("YSortWorld/InitialWorksites/JobBoard/Sprite2D")
-	_expect(board.position + board.offset == plot.interaction_area.position, "Sorting must preserve the Board image/interaction center.")
+	_expect(not plot.get_node("Board").visible and plot.interaction_area.position == keeper.position + Vector2(0, -4),
+		"The main workshop anchors interaction to its visible keeper.")
+	_expect(board.visible and board.position + board.offset == second_plot.interaction_area.position,
+		"The second workshop preserves its visible Board image/interaction center.")
 	_expect(plot.get_node("Plot").position + plot.get_node("Plot").offset == Vector2(0, -17.5), "Rear wall regions retain their authored image placement.")
 	await _probe_occlusion(board, Vector2(0, -2), "plot-board")
 	await _probe_occlusion(wall, Vector2(0, 2), "plot-wall")
@@ -53,11 +63,17 @@ func _run() -> void:
 		"Player inside the plot must appear in front of the rear wall.")
 	probe.free()
 	player.player_visual.show()
+	# Compare the same real animation frame in all four screenshots.
+	var player_layers: Array[AnimatedSprite2D] = _pause_animation_layers(player.player_visual)
+	keeper.set_process(false)
+	var keeper_layers: Array[AnimatedSprite2D] = _pause_animation_layers(keeper)
 	await _native_occlusion(plot.get_node("Plot"), "native-rear-wall")
-	await _native_occlusion(board, "native-plot-board")
+	await _native_occlusion(keeper, "native-keeper")
 	await _native_occlusion(job_board, "native-job-board")
-	var second_plot = content.get_node("YSortWorld/WorkshopPlot2")
 	await _native_occlusion(second_plot.get_node("Board"), "native-second-board")
+	_resume_animation_layers(player_layers)
+	_resume_animation_layers(keeper_layers)
+	keeper.set_process(true)
 	player.can_move = true
 	player.global_position = plot.interaction_area.global_position + Vector2(0, 4)
 	await _settle()
@@ -89,11 +105,32 @@ func _run() -> void:
 	debug.set_speed(1)
 	var worker := WorkerData.new()
 	worker.worker_id = "time_debug_cleaner"
+	worker.satisfaction = 1.0 # Needs remain active throughout the multi-day fixture.
 	WorkerDatabase.workers_by_id[worker.worker_id] = worker
 	_expect(plot.construction.start_clearing([worker.worker_id] as Array[String], false).success, "Fixture worker starts clearing for real time-jump validation.")
+	# Wait for deferred collider/navigation changes exactly as gameplay does
+	# before the player can interact with the debug panel again.
+	for frame: int in range(4):
+		await get_tree().process_frame
+	debug._refresh_controls()
+	var clearing_start: int = _now()
+	_expect(not debug.step_buttons[1].disabled, "The real +3h control is enabled after assignment.")
 	debug.step_buttons[1].pressed.emit()
-	_expect(_now() - before == 180 and plot.construction.phase == "empty" and not worker.is_reserved(),
-		"+3h completes real clearing and releases its worker through existing clock signals.")
+	var arrival: int = int(worker.physical_approach.get("arrival_minute", -1))
+	var shift_start: int = (clearing_start / 1440) * 1440 + 7 * 60
+	var shift_end: int = (clearing_start / 1440) * 1440 + 15 * 60
+	var eligible_clear: int = maxi(0, mini(_now(), shift_end) - maxi(maxi(clearing_start, shift_start), arrival))
+	_expect(_now() - clearing_start == 180 and arrival >= clearing_start and arrival < _now()
+		and eligible_clear > 0 and eligible_clear < 180 and plot.construction.phase == "clearing"
+		and plot.construction._remaining_work_units() == 180 - eligible_clear and worker.is_reserved(),
+		"+3h counts only the paid shift minutes after actual physical arrival.")
+	var clearing_remainder: int = plot.construction._remaining_work_units()
+	var extra_start: int = _now()
+	debug.step_minutes(clearing_remainder)
+	_expect(_now() - extra_start == clearing_remainder and plot.construction.phase == "empty" and not worker.is_reserved(),
+		"The remaining physically eligible cleaning minutes finish once and release the worker.")
+	for frame: int in range(4):
+		await get_tree().process_frame
 	_expect(not plot.construction.get_preview([worker.worker_id] as Array[String]).can_start,
 		"Construction correctly rejects an empty personal Inventory.")
 	Inventory.add_item("wood_log", 8)
@@ -113,6 +150,9 @@ func _run() -> void:
 	Inventory.add_bulk_item(supplied)
 	Inventory.remove_item("reed_bundle", 1)
 	plot.on_player_interact(player)
+	_expect(is_instance_valid(plot.keeper_dialogue), "The current main-workshop keeper opens its greeting first.")
+	if is_instance_valid(plot.keeper_dialogue):
+		plot.keeper_dialogue.continued.emit()
 	_expect(is_instance_valid(plot.menu) and get_tree().paused and not player.can_move,
 		"The real build menu pauses gameplay before the debug refill.")
 	var paused_time: int = _now()
@@ -124,6 +164,8 @@ func _run() -> void:
 	_expect(plot.construction.get_preview([worker.worker_id] as Array[String]).can_start,
 		"Debug kit satisfies the real construction material check.")
 	before = _now()
+	debug._refresh_controls()
+	_expect(not debug.step_buttons[2].disabled, "The real +1d control is enabled after closing the menu.")
 	debug.step_buttons[2].pressed.emit()
 	_expect(_now() - before == 1440, "+1d advances a whole day with normal calendar events.")
 	debug.speed_buttons[0].pressed.emit()
@@ -135,17 +177,52 @@ func _run() -> void:
 	_expect(plot.construction.start_build([worker.worker_id] as Array[String]).success,
 		"The debug-supplied kit starts normal construction.")
 	_expect(Inventory.items == {"wood_log": 2}, "Normal construction consumes its kit exactly once.")
+	for frame: int in range(4):
+		await get_tree().process_frame
+	observed_worker = worker
+	observed_construction = plot.construction
+	TimeComponentManager.simulated_minute_started.connect(_count_eligible_minute)
+	eligible_minutes = 0
+	var remaining_before: int = plot.construction._remaining_work_units()
+	var calendar_before: int = _now()
 	debug.step_minutes(plot.construction.SOLO_MINUTES)
-	_expect(plot.construction.phase == "built" and second_plot.construction.phase == "uncleared",
-		"Debug time completes only the assigned plot.")
+	_expect(_now() - calendar_before == plot.construction.SOLO_MINUTES
+		and plot.construction.phase == "building" and second_plot.construction.phase == "uncleared"
+		and eligible_minutes > 0 and eligible_minutes <= 3 * 8 * 60
+		and plot.construction._remaining_work_units() == remaining_before - eligible_minutes,
+		"Three calendar days credit only physically arrived, eligible minutes inside the shifts.")
+	for day: int in range(12):
+		if plot.construction.phase == "built":
+			break
+		remaining_before = plot.construction._remaining_work_units()
+		calendar_before = _now()
+		eligible_minutes = 0
+		debug.step_minutes(1440)
+		_expect(_now() - calendar_before == 1440 and eligible_minutes <= 8 * 60
+			and plot.construction._remaining_work_units() == maxi(0, remaining_before - eligible_minutes),
+			"Each additional day credits only actual paid, arrived shift minutes.")
+		if plot.construction.phase != "built":
+			_expect(WorkerDatabase.has_worker_data(worker.worker_id) and worker.get_resolved_satisfaction() > 0.0,
+				"The fixture builder remains eligible while daily needs stay enabled.")
+		for frame: int in range(3):
+			await get_tree().process_frame
+	TimeComponentManager.simulated_minute_started.disconnect(_count_eligible_minute)
+	_expect(plot.construction.phase == "built" and second_plot.construction.phase == "uncleared" and not worker.is_reserved(),
+		"The assigned plot eventually completes once and releases its worker.")
 	await _key(KEY_QUOTELEFT)
 	_expect(not debug.panel.visible, "Backtick closes the debug panel.")
 	player.can_move = false
 	# z=11 completion splashes overlap sampled pixels and invalidate built-art comparisons.
 	await _wait_for_completion_splashes(plot)
-	await _native_occlusion(plot.get_node("Plot"), "native-built-rear-wall")
-	await _native_occlusion(plot.get_node("Table"), "native-built-table")
-	await _native_occlusion(board, "native-built-board")
+	player_layers = _pause_animation_layers(player.player_visual)
+	keeper.set_process(false)
+	keeper_layers = _pause_animation_layers(keeper)
+	await _native_occlusion(plot.get_node("FinishedBuilding"), "native-built-workshop")
+	await _native_occlusion(keeper, "native-built-keeper")
+	await _native_occlusion(board, "native-second-board-after-build")
+	_resume_animation_layers(player_layers)
+	_resume_animation_layers(keeper_layers)
+	keeper.set_process(true)
 	player.global_position = plot.global_position + Vector2(0, 0)
 	await _settle()
 	await _capture("native-built-interior")
@@ -156,6 +233,19 @@ func _run() -> void:
 
 func _now() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+
+func _count_eligible_minute(_arrival_minute: int) -> void:
+	if not is_instance_valid(observed_construction) or observed_construction.phase != "building" or observed_worker == null:
+		return
+	var now: int = _now()
+	var minute_of_day: int = now % 1440
+	var approach: Dictionary = observed_worker.physical_approach
+	if minute_of_day >= 7 * 60 and minute_of_day < 15 * 60 \
+			and not observed_worker.is_payroll_blocked() and not observed_worker.resignation_pending \
+			and observed_worker.get_resolved_satisfaction() > 0.0 \
+			and observed_construction.worker_ids.has(observed_worker.worker_id) \
+			and approach.get("arrived", false) and int(approach.get("arrival_minute", now + 1)) <= now:
+		eligible_minutes += 1
 
 func _key(code: Key) -> void:
 	var event := InputEventKey.new()
@@ -183,7 +273,7 @@ func _probe_occlusion(target: Sprite2D, sample: Vector2, caption: String) -> voi
 		_expect(magenta == front, "Actual rendered pixels must put Player %s %s." % ["in front of" if front else "behind", caption])
 		await _capture("depth-" + caption + ("-front" if front else "-behind"))
 
-func _native_occlusion(target: Sprite2D, caption: String) -> void:
+func _native_occlusion(target: Node2D, caption: String) -> void:
 	# Compare the real layered Player against separately rendered background,
 	# object and Player frames; synthetic probes alone miss artwork-specific cases.
 	var duplicate: Sprite2D = target.get_parent().get_node_or_null("ResourceIcon") if target.name == "Board" else null
@@ -229,6 +319,20 @@ func _native_occlusion(target: Sprite2D, caption: String) -> void:
 		await _capture(caption + ("-front" if front else "-behind"))
 	if duplicate_visible:
 		duplicate.show()
+
+func _pause_animation_layers(owner: Node) -> Array[AnimatedSprite2D]:
+	var paused: Array[AnimatedSprite2D] = []
+	for node: Node in owner.find_children("*", "AnimatedSprite2D", true, false):
+		var layer: AnimatedSprite2D = node as AnimatedSprite2D
+		if layer.is_playing():
+			layer.pause()
+			paused.append(layer)
+	return paused
+
+func _resume_animation_layers(layers: Array[AnimatedSprite2D]) -> void:
+	for layer: AnimatedSprite2D in layers:
+		if is_instance_valid(layer):
+			layer.play()
 
 func _wait_for_completion_splashes(plot: Node) -> void:
 	var started_msec: int = Time.get_ticks_msec()

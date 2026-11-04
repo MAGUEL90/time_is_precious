@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_plot"]
 [ext_resource type="Script" path="res://scenes/citizen_house_plot/citizen_house_plot.gd" id="2_house"]
 [ext_resource type="Texture2D" path="res://assets/objects/house_construction_site.png" id="3_site"]
 [ext_resource type="Texture2D" path="res://assets/objects/house_level_0.png" id="4_house"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_house"]
 size = Vector2(38, 20)
@@ -11,6 +12,21 @@ size = Vector2(38, 20)
 [node name="CitizenHousePlot" instance=ExtResource("1_plot")]
 script = ExtResource("2_house")
 plot_id = "citizen_house_1"
+
+[node name="ProgressPercent" type="Label" parent="BuildingProgress" index="0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("5_theme")
+theme_type_variation = &"HudLabelShortcut"
+text = "0%"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="SiteHouse" type="Sprite2D" parent="."]
 visible = false

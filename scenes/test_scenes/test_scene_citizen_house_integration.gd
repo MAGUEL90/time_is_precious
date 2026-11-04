@@ -156,8 +156,10 @@ func _exercise_house() -> void:
 	_expect(construction.phase == "empty" and not first.is_reserved()
 		and first.get_linked_citizen().employment_status == CitizenData.EmploymentStatus.HIRED
 		and CityStockManager.shelter_capacity == baseline_capacity
-		and house.get_node("SiteHouse").visible and not house.get_node("FinishedHouse").visible,
-		"All 180 cleaning minutes finish once, release the worker and add no shelter.")
+		and not house.get_node("SiteHouse").visible and not house.get_node("FinishedHouse").visible
+		and not content.get_node("AuthoredMap/YSortWorld/ToBeClean1").visible
+		and _authored_cleared_footprint_visible(),
+		"All 180 cleaning minutes finish once, release the worker, preserve shelter and show the original authored footprint.")
 	if construction.phase != "empty":
 		return
 
@@ -322,7 +324,7 @@ func _drive_arrival(worker: WorkerData, suffix: String) -> bool:
 	for _frame: int in range(4000):
 		if worker.physical_approach.get("arrived", false):
 			break
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 		if Vector2(worker.physical_approach.position).distance_to(start) > 0.1:
 			moved_from_start = true
 	var arrived: bool = worker.matches_physical_approach("plot", HOUSE_ID + suffix, HOUSE_ID) \
@@ -351,6 +353,20 @@ func _count_npcs(node: Node) -> int:
 	for child: Node in node.get_children():
 		count += _count_npcs(child)
 	return count
+
+
+func _authored_cleared_footprint_visible() -> bool:
+	var binding: Node = content.get_node("ReviewHouseBinding")
+	var layer: TileMapLayer = content.get_node("AuthoredMap/Ground/Setelah Cleaning") as TileMapLayer
+	var original_cells: Array = binding.get("_cells")
+	if original_cells.size() != 9:
+		return false
+	for entry: Dictionary in original_cells:
+		var cell: Vector2i = entry.cell
+		if layer.get_cell_source_id(cell) != entry.source or layer.get_cell_atlas_coords(cell) != entry.atlas \
+				or layer.get_cell_alternative_tile(cell) != entry.alternative:
+			return false
+	return true
 
 
 func _press_interact() -> void:

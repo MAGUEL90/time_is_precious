@@ -4,15 +4,36 @@ extends RefCounted
 ## The map has no authored walkable terrain metadata: this does not classify water.
 const GRID: float = 8.0
 const CLEARANCE: float = 4.5
+const ROUTE_SEARCH = preload("res://scenes/content_scene/worksites/worksite_route_search.gd")
 var polygons: Array[PackedVector2Array] = []
 var resource_bottoms: Dictionary = {}
+var revision: int = 0
 
 func configure(map: Node) -> void:
+	revision += 1
 	polygons.clear()
 	resource_bottoms.clear()
 	if not is_instance_valid(map):
 		return
 	_collect(map)
+
+## The plot worker's physical approach is advanced synchronously for time
+## skips. Its searches must be resumable so an obstructed target cannot stall
+## the clock or be treated as a successful arrival.
+func begin_bounded_route(from: Vector2, to: Vector2) -> RefCounted:
+	return ROUTE_SEARCH.new(self, from, to)
+
+## Capture the exact collision shape in world coordinates even when it is
+## currently disabled. This is value-only and does not alter physics bodies.
+func polygons_for_shape(shape: Shape2D, transform: Transform2D) -> Array[PackedVector2Array]:
+	var copy: RefCounted = get_script().new()
+	copy._add_shape(shape, transform)
+	return copy.polygons.duplicate()
+
+## The parked city owns a value snapshot rather than live physics nodes.
+func replace_polygons(next: Array[PackedVector2Array]) -> void:
+	polygons = next
+	revision += 1
 
 func _collect(node: Node) -> void:
 	if node is Sprite2D and node.name == "ResourceIcon" and node.get_parent() is Marker2D:

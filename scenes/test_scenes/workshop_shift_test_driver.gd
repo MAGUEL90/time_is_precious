@@ -1,5 +1,11 @@
 extends RefCounted
 
+## A direct visual update in these fixtures represents a separate rendered
+## frame, even though the fixture drives many such frames synchronously.
+static func visual_frame(visuals: Node2D, delta: float) -> void:
+	visuals.plot_presence._reset_route_budget(Engine.get_process_frames())
+	visuals.plot_presence.update(visuals, delta)
+
 ## Advance paid work through actual 07:00–15:00 shifts and physical routes.
 static func work_minutes(amount: int, visuals: Node2D, ids: Array[String]) -> bool:
 	var was_paused: bool = TimeComponentManager.is_paused
@@ -21,7 +27,7 @@ static func work_minutes(amount: int, visuals: Node2D, ids: Array[String]) -> bo
 					arrived = false
 			if arrived:
 				break
-			visuals.plot_presence.update(visuals, 0.1)
+			visual_frame(visuals, 0.1)
 		if not arrived:
 			TimeComponentManager.is_paused = was_paused
 			return false

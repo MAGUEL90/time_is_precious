@@ -4,6 +4,7 @@ extends Node
 
 const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
 const VALUES: Script = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const LEGACY_RELIABILITY: Script = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 const CHECKPOINT_PATH: String = "user://contract_continue/checkpoint.json"
 const WORKER_ID: String = "initial_workshop_laborer"
 const HAULER_ID: String = "initial_worksite_hauler"
@@ -119,7 +120,15 @@ func _write_initial_checkpoint(city: Node, store: Node) -> void:
 		return
 	# This fixture saves the exact old placeholder to exercise a pre-existing checkpoint.
 	legacy_hauler.display_name = "Worksite Hauler"
+	# This test places the clock as a fixture before any worker is assigned.
+	# Sync the idle worksite ledger explicitly, without inventing elapsed work.
+	var runtime: Node = city.get_node("YSortWorld/WorkerRuntime")
+	_check(runtime.daily.jobs.is_empty(), "Initial clock placement occurs before any worksite job exists.")
+	if not runtime.daily.jobs.is_empty():
+		return
 	_set_clock(TimeComponentManager.current_day, START_HOUR, START_MINUTE)
+	runtime.daily.tick()
+	_check(runtime.daily.last_tick == _now(), "Initial fixture clock and idle worksite ledger agree.")
 	Inventory.add_item("shekel", INITIAL_WALLET_GRANT)
 	var worker: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 1, 3)
 	_check(worker != null, "The authored Laborer is hired with a three-day wallet contract.")
@@ -292,9 +301,11 @@ func _continue_legacy_and_renew_pending(city: Node, store: Node) -> void:
 	var legacy_values = VALUES.new()
 	legacy_values.allow_legacy_contract_fields = true
 	legacy_values.allow_legacy_approach_field = true
+	legacy_values.allow_legacy_reliability_field = true
+	legacy_values.allow_legacy_resignation_field = true
 	var expected_raw: Variant = legacy_values.decode(disk.get("state"))
 	_check(legacy_values.error.is_empty() and expected_raw is Dictionary,
-		"The encoded v6 test document decodes with its missing contract and approach fields enabled.")
+		"The encoded v6 test document decodes with its historical field rules: " + legacy_values.error)
 	if not legacy_values.error.is_empty() or not expected_raw is Dictionary:
 		return
 	var expected_workers: Variant = expected_raw.get("workers")
@@ -656,7 +667,9 @@ func _make_legacy_v6(current: Dictionary, store: Node) -> Dictionary:
 	raw.workers.workers_by_id[LEGACY_PENDING_ID] = pending_worker
 	raw.raid.erase("notification_seen_keys")
 	raw.player["focus"] = 0.75
-	var encoded_state: Variant = values.encode(raw)
+	# Version six predates Reliability removal, worker resignation, the house
+	# plot and the current worksite layout; use the shared historical fixture.
+	var encoded_state: Variant = LEGACY_RELIABILITY.encode_city(values, raw)
 	_check(values.error.is_empty() and encoded_state is Dictionary,
 		"Encode the legacy fixture through CitySaveValues before removing fields absent in schema six.")
 	if values.error != "" or not encoded_state is Dictionary:
@@ -667,7 +680,7 @@ func _make_legacy_v6(current: Dictionary, store: Node) -> Dictionary:
 	legacy.schema_version = 6
 	legacy.state = encoded_state
 	_check(store.snapshot.prepare(legacy, get_tree().current_scene),
-		"The generated paid and pending v6 document prepares before it is written.")
+		"The generated paid and pending v6 document prepares before it is written: " + store.snapshot.error)
 	_check(store.snapshot.prepare(current, get_tree().current_scene),
 		"The original current-schema snapshot remains valid after checking its v6 copy.")
 	return legacy

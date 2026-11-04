@@ -16,6 +16,11 @@ var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
+func _enter_tree() -> void:
+	# The city runtime is reparented on the way home; _ready() is not repeated.
+	if not TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
+		TimeComponentManager.simulated_minute_started.connect(_on_simulated_minute_started)
+
 func _ready() -> void:
 	rng.randomize()
 	if not WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
@@ -27,6 +32,24 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
 		WorkerDatabase.payroll_changed.disconnect(_on_worker_roster_changed)
+	if TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
+		TimeComponentManager.simulated_minute_started.disconnect(_on_simulated_minute_started)
+
+func _on_simulated_minute_started(arrival_minute: int) -> void:
+	var runtime: Node = get_parent()
+	if not runtime.has_method("can_simulate_plot_travel") or not runtime.can_simulate_plot_travel():
+		return
+	# During a home handoff only the retained city runtime owns physical worker
+	# records. In the city, use only the runtime belonging to the active scene.
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	if store != null and is_instance_valid(store.parked_worksite):
+		if runtime != store.parked_worksite:
+			return
+	else:
+		var scene: Node = get_tree().current_scene
+		if scene == null or scene.get_node_or_null("YSortWorld/WorkerRuntime") != runtime:
+			return
+	plot_presence.update(self, maxf(TimeComponentManager.seconds_per_minute, 0.0), arrival_minute)
 
 func _process(delta: float) -> void:
 	_retire_unhired_actors()
@@ -46,7 +69,8 @@ func _process(delta: float) -> void:
 		last_minute = minute
 	else:
 		fraction = minf(fraction + delta / maxf(TimeComponentManager.seconds_per_minute, 0.001), 0.999)
-	var retained: Array[String] = plot_presence.update(self, delta)
+	var geometry_current: bool = not fixture.has_method("can_simulate_plot_travel") or fixture.can_simulate_plot_travel()
+	var retained: Array[String] = plot_presence.update(self, delta, -1, geometry_current)
 	var plot_workers: Array[String] = retained.duplicate()
 	for site_id in schedule.jobs:
 		var job: Dictionary = schedule.jobs[site_id]

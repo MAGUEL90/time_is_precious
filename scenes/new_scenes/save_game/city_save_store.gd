@@ -162,6 +162,11 @@ func prepare_home_departure(scene: Node, target_path: String) -> bool:
 	var runtime: Node = map.get_node_or_null("YSortWorld/WorkerRuntime")
 	if runtime == null or runtime._working:
 		return _failed("Finish gathering first.")
+	# A plot collider may still be waiting for its deferred physics update.
+	# Do not park a stale city snapshot that cannot be refreshed after the view
+	# is freed; the same existing message already covers short transactions.
+	if runtime.has_method("can_simulate_plot_travel") and runtime.navigation_refresh_pending:
+		return _failed("Wait for the current transaction.")
 	var check: Dictionary = snapshot._sites.capture(runtime)
 	if check.is_empty():
 		return _failed(snapshot._sites.error)

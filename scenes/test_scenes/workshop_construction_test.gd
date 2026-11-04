@@ -2,6 +2,7 @@ extends Node
 
 const CONSTRUCTION_SCRIPT: Script = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const CONTENT_SCENE: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 const REQUIREMENTS: Dictionary = {"wood_log": 6, "clay_lump": 12, "reed_bundle": 8}
 const SOLO_MINUTES: int = 4320
 const TEST_WORKER_IDS: Array[String] = [
@@ -356,7 +357,7 @@ func _drive_plot_arrivals(visuals: Node2D, worker_ids: Array[String], phase: Str
 				break
 		if all_arrived:
 			break
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 	TimeComponentManager.is_paused = was_paused
 	for worker_id: String in worker_ids:
 		var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)

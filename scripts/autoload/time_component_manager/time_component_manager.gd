@@ -37,6 +37,9 @@ signal morning_shift
 signal afternoon_shift
 signal noon_shift
 signal night_shift
+# Emitted only for an explicitly advanced minute, before the clock changes.
+# Ordinary frame time already advances physical movement through _process().
+signal simulated_minute_started(arrival_minute: int)
 
 # Scene references and runtime state
 
@@ -112,11 +115,14 @@ func advance_one_minute() -> bool:
 	if not can_advance_time():
 		return false
 	_advancing_time = true
-	_advance_one_minute()
+	_advance_one_minute(true)
 	_advancing_time = false
 	return true
 
-func _advance_one_minute() -> void:
+func _advance_one_minute(simulated: bool = false) -> void:
+	if simulated:
+		var arrival_minute: int = current_day * 1440 + current_hour * 60 + current_minute + 1
+		simulated_minute_started.emit(arrival_minute)
 	current_minute += 1
 	if current_minute >= minute_per_hour:
 		current_minute = 0
@@ -137,7 +143,7 @@ func advance_minutes(total_minutes: int) -> bool:
 
 	_advancing_time = true
 	for _each_minute in range(total_minutes):
-		_advance_one_minute()
+		_advance_one_minute(true)
 		day_cycle()
 
 	_advancing_time = false

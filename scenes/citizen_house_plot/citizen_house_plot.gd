@@ -10,6 +10,22 @@ var _uses_authored_site_footprint: bool = false
 func is_citizen_house_plot() -> bool:
 	return true
 
+func _sync_build_progress() -> void:
+	super._sync_build_progress()
+	var label: Label = get_node_or_null("BuildingProgress/ProgressPercent") as Label
+	if label == null or not is_instance_valid(construction):
+		return
+	label.visible = construction.phase == "building"
+	if not label.visible:
+		return
+	var total: int = construction.work_total_units
+	if total <= 0:
+		# Legacy saves may not contain work_total_units; match the existing bar.
+		total = maxi(1, (construction.completes_at - construction.started_at) * maxi(1, construction.worker_ids.size()))
+	var completed: int = clampi(total - construction._remaining_work_units(), 0, total)
+	var hundredths: int = clampi(floori(10000.0 * float(completed) / float(total)), 0, 9999)
+	label.text = "0%" if hundredths == 0 else "%d.%02d%%" % [floori(hundredths / 100.0), hundredths % 100]
+
 
 func get_built_footprints() -> Array[Rect2]:
 	return HOUSE_FOOTPRINTS

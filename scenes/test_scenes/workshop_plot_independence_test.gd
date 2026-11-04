@@ -1,6 +1,7 @@
 extends Node
 
 const CONTENT = preload("res://scenes/content_scene/content_scene.tscn")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 var failures: int = 0
 
 func _ready() -> void:
@@ -74,7 +75,7 @@ func _work_minutes(amount: int, visuals: Node2D) -> void:
 					pending = true
 			if not pending:
 				break
-			visuals.plot_presence.update(visuals, 0.1)
+			SHIFT_DRIVER.visual_frame(visuals, 0.1)
 		var step: int = mini(amount, 15 * 60 - minute)
 		if not TimeComponentManager.advance_minutes(step):
 			_expect(false, "The clock advances through the active shift.")

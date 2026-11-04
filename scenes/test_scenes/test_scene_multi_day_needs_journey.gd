@@ -4,6 +4,7 @@ extends Node
 ## clock and Continue. Wallet/materials, initial 10% Satisfaction, and later
 ## food/clothing/shelter are explicit fixtures; this is not a natural-start run.
 const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 const CHECKPOINT: String = "user://multi_day_needs_journey/checkpoint.json"
 const EVIDENCE: String = "user://multi_day_needs_journey/evidence.json"
 const FIRST: String = "initial_workshop_laborer"
@@ -439,7 +440,7 @@ func _drive_arrival(id: String) -> bool:
 	for _frame: int in range(4000):
 		if worker.physical_approach.get("arrived", false):
 			break
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 		moved = moved or worker.physical_approach.position.distance_to(origin) > 0.1
 	return worker.physical_approach.get("arrived", false) \
 		and worker.physical_approach.position.distance_to(worker.physical_approach.target) <= 0.1 \
@@ -507,7 +508,7 @@ func _drive_departure(id: String) -> bool:
 	for _frame: int in range(4000):
 		if worker.physical_approach.position.distance_to(departure.global_position) <= 0.1:
 			break
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 	return worker.physical_approach.position.distance_to(departure.global_position) <= 0.1 \
 		and worker.physical_approach.get("arrival_minute", -1) == WorkerData.PLOT_DEPARTURE_PENDING
 

@@ -30,7 +30,7 @@ func _drive_plot_arrival(visuals: Node2D, ids: Array[String]) -> void:
 				all_arrived = false
 		if all_arrived:
 			return
-		visuals.plot_presence.update(visuals, 0.1)
+		SHIFT_DRIVER.visual_frame(visuals, 0.1)
 
 func _check_completion_pixels() -> void:
 	if DisplayServer.get_name() == "headless":
