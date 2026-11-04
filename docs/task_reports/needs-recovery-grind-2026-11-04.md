@@ -1,5 +1,10 @@
 # Mengurangi grind pemulihan warga — 2026-11-04
 
+> **Catatan historis:** usulan peningkatan nilai Date Cluster dan angka
+> sesudahnya di laporan ini telah digantikan oleh
+> [tindak lanjut food balance](food-balance-palm-gather-2026-11-04.md).
+> Nilai kurma dikembalikan seperti semula; jaminan permintaan kayu tetap.
+
 Baseline perubahan lanjutan: `9eba1d20dc9c74121a939554c62a92a0779e1986` pada
 `feature/gameplay/playable-needs-recovery-20261104`. Angka berikut adalah
 **balance playtest sementara**, masih perlu penilaian manusia dan pengujian

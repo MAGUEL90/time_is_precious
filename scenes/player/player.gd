@@ -160,10 +160,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif current_interactable is PickUpItem:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
-		pickup_item.on_player_interact(self)
+		# Lock before inventory observers run so a checkpoint cannot capture a
+		# pickup halfway through the interaction.
+		_play_pickup_action()
+		pickup_item.on_player_gather(self)
 		if pickup_item.is_collecting:
 			_on_interactable_deactivated(pickup_item)
-		_play_pickup_action()
 
 	elif current_interactable is JobBoard:
 		var job_board: JobBoard = current_interactable as JobBoard

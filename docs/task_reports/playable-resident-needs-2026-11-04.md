@@ -2,6 +2,7 @@
 
 > Tindak lanjut: `needs-recovery-grind-2026-11-04.md` mencatat perubahan
 > permintaan merchant dan nilai Date Cluster setelah pengukuran awal ini.
+> Nilai makanan akhirnya direvisi lagi dalam `food-balance-palm-gather-2026-11-04.md`.
 > Hasil dan angka di bawah adalah bukti historis sebelum tindak lanjut tersebut.
 
 ## Cakupan dan keputusan

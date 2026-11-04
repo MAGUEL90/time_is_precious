@@ -79,7 +79,9 @@ func _run() -> void:
 	_strip_post_v3_owner_fields(raw)
 	var legacy: Dictionary = saved.duplicate(true)
 	legacy.schema_version = 3
-	legacy.state = codec.encode(raw)
+	# v3 predates the retired Reliability fields as well as newer pickup
+	# sources. Use the same genuine legacy encoding as CitySaveTest.
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, raw)
 	_strip_post_v3_worker_fields(legacy.state)
 	_expect(store.snapshot.prepare(legacy, content), "v3 accepts new authored source types through explicit migration.")
 	_expect(sentinel == store.snapshot.capture(content), "Migration preparation does not reset new sources.")

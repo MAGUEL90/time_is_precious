@@ -21,6 +21,7 @@ var skip_merchant_visits: int = 0
 var skipped_visit_days: Array[int] = []
 var maximum_player_hunger: float = 0.0
 var maximum_player_fatigue: float = 0.0
+var harvest_interactions: int = 0
 
 
 func walk(target: Vector2, _door_target: bool = false) -> void:
@@ -55,8 +56,10 @@ func harvest() -> void:
 				return
 			var before: int = Inventory.items.get("date_cluster", 0)
 			await interact(pickup)
-			_expect(int(Inventory.items.get("date_cluster", 0)) == before + 1, "A date comes from its actual pickup.")
-			harvested += 1
+			var gained: int = int(Inventory.items.get("date_cluster", 0)) - before
+			_expect(gained >= 1 and gained <= 3, "An interaction collects available dates from the selected palm.")
+			harvested += gained
+			harvest_interactions += 1
 			while not player.can_move and not stopped:
 				await get_tree().physics_frame
 
@@ -396,7 +399,7 @@ func _run() -> void:
 		await upkeep()
 		await wait_minutes(30)
 	await _check_board(2)
-	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps, "skipped_visit_days": skipped_visit_days, "max_hunger": maximum_player_hunger, "max_fatigue": maximum_player_fatigue}))
+	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "harvest_interactions": harvest_interactions, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps, "skipped_visit_days": skipped_visit_days, "max_hunger": maximum_player_hunger, "max_fatigue": maximum_player_fatigue}))
 	# Save an ordinary sleep checkpoint after recovery, then verify in a new process.
 	while not player.can_sleep() and not stopped:
 		await upkeep()
