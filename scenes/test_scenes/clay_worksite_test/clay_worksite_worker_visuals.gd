@@ -13,6 +13,7 @@ const FEET_OFFSET := Vector2(0, 16)
 const APPROACH_SPEED: float = 24.0
 var rng := RandomNumberGenerator.new()
 var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence.gd").new()
+var resident_spawn: Node2D
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
@@ -20,11 +21,13 @@ func _enter_tree() -> void:
 	# The city runtime is reparented on the way home; _ready() is not repeated.
 	if not TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
 		TimeComponentManager.simulated_minute_started.connect(_on_simulated_minute_started)
+	if not WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
+		WorkerDatabase.payroll_changed.connect(_on_worker_roster_changed)
+	if is_instance_valid(resident_spawn):
+		enable_city_residents.call_deferred(resident_spawn)
 
 func _ready() -> void:
 	rng.randomize()
-	if not WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
-		WorkerDatabase.payroll_changed.connect(_on_worker_roster_changed)
 	# CitySave disables the parked parent, while this retained physical owner
 	# continues hidden approaches using the same real elapsed frame time.
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -34,6 +37,55 @@ func _exit_tree() -> void:
 		WorkerDatabase.payroll_changed.disconnect(_on_worker_roster_changed)
 	if TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
 		TimeComponentManager.simulated_minute_started.disconnect(_on_simulated_minute_started)
+	if CitizenManager.citizen_added.is_connected(_on_resident_changed):
+		CitizenManager.citizen_added.disconnect(_on_resident_changed)
+	if CitizenManager.citizen_left.is_connected(_on_resident_changed):
+		CitizenManager.citizen_left.disconnect(_on_resident_changed)
+	if CitizenNeedsManager.needs_changed.is_connected(sync_city_residents):
+		CitizenNeedsManager.needs_changed.disconnect(sync_city_residents)
+
+## The main city shares one visual per citizen with the existing worker owner.
+## Other worksite fixtures keep their original worker-only behavior.
+func enable_city_residents(spawn: Node2D) -> void:
+	resident_spawn = spawn
+	if not CitizenManager.citizen_added.is_connected(_on_resident_changed):
+		CitizenManager.citizen_added.connect(_on_resident_changed)
+	if not CitizenManager.citizen_left.is_connected(_on_resident_changed):
+		CitizenManager.citizen_left.connect(_on_resident_changed)
+	if not CitizenNeedsManager.needs_changed.is_connected(sync_city_residents):
+		CitizenNeedsManager.needs_changed.connect(sync_city_residents)
+	sync_city_residents()
+
+func _on_resident_changed(_citizen: CitizenData) -> void:
+	sync_city_residents()
+
+func sync_city_residents() -> void:
+	if not is_instance_valid(resident_spawn):
+		return
+	_retire_unhired_actors()
+	var residents: Array[CitizenData] = CitizenManager.get_all_residents()
+	var occupied_slots: Dictionary = {}
+	for actor: Node2D in actors.values():
+		if is_instance_valid(actor) and actor.has_meta("resident_spawn_slot"):
+			occupied_slots[int(actor.get_meta("resident_spawn_slot"))] = true
+	var slot: int = 0
+	for citizen: CitizenData in residents:
+		if actors.has(citizen.citizen_id):
+			actors[citizen.citizen_id].set_meta("visual_has_worker", WorkerDatabase.has_worker_data(citizen.citizen_id))
+			continue
+		while occupied_slots.has(slot):
+			slot += 1
+		occupied_slots[slot] = true
+		var offset := Vector2((slot % 5) * 20, (slot / 5) * 18)
+		var actor: Node2D = ensure_actor(citizen.citizen_id, resident_spawn.global_position + offset)
+		if actor == null:
+			continue
+		actor.set_meta("resident_spawn_slot", slot)
+		var worker: WorkerData = WorkerDatabase.get_worker_data(citizen.citizen_id)
+		# The existing work/commute owner decides when assigned people are outside.
+		if worker == null or (not worker.is_reserved() and worker.physical_approach.is_empty()):
+			actor.show()
+			_play(actor, "idle", "right")
 
 func _on_simulated_minute_started(arrival_minute: int) -> void:
 	var runtime: Node = get_parent()
@@ -145,6 +197,7 @@ func _process(delta: float) -> void:
 
 func _on_worker_roster_changed() -> void:
 	_retire_unhired_actors()
+	sync_city_residents()
 	_update_reed_presence()
 
 func _retire_unhired_actors() -> void:
@@ -157,6 +210,14 @@ func _retire_unhired_actors() -> void:
 		if not actor is Node2D or str(actor.get_meta("worker_id", "")) != id:
 			continue
 		if WorkerDatabase.has_worker_data(id):
+			continue
+		var citizen: CitizenData = CitizenManager.get_citizen(id) if is_instance_valid(resident_spawn) else null
+		if citizen != null and citizen.population_status == CitizenData.PopulationStatus.RESIDENT:
+			if bool(actor.get_meta("visual_has_worker", false)):
+				_clear_worker_presentation(id)
+				actor.set_meta("visual_has_worker", false)
+				actor.show()
+				_play(actor, "idle", "right")
 			continue
 		actor.hide()
 		actor.queue_free()
@@ -240,18 +301,20 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	if actors.has(id):
 		return actors[id]
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
-	if worker == null:
+	var citizen: CitizenData = CitizenManager.get_citizen(id) if is_instance_valid(resident_spawn) else (worker.get_linked_citizen() if worker != null else null)
+	if worker == null and (citizen == null or citizen.population_status != CitizenData.PopulationStatus.RESIDENT):
 		return null
 	var actor = VISUAL.instantiate()
 	actor.set_meta("worker_id", id)
-	var citizen: CitizenData = worker.get_linked_citizen()
+	actor.set_meta("visual_has_worker", worker != null)
 	var profile: VisualProfile = citizen.visual_profile if citizen != null and citizen.visual_profile != null else VisualProfile.new()
-	actor.skin_tone = "light" if get_parent().daily.is_hauler(id) else profile.skin_tone
+	actor.skin_tone = "light" if not is_instance_valid(resident_spawn) and get_parent().daily.is_hauler(id) else profile.skin_tone
+	actor.expression = profile.expression
 	actor.clothes_id = profile.clothes_id
 	actor.hair_style = profile.hair_style
 	actor.accessory = profile.accessory
 	add_child(actor)
-	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if not worker.physical_approach.is_empty() else spawn_position
+	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if worker != null and not worker.physical_approach.is_empty() else spawn_position
 	var foot := Node2D.new()
 	foot.name = "FootSort"
 	foot.position = FEET_OFFSET
@@ -260,7 +323,8 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 		if child is AnimatedSprite2D:
 			child.reparent(foot, true)
 	actor.y_sort_enabled = true
-	_apply_work_identity(actor)
+	if not is_instance_valid(resident_spawn):
+		_apply_work_identity(actor)
 	actor.hide()
 	actors[id] = actor
 	return actor
@@ -291,7 +355,7 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.
-	actor.play_visual(actor.skin_tone, "base", action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
+	actor.play_visual(actor.skin_tone, actor.expression, action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
 	var foot: Node = actor.get_node_or_null("FootSort")
 	if foot != null:
 		for child: Node in actor.get_children():

@@ -137,6 +137,9 @@ position = Vector2(-8, 8)
 [node name="FarSpawn" type="Marker2D" parent="WorkerDeparture"]
 position = Vector2(8, 16)
 
+[node name="ResidentSpawn" type="Marker2D" parent="."]
+position = Vector2(-48, -61)
+
 [node name="GroundOutput" type="Node2D" parent="."]
 y_sort_enabled = true
 

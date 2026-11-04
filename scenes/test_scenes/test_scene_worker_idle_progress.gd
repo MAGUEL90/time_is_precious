@@ -123,7 +123,7 @@ func _run() -> void:
 	_check(_visible_dust_count(plot) == 0, "The gray-bar transition hides all existing activity dust immediately.")
 	var entry: Vector2 = worker.physical_approach.position
 	visuals.plot_presence.update(visuals, 0.1)
-	_check(not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == -1, "Unpaid worker leaves working state and needs a new physical arrival.")
+	_check(not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == WorkerData.PLOT_DEPARTURE_PENDING, "Unpaid worker leaves working state and needs a new physical arrival.")
 	_check(worker.physical_approach.position.distance_to(entry) <= 2.401 and visuals.actors[WORKER_ID].visible, "Departure begins visibly within walking speed, without teleporting.")
 	await _capture("leaving")
 	if mode == "write":
@@ -148,7 +148,7 @@ func _run() -> void:
 			break
 		visuals.plot_presence.update(visuals, 0.1)
 	visuals.plot_presence.update(visuals, 0.0)
-	_check(worker.physical_approach.position.distance_to(departure.global_position) <= 0.1 and not visuals.actors[WORKER_ID].visible, "Unpaid worker exits the plot along the authored route.")
+	_check(worker.physical_approach.position.distance_to(departure.global_position) <= 0.1 and visuals.actors[WORKER_ID].visible, "The unpaid worker exits along the authored route and remains visible as a resident.")
 	await _capture("paused")
 	var animation_dir: String = OS.get_environment("TIP_DUST_ANIMATION_DIR")
 	var recording: bool = not animation_dir.is_empty() and DisplayServer.get_name() != "headless"
@@ -204,7 +204,7 @@ func _read_departure(content: Node, plot: Node, visuals: Node2D) -> void:
 	var bar: TextureProgressBar = plot.get_node("BuildingProgress")
 	var pose: Vector2 = worker.physical_approach.position
 	var progress: float = bar.value
-	_check(plot.construction.phase == "building" and worker.is_payroll_blocked() and not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == -1,
+	_check(plot.construction.phase == "building" and worker.is_payroll_blocked() and not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == WorkerData.PLOT_DEPARTURE_PENDING,
 		"Continue retains building, expired contract and the pending departure pose.")
 	_check(progress > 0.0 and bar.material != null, "Continue retains partial progress and gray presentation.")
 	_check(_visible_dust_count(plot) == 0 and not plot._has_dust_activity(), "Continue starts the unpaid builder without activity dust.")

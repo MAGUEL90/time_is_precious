@@ -169,7 +169,12 @@ Legacy worker compatibility may exist, but new work should not create additional
 - `ImmigrationManager` evaluates immigration and manages pending batches.
 - Accepted immigrants become residents/citizens.
 - Rejected/left citizens must not consume city resources.
-- `CitySpawner` / `CitizenActor` represent resident data in the world.
+- `CitySpawner` / `CitizenActor` remain available for prototype scenes. On the
+  main city map, the existing `WorkerVisuals` owner projects every registered
+  resident by citizen ID and reuses that same visual for hiring and work.
+  A worker inside a plot is hidden until departure; a departed citizen is
+  removed. Checkpoint and home/city restoration rebuild the projection from
+  the existing citizen and worker records without adding save fields.
 - Visual presentation should stay separate from gameplay authority unless an approved trait system intentionally connects them.
 
 Current immigration approval remains batch-based unless design explicitly changes it.

@@ -64,7 +64,9 @@ func _run() -> void:
 	var original_runtime: Node = runtime
 	var before_departure: Dictionary = store.snapshot._sites.capture(runtime)
 	_expect(store.prepare_home_departure(content, store.snapshot.HOME_PATH), "The city can prepare a home handoff.")
+	_expect(WorkerDatabase.payroll_changed.is_connected(Callable(visuals, "_on_worker_roster_changed")), "The parked visual owner keeps its worker roster connection.")
 	store.cancel_home_departure()
+	_expect(WorkerDatabase.payroll_changed.is_connected(Callable(visuals, "_on_worker_roster_changed")), "Cancelling the handoff keeps the worker roster connection.")
 	_expect(runtime.get_parent() == content.get_node("YSortWorld") and _same_snapshot(before_departure, store.snapshot._sites.capture(runtime)), "A failed scene switch can roll back the handoff without altering any work state.")
 	var home_door: Node = content.get_node("YSortWorld/HomeDoor")
 	home_door._on_body_entered(player)
@@ -72,6 +74,7 @@ func _run() -> void:
 		_finish_sleep_test()
 		return
 	_expect(store.parked_worksite == original_runtime and original_runtime.daily.jobs.has(WOOD_SITE), "Entering home preserves the live daily assignment and hauling scheduler.")
+	_expect(CitizenManager.citizen_added.is_connected(Callable(visuals, "_on_resident_changed")) and CitizenManager.citizen_left.is_connected(Callable(visuals, "_on_resident_changed")), "The parked owner reconnects resident signals while away from the city.")
 	_expect(original_runtime.hauling.routes[HAULER_ID].cargo.quantity == 3, "The home transition does not discard in-flight cargo.")
 	_expect(not FileAccess.file_exists(SLEEP_SAVE_PATH), "Entering home alone does not create a sleep checkpoint.")
 	var home: Node = get_tree().current_scene
@@ -239,6 +242,9 @@ func _verify_return_to_city() -> void:
 		return
 	_bind_city_references()
 	_expect(not is_instance_valid(store.parked_worksite), "Returning to city releases the hidden projection after adoption.")
+	var city_visuals: Node = runtime.get_node("WorkerVisuals")
+	for resident: CitizenData in CitizenManager.get_all_residents():
+		_expect(city_visuals.actors.has(resident.citizen_id), "Returning home to the city restores the resident visual for " + resident.citizen_id)
 	_expect(_same_snapshot(store.snapshot._sites.capture(runtime), before), "Return to city preserves the offscreen jobs, cargo, resource stock and ground yield.")
 	_expect(_wood_total() == 72, "All wood remains conserved across sleep and both scene transitions.")
 	_expect(store.snapshot._sources.capture() == palms_before, "Home/city transition preserves every palm slot, timer and RNG.")

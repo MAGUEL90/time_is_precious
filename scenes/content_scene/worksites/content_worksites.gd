@@ -66,6 +66,9 @@ func _ready() -> void:
 	# Notes belong to the isolated fixture, not the content HUD.
 	$FixtureNotes.hide()
 	$WorkerVisuals.y_sort_enabled = true
+	var resident_spawn: Node2D = get_node_or_null("ResidentSpawn") as Node2D
+	if resident_spawn != null:
+		$WorkerVisuals.enable_city_residents(resident_spawn)
 	worker_control.can_open = _can_open_worker_hub
 	# Resource-only map sections can reuse this adapter without a city warehouse.
 	var city_storage_area: Node = get_node_or_null("CityStorageArea")

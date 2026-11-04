@@ -111,7 +111,9 @@ func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, g
 			if simulating or (not visuals.get_tree().paused and not TimeComponentManager.is_paused and not SceneTransition.is_transitioning):
 				_advance_toward(visuals, id, worker, task.key + ":departure", departure, maxf(delta, 0.0))
 			actor.global_position = approach.position - FEET
-			actor.visible = approach.position.distance_to(departure) > 0.1 and visuals.get_parent().enable_worker_commute
+			var citizen: CitizenData = CitizenManager.get_citizen(id)
+			var remains_in_city: bool = is_instance_valid(visuals.resident_spawn) and citizen != null and citizen.population_status == CitizenData.PopulationStatus.RESIDENT
+			actor.visible = visuals.get_parent().enable_worker_commute and (approach.position.distance_to(departure) > 0.1 or remains_in_city)
 			var direction: String = "left" if approach.position.x < previous.x else "right"
 			visuals._play(actor, "walk" if approach.position.distance_to(previous) > 0.001 else "idle", direction)
 			# Keep the outbound sentinel until the next paid shift so repeated

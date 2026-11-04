@@ -378,9 +378,12 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		visuals.roaming.clear()
 		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
+		visuals.plot_presence.tracked.clear()
 		visuals.plot_presence.initial_sync = true
 		visuals.last_minute = -1
 		visuals.fraction = 0.0
+		# The city projection is rebuilt after all save owners finish restoring.
+		visuals.call_deferred("sync_city_residents")
 
 	daily._sync_activities()
 
