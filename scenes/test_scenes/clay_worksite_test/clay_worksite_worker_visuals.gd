@@ -270,8 +270,10 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	var target: Vector2 = state.target
 	var navigation = fixture.worksite_navigation
 	var path: Dictionary = site_paths.get(id, {})
-	if path.get("task", "") != task or path.get("target", Vector2.INF) != target:
-		path = {"task": task, "target": target, "points": navigation.route(feet, target), "next": 1}
+	if path.get("task", "") != task or path.get("target", Vector2.INF) != target or int(path.get("revision", -1)) != navigation.revision:
+		# Cache failed searches too, but retry whenever authored geometry changes.
+		# A blocked route is never treated as an arrival or retried every frame.
+		path = {"task": task, "target": target, "revision": navigation.revision, "points": navigation.route(feet, target), "next": 1}
 		site_paths[id] = path
 	var remaining: float = APPROACH_SPEED * delta
 	var points: PackedVector2Array = path.points

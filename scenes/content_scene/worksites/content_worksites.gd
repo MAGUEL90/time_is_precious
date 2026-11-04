@@ -314,7 +314,49 @@ func _drop_legacy_stockpile_output(quantity: int, drop_position: Vector2, resour
 
 # Physical records use feet coordinates; the visual's art origin is 16px above.
 func worker_destination(site_id: StringName, id: String) -> Vector2:
-	return site_slot_destination(site_id, daily.jobs[site_id].ids.find(id))
+	var ids: Array = daily.jobs[site_id].ids
+	var slot: int = ids.find(id)
+	var entries: Array[Vector2] = [site_slot_destination(site_id, 0), site_slot_destination(site_id, 1)]
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	var own_entry: int = _site_entry_index(worker, site_id, entries)
+	var occupied: Array[bool] = [false, false]
+	var claimed_by_earlier_worker: bool = false
+	for index: int in range(ids.size()):
+		var teammate_id: String = ids[index]
+		if teammate_id == id:
+			continue
+		var teammate: WorkerData = WorkerDatabase.get_worker_data(teammate_id)
+		var entry: int = _site_entry_index(teammate, site_id, entries)
+		if entry < 0:
+			# A teammate without a physical record is either a legacy worker or
+			# another member whose approach has not been initialized yet.
+			entry = index
+		if entry >= 0 and entry < entries.size():
+			occupied[entry] = true
+			if index < slot and entry == own_entry:
+				claimed_by_earlier_worker = true
+	# Keep a worker's existing destination even when a former teammate's
+	# removal changes the worker's list index. Old overlapping checkpoints
+	# are separated on their next approach, in assignment order.
+	if own_entry >= 0 and not claimed_by_earlier_worker:
+		return entries[own_entry]
+	if slot >= 0 and slot < entries.size() and not occupied[slot]:
+		return entries[slot]
+	for entry: int in range(entries.size()):
+		if not occupied[entry]:
+			return entries[entry]
+	return entries[clampi(slot, 0, entries.size() - 1)]
+
+func _site_entry_index(worker: WorkerData, site_id: StringName, entries: Array[Vector2]) -> int:
+	if worker == null or worker.physical_approach.get("kind", "") != "site" or worker.physical_approach.get("owner", "") != str(site_id):
+		return -1
+	var target: Variant = worker.physical_approach.get("target")
+	if not target is Vector2:
+		return -1
+	for index: int in range(entries.size()):
+		if target.distance_to(entries[index]) <= 0.1:
+			return index
+	return -1
 
 # Snapshot validation can resolve authored slots before live jobs are restored.
 func site_slot_destination(site_id: StringName, slot: int) -> Vector2:
