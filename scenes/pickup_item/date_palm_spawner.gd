@@ -4,6 +4,15 @@ extends "res://scenes/pickup_item/pickup_source.gd"
 func _init() -> void:
 	item_id = "date_cluster"
 
+func _ready() -> void:
+	super._ready()
+	# The pickup source and its world positions stay fixed; only the art sways.
+	var visual: Node = self
+	if visual is Sprite2D and not has_node("PalmSway"):
+		var sway := preload("res://scenes/pickup_item/palm_sway.gd").new()
+		sway.name = "PalmSway"
+		add_child(sway)
+
 func _state_prefix() -> String:
 	return "DatePalm_"
 

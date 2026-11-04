@@ -1,6 +1,7 @@
 extends Node2D
 
 const VISUAL = preload("res://scenes/worker_visual/base_worker_visual.tscn")
+const FOOTSTEPS = preload("res://scenes/worker_visual/footstep_emitter.gd")
 var actors: Dictionary = {}
 var last_minute: int = -1
 var fraction: float = 0.0
@@ -324,6 +325,9 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	for child: Node in actor.get_children():
 		if child is AnimatedSprite2D:
 			child.reparent(foot, true)
+	var footsteps: Node = FOOTSTEPS.new()
+	footsteps.name = "Footsteps"
+	actor.add_child(footsteps)
 	actor.y_sort_enabled = true
 	if not is_instance_valid(resident_spawn):
 		_apply_work_identity(actor)
@@ -357,6 +361,9 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.
+	var footsteps: Node = actor.get_node_or_null("Footsteps")
+	if footsteps != null:
+		footsteps.set_walking(action == "walk", direction)
 	actor.play_visual(actor.skin_tone, actor.expression, action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
 	var foot: Node = actor.get_node_or_null("FootSort")
 	if foot != null:
