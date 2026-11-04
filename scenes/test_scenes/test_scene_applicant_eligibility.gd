@@ -15,6 +15,7 @@ func _run() -> void:
 	_test_unemployed_recovery_and_paid_rehire()
 	_test_legacy_hauler_is_not_recruited()
 	_test_legacy_hauler_does_not_reapply()
+	_test_empty_board_guidance()
 	print("ApplicantEligibilityTest: %s (%d checks failed)" % ["PASS" if failures == 0 else "FAIL", failures])
 	get_tree().quit(0 if failures == 0 else 1)
 
@@ -22,6 +23,20 @@ func _expect(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
+
+func _test_empty_board_guidance() -> void:
+	_reset_fixture()
+	var board: JobBoardUI = preload("res://scenes/ui/job_board_ui/job_board_ui.tscn").instantiate()
+	_expect(board._get_empty_state_message() == "No applicants available.", "An empty city does not invent a satisfaction problem.")
+	var resident: CitizenData = _add_resident("waiting", 0.45)
+	var hint: String = board._get_empty_state_message()
+	_expect(hint.contains("Food") and hint.contains("Clothing") and hint.contains("Shelter") and hint.contains("50%"), "An unhappy recruitable resident gets the recovery guidance.")
+	resident.profession = WorkerData.Profession.HAULER
+	_expect(board._get_empty_state_message() == "No applicants available.", "A legacy Hauler alone does not promise a recruitable applicant.")
+	resident.profession = WorkerData.Profession.LABORER
+	resident.employment_status = CitizenData.EmploymentStatus.HIRED
+	_expect(board._get_empty_state_message() == "No applicants available.", "A low-satisfaction worker already hired does not trigger misleading applicant guidance.")
+	board.free()
 
 func _reset_fixture() -> void:
 	TimeComponentManager.set_process(false)

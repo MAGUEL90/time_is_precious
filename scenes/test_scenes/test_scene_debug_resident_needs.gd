@@ -85,6 +85,10 @@ func _run() -> void:
 	var original_house_phase: String = house.phase
 	_expect(CitizenManager.get_all_residents().size() == 2 and CitizenManager.get_all_applicants().size() == 2, "The genuine new game starts with two eligible residents.")
 	_expect(storage.get_food_supply_points() == 0 and storage.get_clothing_item_count() == 0 and CityStockManager.shelter_capacity == 0, "Food, clothing and shelter do not appear automatically.")
+	# This fixture exercises recovery from the prior 50% edge explicitly;
+	# the new-game starter buffer is tested separately without this adjustment.
+	for id: String in [FIRST_ID, SECOND_ID]:
+		CitizenManager.get_citizen(id).satisfaction = 0.5
 	debug.panel.show()
 	await _frames()
 	_expect(storage.get_food_supply_points() == 0 and storage.get_clothing_item_count() == 0 and CityStockManager.shelter_capacity == 0, "Opening Debug does not grant resident needs.")

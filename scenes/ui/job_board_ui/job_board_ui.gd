@@ -200,9 +200,25 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 		if selected_ids.has(citizen.citizen_id):
 			applicant_list.select(index, false)
 	empty_state_panel.visible = applicants.is_empty()
+	if applicants.is_empty():
+		empty_state_label.text = _get_empty_state_message()
 	candidate_scroll.visible = not applicants.is_empty()
 	_refresh_quote()
 	_restore_scroll.call_deferred(keep_scroll)
+
+func _get_empty_state_message() -> String:
+	for person: CitizenData in CitizenManager.get_all_residents():
+		var can_apply_later: bool = (
+			person.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+			and person.profession != WorkerData.Profession.HAULER
+		) or (
+			person.employment_status == CitizenData.EmploymentStatus.APPLICANT
+			and CitizenManager.is_profession_recruitable(person.profession)
+		)
+		if can_apply_later and person.satisfaction < CitizenData.MIN_APPLICANT_SATISFACTION:
+			var threshold: int = roundi(CitizenData.MIN_APPLICANT_SATISFACTION * 100.0)
+			return "No applicants available.\nProvide Food, Clothing and Shelter.\nSatisfaction recovers daily; apply at %d%%." % threshold
+	return "No applicants available."
 
 func _restore_scroll(value: int) -> void:
 	candidate_scroll.scroll_vertical = value

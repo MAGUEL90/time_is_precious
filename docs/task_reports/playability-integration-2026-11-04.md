@@ -1,5 +1,8 @@
 # Pembaruan playability integrasi — 2026-11-04
 
+> Pembaruan berikutnya mengenai jalur rekrut dan workshop dari New Game
+> tersedia pada [laporan starter city](starter-city-playability-2026-11-04.md).
+
 Semua hasil final tim tetap berada di branch integrasi lokal
 `feature/gameplay/integration-worker-animations-20261104`. Laporan ini
 melengkapi [laporan integrasi awal](full-integration-logistics-2026-11-04.md),

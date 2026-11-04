@@ -99,12 +99,25 @@ func _run() -> void:
 	var first: CitizenData = CitizenManager.get_citizen(FIRST_ID)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND_ID)
 	print("RESIDENT_DAY1 day=", TimeComponentManager.current_day, " needs_day=", CitizenNeedsManager.last_processed_day, " satisfaction=", first.satisfaction, ",", second.satisfaction, " applicants=", CitizenManager.get_all_applicants().size())
-	_expect(TimeComponentManager.current_day == 1 and CitizenNeedsManager.last_processed_day == 1 and is_equal_approx(first.satisfaction, 0.45) and is_equal_approx(second.satisfaction, 0.45), "Unmet needs settle once at midnight and lower both starting residents to 45%.")
-	_expect(CitizenManager.get_all_applicants().is_empty() and CitizenManager.get_all_residents().size() == 2 and visuals.actors.size() == 2, "Both ineligible applicants remain real, visible residents on day one.")
+	_expect(TimeComponentManager.current_day == 1 and CitizenNeedsManager.last_processed_day == 1 and is_equal_approx(first.satisfaction, 0.5) and is_equal_approx(second.satisfaction, 0.5), "One unmet day lowers the starting residents from 55% to 50%.")
+	_expect(CitizenManager.get_all_applicants().size() == 2, "Both starters remain eligible through the first merchant visit.")
+	_expect(TimeComponentManager.advance_minutes(1440), "The real clock reaches the second daily settlement.")
+	_expect(TimeComponentManager.current_day == 2 and CitizenNeedsManager.last_processed_day == 2 and is_equal_approx(first.satisfaction, 0.45) and is_equal_approx(second.satisfaction, 0.45), "A second unmet day lowers both starting residents to 45%.")
+	_expect(CitizenManager.get_all_applicants().is_empty() and CitizenManager.get_all_residents().size() == 2 and visuals.actors.size() == 2, "Both ineligible applicants remain real, visible residents on day two.")
 	for person: CitizenData in CitizenManager.get_all_residents():
-		_expect(visuals.actors.has(person.citizen_id) and visuals.actors[person.citizen_id].is_visible_in_tree(), "Day-one residents remain visible despite ineligibility.")
+		_expect(visuals.actors.has(person.citizen_id) and visuals.actors[person.citizen_id].is_visible_in_tree(), "Day-two residents remain visible despite ineligibility.")
 	board.on_player_interact(player)
-	_expect(board.job_board_ui != null and board.job_board_ui.empty_state_panel.visible and board.job_board_ui.applicants.is_empty(), "The actual day-one board shows its empty state under these conditions.")
+	_expect(board.job_board_ui != null and board.job_board_ui.empty_state_panel.visible and board.job_board_ui.applicants.is_empty(), "The actual day-two board shows its empty state under these conditions.")
+	if board.job_board_ui != null:
+		var empty_label: Label = board.job_board_ui.empty_state_label
+		_expect(empty_label.text.contains("Food") and empty_label.text.contains("Clothing") and empty_label.text.contains("Shelter")
+			and empty_label.text.contains("50%") and empty_label.text.contains("daily"), "The empty board explains the actual needs and daily recovery threshold.")
+		_expect(empty_label.size.x > 0 and empty_label.size.y > 0 and empty_label.get_line_count() >= 3
+			and empty_label.get_line_height() * empty_label.get_line_count() <= empty_label.size.y,
+			"The recovery guidance fits inside the existing empty-state label.")
+		for line: String in empty_label.text.split("\n"):
+			_expect(empty_label.get_theme_font("font").get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, empty_label.get_theme_font_size("font_size")).x <= empty_label.size.x,
+				"Each line of recovery guidance fits the label width.")
 	await _capture("day1-board")
 	if board.job_board_ui != null:
 		board.job_board_ui.close()

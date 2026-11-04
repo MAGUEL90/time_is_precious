@@ -140,7 +140,9 @@ func walk_to_site(marker: Marker2D) -> void:
 		if not is_instance_valid(player.current_interactable) and not runtime._pickup_focused:
 			return
 		if player.current_interactable is Node2D:
-			avoided.append((player.current_interactable as Node2D).global_position)
+			# Interactables can have an access shape far larger than their origin;
+			# exclude the failed point, not an arbitrary radius around the origin.
+			avoided.append(approach)
 		else:
 			await _frames(3)
 	_expect(false, "A worksite approach does not focus another interactable")

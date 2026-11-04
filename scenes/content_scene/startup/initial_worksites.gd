@@ -9,6 +9,10 @@ const LABORER_NAME: String = "Naram"
 const HAULER_NAME: String = "Lugal"
 const CART_UNIT_ID: String = "initial_worksite_cart"
 const CART_SUPPLIED_META: StringName = &"initial_worksite_cart_supplied"
+# Temporary starter balance: the first missed day leaves the two authored
+# residents at the existing 0.50 hiring threshold, through the first merchant
+# visit. Further unmet days still make them ineligible and reduce satisfaction.
+const INITIAL_APPLICANT_SATISFACTION: float = 0.55
 
 func _ready() -> void:
 	if not enable_initial_applicant:
@@ -34,6 +38,7 @@ func _register_applicant(citizen_id: String, display_name: String, profession: W
 	applicant.citizen_id = citizen_id
 	applicant.display_name = display_name
 	applicant.population_status = CitizenData.PopulationStatus.RESIDENT
+	applicant.satisfaction = INITIAL_APPLICANT_SATISFACTION
 	CitizenManager.add_citizen(applicant)
 	CitizenManager.register_applicant(citizen_id, profession)
 
