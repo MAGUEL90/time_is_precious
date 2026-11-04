@@ -76,11 +76,23 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		_budget = config.starting_shekel
 		_stock.clear()
 		_demand.clear()
+		_add_missing_configured_offers()
 		_roll_visit_requests()
 		for id: String in _offers:
 			_stock[id] = int(_offers[id].stock)
 			_demand[id] = int(_offers[id].requested)
 	changed.emit()
+
+func _add_missing_configured_offers() -> void:
+	# Checkpoints retain the visit catalog. Adopt newly authored offers only at
+	# the next arrival so Continue never replenishes an already active visit.
+	# Existing offers (including their saved prices and quotas) remain intact.
+	for offer: Dictionary in config.offers:
+		var id: String = str(offer.item_id)
+		if not _offers.has(id):
+			_offers[id] = offer.duplicate(true)
+			_offers[id]["sell_price"] = 0
+			_offers[id]["requested"] = 0
 
 func _roll_visit_requests() -> void:
 	# Snapshot the chosen request set in this ledger, never in a scene/menu.
