@@ -55,6 +55,13 @@ func _validate_config() -> bool:
 			return false
 		_offers[id]["sell_price"] = request.sell_price
 		_offers[id]["requested"] = request.quantity
+	var guaranteed: Dictionary = {}
+	for id: String in config.guaranteed_request_ids:
+		if guaranteed.has(id) or not seen.has(id):
+			return false
+		guaranteed[id] = true
+	if config.randomize_requests and guaranteed.size() > config.request_count_max:
+		return false
 	return not _offers.is_empty()
 
 func _sync_clock() -> void:
@@ -76,11 +83,33 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		_budget = config.starting_shekel
 		_stock.clear()
 		_demand.clear()
+		_add_missing_configured_offers()
 		_roll_visit_requests()
 		for id: String in _offers:
 			_stock[id] = int(_offers[id].stock)
 			_demand[id] = int(_offers[id].requested)
 	changed.emit()
+
+func _add_missing_configured_offers() -> void:
+	# Checkpoints retain the visit catalog. Adopt newly authored offers only at
+	# the next arrival so Continue never replenishes an already active visit.
+	# Existing offers (including their saved prices and quotas) remain intact.
+	var added: Dictionary = {}
+	for offer: Dictionary in config.offers:
+		var id: String = str(offer.item_id)
+		if not _offers.has(id):
+			_offers[id] = offer.duplicate(true)
+			_offers[id]["sell_price"] = 0
+			_offers[id]["requested"] = 0
+			added[id] = true
+	# A newly authored request may also be offered for purchase, or may be a
+	# request-only item. Give only new entries their authored sell price.
+	for request: Dictionary in config.requests:
+		var id: String = str(request.item_id)
+		if not _offers.has(id):
+			_offers[id] = {"stock": 0, "buy_price": 0, "sell_price": request.sell_price, "requested": 0}
+		elif added.has(id):
+			_offers[id]["sell_price"] = request.sell_price
 
 func _roll_visit_requests() -> void:
 	# Snapshot the chosen request set in this ledger, never in a scene/menu.
@@ -90,13 +119,37 @@ func _roll_visit_requests() -> void:
 	var count: int = pool.size()
 	if config.randomize_requests:
 		count = _request_rng.randi_range(config.request_count_min, config.request_count_max)
+	var selected: Array[String] = []
 	for index: int in range(count):
 		var picked: int = _request_rng.randi_range(0, pool.size() - 1) if config.randomize_requests else 0
 		var request: Dictionary = pool.pop_at(picked)
-		var quantity: int = request.quantity
-		if config.randomize_requests:
-			quantity = _request_rng.randi_range(int(request.get("quantity_min", quantity)), quantity)
-		_offers[str(request.item_id)].requested = quantity
+		_roll_request_quantity(request)
+		selected.append(str(request.item_id))
+	if config.randomize_requests:
+		# Keep the random selection, including a brick-only draw, then add any
+		# guaranteed request within the existing maximum. If a different config
+		# filled every slot, replace a non-guaranteed request instead.
+		for id: String in config.guaranteed_request_ids:
+			if selected.has(id):
+				continue
+			if selected.size() >= config.request_count_max:
+				for index: int in range(selected.size() - 1, -1, -1):
+					if not config.guaranteed_request_ids.has(selected[index]):
+						_offers[selected[index]].requested = 0
+						selected.remove_at(index)
+						break
+			for index: int in range(pool.size()):
+				if str(pool[index].item_id) == id:
+					var request: Dictionary = pool.pop_at(index)
+					_roll_request_quantity(request)
+					selected.append(id)
+					break
+
+func _roll_request_quantity(request: Dictionary) -> void:
+	var quantity: int = request.quantity
+	if config.randomize_requests:
+		quantity = _request_rng.randi_range(int(request.get("quantity_min", quantity)), quantity)
+	_offers[str(request.item_id)].requested = quantity
 
 func _is_visit_time(day: int, hour: int) -> bool:
 	return day >= config.first_day and (day - config.first_day) % config.interval_days == 0 and hour >= config.arrival_hour and hour < config.departure_hour

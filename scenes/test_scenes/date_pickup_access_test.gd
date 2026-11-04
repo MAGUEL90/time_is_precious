@@ -18,6 +18,8 @@ func run() -> void:
 	var player: Player = map.get_node("YSortWorld/Player")
 	# This fixture tests interaction and refill, not starvation during clock jumps.
 	player.debug_disable_player_needs = true
+	# Room for one cluster lets the test approach every slot independently.
+	Inventory.max_load = 0.11
 	var tree = map.get_node("YSortWorld/DatePalmTree")
 	var event := InputEventAction.new()
 	event.action = "interact"
@@ -29,6 +31,7 @@ func run() -> void:
 	expect(palms.size() == 6, "Integrated city retains six independent date palms")
 	for palm: Node in palms:
 		for slot in range(3):
+			Inventory.items.clear()
 			var pickup = palm._pickups[slot]
 			var ground: TileMapLayer = map.get_node("Ground/base2")
 			expect(ground.get_cell_source_id(ground.local_to_map(ground.to_local(pickup.global_position))) >= 0, "Date pickup is on authored land: " + str(palm.name))

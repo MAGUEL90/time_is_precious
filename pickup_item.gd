@@ -22,6 +22,10 @@ var icon_default_position: Vector2
 var icon_default_scale: Vector2
 var icon_default_modulate: Color
 var is_collecting: bool = false
+var _pickup_in_progress: bool = false
+## Authored sources may group an interaction while retaining individual pickups.
+var gather_handler: Callable
+var suppress_pickup_popup: bool = false
 var collecting_tween: Tween
 var shake_tween: Tween
 var is_player_in_interaction_range: bool = false
@@ -77,10 +81,17 @@ func _start_idle_float() -> void:
 
 # Collection Flow
 
+func on_player_gather(player: Player) -> void:
+	if gather_handler.is_valid():
+		gather_handler.call(player, self)
+	else:
+		on_player_interact(player)
+
 func on_player_interact(player: Player) -> void:
-	if is_collecting:
+	if is_collecting or _pickup_in_progress:
 		return
 
+	_pickup_in_progress = true
 	if Inventory != null and Inventory.has_method("try_add_item"):
 		var is_success: bool = Inventory.call("try_add_item", item_id, quantity)
 		if is_success:
@@ -97,7 +108,8 @@ func on_player_interact(player: Player) -> void:
 
 			collision_shape_2d.disabled = true
 			interactable_label_component.hide()
-			_spawn_pickup_popup(player)
+			if not suppress_pickup_popup:
+				_spawn_pickup_popup(player)
 
 			collecting_tween = create_tween()
 			collecting_tween.tween_property(self, "global_position", player.global_position, 0.1).set_ease(Tween.EASE_IN_OUT)
@@ -110,12 +122,13 @@ func on_player_interact(player: Player) -> void:
 
 	else:
 		print("Please double check")
+	_pickup_in_progress = false
 
-func _spawn_pickup_popup(player: Player) -> void:
+func _spawn_pickup_popup(player: Player, feedback_quantity: int = -1) -> void:
 	var item_popup = ITEM_CHANGE_POPUP_SCENE.instantiate()
 	get_tree().current_scene.add_child(item_popup)
 	item_popup.global_position = player.global_position + Vector2(0, -28)
-	item_popup.setup(item_id, quantity, true)
+	item_popup.setup(item_id, quantity if feedback_quantity < 0 else feedback_quantity, true)
 
 
 # Interaction Focus Feedback
