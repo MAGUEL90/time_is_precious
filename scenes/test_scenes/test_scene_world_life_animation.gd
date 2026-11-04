@@ -2,13 +2,12 @@ extends Node
 
 ## Isolated city fixture. Use a disposable XDG_DATA_HOME for every run.
 const CITY: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
-const DUST: Script = preload("res://scenes/worker_visual/clay_work_dust.gd")
-const WORKER_ID: String = "world_life_animation_fixture"
+const DUST: Script = preload("res://scenes/worker_visual/footstep_dust.gd")
+const RESIDENT_ID: String = "world_life_animation_fixture"
 var failures: int = 0
 var city: Node2D
 var visuals: Node2D
 var runtime: Node
-var worker: WorkerData
 var actor: Node2D
 var camera: Camera2D
 
@@ -48,7 +47,7 @@ func _run() -> void:
 	await get_tree().physics_frame
 	await get_tree().process_frame
 	await _test_palms()
-	await _test_work_dust()
+	await _test_footsteps()
 	if failures == 0:
 		print("WorldLifeAnimationTest PASSED")
 	else:
@@ -108,105 +107,204 @@ func _test_palms() -> void:
 	copy.queue_free()
 	await get_tree().process_frame
 	_check(palm.material == sway.sway_material and palm.state == state, "Removing a copy preserves the original palm.")
+	if camera != null and not OS.get_environment("TIP_ANIMATION_CAPTURE_DIR").is_empty():
+		city.get_node("TopHUD").hide()
+		city.get_node("BottomHUD").hide()
+		city.get_node("TimeDebugOverlay").visible = false
+		city.get_node("YSortWorld/InitialWorksites/JobBoard").hide()
 	await _capture_frames("palm", palm.global_position + Vector2(32, 10), 50)
 
 func _dust_count() -> int:
 	var count: int = 0
-	for child: Node in actor.get_children():
+	for child: Node in visuals.get_children():
 		if child.get_script() == DUST and not child.is_queued_for_deletion():
 			count += 1
 	return count
 
-func _dust() -> Node:
-	for child: Node in actor.get_children():
+func _dust() -> Node2D:
+	for child: Node in visuals.get_children():
 		if child.get_script() == DUST and not child.is_queued_for_deletion():
-			return child
+			return child as Node2D
 	return null
 
-func _assign_and_arrive(site_id: StringName) -> bool:
-	var assigned: bool = runtime.daily.toggle(site_id, WORKER_ID) and runtime.daily.start(site_id, func(_quantity: int) -> bool: return true)
-	_check(assigned, "Native assignment starts for " + str(site_id))
-	if not assigned:
-		return false
-	for _frame: int in range(4000):
-		if worker.physical_approach.get("arrived", false):
-			break
-		visuals._process(0.05)
-	_check(worker.physical_approach.get("arrived", false), "Worker physically arrives at " + str(site_id))
-	TimeComponentManager.advance_minutes(1)
-	visuals._process(0.05)
-	return worker.physical_approach.get("arrived", false)
-
-func _test_work_dust() -> void:
-	runtime.daily.tool_requirement = Callable()
-	worker = WorkerData.new()
-	worker.worker_id = WORKER_ID
-	worker.display_name = "Animation fixture"
-	worker.payroll_start_day = 20
-	worker.payroll_paid_from_day = 20
-	worker.payroll_paid_until_day = 23
-	worker.payroll_last_attempt_day = 20
-	worker.payroll_period_rate = 1
-	worker.payroll_contract_days = 3
-	worker.payroll_paid_start_minute = 20 * 1440 + 660
-	WorkerDatabase.workers_by_id[WORKER_ID] = worker
-	if not _assign_and_arrive(&"ClaySiteA"):
+func _test_footsteps() -> void:
+	var citizen := CitizenData.new()
+	citizen.citizen_id = RESIDENT_ID
+	citizen.display_name = "Animation fixture"
+	citizen.population_status = CitizenData.PopulationStatus.RESIDENT
+	citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	citizen.visual_profile = VisualProfile.new()
+	citizen.visual_profile.skin_tone = "tan"
+	citizen.visual_profile.clothes_id = "plain_worn_wrap"
+	citizen.visual_profile.hair_style = "black_male_01"
+	CitizenManager.add_citizen(citizen)
+	actor = visuals.actors.get(RESIDENT_ID)
+	_check(is_instance_valid(actor) and actor.is_visible_in_tree(), "A real resident gets one visible actor.")
+	if not is_instance_valid(actor):
 		return
-	actor = visuals.actors[WORKER_ID]
-	var initial_stock: int = runtime.daily.sites[&"ClaySiteA"].stock
-	var initial_units: int = int(runtime.daily.jobs[&"ClaySiteA"].units)
-	var initial_inventory: Dictionary = Inventory.items.duplicate(true)
-	visuals.work_cycles.erase(WORKER_ID)
-	visuals._process(0.05)
-	_check(visuals.work_cycles[WORKER_ID].phase == 0 and _dust_count() == 0, "Arrival idle has no work dust.")
-	for _step: int in range(60):
-		if _dust_count() > 0:
-			break
-		visuals._process(0.1)
-	_check(_dust_count() == 1 and visuals.work_cycles[WORKER_ID].phase == 1, "The first clay work stroke emits one bounded puff.")
-	for _step: int in range(3):
-		visuals._process(0.1)
-	_check(_dust_count() == 1, "Repeated updates in the same stroke do not duplicate the puff.")
-	_check(runtime.daily.sites[&"ClaySiteA"].stock == initial_stock and int(runtime.daily.jobs[&"ClaySiteA"].units) == initial_units and Inventory.items == initial_inventory, "The animation does not change stock, output, or inventory.")
-	var puff: Node = _dust()
-	if puff != null:
-		var before: float = puff.elapsed
-		var cycle_before: float = visuals.work_cycles[WORKER_ID].elapsed
-		TimeComponentManager.is_paused = true
-		visuals._process(1.0)
-		await get_tree().create_timer(0.2).timeout
-		_check(puff.elapsed == before and visuals.work_cycles[WORKER_ID].elapsed == cycle_before and _dust_count() == 1, "Clay dust and work visuals freeze with game time.")
-		TimeComponentManager.is_paused = false
-		SceneTransition.is_transitioning = true
-		visuals._process(1.0)
-		await get_tree().create_timer(0.2).timeout
-		_check(puff.elapsed == before and visuals.work_cycles[WORKER_ID].elapsed == cycle_before and _dust_count() == 1, "Clay dust and work visuals freeze during a scene transition.")
-		SceneTransition.is_transitioning = false
-		get_tree().paused = true
-		await get_tree().create_timer(0.2).timeout
-		_check(puff.elapsed == before, "Clay dust freezes when the tree pauses.")
-		get_tree().paused = false
-	# Capture the native clay assignment while it is still active.
-	visuals.work_cycles.erase(WORKER_ID)
-	visuals.set_process(true)
-	await _capture_frames("clay", actor.global_position, 85)
-	visuals.set_process(false)
-	_check(runtime.daily.withdraw(&"ClaySiteA", WORKER_ID), "The native clay assignment can stop.")
-	visuals._process(0.1)
-	await get_tree().create_timer(0.8).timeout
-	_check(_dust_count() == 0, "The last puff clears after work stops.")
-	for _step: int in range(20):
-		visuals._process(0.1)
-	_check(_dust_count() == 0, "Idle or roaming does not emit work dust.")
-	# Exercise the same visual phase with the water site's real session data;
-	# this does not create a second long-distance navigation journey.
-	visuals.work_cycles[WORKER_ID] = {"phase": 1, "elapsed": 0.0, "direction": "right", "dust_emitted": false,
-		"origin": actor.global_position, "target": actor.global_position, "idle": 1.0}
-	actor.show()
-	visuals._update_work_cycle(&"WaterSite", WORKER_ID, actor, actor.global_position, "right", 1.1)
-	_check(_dust_count() == 0, "The water work pose does not produce clay dust.")
-	visuals.work_cycles.erase(WORKER_ID)
+	var emitter: Node = actor.get_node_or_null("Footsteps")
+	_check(emitter != null, "The resident owns one footstep listener.")
+	if emitter == null:
+		return
+	var inventory_before: Dictionary = Inventory.items.duplicate(true)
+	var time_before: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	# Existing layers remain intact for every supported skin tone and both facings.
+	for tone: String in ["dark", "light", "tan", "warm"]:
+		for facing: String in ["left", "right"]:
+			for clothing: String in ["plain_worn_wrap", "clay_worn_wrap"]:
+				for hair: String in ["black_male_01", "red_female_03", "brown_male_02", "grey_female_01"]:
+					actor.skin_tone = tone
+					actor.clothes_id = clothing
+					actor.hair_style = hair
+					actor.accessory = "farmer_hat"
+					visuals._play(actor, "walk", facing)
+					_check(actor.body_sprite.animation == StringName(tone + "_walk_" + facing), "Walking retains the native body and facing.")
+					_check(actor.clothes_sprite.visible and actor.clothes_sprite.animation == StringName(clothing + "_walk_" + facing), "Walking retains the resident's clothes.")
+					_check(actor.hair_sprite.visible and actor.hair_sprite.animation == StringName(hair + "_walk_" + facing), "Walking retains the resident's hair.")
+					_check(actor.accessories_sprite.visible and actor.accessories_sprite.animation == StringName("farmer_hat_walk_" + facing), "Walking retains the resident's accessory.")
+					visuals._play(actor, "idle", facing)
+	actor.skin_tone = citizen.visual_profile.skin_tone
+	actor.clothes_id = citizen.visual_profile.clothes_id
+	actor.hair_style = citizen.visual_profile.hair_style
+	actor.accessory = citizen.visual_profile.accessory
+	visuals._play(actor, "walk", "right")
+	actor.body_sprite.pause()
+	actor.global_position += Vector2(6, 0)
+	actor.body_sprite.set_frame_and_progress(2, 0.0)
+	# Calling again proves that repeated requests on the same step cannot duplicate it.
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 1, "A moving right-facing walk step emits exactly one puff.")
+	var puff: Node2D = _dust()
+	if puff == null:
+		return
+	_check(puff.global_position.x < actor.global_position.x, "The right-facing puff stays behind the feet.")
+	var origin: Vector2 = puff.global_position
+	actor.global_position += Vector2(1, 0)
+	_check(puff.global_position == origin, "The puff remains on the ground when the actor moves on.")
+	var before: float = puff.elapsed
+	TimeComponentManager.is_paused = true
+	actor.global_position += Vector2(6, 0)
+	emitter._on_body_frame_changed()
+	await get_tree().create_timer(0.2).timeout
+	_check(puff.elapsed == before and _dust_count() == 1, "Game-time pause freezes existing dust and prevents new steps.")
+	TimeComponentManager.is_paused = false
+	SceneTransition.is_transitioning = true
+	emitter._on_body_frame_changed()
+	await get_tree().create_timer(0.2).timeout
+	_check(puff.elapsed == before and _dust_count() == 1, "Scene transitions freeze dust and prevent new steps.")
+	SceneTransition.is_transitioning = false
+	get_tree().paused = true
+	emitter._on_body_frame_changed()
+	await get_tree().create_timer(0.2).timeout
+	_check(puff.elapsed == before and _dust_count() == 1, "Tree pause freezes dust and prevents new steps.")
+	get_tree().paused = false
 	visuals._play(actor, "idle", "right")
+	actor.global_position += Vector2(6, 0)
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 1, "Idle cannot emit a new puff.")
+	await get_tree().create_timer(0.8).timeout
+	_check(_dust_count() == 0, "The last puff clears after walking stops.")
+	visuals._play(actor, "walk", "left")
+	actor.body_sprite.pause()
+	actor.global_position -= Vector2(6, 0)
+	actor.body_sprite.set_frame_and_progress(2, 0.0)
+	emitter._on_body_frame_changed()
+	puff = _dust()
+	_check(puff != null and puff.global_position.x > actor.global_position.x, "The left-facing puff stays behind the feet.")
+	if puff != null:
+		puff.queue_free()
+	await get_tree().process_frame
+	visuals._play(actor, "idle", "right")
+	visuals._play(actor, "walk", "right")
+	actor.body_sprite.pause()
+	actor.body_sprite.set_frame_and_progress(2, 0.0)
+	actor.hide()
+	actor.global_position += Vector2(6, 0)
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 0, "A hidden resident cannot emit footsteps.")
+	actor.show()
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 0, "Reappearing does not turn hidden travel into a fake step.")
+	actor.global_position += Vector2(6, 0)
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 1, "A visible step can emit after the resident reappears.")
+	puff = _dust()
+	if puff != null:
+		puff.queue_free()
+	await get_tree().process_frame
+	visuals._play(actor, "idle", "right")
+	visuals._play(actor, "walk", "right")
+	actor.body_sprite.pause()
+	actor.body_sprite.set_frame_and_progress(2, 0.0)
+	actor.global_position += Vector2(100, 0)
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 0, "A large scene or time-skip jump cannot create a fake step.")
+	actor.global_position += Vector2(6, 0)
+	emitter._on_body_frame_changed()
+	_check(_dust_count() == 1, "Normal steps resume after a jump.")
+	puff = _dust()
+	if puff != null:
+		puff.queue_free()
+	await get_tree().process_frame
+	_check(Inventory.items == inventory_before and time_before == TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute, "Footsteps do not mutate inventory or game time.")
+	_check(citizen.visual_profile.skin_tone == "tan" and citizen.visual_profile.clothes_id == "plain_worn_wrap" and citizen.visual_profile.hair_style == "black_male_01", "The saved citizen profile is unchanged.")
+	await _test_live_walking()
+	visuals.set_process(false)
+	_check(CitizenManager.leave_city(RESIDENT_ID), "The resident can leave normally.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(not is_instance_valid(actor) and not visuals.actors.has(RESIDENT_ID), "The visual and listener are retired with the resident.")
+
+func _test_live_walking() -> void:
+	var directory: String = OS.get_environment("TIP_ANIMATION_CAPTURE_DIR")
+	var capturing: bool = camera != null and not directory.is_empty()
+	# Capture-only staging: keep the real city and actor, hide HUD/board overlap.
+	if capturing:
+		city.get_node("TopHUD").hide()
+		city.get_node("BottomHUD").hide()
+		city.get_node("TimeDebugOverlay").visible = false
+		city.get_node("YSortWorld/InitialWorksites/JobBoard").hide()
+		city.get_node("YSortWorld/Player").hide()
+		city.get_node("YSortWorld/TravelingMerchant").hide()
+		city.get_node("YSortWorld/WorkshopPlot/Craftsman").hide()
+		runtime.get_node("WorksiteMarkers").hide()
+	for id: String in visuals.actors:
+		if id != RESIDENT_ID:
+			visuals.actors[id].hide()
+			if capturing:
+				visuals.actors[id].modulate.a = 0.0
+	var start: Vector2 = Vector2.INF
+	for y: int in [40, 60, 25, 0, -25, -50]:
+		for x: int in [0, 30, -40, -60, -80]:
+			var candidate: Vector2 = runtime.global_position + Vector2(x, y)
+			if runtime.worksite_navigation.segment_clear(candidate + Vector2(0, 16), candidate + Vector2(80, 16)):
+				start = candidate
+				break
+		if start != Vector2.INF:
+			break
+	_check(start != Vector2.INF, "An unobstructed native walk route is available for capture.")
+	if start == Vector2.INF:
+		return
+	actor.global_position = start
+	actor.show()
+	visuals._play(actor, "idle", "right")
+	visuals.roaming[RESIDENT_ID] = {"target": start + Vector2(80, 0), "idle": 0.0, "direction": "right"}
+	visuals.set_process(true)
+	if capturing:
+		DirAccess.make_dir_recursive_absolute(directory.path_join("footsteps"))
+		camera.zoom = Vector2(3, 3)
+	var saw_puff: bool = false
+	for index: int in range(80 if capturing else 25):
+		await get_tree().create_timer(0.1).timeout
+		saw_puff = saw_puff or _dust_count() > 0
+		if capturing:
+			camera.global_position = actor.global_position
+			camera.force_update_scroll()
+			await RenderingServer.frame_post_draw
+			var frame: Image = get_viewport().get_texture().get_image()
+			_check(frame.save_png(directory.path_join("footsteps").path_join("%04d.png" % index)) == OK, "Save footstep animation frame.")
+	_check(actor.global_position.distance_to(start) > 8.0 and saw_puff, "The actual resident roaming cycle moves and emits footsteps.")
+	_check(actor.clothes_sprite.visible and actor.hair_sprite.visible, "The naturally walking resident retains hair and clothes.")
 
 func _capture_frames(name: String, center: Vector2, count: int) -> void:
 	var directory: String = OS.get_environment("TIP_ANIMATION_CAPTURE_DIR")

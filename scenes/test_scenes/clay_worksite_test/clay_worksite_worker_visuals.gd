@@ -1,7 +1,7 @@
 extends Node2D
 
 const VISUAL = preload("res://scenes/worker_visual/base_worker_visual.tscn")
-const CLAY_WORK_DUST = preload("res://scenes/worker_visual/clay_work_dust.gd")
+const FOOTSTEPS = preload("res://scenes/worker_visual/footstep_emitter.gd")
 var actors: Dictionary = {}
 var last_minute: int = -1
 var fraction: float = 0.0
@@ -185,7 +185,7 @@ func _process(delta: float) -> void:
 				_play(actor, "walk", direction)
 			elif schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				roaming.erase(id)
-				_update_work_cycle(site_id, id, actor, destination, direction, delta)
+				_update_work_cycle(id, actor, destination, direction, delta)
 			else:
 				work_cycles.erase(id)
 				_roam(id, actor, delta)
@@ -256,7 +256,7 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	actor.show()
 	if state.arrived:
 		if schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
-			_update_work_cycle(site_id, id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta)
+			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta)
 		else:
 			work_cycles.erase(id)
 			_play(actor, "idle", "right")
@@ -323,6 +323,9 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	for child: Node in actor.get_children():
 		if child is AnimatedSprite2D:
 			child.reparent(foot, true)
+	var footsteps: Node = FOOTSTEPS.new()
+	footsteps.name = "Footsteps"
+	actor.add_child(footsteps)
 	actor.y_sort_enabled = true
 	if not is_instance_valid(resident_spawn):
 		_apply_work_identity(actor)
@@ -356,6 +359,9 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.
+	var footsteps: Node = actor.get_node_or_null("Footsteps")
+	if footsteps != null:
+		footsteps.set_walking(action == "walk", direction)
 	actor.play_visual(actor.skin_tone, actor.expression, action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
 	var foot: Node = actor.get_node_or_null("FootSort")
 	if foot != null:
@@ -363,14 +369,14 @@ func _play(actor: Node2D, action: String, direction: String) -> void:
 			if child is AnimatedSprite2D:
 				child.reparent(foot, true)
 
-func _update_work_cycle(site_id: StringName, id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
+func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
 	if _reed_working(id):
 		work_cycles.erase(id)
 		return
 	if not work_cycles.has(id):
 		if not get_parent().has_method("site_approach_task"):
 			actor.global_position = center
-		work_cycles[id] = {"phase": 0, "elapsed": 0.0, "direction": direction, "dust_emitted": false,
+		work_cycles[id] = {"phase": 0, "elapsed": 0.0, "direction": direction,
 			"origin": actor.global_position, "target": actor.global_position, "idle": rng.randf_range(idle_min_seconds, idle_max_seconds)}
 		# Arrival gets a full idle pause, even after a game-time skip.
 		delta = 0.0
@@ -380,7 +386,6 @@ func _update_work_cycle(site_id: StringName, id: String, actor: Node2D, center: 
 	while cycle.elapsed >= duration:
 		cycle.elapsed -= duration
 		cycle.phase = 1 if cycle.phase == 5 else int(cycle.phase) + 1
-		cycle.dust_emitted = false
 		cycle.idle = rng.randf_range(idle_min_seconds, idle_max_seconds)
 		if cycle.phase == 2:
 			cycle.direction = "right" if cycle.direction == "left" else "left"
@@ -406,15 +411,6 @@ func _update_work_cycle(site_id: StringName, id: String, actor: Node2D, center: 
 		for layer: AnimatedSprite2D in [actor.body_sprite, actor.head_sprite]:
 			layer.stop()
 			layer.set_frame_and_progress(frame, 0.0)
-		if not cycle.dust_emitted and cycle.elapsed >= 3.0 / maxf(actor.anim_speed, 0.01):
-			cycle.dust_emitted = true
-			var site = get_parent().daily.sites.get(site_id)
-			if site != null and site.item_id == "clay_lump" and actor.is_visible_in_tree():
-				var dust: Node2D = CLAY_WORK_DUST.new()
-				actor.add_child(dust)
-				dust.position = FEET_OFFSET + Vector2(-6 if cycle.direction == "left" else 6, -2)
-				dust.scale = Vector2(0.75, 0.75)
-				dust.modulate = Color(0.95, 0.78, 0.65)
 
 func _phase_duration(cycle: Dictionary, actor: Node2D) -> float:
 	if cycle.phase == 1 or cycle.phase == 2:
