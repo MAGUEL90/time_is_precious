@@ -123,8 +123,9 @@ func _test_read() -> void:
 		and not WorkerDatabase.has_worker_data(HAULER_ID) and ready_notifications == 1,
 		"The original load is accepted once and the hauler resigns synchronously despite recovery.")
 	_expect(not runtime.daily.pending_output.has(FAILED_DROP_SITE)
-		and runtime._daily_output_count(FAILED_DROP_SITE) == 2,
-		"Previously undroppable output reaches the restored ground exactly once.")
+		and runtime._daily_output_count(FAILED_DROP_SITE) == 0
+		and int(city_storage.items.get("clay_lump", 0)) == 2,
+		"Previously undeliverable output reaches City Storage exactly once after Continue.")
 	_expect(not city_storage.has_equipped(HAULER_ID, "cart")
 		and int(WorkerDatabase.dismissed_workers[HAULER_ID].profession_xp) == 3,
 		"Delivery XP and released city equipment survive the final departure.")

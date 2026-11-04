@@ -61,6 +61,23 @@ func _run() -> void:
 	if original_bytes.is_empty() or _sha256(original_bytes) != FIXTURE_HASHES[fixture_case]:
 		_abort("The synthetic pre-removal checkpoint is missing or has an unexpected hash.")
 		return
+	if fixture_case != "stocked":
+		# The latest authored map moved this unrelated Laborer's destination.
+		# Clear it only in this synthetic copy so the separate Hauler migration
+		# can be exercised; the original must still fail safe below.
+		var document: Dictionary = JSON.parse_string(original_bytes.get_string_from_utf8())
+		var codec = MIGRATION_VALUES.new()
+		var raw: Dictionary = codec.decode(document.state)
+		var worker: WorkerData = raw.workers.workers_by_id.get(LABORER_ID)
+		if worker == null or worker.physical_approach.get("owner") != "WoodSite":
+			_abort("The synthetic checkpoint does not have its expected old-map Laborer approach.")
+			return
+		worker.physical_approach = {}
+		document.state = codec.encode(raw)
+		if not codec.error.is_empty():
+			_abort("Could not encode the isolated old-map diagnostic copy.")
+			return
+		original_bytes = (JSON.stringify(document, "\t", true, true) + "\n").to_utf8_buffer()
 	evidence = {
 		"saved_inventory": {"shekel": 3} if fixture_case == "stocked" else {},
 		"saved_city_storage_items": {"barley_bread": 12, "simple_clothes": 3} if fixture_case == "stocked" else {"barley_bread": 9},
@@ -87,11 +104,18 @@ func _run() -> void:
 	await _load_root_city()
 	player.debug_disable_player_needs = true
 	player.debug_disable_fatigue = true
+	if fixture_case != "stocked":
+		var live_before: Dictionary = store.snapshot.capture(content)
+		var source_document: Dictionary = JSON.parse_string(_fixture_bytes().get_string_from_utf8())
+		_expect(not store.snapshot.prepare(source_document, content)
+			and store.snapshot.error == "Worker physical approach differs from its authored site."
+			and _same_snapshot(store.snapshot.capture(content), live_before),
+			"The unmodified old-map worker target is rejected without changing the live game.")
 	store.disk.path = test_path
 	store.refresh_checkpoint_slot()
 	for attempt: int in range(2):
 		if not store.load_checkpoint():
-			_abort("Legacy load failed on attempt %d: " % attempt + store.last_error)
+			_abort("Legacy load failed on attempt %d: " % attempt + store.last_error + " (" + store.snapshot.error + ")")
 			return
 		ui.close_details()
 		_assert_initial_state("old load %d" % attempt)
@@ -105,7 +129,8 @@ func _run() -> void:
 		_abort("Cannot write upgraded checkpoint: " + store.last_error)
 		return
 	var upgraded: Variant = JSON.parse_string(FileAccess.get_file_as_string(test_path))
-	_expect(upgraded is Dictionary and int(upgraded.get("schema_version", -1)) == 14, "Explicit Save writes schema 14.")
+	_expect(upgraded is Dictionary and int(upgraded.get("schema_version", -1)) == store.snapshot.VERSION,
+		"Explicit Save writes the current schema.")
 	_expect(FileAccess.get_file_as_bytes(test_path + ".bak") == original_bytes, "The first upgrade retains the exact old checkpoint in the backup.")
 	for attempt: int in range(2):
 		if not store.load_checkpoint():
@@ -252,10 +277,14 @@ func _test_final_route() -> void:
 			and not remaining_worker.is_reserved(), "The released Hauler remains hired with the same contract.")
 		_expect(city_storage.has_equipped(HAULER_ID, "cart"), "The retained worker keeps the assigned cart.")
 	_expect(not runtime.hauling.routes.has(HAULER_ID), "The completed legacy assignment has no remaining route.")
+	var city_before_extra: int = int(city_storage.items.get("wood_log", 0))
+	var site_before_extra: int = int(runtime.sites[WOOD_SITE].stock)
 	_expect(TimeComponentManager.advance_minutes(15), "Further time can pass without a new Hauler task.")
-	_expect(not runtime.hauling.routes.has(HAULER_ID) and int(city_storage.items.get("wood_log", 0)) == expected_city
+	var city_after_extra: int = int(city_storage.items.get("wood_log", 0))
+	_expect(not runtime.hauling.routes.has(HAULER_ID)
+		and city_after_extra - city_before_extra == site_before_extra - int(runtime.sites[WOOD_SITE].stock)
 		and delivery_events == expected_delivery_events and resignation_events == (1 if expect_resignation else 0),
-		"Extra ticks cannot repeat the final delivery, resignation, or start a task.")
+		"Extra ticks cannot repeat the final delivery or resignation; new laborer output is conserved in city stock.")
 	var final_worker: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)
 	if final_worker == null:
 		final_worker = WorkerDatabase.dismissed_workers.get(HAULER_ID)
@@ -268,7 +297,7 @@ func _test_final_route() -> void:
 		return
 	ui.close_details()
 	_assert_totals("after completed route Continue")
-	_expect(not runtime.hauling.routes.has(HAULER_ID) and int(city_storage.items.get("wood_log", 0)) == expected_city,
+	_expect(not runtime.hauling.routes.has(HAULER_ID) and int(city_storage.items.get("wood_log", 0)) == city_after_extra,
 		"Continue cannot recreate the completed route or repeat its receipt.")
 
 

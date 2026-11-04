@@ -26,7 +26,7 @@ func _run() -> void:
 	WorkerDatabase.get_worker_data(PRODUCTION_ID).profession_xp = 17
 	_select_house_path(test_root.path_join("player_house.json"))
 	var baseline: Dictionary = store.snapshot.capture(content)
-	_expect(store.snapshot.VERSION == 14 and store.snapshot.prepare(baseline, content),
+	_expect(store.snapshot.VERSION == 15 and store.snapshot.prepare(baseline, content),
 		"The current world validates before the player begins work.")
 	var values = MIGRATION_VALUES.new()
 	var legacy: Dictionary = baseline.duplicate(true)

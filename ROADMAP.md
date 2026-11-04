@@ -19,6 +19,24 @@ Other documents have different jobs:
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
 
+## Direct worksite supply — branch under review (2026-11-04)
+
+The Game Director's latest direction sends Daily worker worksite output directly to
+City Storage; manual player gathering continues to supply personal construction
+materials. The city store retains its existing effectively unbounded temporary
+capacity. This branch implements and tests that handoff and non-destructive old-save
+migration; it has not yet received human acceptance or been merged.
+Workshop and house plots already consume personal Inventory. The existing city wall
+and Watchtower systems still consume City Storage; whether the new construction
+instruction also covers those city defenses needs to be resolved before treating
+all construction costs as player-funded.
+
+Haulers are limited by the new direction to storage-to-storage transport. No new
+worksite Hauler task is exposed. A usable storage-to-storage route remains unfinished:
+the city-owned and personal workshop inventories need separate ownership and transfer
+rules, and the current map has no second city-owned storage endpoint. Do not interpret
+the retained old-save final-delivery code as a new route.
+
 ## Current merged baseline — PR #115 (2026-10-18)
 
 The current baseline includes PR #114 (gameplay/main integration, merge commit

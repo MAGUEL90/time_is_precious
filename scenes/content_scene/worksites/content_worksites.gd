@@ -264,6 +264,13 @@ func _update_parked_plot_geometry(state_id: int, previous: String, next: String)
 		visuals.plot_presence.states.clear()
 	return true
 
+## New worker production is received once by City Storage. Old ground piles
+## and returned legacy cargo still use _drop_daily_output and remain collectable.
+func _deliver_daily_output(quantity: int, site: Marker2D) -> bool:
+	if not is_instance_valid(site) or not sites.has(site.name) or not is_instance_valid(city_tools):
+		return false
+	return bool(city_tools.try_add_worksite_output(str(sites[site.name].item_id), quantity))
+
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if site.name != &"ReedSite":
 		return super._drop_daily_output(quantity, site)
@@ -458,7 +465,7 @@ func _restore_resource_stock() -> void:
 		var site_id := StringName(saved_id)
 		if sites.has(site_id):
 			daily.pending_output[site_id] = {"quantity": int(snapshot.pending_output[saved_id]),
-				"drop": _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))}
+				"drop": _deliver_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))}
 	for saved_id: Variant in snapshot.get("pending_progress", {}):
 		var site_id := StringName(saved_id)
 		if sites.has(site_id):

@@ -421,7 +421,15 @@ func has_capacity_for(item_id: String, quantity: int) -> bool:
 	return _can_receive_item(item_id, quantity)
 
 func try_add_item(item_id: String, quantity: int) -> bool:
-	if not has_capacity_for(item_id, quantity):
+	return _try_add_item(item_id, quantity, false)
+
+## Daily worksite production belongs to the city. Its authored resource may be
+## raw material, so this path is separate from player deposits and deliveries.
+func try_add_worksite_output(item_id: String, quantity: int) -> bool:
+	return _try_add_item(item_id, quantity, true)
+
+func _try_add_item(item_id: String, quantity: int, worksite_output: bool) -> bool:
+	if not _can_receive_item(item_id, quantity, worksite_output):
 		return false
 	var next_units: Dictionary = units.duplicate(true)
 	var next_items: Dictionary = items.duplicate(true)
@@ -673,10 +681,10 @@ func _get_available_quantity(item_id: String) -> int:
 		return 0
 	return int(stored_quantity)
 
-func _can_receive_item(item_id: String, quantity: int) -> bool:
+func _can_receive_item(item_id: String, quantity: int, worksite_output: bool = false) -> bool:
 	if _transfer_in_progress or item_id.is_empty() or quantity <= 0:
 		return false
-	if not accepts_item(item_id):
+	if ItemDatabase.get_item_data(item_id) == null or (not worksite_output and not accepts_item(item_id)):
 		return false
 	if not _has_valid_counted_stacks():
 		return false

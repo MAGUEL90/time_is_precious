@@ -16,6 +16,19 @@ func _run() -> void:
 			and user_root.begins_with(data_root.simplify_path().trim_suffix("/") + "/"), "Use an isolated absolute XDG_DATA_HOME.")
 	var source: PackedByteArray = FileAccess.get_file_as_bytes(CITY_SOURCE).decompress_dynamic(1000000, FileAccess.COMPRESSION_GZIP)
 	_expect(not source.is_empty() and _sha256(source) == CITY_SHA256, "The synthetic city-outbound checkpoint has the expected v12 hash.")
+	# As in the Job Board compatibility fixture, clear an unrelated old-map
+	# Laborer approach only in this test copy; never rewrite the source file.
+	var document: Dictionary = JSON.parse_string(source.get_string_from_utf8())
+	var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
+	var raw: Dictionary = codec.decode(document.state)
+	var old_laborer: WorkerData = raw.workers.workers_by_id.get("initial_workshop_laborer")
+	_expect(old_laborer != null and old_laborer.physical_approach.get("owner") == "WoodSite",
+		"The synthetic checkpoint contains the expected old-map Laborer approach.")
+	if not stopped:
+		old_laborer.physical_approach = {}
+		document.state = codec.encode(raw)
+		_expect(codec.error.is_empty(), "The isolated delivery test copy encodes.")
+		source = (JSON.stringify(document, "\t", true, true) + "\n").to_utf8_buffer()
 	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
 		_expect(not FileAccess.file_exists(CITY_SAVE + suffix), "Refuse to overwrite an existing isolated checkpoint.")
 	if stopped:

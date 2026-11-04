@@ -22,7 +22,7 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `workshop_resignation_shift_test.tscn` | Shaping shift, zero/pending eligibility, replacement, unlocated legacy work and transactional callbacks |
 | `workshop_resignation_continue_test.tscn` | Real city checkpoint: `-- --workshop-resignation-phase=write`, `read`, `finish` in three processes |
 | `test_scene_resignation_menu_continue.tscn` | Actual Start Menu Continue for the preceding workshop checkpoint immediately after its `write` phase |
-| `test_scene_worksite_resignation_continue.tscn` | In-flight delivery and retained ground output: `-- --resign-phase=write`, then `read` |
+| `test_scene_worksite_resignation_continue.tscn` | Legacy in-flight delivery and retained worker output: `-- --resign-phase=write`, then `read` |
 | `test_scene_worksite_midnight_continue.tscn` | Gathering fraction, midnight resignation and replacement: `-- --midnight-phase=write`, then `read` |
 | `clay_worksite_test/test_scene_worksite_resignation.tscn` | Worksite reentry, pending delivery, tools, ground output and replacement progress |
 | `test_scene_passive_drying_shift.tscn` | Real passive drying across 15:00 and midnight without a worker |
@@ -34,6 +34,13 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `test_scene_review_default_save.tscn` | With `TIP_ISOLATED_DATA_ROOT` set to a fresh absolute data root, run `-- --review-save=write`, `read`, then `restart`; checks the distinct map slot and unchanged synthetic old save/recovery files |
 | `test_scene_review_resource_paths.tscn` | Actual player pickup and worker path clearance at each of the five temporary resource sites |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
+
+`test_scene_no_stockpile_flow.tscn` exercises the current Daily-worker-to-city
+handoff, existing player-owned construction inputs, full-stack refusal and retry,
+v14 unsettled-output migration and home/Continue conservation. Run its
+`-- --stockpile-phase=write`, `read`, `verify` phases in order with the same fresh
+isolated data directory. It grants ten Shekels for fixture hires; this is not an
+unassisted normal-game playthrough.
 
 The multi-day needs journey is a controlled fixture, not an unassisted run. It
 grants wallet funds and construction materials, seeds the first hired worker at
@@ -73,19 +80,18 @@ See `docs/task_reports/prepaid-worker-contracts-2026-10-23.md` for evidence and 
 | Scene | Coverage |
 | --- | --- |
 | `main_map_worker_hub_test.tscn` | Current `WorkerRuntime`, K/J modal controls and pause release |
-| `main_map_hauler_start_test.tscn` | Current-map hiring, Cart equipment ownership, reload and dismissal |
+| `main_map_hauler_start_test.tscn` | Historical worksite-Hauler onboarding; current recruitment and worksite rules differ |
 | `debug_production_flow_test.tscn` | Current-map construction and two production cycles using explicit debug supplies |
 | `workshop_label_presentation_test.tscn` | BUILD WORKSHOP margins, keyboard Cancel, worker scrolling, building labels, contract-expiry feedback and completed-workshop E; optional rendered captures via `TIP_MVP_CAPTURE_DIR` |
 | `mudbrick_production_chain_integration_test.tscn` | Held output, rejected empty-wallet payment, fee payment, drying and overdue fees |
 | `population_employment_integration_test.tscn` | Population/employment separation and worker lifecycle |
 
-The current PR #115 map has Clay, Wood, Reed, Straw and Water worksites and
-matching stockpiles under `YSortWorld/WorkerRuntime`. The earlier no-resource-map
-statement described the 2026-10-03 authoring checkpoint. Some worksite tests still
-use `fixtures/content_worksites_map.tscn` or isolated Clay fixtures:
-`resource_worksites_test.tscn` covers resource hauling and withdrawal, while
-`initial_workshop_start_test.tscn` covers gathering, hiring and construction.
-Their fixture setups do not prove the complete current-map economy from zero.
+The current map has Clay, Wood, Reed, Straw and Water worksites under
+`YSortWorld/WorkerRuntime`, but the earlier per-resource stockpiles were removed.
+`resource_worksites_test.tscn` explicitly enables the retired stockpile/Hauler
+behavior on `fixtures/content_worksites_map.tscn`; it is compatibility coverage,
+not a current gameplay route. `initial_workshop_start_test.tscn` covers gathering,
+hiring and construction. These fixtures do not prove the complete economy from zero.
 
 ## Audit regression cases
 
@@ -96,7 +102,7 @@ Their fixture setups do not prove the complete current-map economy from zero.
 | `test_scene_negotiation_needs.tscn` | Negotiation applies only the configured elapsed-time needs costs |
 | `test_scene_inventory_modal_pause.tscn` | Inventory shortcuts, repeated open/close, underlying Workshop pause and exit cleanup |
 | `test_scene_worker_rehire_regression.tscn` | Actual midnight reapplication, preserved profession/XP, first-time defaults and eligibility |
-| `test_scene_city_storage_overflow.tscn` | Atomic deposit/cargo rejection above the integer limit and exact-limit success |
+| `test_scene_city_storage_overflow.tscn` | Atomic deposit, cargo and worksite receipt at the integer limit |
 | `clay_worksite_test/test_scene_clay_worksite_teardown.tscn` | In-flight owner removal, cancellation, freed Player and payout reentry conservation |
 | `test_scene_clock_state_broadcast.tscn` | State refresh updates the time label without needs drain, duplicated work or day ticks; real minute/midnight advancement still works |
 | `test_scene_transition_timing.tscn` | Actual Home ExitDoor transition, movement on both sides of the fade, failed transition restrictions, playable Nightmare timing and return |
