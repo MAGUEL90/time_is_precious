@@ -1,5 +1,11 @@
 # Integrasi logistik, worker, animasi dan kebutuhan — 2026-11-04
 
+> Pembaruan setelah laporan awal: asumsi sementara Daily/Hourly telah diberikan,
+> dan perjalanan kebutuhan berikut Continue telah lulus. Lihat
+> [pembaruan playability](playability-integration-2026-11-04.md) untuk hasil,
+> bukti tambahan, dan keterbatasan terbaru. Status di bawah merekam keadaan
+> sebelum pembaruan tersebut.
+
 Status: **PARTIAL — NEEDS HUMAN REVIEW**. Semua hasil final tim sudah digabung
 di branch integrasi cloud, tetapi perjalanan kebutuhan standar belum lulus karena
 aturan hasil kerja Hourly dan kepemilikan barang kota memerlukan keputusan.

@@ -121,6 +121,7 @@ func _write_flow() -> void:
 	var found_item: bool = _select_metadata(dialog.item_option, ITEM_ID)
 	_expect(found_worker and found_item, "The panel lists the cart-equipped worker and city-owned logs.")
 	dialog.quantity_spin.value = 3
+	await _capture_haul_ui("ready")
 	var probe: Dictionary = {"calls": 0, "conserved": true, "reentered": false}
 	var observe_pickup := func():
 		probe.calls += 1
@@ -132,6 +133,8 @@ func _write_flow() -> void:
 	_expect(int(probe.calls) > 0 and bool(probe.conserved) and not bool(probe.reentered), "Pickup observers see exactly one stock owner and cannot reenter the route or advance time.")
 	_expect(not transport.route.is_empty() and transport.route.worker_id == WORKER_ID and int(transport.route.quantity) == 3, "The real Start button creates an outbound three-log cargo.")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 0 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "Pickup moves city stock to cargo once, without touching player stock.")
+	_expect(dialog.start_button.disabled and not dialog.cancel_button.disabled and dialog.route_label.text.contains("x3"), "The active panel shows its cargo and offers cancellation.")
+	await _capture_haul_ui("active")
 	_expect(not central.release("initial_worksite_cart", WORKER_ID) and central.has_equipped(WORKER_ID, "cart"), "The active courier's cart cannot be removed mid-shipment.")
 	dialog.close()
 	access.close()
@@ -199,7 +202,23 @@ func _read_flow() -> void:
 	print("Transport flow: reverse delivery completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 5 and int(annex.items.get(ITEM_ID, 0)) == 1, "A second trip moves two logs back to Central Storage.")
 	_expect(transport.start(WORKER_ID, "annex", ITEM_ID, 1), "A third shipment can be scheduled.")
-	_expect(transport.cancel(), "Cancellation requests a safe return.")
+	await interact(area)
+	access = area.menu
+	_expect(is_instance_valid(access), "The annex board reopens while cargo is in transit.")
+	if stopped:
+		return
+	await press(access.haul_button)
+	dialog = access.haul_ui
+	_expect(is_instance_valid(dialog) and not dialog.cancel_button.disabled, "The active hauling panel offers cancellation.")
+	if stopped:
+		return
+	await press(dialog.cancel_button)
+	_expect(str(transport.route.get("phase", "")) == "returning" and int(transport.route.get("quantity", 0)) == 1,
+		"The actual Cancel Route button requests a safe loaded return.")
+	await _capture_haul_ui("cancelled")
+	dialog.close()
+	access.close()
+	await _frames()
 	await _finish_route()
 	print("Transport flow: cancellation completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 5 and int(annex.items.get(ITEM_ID, 0)) == 1 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "Cancellation returns the cargo to its source without duplication or player debit.")
@@ -224,6 +243,16 @@ func _read_flow() -> void:
 	await _finish_route()
 	print("Transport flow: refused delivery retried")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 4 and int(annex.items.get(ITEM_ID, 0)) == 2 and int(Inventory.items.get(ITEM_ID, 0)) == 4 and WorkerDatabase.get_worker_data(WORKER_ID).profession_xp == xp_before + 1, "A refused delivery retries once and awards one Hauler XP after capacity is freed.")
+	# Daily receipts include these resources even though the city does not
+	# accept every one as a personal deposit. Exercise actual city-to-city
+	# transport rather than assuming the wood route covers the other goods.
+	for resource_id: String in ["clay_lump", "reed_bundle", "straw_bundle", "water_jar"]:
+		var owned_before: int = int(Inventory.items.get(resource_id, 0))
+		_expect(central.try_add_worksite_output(resource_id, 1), "The city receives one fixture worksite output: " + resource_id)
+		_expect(transport.available_items("city").has(resource_id) and transport.start(WORKER_ID, "city", resource_id, 1), "The courier picks up the city-owned output: " + resource_id)
+		await _finish_route()
+		_expect(int(central.items.get(resource_id, 0)) == 0 and int(annex.items.get(resource_id, 0)) == 1 and int(Inventory.items.get(resource_id, 0)) == owned_before,
+			"The non-wood shipment arrives exactly once without taking player goods: " + resource_id)
 	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 1), "Start a shipment before worker resignation.")
 	var citizen: CitizenData = CitizenManager.get_citizen(WORKER_ID)
 	_expect(citizen != null, "The courier has its real citizen record.")
@@ -236,6 +265,15 @@ func _read_flow() -> void:
 	print("Transport flow: resignation cargo settled")
 	await _frames()
 	_expect(not WorkerDatabase.has_worker_data(WORKER_ID) and int(central.items.get(ITEM_ID, 0)) + int(annex.items.get(ITEM_ID, 0)) == 6 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "A resigning courier settles city cargo before leaving, without loss or player debit.")
+
+func _capture_haul_ui(label: String) -> void:
+	var directory: String = OS.get_environment("TIP_HAUL_CAPTURE_DIR")
+	if directory.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	DirAccess.make_dir_recursive_absolute(directory)
+	await RenderingServer.frame_post_draw
+	_expect(get_viewport().get_texture().get_image().save_png(directory.path_join("haul-" + label + ".png")) == OK,
+		"Capture the real hauling panel: " + label)
 
 func _finish_route() -> void:
 	for _minute: int in range(600):

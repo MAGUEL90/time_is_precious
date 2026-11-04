@@ -95,6 +95,79 @@ func build_route(door_target: bool) -> void:
 				solid = true
 			route.set_point_solid(Vector2i(x, y), solid)
 
+func _pickup_approach(pickup: PickUpItem) -> Vector2:
+	# A fruit's visual center can overlap authored solid scenery even though its
+	# interaction area is reachable from the side. Never force that blocked cell
+	# open: choose an actual collision-clear approach inside the pickup radius.
+	var candidates: Array[Vector2] = []
+	for radius: float in [0.0, 3.0, 6.0, 8.0]:
+		for angle_index: int in range(8):
+			candidates.append(pickup.global_position + Vector2(0, -2) + Vector2.from_angle(angle_index * TAU / 8.0) * radius)
+	return _reachable_approach(candidates, pickup.global_position)
+
+func _site_approach(marker: Marker2D, avoided: Array[Vector2] = []) -> Vector2:
+	# Site art can be solid at the marker itself. E works within 32 pixels;
+	# choose a clear point that is also closer to this site than its neighbours.
+	var candidates: Array[Vector2] = []
+	for radius: float in [12.0, 16.0, 20.0, 24.0, 28.0]:
+		for angle_index: int in range(16):
+			var candidate: Vector2 = marker.global_position + Vector2.from_angle(angle_index * TAU / 16.0) * radius
+			var nearest: bool = true
+			for obstruction: Vector2 in avoided:
+				if candidate.distance_to(obstruction) < 20.0:
+					nearest = false
+					break
+			for other: Marker2D in runtime.get_node("WorksiteMarkers").get_children():
+				if other != marker and candidate.distance_to(other.global_position) <= radius:
+					nearest = false
+					break
+			if nearest:
+				candidates.append(candidate)
+	return _reachable_approach(candidates, marker.global_position)
+
+func walk_to_site(marker: Marker2D) -> void:
+	# Nearby pickups receive E before the worksite. Walk around them rather
+	# than bypassing the player's ordinary interaction selection.
+	var avoided: Array[Vector2] = []
+	for _attempt: int in range(12):
+		var approach: Vector2 = _site_approach(marker, avoided)
+		_expect(approach != Vector2.INF, "A collision-clear, unfocused worksite approach exists")
+		if stopped:
+			return
+		await walk(approach)
+		if stopped:
+			return
+		if not is_instance_valid(player.current_interactable) and not runtime._pickup_focused:
+			return
+		if player.current_interactable is Node2D:
+			avoided.append((player.current_interactable as Node2D).global_position)
+		else:
+			await _frames(3)
+	_expect(false, "A worksite approach does not focus another interactable")
+
+func _reachable_approach(candidates: Array[Vector2], target: Vector2) -> Vector2:
+	build_route(false)
+	var start := Vector2i((player.global_position / 8).round())
+	route.set_point_solid(start, false)
+	var best: Vector2 = Vector2.INF
+	var best_cost: float = INF
+	for candidate: Vector2 in candidates:
+		var cell := Vector2i((candidate / 8).round())
+		if not route.is_in_boundsv(cell) or route.is_point_solid(cell):
+			continue
+		var cell_position := Vector2(cell) * 8.0
+		if player.test_move(Transform2D(0, candidate), Vector2(0.01, 0)) \
+			or player.test_move(Transform2D(0, cell_position), candidate - cell_position):
+			continue
+		var points: PackedVector2Array = route.get_point_path(start, cell)
+		if points.is_empty():
+			continue
+		var cost: float = points.size() * 8.0 + candidate.distance_to(target)
+		if cost < best_cost:
+			best = candidate
+			best_cost = cost
+	return best
+
 func walk(target: Vector2, door_target: bool = false) -> void:
 	if stopped:
 		return
@@ -117,13 +190,18 @@ func walk(target: Vector2, door_target: bool = false) -> void:
 			release_input()
 			if absf(delta.x) > 0.7:
 				Input.action_press("move_right" if delta.x > 0 else "move_left")
-			if absf(delta.y) > 0.7:
+			elif absf(delta.y) > 0.7:
 				Input.action_press("move_down" if delta.y > 0 else "move_up")
 			var before: Vector2 = player.global_position
 			await get_tree().physics_frame
 			walked += before.distance_to(player.global_position)
 			frames += 1
 			if player.is_collapsing or frames > 240:
+				var collision := KinematicCollision2D.new()
+				var blocked: bool = player.test_move(player.global_transform, delta.normalized() * 2.0, collision)
+				print("MVP_ROUTE_DIAGNOSTIC ", {"target": target, "waypoint": point, "position": player.global_position,
+					"blocked": blocked, "collider": collision.get_collider() if blocked else null,
+					"waypoint_blocked": player.test_move(Transform2D(0, point), Vector2(0.01, 0))})
 				_expect(false, "Route blocked/collapsed at %s toward %s" % [player.global_position, point])
 		release_input()
 	await _frames(5)
@@ -164,7 +242,11 @@ func harvest() -> void:
 			var pickup = tree._pickups.get(slot)
 			if not is_instance_valid(pickup) or pickup.is_collecting:
 				continue
-			await walk(pickup.global_position + Vector2(0, -6))
+			var approach: Vector2 = _pickup_approach(pickup)
+			_expect(approach != Vector2.INF, "A collision-clear interaction point exists for " + str(pickup.name))
+			if stopped:
+				return
+			await walk(approach)
 			if stopped:
 				return
 			var before: int = Inventory.items.get("date_cluster", 0)
@@ -183,7 +265,7 @@ func supply_city() -> void:
 	var amount: int = mini(need, maxi(int(Inventory.items.get("date_cluster", 0)) - 8, 0))
 	if amount > 0:
 		var area = runtime.get_node("CityStorageArea")
-		await walk(area.global_position + Vector2(0, 8))
+		await walk(area.get_node("Board").global_position + Vector2(0, 13))
 		if stopped:
 			return
 		_expect(area.has_player_access(), "Physical city stock access")
@@ -243,9 +325,9 @@ func gather(site_name: String) -> void:
 	if stopped:
 		return
 	var marker = runtime.get_node("WorksiteMarkers/" + site_name)
-	await walk(marker.global_position)
+	await walk_to_site(marker)
 	await interact()
-	_expect(runtime.inspector.visible, "E opens " + site_name)
+	_expect(runtime.inspector.visible and runtime._selected_site == marker, "E opens " + site_name)
 	if stopped:
 		return
 	runtime.inspector.select_mode("Hourly")

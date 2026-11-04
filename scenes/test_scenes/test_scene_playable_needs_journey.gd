@@ -16,12 +16,12 @@ var house_sessions: int = 0
 var saw_empty_board: bool = false
 var saw_house_work_without_applicants: bool = false
 var minimum_satisfaction: float = 1.0
-var require_city_worksite_output: bool = true
 var skip_merchant_visits: int = 0
 var skipped_visit_days: Array[int] = []
 var maximum_player_hunger: float = 0.0
 var maximum_player_fatigue: float = 0.0
 var harvest_interactions: int = 0
+var audit_material_sources: bool = false
 
 
 func walk(target: Vector2, _door_target: bool = false) -> void:
@@ -126,7 +126,7 @@ func gather(site_name: String) -> void:
 	await interact()
 	if not runtime.inspector.visible:
 		print("GATHER_DIAGNOSTIC ", {"site": site_name, "current": player.current_interactable, "can_move": player.can_move, "pickup_focus": runtime._pickup_focused, "inventory_visible": runtime.inventory_ui.visible, "paused": get_tree().paused, "transition": SceneTransition.is_transitioning})
-	_expect(runtime.inspector.visible, "The real worksite inspector opens: " + site_name)
+	_expect(runtime.inspector.visible and runtime._selected_site == site, "The real worksite inspector opens: " + site_name)
 	if stopped:
 		return
 	runtime.inspector.select_mode("Hourly")
@@ -134,25 +134,121 @@ func gather(site_name: String) -> void:
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
 	var city_before: int = int(storage.get_available_items().get(item_id, 0))
 	var player_before: int = int(Inventory.items.get(item_id, 0))
+	var ground_before: int = _personal_ground_quantity(item_id)
+	var stock_before: int = int(runtime.sites[site_name].stock)
+	var day_before: int = TimeComponentManager.current_day
 	await runtime._start_work(180)
-	_expect(runtime.last_work_result.minutes == 180 and not runtime.last_work_result.interrupted and runtime.last_work_result.units > 0, "A normal three-hour work session yields its output: " + site_name)
-	if require_city_worksite_output:
-		var city_after: int = int(storage.get_available_items().get(item_id, 0))
-		_expect(city_after - city_before == int(runtime.last_work_result.units) and int(Inventory.items.get(item_id, 0)) == player_before, "Worksite output enters City Storage directly; the player's bag is unchanged.")
+	var result: Dictionary = runtime.last_work_result
+	_expect(result.minutes == 180 and not result.interrupted and int(result.units) > 0, "A normal three-hour work session yields its output: " + site_name)
+	_expect(int(Inventory.items.get(item_id, 0)) - player_before == int(result.to_bag)
+		and _personal_ground_quantity(item_id) - ground_before == int(result.to_ground)
+		and int(result.to_bag) + int(result.to_ground) == int(result.units)
+		and int(storage.get_available_items().get(item_id, 0)) == city_before,
+		"Hourly output belongs to the player and is conserved between the bag and personal pickup; city stock is unchanged.")
+	if TimeComponentManager.current_day == day_before:
+		_expect(int(runtime.sites[site_name].stock) == stock_before - int(result.units), "Hourly output consumes the same number of natural units.")
 	await eat()
 
 
-func _fetch_material(id: String, minimum: int) -> void:
-	# If the integrated logistics route placed the output in City Storage, take
-	# it back into the player's inventory before a player-funded house build.
-	var missing: int = maxi(0, minimum - int(Inventory.items.get(id, 0)))
+func _personal_ground_quantity(item_id: String) -> int:
+	var quantity: int = 0
+	for pickup: PickUpItem in runtime.get_node("GroundOutput").get_children():
+		if is_instance_valid(pickup) and not pickup.is_queued_for_deletion() and not pickup.is_collecting \
+			and pickup.item_id == item_id and str(pickup.get_meta("daily_site", "")).is_empty():
+			quantity += pickup.quantity
+	return quantity
+
+
+func _buy_available_stone(goal: int) -> int:
+	var merchant: Node = content.get_node("YSortWorld/TravelingMerchant")
+	if stopped or not merchant.state.is_present():
+		return 0
+	var stock: int = 0
+	var price: int = 0
+	for row: Dictionary in merchant.state.get_catalog():
+		if row.item_id == "stone":
+			stock = int(row.stock)
+			price = int(row.buy_price)
+	if price <= 0:
+		return 0
+	var fits: int = floori(Inventory.get_remaining_capacity() / ItemDatabase.get_item_data("stone").weight)
+	var quantity: int = mini(goal, mini(stock, mini(fits, int(Inventory.items.get("shekel", 0)) / price)))
+	if quantity <= 0:
+		return 0
+	await walk(merchant.global_position + Vector2(0, 6))
+	await interact(merchant)
+	await accept_greeting(merchant)
+	if stopped:
+		return 0
+	merchant.menu.buy_tab.pressed.emit()
+	merchant.menu._on_catalog_item_pressed("stone")
+	merchant.menu.quantity_spin_box.value = quantity
+	_expect(not merchant.menu.confirm_button.disabled, "The actual merchant offers the affordable stone batch.")
+	var before_stone: int = int(Inventory.items.get("stone", 0))
+	var before_wallet: int = int(Inventory.items.get("shekel", 0))
+	merchant.menu.confirm_button.pressed.emit()
+	_expect(int(Inventory.items.get("stone", 0)) - before_stone == quantity
+		and before_wallet - int(Inventory.items.get("shekel", 0)) == quantity * price,
+		"Buying stone transfers the exact offered quantity and debits earned personal money.")
+	merchant.close_menu()
+	await _frames(3)
+	print("MATERIAL_AUDIT_STONE ", JSON.stringify({"day": TimeComponentManager.current_day, "quantity": quantity, "price": price, "owned": Inventory.items.get("stone", 0)}))
+	return quantity
+
+
+func _drop_earned_surplus(item_id: String, keep: int) -> void:
+	var quantity: int = maxi(0, int(Inventory.items.get(item_id, 0)) - keep)
+	if quantity > 0:
+		var parent: Node = player.get_parent()
+		var children_before: Array[Node] = parent.get_children()
+		var inventory_ui: InventoryUI = content.get_node("InventoryUI")
+		inventory_ui.open_inventory()
+		await inventory_ui._execute_drop_item(item_id, quantity)
+		inventory_ui.close_inventory()
+		var new_ground: int = 0
+		for child: Node in parent.get_children():
+			if child is PickUpItem and not children_before.has(child) and child.item_id == item_id:
+				new_ground += child.quantity
+		_expect(new_ground == quantity and int(Inventory.items.get(item_id, 0)) == keep,
+			"The actual inventory drop action moves excess " + item_id + " into a recoverable pickup exactly once.")
+
+
+func _audit_material_sources() -> void:
+	# Leave working room with the ordinary inventory drop action and a one-way
+	# city wood deposit. No goods or money are injected.
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
-	var available: int = int(storage.get_available_items().get(id, 0))
-	if missing <= 0 or available <= 0:
+	await _drop_earned_surplus("clay_lump", 4)
+	var spare_wood: int = maxi(0, int(Inventory.items.get("wood_log", 0)) - 2)
+	if spare_wood > 0:
+		_expect(bool(storage.deposit_from_inventory("wood_log", spare_wood).ok), "Earned excess wood can be deposited to make carrying room.")
+	if stopped:
 		return
-	var area: Node2D = runtime.get_node("CityStorageArea")
-	await walk(area.get_node("CollisionShape2D").global_position)
-	_expect(area.has_player_access() and bool(storage.withdraw_items_to_inventory({id: mini(missing, available)}).ok), "Player withdraws construction materials from City Storage.")
+	for entry: Array in [["StrawSite", "straw_bundle"], ["WaterSite", "water_jar"]]:
+		var before: int = int(Inventory.items.get(entry[1], 0))
+		await gather(entry[0])
+		_expect(int(Inventory.items.get(entry[1], 0)) - before >= 3, "The player's actual Hourly work supplies a full mudbrick input: " + str(entry[1]))
+		if stopped:
+			return
+		await _drop_earned_surplus(str(entry[1]), 3)
+	var purchased: int = 0
+	var deadline_day: int = TimeComponentManager.current_day + 30
+	while purchased < 20 and TimeComponentManager.current_day < deadline_day and not stopped:
+		await upkeep()
+		await _market()
+		purchased += await _buy_available_stone(20 - purchased)
+		if purchased >= 20 or stopped:
+			break
+		if int(Inventory.items.get("wood_log", 0)) < 3:
+			await gather("WoodSite")
+		else:
+			await wait_minutes(60)
+	_expect(purchased == 20 and int(Inventory.items.get("stone", 0)) >= 20,
+		"Earned wood income and ordinary merchant visits supply twenty personal stone for the largest single wall requirement.")
+	print("MATERIAL_AUDIT_RESULT ", JSON.stringify({"stone": Inventory.items.get("stone", 0), "purchased": purchased,
+		"straw": Inventory.items.get("straw_bundle", 0), "water": Inventory.items.get("water_jar", 0),
+		"clay": Inventory.items.get("clay_lump", 0), "reed": Inventory.items.get("reed_bundle", 0),
+		"wood": Inventory.items.get("wood_log", 0), "day": TimeComponentManager.current_day,
+		"income_from_wood": paid_wood, "clothes_purchased": bought_clothes}))
 
 
 func _market() -> void:
@@ -172,7 +268,6 @@ func _market() -> void:
 		print("NEEDS_JOURNEY_VISIT ", {"day": TimeComponentManager.current_day, "requests": requests, "skipped": skipped})
 	if bool(seen_visits[TimeComponentManager.current_day]):
 		return
-	await _fetch_material("wood_log", 6)
 	var demand: int = 0
 	var stock: int = 0
 	for row: Dictionary in catalog:
@@ -285,10 +380,10 @@ func _run() -> void:
 			food_seed = int(arg.trim_prefix("--food-seed="))
 		elif arg == "--expect-zero":
 			expect_zero = true
-		elif arg == "--expect-worksite-city":
-			require_city_worksite_output = true
-		elif arg == "--allow-legacy-player-worksite":
-			require_city_worksite_output = false
+		elif arg == "--audit-material-sources":
+			audit_material_sources = true
+		elif arg in ["--expect-worksite-city", "--allow-legacy-player-worksite"]:
+			_expect(false, "The temporary logistics flag is obsolete; Hourly output is checked as player-owned.")
 		elif arg.begins_with("--skip-merchant-visits="):
 			skip_merchant_visits = int(arg.trim_prefix("--skip-merchant-visits="))
 		elif arg.begins_with("--max-recovery-day="):
@@ -337,8 +432,7 @@ func _run() -> void:
 				tree.state._rng.seed = food_seed + 1009 * index
 				index += 1
 		print("NEEDS_JOURNEY_FOOD_SEED ", food_seed, " trees=", index)
-	if not require_city_worksite_output:
-		print("NEEDS_JOURNEY_LOGISTICS: legacy player output (pre-integration only)")
+	print("NEEDS_JOURNEY_LOGISTICS: player Hourly output remains personal; Daily worker output belongs to the city")
 	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "New Game begins without personal resources or hired workers.")
 	_expect(CitizenManager.get_all_residents().size() == 2 and CitizenManager.get_all_applicants().size() == 2, "The normal two residents are initially eligible.")
 	await _check_board(2)
@@ -365,7 +459,6 @@ func _run() -> void:
 			var needed: Dictionary = house.get_requirements()
 			var missing: String = ""
 			for id: String in needed:
-				await _fetch_material(id, int(needed[id]))
 				if int(Inventory.items.get(id, 0)) < int(needed[id]):
 					missing = id
 					break
@@ -374,7 +467,6 @@ func _run() -> void:
 			else:
 				await gather(sites[missing])
 		else:
-			await _fetch_material("wood_log", 8)
 			if int(Inventory.items.get("shekel", 0)) < 4 and int(Inventory.items.get("wood_log", 0)) < 8:
 				await gather("WoodSite")
 			else:
@@ -400,6 +492,10 @@ func _run() -> void:
 		await wait_minutes(30)
 	await _check_board(2)
 	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "harvest_interactions": harvest_interactions, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps, "skipped_visit_days": skipped_visit_days, "max_hunger": maximum_player_hunger, "max_fatigue": maximum_player_fatigue}))
+	if audit_material_sources:
+		await _audit_material_sources()
+		if stopped:
+			return
 	# Save an ordinary sleep checkpoint after recovery, then verify in a new process.
 	while not player.can_sleep() and not stopped:
 		await upkeep()

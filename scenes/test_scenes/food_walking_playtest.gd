@@ -20,6 +20,7 @@ var worked_by_day: Dictionary = {}
 var measurements: Array = []
 var collected_by_tree: Dictionary = {}
 var stopped := false
+var navigator: Node
 
 func _ready() -> void:
 	call_deferred("run")
@@ -45,6 +46,13 @@ func sample_needs(_minute: int = 0) -> void:
 func bind_map() -> void:
 	content = get_tree().current_scene
 	player = content.get_node("YSortWorld/Player")
+	if navigator == null:
+		# Reuse the other walking fixture's collision-aware path calculations;
+		# the detached driver never runs its own scene or moves the player.
+		navigator = preload("res://scenes/test_scenes/mvp_first_playthrough.gd").new()
+	navigator.content = content
+	navigator.player = player
+	navigator.runtime = content.get_node_or_null("YSortWorld/WorkerRuntime")
 	var index := 0
 	for tree in trees():
 		if not tree.state.has_meta("walking_seed"):
@@ -63,35 +71,53 @@ func release_input() -> void:
 	for action in ACTIONS:
 		Input.action_release(action)
 
-func walk_axis(target: Vector2, axis: int) -> void:
-	var frames := 0
-	while not stopped and is_instance_valid(player) and absf(player.global_position[axis] - target[axis]) > 1.0:
+func walk(target: Vector2, door_target: bool = false) -> void:
+	if stopped:
+		return
+	navigator.build_route(door_target)
+	var route: AStarGrid2D = navigator.route
+	var start := Vector2i((player.global_position / 8).round())
+	var end := Vector2i((target / 8).round())
+	route.set_point_solid(start, false)
+	if door_target:
+		route.set_point_solid(end, false)
+	var points: PackedVector2Array = route.get_point_path(start, end)
+	check(not points.is_empty(), "A physical walking route exists toward %s" % target)
+	points.append(target)
+	for point: Vector2 in points:
+		var frames: int = 0
+		while not stopped and player.global_position.distance_to(point) > 1.1:
+			if door_target and SceneTransition.is_transitioning:
+				release_input()
+				return
+			var delta: Vector2 = point - player.global_position
+			release_input()
+			if absf(delta.x) > 0.7:
+				Input.action_press("move_right" if delta.x > 0 else "move_left")
+			elif absf(delta.y) > 0.7:
+				Input.action_press("move_down" if delta.y > 0 else "move_up")
+			var before: Vector2 = player.global_position
+			await get_tree().physics_frame
+			distance += before.distance_to(player.global_position)
+			walk_seconds += 1.0 / Engine.physics_ticks_per_second
+			frames += 1
+			if frames > 240:
+				check(false, "Walking blocked at %s toward %s (route target %s)" % [player.global_position, point, target])
 		release_input()
-		var positive: bool = target[axis] > player.global_position[axis]
-		Input.action_press(ACTIONS[(1 if positive else 0) if axis == 0 else (3 if positive else 2)])
-		var before := player.global_position
-		await get_tree().physics_frame
-		if not is_instance_valid(player):
-			break
-		distance += before.distance_to(player.global_position)
-		walk_seconds += 1.0 / Engine.physics_ticks_per_second
-		frames += 1
-		if frames > 1800:
-			check(false, "Walking blocked at %s toward %s" % [player.global_position, target])
-			break
-	release_input()
-
-func walk(target: Vector2) -> void:
-	await walk_axis(target, 0)
-	await walk_axis(target, 1)
 	for frame in range(3):
 		await get_tree().physics_frame
 
 func outdoor_walk(target: Vector2) -> void:
-	# Authored open east-west corridor below the home, above the worksites.
-	var corridor_y: float = content.get_node("YSortWorld").global_position.y - 402.0
-	await walk_axis(Vector2(player.global_position.x, corridor_y), 1)
-	await walk(target)
+	# A tree's scenery can cover its visual center. Visit a nearby open point,
+	# then use a separate in-range target for each actual fruit interaction.
+	var candidates: Array[Vector2] = []
+	for radius: float in [0.0, 8.0, 16.0, 24.0]:
+		for angle: int in range(8):
+			candidates.append(target + Vector2.from_angle(angle * TAU / 8.0) * radius)
+	var approach: Vector2 = navigator._reachable_approach(candidates, target)
+	check(approach != Vector2.INF, "The outdoor destination has a collision-clear approach")
+	if not stopped:
+		await walk(approach)
 
 func interact() -> void:
 	var event := InputEventAction.new()
@@ -132,7 +158,10 @@ func harvest_round() -> void:
 			var pickup = tree._pickups.get(slot)
 			if not is_instance_valid(pickup) or pickup.is_collecting:
 				continue
-			await walk(pickup.global_position + Vector2(0, -5))
+			var approach: Vector2 = navigator._pickup_approach(pickup)
+			check(approach != Vector2.INF, "A collision-clear pickup approach exists")
+			if not stopped:
+				await walk(approach)
 			check(player.current_interactable == pickup, "Walking reaches date on " + str(tree.name))
 			if stopped:
 				return
@@ -154,14 +183,26 @@ func harvest_round() -> void:
 func work() -> void:
 	var runtime = content.get_node("YSortWorld/WorkerRuntime")
 	var marker = runtime.get_node("WorksiteMarkers/WoodSite")
-	await outdoor_walk(marker.global_position)
+	var avoided: Array[Vector2] = []
+	for _attempt: int in range(12):
+		var approach: Vector2 = navigator._site_approach(marker, avoided)
+		check(approach != Vector2.INF, "A collision-clear worksite approach exists")
+		if stopped:
+			return
+		await walk(approach)
+		if not is_instance_valid(player.current_interactable) and not runtime._pickup_focused:
+			break
+		if player.current_interactable is Node2D:
+			avoided.append((player.current_interactable as Node2D).global_position)
+		else:
+			await get_tree().physics_frame
 	if stopped:
 		return
 	var site = runtime.sites[&"WoodSite"]
 	if not site.participants.has("player"):
 		site.toggle_participant("player")
 	await interact()
-	check(runtime.inspector.visible, "E opens worksite after walking")
+	check(runtime.inspector.visible and runtime._selected_site == marker, "E opens the selected worksite after walking")
 	if stopped:
 		return
 	runtime.inspector.select_mode("Hourly")
@@ -174,26 +215,10 @@ func work() -> void:
 	await eat()
 	measure("work")
 
-func enter_door(path: String, expected_scene: String, outside: bool) -> void:
+func enter_door(path: String, expected_scene: String, _outside: bool) -> void:
 	var door = content.get_node(path)
 	# Stop walking when the overlap starts the real scene transition.
-	var target: Vector2 = door.global_position
-	if outside:
-		var corridor_y: float = content.get_node("YSortWorld").global_position.y - 402.0
-		await walk_axis(Vector2(player.global_position.x, corridor_y), 1)
-		await walk_axis(target, 0)
-	else:
-		await walk_axis(target, 0)
-	var action: String = "move_down" if target.y > player.global_position.y else "move_up"
-	Input.action_press(action)
-	var frames := 0
-	while not SceneTransition.is_transitioning and frames < 1200 and not stopped:
-		var before := player.global_position
-		await get_tree().physics_frame
-		distance += before.distance_to(player.global_position)
-		walk_seconds += 1.0 / Engine.physics_ticks_per_second
-		frames += 1
-	release_input()
+	await walk(door.global_position, true)
 	check(SceneTransition.is_transitioning, "Walk activates door")
 	while SceneTransition.is_transitioning:
 		await get_tree().process_frame
@@ -267,6 +292,9 @@ func run() -> void:
 		"measurements": measurements}))
 	print("FoodWalkingPlaytest: ", "PASS" if failures == 0 else "FAIL")
 	release_input()
+	if navigator != null:
+		navigator.free()
+		navigator = null
 	await get_tree().create_timer(6.0).timeout
 	var final_scene = get_tree().current_scene
 	get_tree().current_scene = null

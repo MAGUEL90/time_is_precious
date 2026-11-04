@@ -13,6 +13,8 @@ var output_observed: int = 0
 var expired_observed: bool = false
 var renewal_observed: bool = false
 var output_after_renewal: int = 0
+var city_wood_at_assignment: int = 0
+var start_from_recovered_needs: bool = false
 const EXPECTED_PATH: String = "user://contract_journey/expected.json"
 const EVIDENCE_PATH: String = "user://contract_journey/flow-evidence.json"
 
@@ -72,9 +74,9 @@ func gather(site_name: String) -> void:
 	if stopped:
 		return
 	var marker: Marker2D = runtime.get_node("WorksiteMarkers/" + site_name)
-	await walk(marker.global_position)
+	await walk_to_site(marker)
 	await interact()
-	_expect(runtime.inspector.visible, "E opens " + site_name)
+	_expect(runtime.inspector.visible and runtime._selected_site == marker, "E opens " + site_name)
 	if stopped:
 		return
 	await press(runtime.inspector.hourly_button)
@@ -96,7 +98,7 @@ func supply_city() -> void:
 		return
 	var area: Node = runtime.get_node("CityStorageArea")
 	# Approach the authored front board, inside the current physical access shape.
-	await walk(area.get_node("Board").global_position + Vector2(-17, 13))
+	await walk(area.get_node("Board").global_position + Vector2(0, 13))
 	if stopped:
 		return
 	await interact(area)
@@ -191,9 +193,11 @@ func _run() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--journey-phase="):
 			phase = arg.trim_prefix("--journey-phase=")
+		elif arg == "--from-recovered-needs":
+			start_from_recovered_needs = true
 	get_tree().current_scene = null
 	var menu = MENU.instantiate()
-	menu.checkpoint_file.path = checkpoint_path
+	menu.checkpoint_file.path = "user://playable_needs_journey/checkpoint.json" if start_from_recovered_needs and phase == "write" else checkpoint_path
 	menu.session_started.connect(func(continued: bool):
 		if continued:
 			restored_snapshot = WorkStateRuntime.get_node("CitySave").snapshot.capture(get_tree().current_scene)
@@ -201,7 +205,7 @@ func _run() -> void:
 	get_tree().root.add_child(menu)
 	get_tree().current_scene = menu
 	await _frames()
-	if phase == "read":
+	if phase == "read" or start_from_recovered_needs:
 		await press(menu.continue_button)
 	else:
 		_expect(menu.continue_button.disabled, "Fresh isolated normal-journey directory required")
@@ -212,11 +216,19 @@ func _run() -> void:
 	if phase == "read":
 		await verify_continue()
 		return
-	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty()
-		and CityStockManager.treasury_shekel == 0, "Normal New Game has no wallet, workers or city cash")
+	if start_from_recovered_needs:
+		_expect(WorkerDatabase.get_all_workers().is_empty() and int(Inventory.items.get("shekel", 0)) >= 2
+			and CitizenManager.get_all_applicants().size() >= 2 and CityStockManager.treasury_shekel == 0,
+			"The separate no-grant needs journey supplies its earned wallet and recovered applicants.")
+		WorkStateRuntime.get_node("CitySave").disk.path = checkpoint_path
+		await leave_home()
+		print("CONTRACT_RECOVERED_START: the preceding needs journey used an accelerated movement driver; this contract stage walks normally")
+	else:
+		_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty()
+			and CityStockManager.treasury_shekel == 0, "Normal New Game has no wallet, workers or city cash")
 	_expect(preload("res://resources/traveling_merchant/common_merchant.tres").randomize_requests, "No forced merchant requests")
-	measure("new_game")
-	while earned == 0 and TimeComponentManager.current_day < 16 and not stopped:
+	measure("recovered_start" if start_from_recovered_needs else "new_game")
+	while not start_from_recovered_needs and earned == 0 and TimeComponentManager.current_day < 16 and not stopped:
 		await upkeep()
 		await trade()
 		if earned > 0 or stopped:
@@ -225,7 +237,7 @@ func _run() -> void:
 			await gather("WoodSite")
 		else:
 			await wait_minutes(60)
-	if earned == 0 or stopped:
+	if (earned == 0 and not start_from_recovered_needs) or stopped:
 		await finish()
 		return
 	await hire()
@@ -278,12 +290,13 @@ func assign_woodsite() -> void:
 	if stopped:
 		return
 	var marker: Marker2D = runtime.get_node("WorksiteMarkers/WoodSite")
-	await walk(marker.global_position)
+	await walk_to_site(marker)
 	await interact()
-	_expect(runtime.inspector.visible, "The authored Wood worksite opens through E")
+	_expect(runtime.inspector.visible and runtime._selected_site == marker, "The authored Wood worksite opens through E")
 	if stopped:
 		return
 	var inspector = runtime.inspector
+	city_wood_at_assignment = int(WorkStateRuntime.get_node("CityToolStorage").items.get("wood_log", 0))
 	await press(inspector.daily_button)
 	var assignment = inspector.assignment_ui
 	await press(assignment.slot_grid.get_child(0))
@@ -306,7 +319,9 @@ func observe_output(previous: int, after_renewal: bool) -> void:
 			arrival_in_period = true
 		var current: int = worksite_output()
 		if arrival_in_period and current > previous:
-			_expect(runtime._daily_output_count(&"WoodSite") >= current, "Worker output is present as a real WoodSite ground pickup")
+			var city_wood: int = int(WorkStateRuntime.get_node("CityToolStorage").items.get("wood_log", 0))
+			_expect(city_wood - city_wood_at_assignment == current and runtime._daily_output_count(&"WoodSite") == 0,
+				"The worker's completed output reaches City Storage exactly once, with no new ground pickup")
 			if after_renewal:
 				output_after_renewal = current
 			else:
@@ -409,7 +424,16 @@ func hire() -> void:
 			await press(panel.confirm_hire_button)
 			break
 	worker = WorkerDatabase.get_worker_data("initial_workshop_laborer")
+	if worker == null:
+		var applicant_state: Array[Dictionary] = []
+		for resident: CitizenData in CitizenManager.get_all_residents():
+			applicant_state.append({"id": resident.citizen_id, "satisfaction": resident.satisfaction,
+				"eligible": resident.can_be_hired(), "needs_met": resident.are_basic_needs_fulfilled()})
+		print("CONTRACT_HIRE_DIAGNOSTIC ", JSON.stringify({"applicants": panel.applicants.size(),
+			"day": TimeComponentManager.current_day, "residents": applicant_state}))
 	_expect(worker != null and not worker.is_payroll_blocked(), "Normal hire can work immediately")
+	if stopped:
+		return
 	_expect(worker.payroll_paid_from_day == hired_day and worker.payroll_paid_until_day == hired_day + 3, "Hire covers remaining today plus three full days")
 	wallet_paid = before - int(Inventory.items.get("shekel", 0))
 	_expect(Inventory.items.get("shekel", 0) == before - 1 and CityStockManager.treasury_shekel == 0, "Hiring takes exactly one earned wallet Shekel")
@@ -440,7 +464,12 @@ func verify_continue() -> void:
 	measure("continued")
 	await leave_home()
 	_expect(worksite_output() >= int(evidence.output_after_renewal), "Continue restores the standing worksite assignment and its output")
-	await walk(runtime.get_node("WorksiteMarkers/WoodSite").global_position)
+	var marker: Marker2D = runtime.get_node("WorksiteMarkers/WoodSite")
+	var approach: Vector2 = _site_approach(marker)
+	_expect(approach != Vector2.INF, "The continued Wood Site has a collision-clear approach")
+	if stopped:
+		return
+	await walk(approach)
 	await _capture("continued-city")
 	await _press_input("open_worker_hub")
 	_expect(runtime.worker_control.visible, "Worker Hub remains available after Continue")
@@ -452,12 +481,12 @@ func verify_continue() -> void:
 
 func finish() -> void:
 	release_input()
-	var complete: bool = phase == "read" or (earned > 0 and wallet_paid == 1 and first_payment_observed
+	var complete: bool = phase == "read" or ((earned > 0 or start_from_recovered_needs) and wallet_paid == 1 and first_payment_observed
 		and assignment_observed and arrival_observed and output_observed > 0 and expired_observed
 		and renewal_observed and output_after_renewal > output_observed and FileAccess.file_exists(checkpoint_path)
 		and FileAccess.file_exists(EVIDENCE_PATH))
 	var status: String = "FAIL" if failures > 0 else ("PASS" if complete else "PARTIAL")
-	var result: Dictionary = {"phase": phase, "status": status, "failures": failures,
+	var result: Dictionary = {"phase": phase, "status": status, "failures": failures, "from_recovered_needs": start_from_recovered_needs,
 		"visits": visits, "measurements": measurements, "normal_income": earned,
 		"wallet_paid": wallet_paid, "first_payment_observed": first_payment_observed,
 		"assignment_observed": assignment_observed, "arrival_observed": arrival_observed,
