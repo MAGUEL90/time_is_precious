@@ -1,5 +1,10 @@
 # Direct worksite output to City Storage
 
+> Follow-up: [City transport and player-funded construction](city-transport-and-player-construction-2026-11-04.md)
+> supersedes this report's implementation-status statements about inter-storage
+> hauling, defense payments, and the city checkpoint schema. The baseline
+> investigation and worksite migration evidence below remain historical.
+
 Status: branch implementation; requires integration and human review. Baseline
 `13a6c0725a08c91bfcbc2606646e8ebf0f668968`, clean isolated cloud checkout.
 Branch: `feature/inventory/direct-worksite-city-supply-20261104`. Risk: system

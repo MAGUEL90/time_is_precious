@@ -188,12 +188,53 @@ func _process(delta: float) -> void:
 			else:
 				work_cycles.erase(id)
 				_roam(id, actor, delta)
+	_city_transport_visual(minute + fraction, retained)
 	for id: String in actors.keys():
 		if not retained.has(id):
 			work_cycles.erase(id)
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
 	_update_reed_presence()
+
+func _city_transport_visual(absolute_minute: float, retained: Array[String]) -> Dictionary:
+	var managers: Array[Node] = get_tree().get_nodes_in_group("city_storage_transport")
+	if managers.is_empty():
+		return {}
+	var transport: Node = managers[0]
+	if not transport.has_method("get_visual"):
+		return {}
+	var visual: Dictionary = transport.call("get_visual", absolute_minute)
+	if visual.is_empty():
+		return {}
+	var route_value: Variant = transport.get("route")
+	if not route_value is Dictionary:
+		return {}
+	var worker_id: String = str(route_value.get("worker_id", ""))
+	if worker_id.is_empty():
+		return {}
+	if not retained.has(worker_id):
+		retained.append(worker_id)
+	var actor: Node2D = ensure_actor(worker_id, Vector2(visual.position))
+	if actor == null:
+		return visual
+	actor.show()
+	work_cycles.erase(worker_id)
+	roaming.erase(worker_id)
+	site_paths.erase(worker_id)
+	actor.global_position = Vector2(visual.position)
+	_play(actor, "push_cart" if bool(visual.get("moving", false)) else "idle_cart", str(visual.get("direction", "right")))
+	if not actor.has_node("CargoLabel"):
+		var label := Label.new()
+		label.name = "CargoLabel"
+		label.position = Vector2(0, -8)
+		label.add_theme_font_size_override("font_size", 6)
+		actor.add_child(label)
+	var quantity: int = int(visual.get("carrying", 0))
+	var item_id: String = str(visual.get("item_id", ""))
+	var item: ItemData = ItemDatabase.get_item_data(item_id)
+	var item_name: String = item.display_name if item != null else item_id
+	actor.get_node("CargoLabel").text = "%s x%d" % [item_name, quantity] if quantity > 0 else ""
+	return visual
 
 func _on_worker_roster_changed() -> void:
 	_retire_unhired_actors()

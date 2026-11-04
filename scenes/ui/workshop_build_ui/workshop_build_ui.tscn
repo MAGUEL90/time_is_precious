@@ -183,13 +183,34 @@ custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
-text = "Materials from Free Stock"
+text = "Inventory + committed / required"
 vertical_alignment = 1
 
 [node name="RequirementsList" type="VBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_constants/separation = 1
+
+[node name="ContributionActions" type="HBoxContainer" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ContributeButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/ContributionActions"]
+custom_minimum_size = Vector2(68, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Contribute"
+tooltip_text = "Commit available matching Inventory materials toward this level."
+
+[node name="RefundButton" type="Button" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage/ContributionActions"]
+custom_minimum_size = Vector2(58, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Refund"
+tooltip_text = "Return committed materials if Inventory has enough room."
 
 [node name="FeedbackLabel" type="Label" parent="Root/Center/TextureWindow/Margin/MainVBox/DetailsPage"]
 custom_minimum_size = Vector2(0, 10)
@@ -275,5 +296,5 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="ConfirmPanel" parent="Root/ConfirmOverlay/Center" instance=ExtResource("6_confirm")]
-custom_minimum_size = Vector2(184, 48)
+custom_minimum_size = Vector2(184, 88)
 layout_mode = 2

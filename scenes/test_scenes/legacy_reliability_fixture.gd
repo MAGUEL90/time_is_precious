@@ -3,29 +3,47 @@ extends RefCounted
 ## Construct historical schemas without restoring retired runtime properties.
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 
-static func _add_old_empty_stockpiles(worksites: Dictionary) -> void:
-	for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
-		worksites.storages[endpoint_id] = {"shared": false, "quantity": 0, "capacity": 96, "accepting": true}
+## Old city checkpoints have neither the annex nor a payment-source marker.
+static func strip_v16_owners(raw: Dictionary) -> void:
+	raw.erase("annex_storage")
+	raw.erase("transport")
+	if raw.get("raid") is Dictionary:
+		raw.raid.erase("_work_paid_source")
+		raw.raid.erase("_refund_pending")
+	if raw.get("facilities") is Dictionary:
+		raw.facilities.erase("facility_contributions")
+	if raw.get("merchant") is Dictionary:
+		for field: String in ["_offers", "_stock", "_demand"]:
+			if raw.merchant.get(field) is Dictionary:
+				raw.merchant[field].erase("stone")
 
-static func encode_city(codec: RefCounted, raw: Dictionary) -> Variant:
+static func _add_old_empty_stockpiles(worksites: Dictionary, retained: Dictionary = {}) -> void:
+	for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+		if retained.has(endpoint_id):
+			worksites.storages[endpoint_id] = retained[endpoint_id].duplicate(true)
+		else:
+			worksites.storages[endpoint_id] = {"shared": false, "quantity": 0, "capacity": 96, "accepting": true}
+
+static func encode_city(codec: RefCounted, raw: Dictionary, retained_stockpiles: Dictionary = {}) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
 	for result: Dictionary in legacy.needs.last_needs_results.values():
 		result["reliability"] = 0.5
 		result["reliability_delta"] = -0.05
-	var encoded: Variant = encode_v10(codec, legacy)
+	var encoded: Variant = encode_v10(codec, legacy, retained_stockpiles)
 	add_city_object_fields(encoded)
 	return encoded
 
 ## Version 10 predates the construction team and deferred-resignation fields.
-static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
+static func encode_v10(codec: RefCounted, raw: Dictionary, retained_stockpiles: Dictionary = {}) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
+	strip_v16_owners(legacy)
 	# Versions through 11 predate the authored citizen-house plot.
 	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
 	for plot: Dictionary in legacy.plots.values():
 		plot.erase("worker_capacity")
 		plot.erase("work_total_units")
 	legacy.worksites.schema_version = 1
-	_add_old_empty_stockpiles(legacy.worksites)
+	_add_old_empty_stockpiles(legacy.worksites, retained_stockpiles)
 	legacy.worksites.erase("pending_output")
 	legacy.worksites.erase("pending_progress")
 	legacy.worksites.erase("legacy_ground")
@@ -41,6 +59,7 @@ static func encode_v10(codec: RefCounted, raw: Dictionary) -> Variant:
 ## Version 11 has the prior worker/worksite fields, but no house plot.
 static func encode_v11(codec: RefCounted, raw: Dictionary) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
+	strip_v16_owners(legacy)
 	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
 	legacy.worksites.schema_version = 2
 	_add_old_empty_stockpiles(legacy.worksites)

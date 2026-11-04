@@ -8,7 +8,7 @@ const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
-const VERSION: int = 15
+const VERSION: int = 16
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -17,6 +17,8 @@ const GROUPS: Dictionary = {
 	"player": ["global_position", "fatigue", "hunger", "current_experience", "last_sleep_day", "last_collapse_day", "total_collapse_count"],
 	"inventory": ["items", "max_load"],
 	"city_storage": ["items", "units", "food_portions", "_unit_sequence"],
+	"annex_storage": ["items", "units", "food_portions", "_unit_sequence"],
+	"transport": ["route", "last_tick"],
 	"stock": ["food_supply", "clothing_supply", "treasury_shekel", "shelter_capacity"],
 	"citizens": ["citizens_by_id"],
 	"workers": ["workers_by_id", "dismissed_workers"],
@@ -27,9 +29,9 @@ const GROUPS: Dictionary = {
 	"workshop_storage": ["items", "claimable_outputs", "unpaid_claims_ledger", "max_load", "_next_fee_sequence", "_next_output_lot_sequence", "output_lots"],
 	"work": ["active_orders", "service_fee_by_order", "service_fee_currency_by_order", "_last_total_minutes"],
 	"process": ["stations", "current_weather_key", "_last_total_minutes", "_auto_pull_batch_size"],
-	"facilities": ["facility_levels"],
+	"facilities": ["facility_levels", "facility_contributions"],
 	"city": ["level", "progress", "last_daily", "last_event", "last_awarded_day", "_last_breach_id"],
-	"raid": ["notification_seen_keys", "phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
+	"raid": ["notification_seen_keys", "phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "_work_paid_source", "_refund_pending", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
 	"merchant": ["_stock", "_offers", "_demand", "_budget", "_visit_day", "_latest_minute", "_present"]
 }
 const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "worker_capacity", "work_total_units", "started_at", "completes_at", "_latest_time", "payroll_work_remainder"]
@@ -43,6 +45,8 @@ var _legacy_palms = PALMS.new()
 func owners(map: Node) -> Dictionary:
 	return {"clock": TimeComponentManager, "player": map.get_node("YSortWorld/Player"),
 		"inventory": Inventory, "city_storage": WorkStateRuntime.get_node("CityToolStorage"),
+		"annex_storage": WorkStateRuntime.get_node("CityStorageTransport/Annex"),
+		"transport": WorkStateRuntime.get_node("CityStorageTransport"),
 		"stock": CityStockManager, "citizens": CitizenManager, "workers": WorkerDatabase,
 		"needs": CitizenNeedsManager, "immigration": ImmigrationManager, "generator": CitizenGenerator,
 		"dialogue": BaseDialogueManager, "workshop_storage": WorkShopStorage, "work": WorkManager,
@@ -90,7 +94,7 @@ func busy_reason(map: Node) -> String:
 		return "Wait for the current transaction."
 	if worksite(map).daily.has_method("is_settlement_busy") and worksite(map).daily.is_settlement_busy():
 		return "Wait for the current transaction."
-	if nodes.city_storage._transfer_in_progress or nodes.merchant._trading or nodes.raid._advancing or nodes.raid._resolving or nodes.raid._starting_work or nodes.raid._refund_pending:
+	if Inventory._bulk_transaction_in_progress or (nodes.facilities.has_method("is_transaction_busy") and nodes.facilities.is_transaction_busy()) or nodes.city_storage._transfer_in_progress or nodes.annex_storage._transfer_in_progress or nodes.transport.is_transaction_busy() or nodes.merchant._trading or nodes.raid._advancing or nodes.raid._resolving or nodes.raid._starting_work or nodes.raid._refunding:
 		return "Wait for the current transaction."
 	if TimeComponentManager.has_method("is_dispatching_time") and TimeComponentManager.is_dispatching_time():
 		return "Wait for the current transaction."
@@ -149,7 +153,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -168,12 +172,41 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	if not values.error.is_empty() or not raw is Dictionary:
 		return fail("Invalid checkpoint values. " + values.error)
 	var nodes: Dictionary = owners(map)
-	if raw.size() != GROUPS.size() + (9 if version >= 3 else 8):
+	var expected_groups: int = GROUPS.size() if version >= 16 else GROUPS.size() - 2
+	if raw.size() != expected_groups + (9 if version >= 3 else 8):
 		return fail("Incomplete checkpoint.")
+	if version < 16:
+		# Old saves have no second city store and no inter-storage cargo. Stage
+		# empty owners only in memory; the source file stays untouched on load.
+		var old_clock: Variant = raw.get("clock")
+		if not old_clock is Dictionary or not old_clock.get("current_day") is int or not old_clock.get("current_hour") is int or not old_clock.get("current_minute") is int:
+			return fail("Invalid legacy clock.")
+		raw["annex_storage"] = {"items": {}, "units": {}, "food_portions": {}, "_unit_sequence": 0}
+		raw["transport"] = {"route": {}, "last_tick": old_clock.current_day * 1440 + old_clock.current_hour * 60 + old_clock.current_minute}
+		if not raw.get("facilities") is Dictionary or raw.facilities.has("facility_contributions"):
+			return fail("Invalid legacy facility state.")
+		raw.facilities["facility_contributions"] = {}
+		if not _stage_legacy_stone_offer(raw, nodes.merchant):
+			return false
 	if version < 7:
 		if not raw.get("raid") is Dictionary or raw.raid.has("notification_seen_keys"):
 			return fail("Invalid legacy notification state.")
 		raw.raid["notification_seen_keys"] = {}
+	if version < VERSION:
+		if not raw.get("raid") is Dictionary or raw.raid.has("_work_paid_source") or raw.raid.has("_refund_pending"):
+			return fail("Invalid legacy wall payment source.")
+		var legacy_raid_fields: Array = GROUPS.raid.duplicate()
+		legacy_raid_fields.erase("_work_paid_source")
+		legacy_raid_fields.erase("_refund_pending")
+		if raw.raid.size() != legacy_raid_fields.size():
+			return fail("Invalid legacy wall payment source.")
+		for field: String in legacy_raid_fields:
+			if not raw.raid.has(field):
+				return fail("Invalid legacy wall payment source.")
+		var legacy_work_kind: Variant = raw.raid.get("_work_kind")
+		raw.raid["_work_paid_source"] = "city_storage" if legacy_work_kind is String and not legacy_work_kind.is_empty() else ""
+		# Earlier writers refused to save while a refund was pending.
+		raw.raid["_refund_pending"] = false
 	if version <= 8:
 		# Old checkpoints retain their on-disk bytes until a successful future save.
 		# Validate the retired field before dropping it from this staged copy.
@@ -229,6 +262,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 		return fail(_sites.error)
+	if not _validate_transport(raw, nodes.transport):
+		return false
 	if version >= 11 and not _valid_settled_time_cursors(raw):
 		return false
 	if not _validate_approaches(raw, map):
@@ -263,7 +298,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not _sites.migrate_legacy(raw.worksites, worksite(map)) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
-	if migrated_worksites or version < 14:
+	if migrated_worksites or version < VERSION:
 		# Do not apply a legacy state that cannot be written by the existing
 		# bounded codec/disk format. The original checkpoint remains untouched.
 		var next_values = VALUES.new()
@@ -274,6 +309,30 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if JSON.stringify(next_document, "\t", true, true).to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
 			return fail("Migrated checkpoint exceeds the existing save size limit.")
 	prepared = raw
+	return true
+
+func _stage_legacy_stone_offer(raw: Dictionary, merchant: Node) -> bool:
+	# Preserve an ongoing legacy visit exactly: the new offer has zero stock
+	# until the next scheduled arrival. No old stock or purchase is rewritten.
+	var state: Variant = raw.get("merchant")
+	if not state is Dictionary or not state.get("_offers") is Dictionary or not state.get("_stock") is Dictionary or not state.get("_demand") is Dictionary:
+		return fail("Invalid legacy merchant state.")
+	if state._offers.has("stone"):
+		return true
+	var configured: Dictionary = {}
+	for entry: Dictionary in merchant.config.offers:
+		if entry.get("item_id") == "stone":
+			configured = entry.duplicate(true)
+			break
+	if configured.is_empty():
+		return fail("Stone merchant offer is unavailable.")
+	configured["sell_price"] = 0
+	configured["requested"] = 0
+	state._offers["stone"] = configured
+	if not state._stock.has("stone"):
+		state._stock["stone"] = 0
+	if not state._demand.has("stone"):
+		state._demand["stone"] = 0
 	return true
 
 
@@ -352,6 +411,8 @@ func _valid_settled_time_cursors(raw: Dictionary) -> bool:
 			return fail("Process time cursor differs from the clock.")
 	if int(raw.worksites.ledger.last_tick) != now:
 		return fail("Worksite time cursor differs from the clock.")
+	if raw.transport.last_tick != now:
+		return fail("City transport time cursor differs from the clock.")
 	for plot: Dictionary in raw.plots.values():
 		if plot.phase in ["building", "clearing"] and plot._latest_time != now:
 			return fail("Construction time cursor differs from the clock.")
@@ -408,6 +469,7 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	var nodes: Dictionary = owners(map)
 	for key: String in GROUPS:
 		assign_fields(nodes[key], prepared[key])
+	nodes.transport.rebind_after_restore()
 	_sources.restore(prepared.pickup_sources)
 	_restore_rng(nodes.raid._rng, prepared.rng.raid)
 	_restore_rng(nodes.merchant._request_rng, prepared.rng.merchant)
@@ -451,6 +513,8 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	_sources.refresh()
 	Inventory.items_changed.emit()
 	nodes.city_storage.changed.emit()
+	nodes.annex_storage.changed.emit()
+	nodes.transport.changed.emit()
 	CitizenNeedsManager.needs_changed.emit()
 	nodes.city.changed.emit()
 	nodes.raid.changed.emit()
@@ -573,11 +637,17 @@ func _validate_core(raw: Dictionary, map: Node) -> bool:
 		return fail("Invalid player state.")
 	if raw.city.level < 1 or raw.city.progress < 0 or raw.city.progress > 100 or raw.city._last_breach_id < 0 or raw.city.last_awarded_day < raw.needs.last_processed_day:
 		return fail("Invalid city progress.")
-	for stock: Variant in [raw.inventory.items, raw.city_storage.items, raw.workshop_storage.items, raw.merchant._stock, raw.merchant._demand, raw.raid._stolen, raw.raid._work_paid]:
+	for stock: Variant in [raw.inventory.items, raw.city_storage.items, raw.annex_storage.items, raw.workshop_storage.items, raw.merchant._stock, raw.merchant._demand, raw.raid._stolen, raw.raid._work_paid]:
 		if not _counts(stock):
 			return fail("Unknown item or invalid stock count.")
 	if raw.inventory.max_load < 0 or raw.workshop_storage.max_load < 0 or raw.merchant._budget < 0 or raw.city_storage._unit_sequence < 0:
 		return fail("Invalid storage capacity or budget.")
+	if not raw.annex_storage.units.is_empty() or not raw.annex_storage.food_portions.is_empty() or raw.annex_storage._unit_sequence != 0:
+		return fail("Invalid annex equipment or portions.")
+	for item_id: String in raw.annex_storage.items:
+		var annex_item: ItemData = ItemDatabase.get_item_data(item_id)
+		if item_id in ["cart", "basic_glove", "stone_hammer", "shekel"] or annex_item.category == ItemEnums.ItemCategory.EQUIPMENT:
+			return fail("Invalid annex stock.")
 	for v: int in raw.stock.values():
 		if v < 0:
 			return fail("Invalid city supplies.")
@@ -596,6 +666,18 @@ func _validate_core(raw: Dictionary, map: Node) -> bool:
 		return fail("Invalid wall state.")
 	if raid._work_kind not in ["", "build", "rebuild", "repair", "upgrade", "watchtower"] or raid._work_remaining < 0 or raid._work_remaining > raid._work_total or raid._elapsed < 0 or raid._elapsed > 60.0 or raid._loot_weight < 0 or raid._loot_weight > 10.0 or raid._hits < 0 or raid._report_sequence < 0:
 		return fail("Invalid raid timers.")
+	if raid._work_paid_source not in ["", "city_storage", "inventory"]:
+		return fail("Invalid wall payment source.")
+	for item_id: String in raid._work_paid:
+		if int(raid._work_paid[item_id]) <= 0:
+			return fail("Invalid wall payment amount.")
+	if raid._work_kind.is_empty():
+		if not raid._work_paid.is_empty() or not raid._work_paid_source.is_empty():
+			return fail("Idle wall work retains a payment.")
+	elif raid._work_paid_source.is_empty():
+		return fail("Active wall work has no payment source.")
+	if raid._refund_pending and (raid._work_kind not in ["repair", "upgrade", "watchtower"] or raid._work_paid.is_empty()):
+		return fail("Invalid pending wall refund.")
 	if raid._composition_stage not in [&"early", &"developing", &"advanced"]:
 		return fail("Unknown raid stage.")
 	if raid.phase in ["attacking", "looting"] and raid._party.is_empty():
@@ -659,6 +741,42 @@ func _validate_people(raw: Dictionary) -> bool:
 			return fail("Invalid equipment unit.")
 		if unit.tool_id not in ["cart", "basic_glove", "stone_hammer"] or (not unit.worker_id.is_empty() and not workers.has(unit.worker_id)):
 			return fail("Equipment owner missing.")
+	return true
+
+func _validate_transport(raw: Dictionary, transport: Node) -> bool:
+	var saved: Dictionary = raw.transport.route
+	if not transport.validate_restore(saved, raw.transport.last_tick):
+		return fail("Invalid city transport route.")
+	var selected_id: String = str(saved.get("worker_id", ""))
+	for id: String in raw.workers.workers_by_id:
+		var candidate: WorkerData = raw.workers.workers_by_id[id]
+		var owns_transport: bool = candidate.current_order_id == transport.WORK_ORDER_ID or candidate.current_job_id == transport.WORK_JOB_ID
+		if owns_transport and (saved.is_empty() or selected_id != id):
+			return fail("City transport reservation has no route.")
+	if saved.is_empty():
+		return true
+	var worker: WorkerData = raw.workers.workers_by_id.get(selected_id)
+	if worker == null or worker.worker_id != selected_id or worker.profession not in [WorkerData.Profession.LABORER, WorkerData.Profession.HAULER] or worker.current_order_id != transport.WORK_ORDER_ID or worker.current_job_id != transport.WORK_JOB_ID or worker.current_work_status not in [WorkerData.WorkStatus.TRAVELLING, WorkerData.WorkStatus.RESTING] or not worker.physical_approach.is_empty():
+		return fail("City transport worker reservation differs.")
+	if worker.profession == WorkerData.Profession.HAULER and saved.phase == "outbound" and worker.profession_xp > transport.MAX_INT_VALUE - int(saved.quantity):
+		return fail("City transport experience would overflow.")
+	var citizen: CitizenData = raw.citizens.citizens_by_id.get(selected_id)
+	if citizen != null and citizen.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+		return fail("City transport worker is not assigned.")
+	var cart_found: bool = false
+	for unit: Dictionary in raw.city_storage.units.values():
+		if unit.tool_id == "cart" and unit.worker_id == selected_id:
+			cart_found = true
+			break
+	if not cart_found:
+		return fail("City transport worker has no allocated cart.")
+	# Only authored endpoint IDs are loaded. A saved intermediate return or
+	# paused position must stay on their physical route, never a file-set path.
+	var source: Vector2 = transport._position_for(str(saved.source))
+	var destination: Vector2 = transport._position_for(str(saved.destination))
+	var origin: Vector2 = saved.leg_origin
+	if origin.distance_to(Geometry2D.get_closest_point_to_segment(origin, source, destination)) > 0.1:
+		return fail("City transport position differs from the authored route.")
 	return true
 
 func _validate_approaches(raw: Dictionary, map: Node) -> bool:
@@ -786,6 +904,18 @@ func _validate_work(raw: Dictionary, map: Node, version: int = 0) -> bool:
 	for id: String in raw.facilities.facility_levels:
 		if not WorkshopFacilityManager.has_facility(id) or raw.facilities.facility_levels[id] < 0 or raw.facilities.facility_levels[id] > WorkshopFacilityManager.get_facility_max_level(id):
 			return fail("Invalid facility.")
+	for id: Variant in raw.facilities.facility_contributions:
+		var contribution: Variant = raw.facilities.facility_contributions[id]
+		if not id is String or not WorkshopFacilityManager.has_facility(id) or not contribution is Dictionary or contribution.size() != 2 or not contribution.get("target_level") is int or not contribution.get("items") is Dictionary or contribution.items.is_empty():
+			return fail("Invalid facility contribution.")
+		var level: int = int(raw.facilities.facility_levels.get(id, 0))
+		if contribution.target_level != level + 1 or contribution.target_level > WorkshopFacilityManager.get_facility_max_level(id):
+			return fail("Facility contribution targets a different upgrade.")
+		var requirements: Dictionary = WorkshopFacilityManager.get_facility_upgrade_requirements(id, contribution.target_level)
+		for item_id: Variant in contribution.items:
+			var amount: Variant = contribution.items[item_id]
+			if not item_id is String or not requirements.has(item_id) or not amount is int or amount <= 0 or amount > int(requirements[item_id]):
+				return fail("Invalid contributed facility material.")
 	for id: String in raw.process.stations:
 		var station: StationState = raw.process.stations[id]
 		if station.station_id != id or station.slots_total != station.slots.size() or station.slots_total < 0 or station.slots_total > 100:

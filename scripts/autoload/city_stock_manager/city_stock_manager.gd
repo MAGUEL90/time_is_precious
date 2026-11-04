@@ -11,7 +11,7 @@ var shelter_capacity: int
 
 func deposit_wallet_shekel(amount: int) -> bool:
 	# Explicit player action; payroll never reads the personal inventory.
-	if amount <= 0 or amount > MAX_SHEKEL - treasury_shekel:
+	if Inventory._bulk_transaction_in_progress or amount <= 0 or amount > MAX_SHEKEL - treasury_shekel:
 		return false
 	if not Inventory.has_item("shekel", amount):
 		return false

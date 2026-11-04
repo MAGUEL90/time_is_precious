@@ -106,7 +106,7 @@ func hire_applicant(
 	wage_shekel_per_day: int = 1,
 	contract_days: int = 3
 ) -> WorkerData:
-	if _payroll_settling or not is_job_board_open():
+	if _payroll_settling or Inventory._bulk_transaction_in_progress or not is_job_board_open():
 		return null
 	var citizen_data: CitizenData = CitizenManager.get_citizen(citizen_id)
 	if citizen_data == null:
@@ -144,7 +144,7 @@ func hire_applicants(
 	contract_days: int = 3
 ) -> Array[WorkerData]:
 	var hired: Array[WorkerData] = []
-	if _payroll_settling or not is_job_board_open() or citizen_ids.is_empty():
+	if _payroll_settling or Inventory._bulk_transaction_in_progress or not is_job_board_open() or citizen_ids.is_empty():
 		return hired
 	if contract_days not in CONTRACT_DAYS or TimeComponentManager.current_day > MAX_CONTRACT_DAY - contract_days:
 		return hired
@@ -245,6 +245,8 @@ func _live_worksite_schedules() -> Array:
 ## worksite, equipment transfer or resignation owns a partial transaction.
 func is_world_time_transition_busy() -> bool:
 	if _payroll_settling or _idle_resignation_sweep_active:
+		return true
+	if Inventory._bulk_transaction_in_progress or (WorkshopFacilityManager.has_method("is_transaction_busy") and WorkshopFacilityManager.is_transaction_busy()):
 		return true
 	if StorageDestination.is_any_delivery_busy():
 		return true
@@ -562,7 +564,10 @@ func assign_worker(worker_id: String) -> bool:
 
 func unassign_worker(worker_id: String) -> bool:
 	var worker_data: WorkerData = get_worker_data(worker_id)
-	if worker_data == null:
+	# A live work owner must finish its reservation before releasing the
+	# citizen's assignment. This also prevents a payment observer from silently
+	# unassigning a builder while construction is being committed.
+	if worker_data == null or worker_data.is_reserved():
 		return false
 
 	var citizen_data: CitizenData = worker_data.get_linked_citizen()
@@ -618,7 +623,7 @@ func get_contract_price(profession: WorkerData.Profession, days: int) -> int:
 
 func renew_contract(worker_id: String, days: int) -> bool:
 	var worker: WorkerData = get_worker_data(worker_id)
-	if _payroll_settling or worker == null:
+	if _payroll_settling or Inventory._bulk_transaction_in_progress or worker == null:
 		return false
 	if worker.resignation_pending or worker.get_resolved_satisfaction() <= 0.0:
 		return false

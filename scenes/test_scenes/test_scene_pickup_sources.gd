@@ -79,10 +79,14 @@ func _run() -> void:
 	_strip_post_v3_owner_fields(raw)
 	var legacy: Dictionary = saved.duplicate(true)
 	legacy.schema_version = 3
-	legacy.state = codec.encode(raw)
+	legacy.state = LEGACY_RELIABILITY.encode_city(codec, raw)
 	_strip_post_v3_worker_fields(legacy.state)
-	_expect(store.snapshot.prepare(legacy, content), "v3 accepts new authored source types through explicit migration.")
+	var prepared: bool = store.snapshot.prepare(legacy, content)
+	_expect(prepared, "v3 accepts new authored source types through explicit migration: " + store.snapshot.error)
 	_expect(sentinel == store.snapshot.capture(content), "Migration preparation does not reset new sources.")
+	if not prepared:
+		_finish()
+		return
 	store.snapshot.apply_prepared(content, false)
 	await _settle_source_views()
 	for source: Node in sources:

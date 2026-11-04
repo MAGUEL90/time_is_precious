@@ -100,6 +100,10 @@ func is_dispatching_time() -> bool:
 func can_advance_time() -> bool:
 	if is_dispatching_time():
 		return false
+	# Bulk inventory payments publish synchronously. The clock must not enter a
+	# new minute until the owning construction transaction has also committed.
+	if Inventory._bulk_transaction_in_progress or (WorkshopFacilityManager.has_method("is_transaction_busy") and WorkshopFacilityManager.is_transaction_busy()):
+		return false
 	if StorageDestination.is_any_delivery_busy():
 		return false
 	var workers: Node = get_node_or_null("/root/WorkerDatabase")

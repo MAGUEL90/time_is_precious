@@ -1,9 +1,10 @@
 extends Area2D
 
 ## Physical access to the shared city stock. Worker Hub only manages allocation.
+@export_enum("city", "annex") var storage_id: String = "city"
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 @onready var access_shape: CollisionShape2D = $CollisionShape2D
-@onready var delivery_point: StorageDestination = $DeliveryPoint
+@onready var delivery_point: Node = get_node_or_null("DeliveryPoint")
 
 var player: Player
 var storage: Node
@@ -13,8 +14,13 @@ var _previous_can_move: bool = true
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	interactable_label_component.place_above_art($Board)
-	add_to_group("city_storage_areas")
+	var board: Node2D = get_node_or_null("Board") as Node2D
+	if is_instance_valid(board):
+		interactable_label_component.place_above_art(board)
+	if storage_id == "annex":
+		add_to_group("city_storage_annex_areas")
+	else:
+		add_to_group("city_storage_areas")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 
@@ -22,9 +28,21 @@ func configure(next_player: Player, next_storage: Node, open_gate: Callable) -> 
 	player = next_player
 	storage = next_storage
 	can_open = open_gate
-	delivery_point.storage_path = NodePath("")
+	_set_delivery_storage(next_storage)
+
+func _set_delivery_storage(next_storage: Node) -> void:
+	if not is_instance_valid(delivery_point):
+		return
+	var supports_storage_path: bool = false
+	for property: Dictionary in delivery_point.get_property_list():
+		if str(property.get("name", "")) == "storage_path":
+			supports_storage_path = true
+			break
+	if not supports_storage_path:
+		return
+	delivery_point.set("storage_path", NodePath(""))
 	if is_instance_valid(next_storage) and is_inside_tree() and next_storage.is_inside_tree():
-		delivery_point.storage_path = next_storage.get_path()
+		delivery_point.set("storage_path", next_storage.get_path())
 
 func _on_body_entered(body: Node2D) -> void:
 	if body == player:
@@ -57,7 +75,7 @@ func on_player_interact(interacting_player: Player) -> void:
 	menu = preload("res://scenes/storage_destination/city_storage_access_ui.tscn").instantiate()
 	add_child(menu)
 	menu.closed.connect(_on_menu_closed.bind(menu))
-	menu.open(storage, has_player_access)
+	menu.open(storage, has_player_access, storage_id)
 	get_viewport().set_input_as_handled()
 
 func close_menu() -> void:

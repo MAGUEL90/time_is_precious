@@ -29,8 +29,13 @@ var _reentrant_attempted: bool = false
 var _reentrant_state: Variant
 var _reentrant_worker_ids: Array[String] = []
 var _reentrant_result: Dictionary = {}
-var _rollback_watch: bool = false
-var _externally_removed_item_id: String = ""
+var _reentrant_state_was_staged: bool = false
+var _reentrant_worker_reserved: bool = false
+var _reentrant_unassign_result: bool = true
+var _reentrant_dismiss_result: bool = true
+var _reentrant_inventory_remove_result: bool = true
+var _reentrant_time_advanced: bool = true
+var _save_busy_reason_during_payment: String = ""
 var _change_count: int = 0
 
 func _ready() -> void:
@@ -136,21 +141,15 @@ func _test_rejections_are_transactional() -> void:
 	_expect(not available_worker.is_reserved() and available_citizen.employment_status == CitizenData.EmploymentStatus.HIRED, "Missing materials must not reserve workers or assign linked citizens.")
 
 	_set_fixture_materials()
-	var before_partial_failure: Dictionary = Inventory.items.duplicate()
-	_rollback_watch = true
-	_externally_removed_item_id = ""
-	Inventory.items_changed.connect(_remove_unconsumed_material_during_start)
-	var partial_result: Dictionary = state.start_build([first_id] as Array[String])
-	if Inventory.items_changed.is_connected(_remove_unconsumed_material_during_start):
-		Inventory.items_changed.disconnect(_remove_unconsumed_material_during_start)
-	_rollback_watch = false
-	var external_change_expected: Dictionary = before_partial_failure.duplicate()
-	external_change_expected.erase(_externally_removed_item_id)
-	_expect(not bool(partial_result.get("success", false)), "Construction must roll back when an item disappears during multi-item consumption.")
-	_expect(not _externally_removed_item_id.is_empty(), "The partial-consumption fixture must remove one still-unconsumed requirement.")
-	_expect(Inventory.items == external_change_expected, "Rollback must refund construction-consumed inputs while preserving the external material removal.")
-	_expect(state.phase == "empty" and not available_worker.is_reserved(), "Failed partial consumption must leave construction empty and release its builder.")
-	_expect(available_citizen.employment_status == CitizenData.EmploymentStatus.HIRED, "Failed partial consumption must restore linked citizen employment.")
+	Inventory.items["construction_invalid_fixture"] = 1
+	var malformed_inventory: Dictionary = Inventory.items.duplicate()
+	var denied_payment: Dictionary = state.start_build([first_id] as Array[String])
+	_expect(not bool(denied_payment.get("success", false)), "Invalid Inventory state must fail the complete payment preflight.")
+	_expect(Inventory.items == malformed_inventory, "Denied bulk payment must leave every Inventory entry untouched.")
+	_expect(state.phase == "empty" and not available_worker.is_reserved() and not state.is_transaction_busy(),
+		"Denied payment must leave construction empty, release no worker reservation and clear its transaction guard.")
+	_expect(available_citizen.employment_status == CitizenData.EmploymentStatus.HIRED, "Denied payment must leave linked citizen employment unchanged.")
+	Inventory.items.erase("construction_invalid_fixture")
 	state.free()
 	_fixture_state = null
 	_completed_sections += 1
@@ -183,6 +182,12 @@ func _test_team_durations_and_completion() -> void:
 			Inventory.items_changed.disconnect(_attempt_reentrant_start)
 			_reentrant_watch = false
 			_expect(_reentrant_attempted and not bool(_reentrant_result.get("success", false)), "A reentrant start during inventory mutation must be rejected.")
+			_expect(_reentrant_state_was_staged and _reentrant_worker_reserved,
+				"Inventory observers must see the complete building state and reserved worker before payment notification.")
+			_expect(not _reentrant_unassign_result and not _reentrant_dismiss_result,
+				"Worker assignment and dismissal changes must be rejected while construction payment is publishing.")
+			_expect(not _reentrant_inventory_remove_result and not _reentrant_time_advanced,
+				"Inventory mutation and clock advancement must be rejected during the bulk payment callback.")
 		_expect(bool(result.success), "%d-worker construction must start." % count)
 		_expect(state.phase == "building" and state.worker_ids == selected, "Construction must lock the selected team in building phase.")
 		_expect(state.completes_at - state.started_at == expected_duration, "Construction deadline must match the previewed duration.")
@@ -257,7 +262,16 @@ func _test_map_reload_and_built_workshop_access() -> void:
 	_advance_worker_minutes(_fixture_state, _fixture_state.CLEARING_MINUTES, visuals)
 	_expect(_fixture_state.phase == "empty" and not clearing_worker.is_reserved(),
 		"Arrived clearing finishes and releases its worker before construction.")
+	_save_busy_reason_during_payment = ""
+	var was_clock_paused: bool = TimeComponentManager.is_paused
+	TimeComponentManager.is_paused = false
+	Inventory.items_changed.connect(_observe_save_busy_during_payment)
 	var result: Dictionary = _fixture_state.start_build(selected)
+	if Inventory.items_changed.is_connected(_observe_save_busy_during_payment):
+		Inventory.items_changed.disconnect(_observe_save_busy_during_payment)
+	TimeComponentManager.is_paused = was_clock_paused
+	_expect(_save_busy_reason_during_payment.begins_with("Wait for the current transaction"),
+		"A save snapshot must refuse reentry while construction payment is publishing.")
 	_expect(bool(result.success), "The real plot's runtime state must accept the fixture construction team.")
 	if not bool(result.success):
 		await _free_content()
@@ -369,18 +383,24 @@ func _attempt_reentrant_start() -> void:
 	if not _reentrant_watch or _reentrant_attempted:
 		return
 	_reentrant_attempted = true
+	_reentrant_state_was_staged = _reentrant_state.phase == "building" and _reentrant_state.worker_ids == _reentrant_worker_ids
+	var worker: WorkerData = WorkerDatabase.get_worker_data(_reentrant_worker_ids[0]) if not _reentrant_worker_ids.is_empty() else null
+	_reentrant_worker_reserved = worker != null and worker.is_reserved()
+	if worker != null:
+		_reentrant_unassign_result = WorkerDatabase.unassign_worker(worker.worker_id)
+		_reentrant_dismiss_result = WorkerDatabase.dismiss_worker(worker.worker_id)
+	_reentrant_inventory_remove_result = Inventory.remove_item("wood_log", 1)
+	_reentrant_time_advanced = TimeComponentManager.advance_one_minute()
 	_reentrant_result = _reentrant_state.call("start_build", _reentrant_worker_ids)
 
-func _remove_unconsumed_material_during_start() -> void:
-	if not _rollback_watch:
-		return
-	_rollback_watch = false
-	for item_id: String in REQUIREMENTS:
-		var quantity: int = int(REQUIREMENTS[item_id])
-		if Inventory.has_item(item_id, quantity):
-			_externally_removed_item_id = item_id
-			Inventory.remove_item(item_id, quantity)
-			return
+
+func _observe_save_busy_during_payment() -> void:
+	if is_instance_valid(_content):
+		var city_save: Node = WorkStateRuntime.get_node_or_null("CitySave")
+		if city_save != null:
+			var snapshot: Variant = city_save.get("snapshot")
+			if snapshot != null:
+				_save_busy_reason_during_payment = str(snapshot.call("busy_reason", _content))
 
 func _on_state_changed() -> void:
 	_change_count += 1

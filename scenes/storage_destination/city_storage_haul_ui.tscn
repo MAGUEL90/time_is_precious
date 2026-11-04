@@ -1,0 +1,217 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/storage_destination/city_storage_haul_ui.gd" id="1_script"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_base"]
+
+[sub_resource type="AtlasTexture" id="PanelTexture"]
+atlas = ExtResource("3_base")
+region = Rect2(1, 1, 168, 134)
+
+[node name="CityStorageHaulUI" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.3)
+mouse_filter = 2
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="NinePatchRect" parent="Center"]
+custom_minimum_size = Vector2(270, 202)
+layout_mode = 2
+texture_filter = 1
+texture = SubResource("PanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+theme = ExtResource("2_theme")
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 13
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 13
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "City Storage Hauling"
+horizontal_alignment = 1
+
+[node name="SourceRow" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="SourceCaption" type="Label" parent="Center/Panel/Margin/Content/SourceRow"]
+custom_minimum_size = Vector2(36, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Source"
+vertical_alignment = 1
+
+[node name="Source" type="OptionButton" parent="Center/Panel/Margin/Content/SourceRow"]
+custom_minimum_size = Vector2(128, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+
+[node name="Destination" type="Label" parent="Center/Panel/Margin/Content/SourceRow"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "To: Annex"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WorkerRow" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="WorkerCaption" type="Label" parent="Center/Panel/Margin/Content/WorkerRow"]
+custom_minimum_size = Vector2(36, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Worker"
+vertical_alignment = 1
+
+[node name="Worker" type="OptionButton" parent="Center/Panel/Margin/Content/WorkerRow"]
+custom_minimum_size = Vector2(183, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+
+[node name="ItemRow" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ItemCaption" type="Label" parent="Center/Panel/Margin/Content/ItemRow"]
+custom_minimum_size = Vector2(36, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Item"
+vertical_alignment = 1
+
+[node name="Item" type="OptionButton" parent="Center/Panel/Margin/Content/ItemRow"]
+custom_minimum_size = Vector2(183, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+
+[node name="QuantityRow" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="QuantityCaption" type="Label" parent="Center/Panel/Margin/Content/QuantityRow"]
+custom_minimum_size = Vector2(36, 16)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Quantity"
+vertical_alignment = 1
+
+[node name="Quantity" type="SpinBox" parent="Center/Panel/Margin/Content/QuantityRow"]
+custom_minimum_size = Vector2(56, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+allow_greater = false
+allow_lesser = false
+max_value = 3.0
+value = 1.0
+rounded = true
+update_on_text_changed = true
+
+[node name="UpToThree" type="Label" parent="Center/Panel/Margin/Content/QuantityRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Up to 3 items per trip"
+vertical_alignment = 1
+
+[node name="Route" type="Label" parent="Center/Panel/Margin/Content"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "No active route"
+autowrap_mode = 2
+max_lines_visible = 2
+
+[node name="Feedback" type="Label" parent="Center/Panel/Margin/Content"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Choose a worker, item and quantity (up to 3)."
+autowrap_mode = 2
+max_lines_visible = 2
+
+[node name="Footer" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Start" type="Button" parent="Center/Panel/Margin/Content/Footer"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Start"
+
+[node name="CancelRoute" type="Button" parent="Center/Panel/Margin/Content/Footer"]
+custom_minimum_size = Vector2(68, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Cancel Route"
+disabled = true
+
+[node name="Back" type="Button" parent="Center/Panel/Margin/Content/Footer"]
+custom_minimum_size = Vector2(48, 16)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"

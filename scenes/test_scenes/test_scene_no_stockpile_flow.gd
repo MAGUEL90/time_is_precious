@@ -294,6 +294,7 @@ func _test_legacy_pending_migration(pending: int) -> void:
 	raw.worksites.sites.ReedSite.stock -= 3
 	raw.worksites.pending_output["ClaySiteA"] = 2
 	raw.worksites.pending_output["ReedSite"] = 3
+	preload("res://scenes/test_scenes/legacy_reliability_fixture.gd").strip_v16_owners(raw)
 	document.schema_version = 14
 	document.state = codec.encode(raw)
 	_expect(codec.error.is_empty() and not FileAccess.file_exists(LEGACY_PENDING_SAVE),

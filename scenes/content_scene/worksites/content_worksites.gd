@@ -74,6 +74,21 @@ func _ready() -> void:
 	var city_storage_area: Node = get_node_or_null("CityStorageArea")
 	if city_storage_area != null:
 		city_storage_area.configure(player, city_tools, _can_open_worker_hub)
+	var city_storage_annex: Node = get_node_or_null("CityStorageAnnex")
+	if city_storage_area != null and city_storage_annex != null:
+		# Both providers are city property. Keep the annex and in-flight cargo in
+		# the existing persistent world host during the city/home handoff.
+		var transport: Node = WorkStateRuntime.get_node_or_null("CityStorageTransport")
+		if transport == null:
+			transport = preload("res://scenes/storage_destination/city_storage_transport.gd").new()
+			transport.name = "CityStorageTransport"
+			var annex: Node = preload("res://scenes/storage_destination/city_tool_storage.gd").new()
+			annex.name = "Annex"
+			transport.add_child(annex)
+			WorkStateRuntime.add_child(transport)
+		transport.configure(city_tools, city_storage_area.get_node("DeliveryPoint").global_position,
+			city_storage_annex.get_node("DeliveryPoint").global_position)
+		city_storage_annex.configure(player, transport.get_storage("annex"), _can_open_worker_hub)
 	if seed_playtest_equipment:
 		city_tools.add_tool_unit("content_cart", "cart", "Cart")
 		city_tools.add_tool_unit("content_glove", "basic_glove", "Basic Glove")

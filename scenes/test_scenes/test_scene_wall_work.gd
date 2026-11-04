@@ -9,7 +9,9 @@ var state: Node
 var storage: Node
 var map_fixture: Node2D
 var storage_changed_count: int = 0
+var inventory_changed_count: int = 0
 var inventory_before: Dictionary = {}
+var inventory_capacity_before: float = 0.0
 var clock_before: Dictionary = {}
 var clock_paused_before: bool = false
 var clock_processing_before: bool = false
@@ -28,6 +30,10 @@ func _run() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
 	get_tree().paused = false
+	inventory_capacity_before = Inventory.max_load
+	Inventory.max_load = 100000.0
+	Inventory.items.assign({"stone": 500, "wood_log": 500})
+	Inventory.items_changed.connect(_on_inventory_changed)
 	storage = CITY_STORAGE_SCRIPT.new()
 	storage.name = "SyntheticCityStorage"
 	add_child(storage)
@@ -67,7 +73,6 @@ func _run() -> void:
 	await _test_stale_quote_and_repair_rounding(base_minute)
 	await _test_raid_pause_resume_and_breach_refund(base_minute)
 
-	_expect(Inventory.items == inventory_before, "Timed wall material work never changes player Inventory.")
 	_expect(storage.units == units_before and storage.food_portions == portions_before,
 		"Wall material work leaves unique equipment and food portions untouched.")
 	_finish()
@@ -75,50 +80,54 @@ func _run() -> void:
 func _test_build_shortage_quote_and_start() -> void:
 	storage.items = {}
 	storage_changed_count = 0
+	Inventory.items.clear()
 	var empty_stock: Dictionary = storage.items.duplicate(true)
 	var units_snapshot: Dictionary = storage.units.duplicate(true)
 	var quote: Dictionary = state.get_work_quote()
 	_expect(quote.kind == "build" and quote.materials == {"stone": 10, "wood_log": 5}
-		and not quote.can_start, "An empty City Storage shows the full build requirement as unavailable.")
+		and not quote.can_start and quote.reason == "Not enough materials in Inventory.", "An empty Inventory shows the full build requirement as unavailable.")
 	_expect(not state.request_wall_work(quote) and storage.items == empty_stock
 		and storage_changed_count == 0 and state._work_kind.is_empty(),
 		"Empty stock blocks construction atomically without charging or starting a job.")
 
 	storage.items = {"stone": 10, "wood_log": 4}
 	var before: Dictionary = storage.items.duplicate(true)
+	Inventory.items.assign({"stone": 10, "wood_log": 4})
 	quote = state.get_work_quote()
 	_expect(quote.kind == "build" and quote.materials == {"stone": 10, "wood_log": 5}
 		and quote.duration_minutes == 120 and not quote.can_start,
-		"Build quote lists its full synthetic materials and duration while one stock is short.")
-	_expect(not state.request_wall_work(quote), "Short City Storage cannot start a wall build.")
+		"Build quote lists its full synthetic materials and duration while Inventory is one item short.")
+	_expect(not state.request_wall_work(quote), "Short Inventory cannot start a wall build despite City Storage stock.")
 	_expect(storage.items == before and storage.units == units_snapshot and storage_changed_count == 0
 		and state._work_kind.is_empty(), "A multi-material shortage is rejected atomically without starting work.")
 
 	storage.items = {"stone": 12, "wood_log": 6}
+	Inventory.items.assign({"stone": 10, "wood_log": 5})
 	before = storage.items.duplicate(true)
 	var read_quote: Dictionary = state.get_work_quote()
 	var second_read: Dictionary = state.get_work_quote()
 	_expect(read_quote.can_start and read_quote == second_read and storage.items == before
 		and storage_changed_count == 0, "Reading the same available quote repeatedly does not reserve or consume materials.")
-	storage.items["wood_log"] = 4
-	var changed_stock: Dictionary = storage.items.duplicate(true)
-	_expect(not state.request_wall_work(read_quote), "A quote becomes stale when required City Storage stock changes.")
-	_expect(storage.items == changed_stock and state._work_kind.is_empty() and storage_changed_count == 0,
-		"A stale quote is rejected without partial material consumption.")
+	Inventory.items["wood_log"] = 4
+	var changed_inventory: Dictionary = Inventory.items.duplicate(true)
+	_expect(not state.request_wall_work(read_quote), "A quote becomes stale when required Inventory stock changes.")
+	_expect(Inventory.items == changed_inventory and storage.items == before and state._work_kind.is_empty() and storage_changed_count == 0,
+		"A stale quote is rejected without partial material consumption or City Storage use.")
 
 	storage.items = {"stone": 12, "wood_log": 6}
+	Inventory.items.assign({"stone": 10, "wood_log": 5})
 	storage_changed_count = 0
+	inventory_changed_count = 0
 	quote = state.get_work_quote()
 	_expect(state.request_wall_work(quote), "A current, affordable build quote starts timed construction.")
-	_expect(storage.items == {"stone": 2, "wood_log": 1} and storage_changed_count == 1,
-		"Construction charges the exact materials once at job start.")
+	_expect(Inventory.items.is_empty() and inventory_changed_count == 1 and storage.items == {"stone": 12, "wood_log": 6} and storage_changed_count == 0,
+		"Construction atomically charges the exact Inventory materials once and leaves City Storage untouched.")
 	_expect(state.wall_hp == 0 and state.wall_level == 0 and state._work_kind == "build"
 		and state._work_remaining == 120, "Starting construction does not grant wall HP before work finishes.")
-	var paid_stock: Dictionary = storage.items.duplicate(true)
 	_expect(not state.request_wall_work(quote) and not state.build_wall(),
 		"A repeated quote or direct build request cannot restart work already in progress.")
-	_expect(storage.items == paid_stock and storage_changed_count == 1,
-		"Repeated start attempts do not charge City Storage a second time.")
+	_expect(storage.items == {"stone": 12, "wood_log": 6} and inventory_changed_count == 1 and storage_changed_count == 0,
+		"Repeated start attempts do not charge either material provider a second time.")
 
 func _test_build_completion_across_map_replace(base_minute: int) -> void:
 	_set_clock_minute(base_minute + 30)
@@ -140,12 +149,14 @@ func _test_build_completion_across_map_replace(base_minute: int) -> void:
 	_expect(state._work_kind.is_empty() and state._work_remaining == 0
 		and state.wall_hp == 50 and state.wall_level == 1,
 		"Build completes on the exact due minute and grants level 1 at full HP.")
-	_expect(storage.items == {"stone": 2, "wood_log": 1},
-		"Build completion does not charge materials a second time.")
+	_expect(storage.items == {"stone": 12, "wood_log": 6} and Inventory.items.is_empty(),
+		"Build completion does not charge materials a second time or touch City Storage.")
 
 func _test_stale_quote_and_repair_rounding(base_minute: int) -> void:
 	storage.items = {"stone": 10, "wood_log": 5}
+	Inventory.items.assign({"stone": 10, "wood_log": 5})
 	storage_changed_count = 0
+	inventory_changed_count = 0
 	state.wall_hp = 45
 	var stale_quote: Dictionary = state.get_work_quote()
 	_expect(stale_quote.kind == "repair" and stale_quote.materials == {"stone": 1}
@@ -156,8 +167,9 @@ func _test_stale_quote_and_repair_rounding(base_minute: int) -> void:
 	var revised_quote: Dictionary = state.get_work_quote()
 	_expect(revised_quote.materials == {"stone": 2} and not state.request_wall_work(stale_quote),
 		"A wall-condition change invalidates an earlier repair quote.")
-	_expect(storage.items == stock_before_stale_request and state._work_kind.is_empty()
-		and storage_changed_count == 0, "A stale wall-condition quote consumes no supplies.")
+	_expect(storage.items == stock_before_stale_request and Inventory.items == {"stone": 10, "wood_log": 5}
+		and state._work_kind.is_empty() and storage_changed_count == 0 and inventory_changed_count == 0,
+		"A stale wall-condition quote consumes no supplies.")
 
 	state.wall_hp = 37
 	var quote: Dictionary = state.get_work_quote()
@@ -167,14 +179,15 @@ func _test_stale_quote_and_repair_rounding(base_minute: int) -> void:
 	_expect(state.get_work_quote() == quote and storage.items == stock_before_quote and storage_changed_count == 0,
 		"Reading a repair quote does not charge or reserve materials.")
 	_expect(state.request_wall_work(quote), "A current repair quote starts timed repair.")
-	_expect(storage.items == {"stone": 7, "wood_log": 5} and storage_changed_count == 1,
-		"Repair consumes the three quoted stone units exactly once at start.")
+	_expect(Inventory.items == {"stone": 7, "wood_log": 5} and storage.items == stock_before_quote and storage_changed_count == 0 and inventory_changed_count == 1,
+		"Repair atomically consumes the three quoted Inventory stones and leaves City Storage unchanged.")
 	_expect(state.wall_hp == 37 and state._work_remaining == 60 and state._work_restore_hp == 13,
 		"Repair holds HP steady until the job finishes and records its paid repair amount.")
 	stock_before_quote = storage.items.duplicate(true)
 	_expect(not state.request_wall_work(quote) and not state.repair_wall(),
 		"Repair cannot be restarted while its timed job is active.")
-	_expect(storage.items == stock_before_quote and storage_changed_count == 1,
+	_expect(storage.items == stock_before_quote and Inventory.items == {"stone": 7, "wood_log": 5}
+		and storage_changed_count == 0 and inventory_changed_count == 1,
 		"Repeated repair attempts do not consume additional stock.")
 
 	_set_clock_minute(base_minute + 150)
@@ -195,17 +208,20 @@ func _test_stale_quote_and_repair_rounding(base_minute: int) -> void:
 	_set_clock_minute(base_minute + 180)
 	_expect(state._work_kind.is_empty() and state._work_remaining == 0 and state.wall_hp == 50,
 		"Repair restores full HP exactly when its 60-minute job becomes due.")
-	_expect(storage.items == {"stone": 7, "wood_log": 5},
-		"Repair completion does not consume extra materials.")
+	_expect(storage.items == {"stone": 10, "wood_log": 5} and Inventory.items == {"stone": 7, "wood_log": 5},
+		"Repair completion does not consume extra materials or alter City Storage.")
 
 func _test_raid_pause_resume_and_breach_refund(base_minute: int) -> void:
 	state.wall_hp = 40
 	storage.items = {"stone": 10, "wood_log": 5}
+	Inventory.items.assign({"stone": 2})
 	storage_changed_count = 0
+	inventory_changed_count = 0
 	var repair_quote: Dictionary = state.get_work_quote()
 	_expect(repair_quote.materials == {"stone": 2} and state.request_wall_work(repair_quote),
 		"A two-step repair starts before a non-breaching debug raid.")
-	_expect(storage.items == {"stone": 8, "wood_log": 5}, "Repair stock is paid before the raid starts.")
+	_expect(Inventory.items.is_empty() and storage.items == {"stone": 10, "wood_log": 5} and inventory_changed_count == 1,
+		"The two-step repair pays Inventory before the raid starts and preserves City Storage.")
 	_expect(state.start_debug_raid(false), "A controlled light debug raid starts while repair is pending.")
 	var paused_work_remaining: int = state._work_remaining
 	_set_clock_minute(base_minute + 300)
@@ -218,16 +234,19 @@ func _test_raid_pause_resume_and_breach_refund(base_minute: int) -> void:
 	_set_clock_minute(base_minute + 360)
 	_expect(state._work_kind.is_empty() and state._work_remaining == 0 and state.wall_hp > 4,
 		"Pending repair resumes and completes after a repelled raid.")
-	_expect(storage.items == {"stone": 8, "wood_log": 5},
-		"A resumed repair keeps only its original material charge.")
+	_expect(Inventory.items.is_empty() and storage.items == {"stone": 10, "wood_log": 5} and inventory_changed_count == 1,
+		"A resumed repair keeps only its original Inventory material charge.")
 
 	state.wall_hp = 30
 	storage.items = {"stone": 10, "wood_log": 5}
+	Inventory.items.assign({"stone": 4})
 	storage_changed_count = 0
+	inventory_changed_count = 0
 	repair_quote = state.get_work_quote()
 	_expect(repair_quote.materials == {"stone": 4} and state.request_wall_work(repair_quote),
 		"A four-step repair starts before a breaching debug raid.")
-	_expect(storage.items == {"stone": 6, "wood_log": 5}, "Breached repair materials are held in City Storage's paid balance.")
+	_expect(Inventory.items.is_empty() and storage.items == {"stone": 10, "wood_log": 5} and inventory_changed_count == 1,
+		"Breached repair materials are paid from Inventory, leaving City Storage untouched.")
 	_expect(state.start_debug_raid(true), "A controlled heavy debug raid starts while repair is pending.")
 	_set_clock_minute(base_minute + 390)
 	_expect(state.phase == "attacking" and state._work_remaining == 60 and state.wall_hp == 30,
@@ -237,10 +256,10 @@ func _test_raid_pause_resume_and_breach_refund(base_minute: int) -> void:
 		"The heavy raid breaches the wall at its sixth five-second hit.")
 	_expect(state._work_kind.is_empty() and state._work_remaining == 0 and state._work_paid.is_empty(),
 		"A breach cancels the pending repair job and clears its paid-material record.")
-	_expect(storage.items == {"stone": 10, "wood_log": 5},
-		"A breached repair refunds every paid material to City Storage.")
-	_expect("returned to City Storage" in state.last_work_message and storage_changed_count == 2,
-		"The refund is reported once after the repair payment and return.")
+	_expect(Inventory.items == {"stone": 4} and storage.items == {"stone": 10, "wood_log": 5},
+		"A breached repair returns every paid material to Inventory.")
+	_expect("returned to Inventory" in state.last_work_message and inventory_changed_count == 2 and storage_changed_count == 0,
+		"The refund is reported once after the Inventory payment and return.")
 
 func _clock_minute() -> int:
 	return TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
@@ -266,7 +285,15 @@ func _snapshot_globals() -> void:
 func _on_storage_changed() -> void:
 	storage_changed_count += 1
 
+func _on_inventory_changed() -> void:
+	inventory_changed_count += 1
+
 func _finish() -> void:
+	if Inventory.items_changed.is_connected(_on_inventory_changed):
+		Inventory.items_changed.disconnect(_on_inventory_changed)
+	Inventory.items.assign(inventory_before)
+	Inventory.max_load = inventory_capacity_before
+	Inventory.items_changed.emit()
 	if is_instance_valid(state):
 		var time_callable: Callable = Callable(state, "_on_time_changed")
 		if TimeComponentManager.time_changed.is_connected(time_callable):

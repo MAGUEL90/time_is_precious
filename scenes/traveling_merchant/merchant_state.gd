@@ -176,6 +176,10 @@ func quote(item_id: String, quantity: int, buying: bool) -> Dictionary:
 	return {"ok": true, "message": "", "total": total}
 
 func trade(item_id: String, quantity: int, buying: bool) -> Dictionary:
+	# Quotes are read-only, but the trade writes Inventory directly. Do not let
+	# an Inventory signal observer start it during a guarded construction debit.
+	if Inventory._bulk_transaction_in_progress:
+		return _failure("A trade is already being completed.")
 	var result: Dictionary = quote(item_id, quantity, buying)
 	if not result.ok:
 		return result

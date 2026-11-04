@@ -13,9 +13,12 @@ signal closed
 var stock_summary: RichTextLabel
 
 var storage: Node
+var storage_id: String = "city"
 var access_check: Callable
 var deposit_button: Button
+var haul_button: Button
 var transfer_ui: ItemTransferUI
+var haul_ui: Control
 var clear_button: Button
 var _transfer_mode: String = ""
 var _previous_tree_paused: bool = false
@@ -83,12 +86,15 @@ func _add_supply_icon(summary: Label, texture: Texture2D) -> void:
 	summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	summary.mouse_filter = Control.MOUSE_FILTER_STOP
 
-func open(provider: Node, gate: Callable) -> void:
-	storage = provider
+func open(provider: Node, gate: Callable, next_storage_id: String = "city") -> void:
+	storage_id = "annex" if next_storage_id == "annex" else "city"
+	storage = _resolve_storage_provider(provider)
 	access_check = gate
 	if not _has_access():
 		close()
 		return
+	_set_location_presentation()
+	_ensure_haul_button()
 	_previous_tree_paused = get_tree().paused
 	_owns_pause = true
 	get_tree().paused = true
@@ -102,6 +108,69 @@ func open(provider: Node, gate: Callable) -> void:
 func _has_access() -> bool:
 	return is_instance_valid(storage) and access_check.is_valid() and bool(access_check.call())
 
+func _resolve_storage_provider(provider: Node) -> Node:
+	var manager: Node = _get_transport_manager()
+	if is_instance_valid(manager) and manager.has_method("get_storage"):
+		var resolved: Variant = manager.call("get_storage", storage_id)
+		if resolved is Node and is_instance_valid(resolved):
+			return resolved
+	# Annex stock is only defined by the city transport runtime. Falling back to
+	# the central provider here could make the two physical locations look alike.
+	if storage_id == "annex":
+		return null
+	return provider if is_instance_valid(provider) else null
+
+func _get_transport_manager() -> Node:
+	return get_tree().get_first_node_in_group("city_storage_transport")
+
+func _set_location_presentation() -> void:
+	var title: Label = view.get_node("Margin/Content/TitleRow/Title")
+	$Root/CitySupplyPanel.hide()
+	if storage_id == "annex":
+		title.text = "City-Owned Annex"
+		context.text = "Citizens use Central Storage.\nPlayer deposits go to Central."
+		context.show()
+		deposit_button.disabled = true
+	else:
+		title.text = "City Storage"
+		context.text = "Central City Storage"
+		context.show()
+		deposit_button.disabled = false
+
+func _ensure_haul_button() -> void:
+	var manager: Node = _get_transport_manager()
+	if not is_instance_valid(manager):
+		return
+	if is_instance_valid(haul_button):
+		return
+	haul_button = _make_button("Haul", deposit_button.get_parent())
+	haul_button.pressed.connect(_open_haul)
+
+func _open_haul() -> void:
+	if not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui):
+		return
+	if not _has_access():
+		close()
+		return
+	var manager: Node = _get_transport_manager()
+	if not is_instance_valid(manager):
+		return
+	$Root.hide()
+	haul_ui = preload("res://scenes/storage_destination/city_storage_haul_ui.tscn").instantiate()
+	add_child(haul_ui)
+	haul_ui.connect("closed", Callable(self, "_on_haul_ui_closed").bind(haul_ui))
+	haul_ui.call("open", manager, storage_id)
+
+func _on_haul_ui_closed(source: Control) -> void:
+	if haul_ui != source:
+		return
+	haul_ui = null
+	if not _has_access():
+		close()
+		return
+	$Root.show()
+	_refresh_view()
+
 func _process(_delta: float) -> void:
 	if visible and not _has_access():
 		close()
@@ -110,7 +179,9 @@ func _input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
-		if is_instance_valid(transfer_ui):
+		if is_instance_valid(haul_ui):
+			haul_ui.call("close")
+		elif is_instance_valid(transfer_ui):
 			transfer_ui._on_back_pressed()
 		else:
 			close()
@@ -124,6 +195,9 @@ func close() -> void:
 		transfer_ui.hide()
 		transfer_ui.queue_free()
 	transfer_ui = null
+	if is_instance_valid(haul_ui):
+		haul_ui.queue_free()
+	haul_ui = null
 	if Inventory.items_changed.is_connected(_on_stock_changed):
 		Inventory.items_changed.disconnect(_on_stock_changed)
 	if is_instance_valid(storage) and storage.changed.is_connected(_on_stock_changed):
@@ -156,17 +230,17 @@ func _disconnect_refresh_signals() -> void:
 		_needs_manager.disconnect("needs_changed", _on_needs_changed)
 
 func _on_time_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
-	if visible:
+	if visible and storage_id == "city":
 		_refresh_food_summary()
 		_refresh_clothing_summary()
 
 func _on_citizen_added(_citizen: Variant) -> void:
-	if visible:
+	if visible and storage_id == "city":
 		_refresh_food_summary()
 		_refresh_clothing_summary()
 
 func _on_needs_changed() -> void:
-	if visible:
+	if visible and storage_id == "city":
 		_refresh_food_summary()
 		_refresh_clothing_summary()
 
@@ -185,17 +259,22 @@ func _on_stock_changed() -> void:
 func _refresh_view() -> void:
 	if not is_instance_valid(storage):
 		return
-	var food_supply_summary: Dictionary = _refresh_food_summary()
-	_refresh_clothing_summary()
+	var food_supply_summary: Dictionary = {}
+	if storage_id == "city":
+		food_supply_summary = _refresh_food_summary()
+		_refresh_clothing_summary()
+	else:
+		food_summary.text = "Citizens use Central Storage."
+		clothing_summary.text = "Citizens use Central Storage."
 	for child: Node in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
-	var items: Dictionary = storage.get_available_items()
+	var items: Dictionary = _get_available_items(storage_id)
 	var item_ids: Array = items.keys()
 	item_ids.sort()
 	var quantity: int = 0
 	var equipped: int = 0
-	for unit: Dictionary in storage.units.values():
+	for unit: Dictionary in _get_storage_units().values():
 		if not str(unit.get("worker_id", "")).is_empty():
 			equipped += 1
 	for item_id: String in item_ids:
@@ -207,7 +286,10 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
 		slot.interaction_locked = true
-	stock_summary.text = "[center]City cash: %d\nAvailable: %d | Equipped: %d[/center]" % [CityStockManager.treasury_shekel, quantity, equipped]
+	if storage_id == "annex":
+		stock_summary.text = "[center]Available: %d | Equipped: %d[/center]" % [quantity, equipped]
+	else:
+		stock_summary.text = "[center]City cash: %d\nAvailable: %d | Equipped: %d[/center]" % [CityStockManager.treasury_shekel, quantity, equipped]
 	feedback.text = _feedback_text
 	if feedback.text.is_empty() and grid.get_child_count() == 0:
 		if items.is_empty() and int(food_supply_summary.get("portion_points", 0)) > 0:
@@ -218,10 +300,35 @@ func _refresh_view() -> void:
 		var slot: ItemSlot = preload("res://scenes/ui/item_slot/item_slot.tscn").instantiate()
 		grid.add_child(slot)
 		slot.set_empty()
-	deposit_button.disabled = storage.get_depositable_items().is_empty()
+	deposit_button.disabled = storage_id != "city" or not storage.has_method("get_depositable_items") or storage.call("get_depositable_items").is_empty()
+	if is_instance_valid(haul_button):
+		haul_button.disabled = not _has_access()
+
+func _get_available_items(location_id: String) -> Dictionary:
+	if is_instance_valid(storage) and storage.has_method("get_available_items"):
+		var result: Variant = storage.call("get_available_items")
+		if result is Dictionary:
+			return result
+	var manager: Node = _get_transport_manager()
+	if is_instance_valid(manager) and manager.has_method("available_items"):
+		var result: Variant = manager.call("available_items", location_id)
+		if result is Dictionary:
+			return result
+	return {}
+
+func _get_storage_units() -> Dictionary:
+	if not is_instance_valid(storage):
+		return {}
+	for property: Dictionary in storage.get_property_list():
+		if str(property.get("name", "")) == "units":
+			var value: Variant = storage.get("units")
+			return value if value is Dictionary else {}
+	return {}
 
 func _refresh_food_summary() -> Dictionary:
 	if not is_instance_valid(food_summary):
+		return {}
+	if storage_id != "city":
 		return {}
 	var summary: Dictionary = _get_food_supply_summary(storage)
 	var points: int = int(summary.get("points", 0))
@@ -242,6 +349,9 @@ func _get_food_supply_summary(provider: Node = null) -> Dictionary:
 func _refresh_clothing_summary() -> void:
 	if not is_instance_valid(clothing_summary):
 		return
+	if storage_id != "city":
+		clothing_summary.text = "Citizens use Central Storage."
+		return
 	if not is_instance_valid(_needs_manager):
 		clothing_summary.text = "Clothing Supply\nUnavailable"
 		return
@@ -258,7 +368,7 @@ func _refresh_clothing_summary() -> void:
 		clothing_summary.text += "\nReady tomorrow"
 
 func _open_transfer(mode: String) -> void:
-	if not visible or not view.visible or is_instance_valid(transfer_ui) or mode != "deposit":
+	if not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui) or storage_id != "city" or mode != "deposit":
 		return
 	if not _has_access():
 		close()
