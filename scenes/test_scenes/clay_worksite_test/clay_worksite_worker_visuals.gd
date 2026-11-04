@@ -134,6 +134,10 @@ func _process(delta: float) -> void:
 			var actor = ensure_actor(id, fixture.worker_spawn(site_id, id))
 			if actor == null:
 				continue
+			# A worker may have just finished or cancelled a city-storage trip.
+			# Active hauling below will set its current cargo label again.
+			if actor.has_node("CargoLabel"):
+				actor.get_node("CargoLabel").text = ""
 			if not fixture.enable_worker_commute:
 				actor.hide()
 				continue
@@ -160,8 +164,6 @@ func _process(delta: float) -> void:
 				var cargo_name: String = cargo_item.display_name if cargo_item != null else "Clay"
 				actor.get_node("CargoLabel").text = "%s x%d" % [cargo_name, cargo_quantity] if cargo_quantity > 0 else ""
 				continue
-			if actor.has_node("CargoLabel"):
-				actor.get_node("CargoLabel").text = ""
 			var first_day: int = int(job.starts[id]) / 1440
 			if minute < schedule.departure_time(site_id, id, first_day):
 				work_cycles.erase(id)
@@ -193,6 +195,8 @@ func _process(delta: float) -> void:
 	for id: String in actors.keys():
 		if not retained.has(id):
 			work_cycles.erase(id)
+			if actors[id].has_node("CargoLabel"):
+				actors[id].get_node("CargoLabel").text = ""
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
 	_update_reed_presence()

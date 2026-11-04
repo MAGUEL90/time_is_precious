@@ -137,9 +137,11 @@ func harvest_round() -> void:
 			if stopped:
 				return
 			var before: int = Inventory.items.get("date_cluster", 0)
+			var available_before: int = tree.state.available.count(true)
 			await interact()
 			var gained: int = int(Inventory.items.get("date_cluster", 0)) - before
-			check(gained == 1, "E collects one date on " + str(tree.name))
+			var consumed: int = available_before - tree.state.available.count(true)
+			check(gained > 0 and gained == consumed, "E transfers the collected dates exactly once on " + str(tree.name))
 			harvested += gained
 			collected_by_tree[tree.name] = int(collected_by_tree.get(tree.name, 0)) + gained
 			await get_tree().create_timer(1.0).timeout

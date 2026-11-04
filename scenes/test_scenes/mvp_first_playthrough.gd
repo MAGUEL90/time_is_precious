@@ -168,9 +168,12 @@ func harvest() -> void:
 			if stopped:
 				return
 			var before: int = Inventory.items.get("date_cluster", 0)
+			var available_before: int = tree.state.available.count(true)
 			await interact(pickup)
-			_expect(Inventory.items.get("date_cluster", 0) == before + 1, "Pickup earns one date")
-			harvested += int(Inventory.items.get("date_cluster", 0)) - before
+			var gained: int = int(Inventory.items.get("date_cluster", 0)) - before
+			var consumed: int = available_before - tree.state.available.count(true)
+			_expect(gained > 0 and gained == consumed, "One palm interaction transfers each collected date exactly once")
+			harvested += gained
 			await get_tree().create_timer(1.0).timeout
 		await eat()
 

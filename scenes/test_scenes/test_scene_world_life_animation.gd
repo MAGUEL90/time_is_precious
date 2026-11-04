@@ -268,6 +268,9 @@ func _test_live_walking() -> void:
 		city.get_node("YSortWorld/TravelingMerchant").hide()
 		city.get_node("YSortWorld/WorkshopPlot/Craftsman").hide()
 		runtime.get_node("WorksiteMarkers").hide()
+		var annex: CanvasItem = runtime.get_node_or_null("CityStorageAnnex")
+		if annex != null:
+			annex.hide()
 	for id: String in visuals.actors:
 		if id != RESIDENT_ID:
 			visuals.actors[id].hide()

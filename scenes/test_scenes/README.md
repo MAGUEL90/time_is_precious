@@ -35,6 +35,8 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `test_scene_review_resource_paths.tscn` | Actual player pickup and worker path clearance at each of the five temporary resource sites |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
 | `test_scene_multi_worker_navigation.tscn` | Actual Wood Site worker replacement, blocked-route recovery, shared stock, shift boundaries and checkpoint compatibility. Run `-- --navigation-phase=write`, then `read` in separate processes with the same fresh `XDG_DATA_HOME` and `TIP_ISOLATED_DATA_ROOT`; use a separate fresh profile for `--navigation-phase=hire` to test the starting resident hires. |
+| `test_scene_multi_worker_city_supply.tscn` | Two Wood Site workers deliver directly to city stock, Continue without duplication and stop at shift end. Run `-- --navigation-phase=write`, then `read` with the same fresh isolated data root. |
+| `test_scene_city_transport_interruption.tscn` | Loaded courier encounters new obstruction, contract expiry and renewal; checks clear-path movement and stock conservation, including save/load and an active contract extension. Uses isolated data and explicit fixture funds and stock. |
 
 `test_scene_no_stockpile_flow.tscn` exercises the current Daily-worker-to-city
 handoff, existing player-owned construction inputs, full-stack refusal and retry,

@@ -187,10 +187,15 @@ func _set_clock(day: int, hour: int, minute: int) -> void:
 	TimeComponentManager.current_hour = hour
 	TimeComponentManager.current_minute = minute
 	# This fixture jumps the clock directly rather than emitting elapsed time.
-	# Keep the otherwise idle workshop and process cursors at that same instant.
+	# Keep otherwise idle owners' cursors at that same instant.
 	var absolute_minute: int = day * 1440 + hour * 60 + minute
 	WorkManager._last_total_minutes = absolute_minute
 	ProcessManager._last_total_minutes = absolute_minute
+	var transport: Node = WorkStateRuntime.get_node_or_null("CityStorageTransport")
+	if transport != null:
+		_check(transport.route.is_empty(), "A direct fixture clock jump requires no active city transport")
+		if transport.route.is_empty():
+			transport.tick(absolute_minute)
 
 func _test_obstacle_route() -> void:
 	var navigation = NAVIGATION.new()
