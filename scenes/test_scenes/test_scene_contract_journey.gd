@@ -28,7 +28,8 @@ func _press_input(action: String) -> void:
 	await _frames(2)
 
 func eat() -> void:
-	var amount: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / 0.04))
+	var value: float = ItemDatabase.get_item_data("date_cluster").hunger_reduction
+	var amount: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / value))
 	if amount <= 0 or stopped:
 		return
 	var inventory_ui: InventoryUI = content.get_node("InventoryUI")

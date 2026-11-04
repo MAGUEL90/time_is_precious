@@ -78,7 +78,8 @@ func harvest_and_eat() -> void:
 			harvested += int(Inventory.items.get("date_cluster", 0)) - before
 			if prior_timer == 0 and candidate.state.remaining_minutes > 0:
 				delays.append(floori(float(candidate.state.remaining_minutes) / 60.0))
-	var qty: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / 0.04))
+	var value: float = ItemDatabase.get_item_data("date_cluster").hunger_reduction
+	var qty: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / value))
 	if qty > 0:
 		var ui = content.get_node("InventoryUI")
 		ui.player_ref = player

@@ -149,7 +149,7 @@ func _test_eating_and_sleep(player: Player, hud: Node) -> void:
 	player.hunger = 0.5
 	player.fatigue = 0.5
 	await inventory_ui._execute_use_item("date_cluster", 1)
-	_expect(is_equal_approx(player.hunger, 0.46) and is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 1, "Eating a date preserves both its Hunger and Energy effects and consumes one item.")
+	_expect(is_equal_approx(player.hunger, 0.40) and is_equal_approx(player.fatigue, 0.475) and Inventory.items.get("date_cluster") == 1, "Eating a date restores ten Belly points and 2.5 Energy points, and consumes one item.")
 	player.hunger = 0.0
 	player.fatigue = 0.0
 	await inventory_ui._execute_use_item("date_cluster", 1)
@@ -220,21 +220,21 @@ func _test_full_belly_food_rule(player: Player, inventory_ui: InventoryUI, hud: 
 	_expect(hud.hunger_bar.value < 100, "A slightly hungry player does not see a full Belly bar.")
 	_expect(inventory_ui._can_use_item(ItemDatabase.get_item_data("date_cluster")), "Food remains usable just below full Belly.")
 	await inventory_ui._execute_use_item("date_cluster", 3)
-	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "A nearly full Belly consumes only one item, clamps, and gains its normal Energy.")
+	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.475) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "A nearly full Belly consumes only one item, clamps, and gains its normal Energy.")
 	_expect(hud.hunger_bar.value == 100 and not inventory_ui._can_use_item(ItemDatabase.get_item_data("date_cluster")), "The bar becomes full exactly when another food is disallowed.")
 	await inventory_ui._execute_use_item("date_cluster", 1)
-	_expect(is_equal_approx(player.fatigue, 0.49) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "Another attempt after filling Belly has no effect.")
+	_expect(is_equal_approx(player.fatigue, 0.475) and Inventory.items.get("date_cluster") == 2 and success_events.size() == 1, "Another attempt after filling Belly has no effect.")
 
 	Inventory.items["date_cluster"] = 5
-	player.hunger = 0.1
+	player.hunger = 0.25
 	player.fatigue = 0.5
 	await inventory_ui._execute_use_item("date_cluster", 5)
-	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.47) and Inventory.items.get("date_cluster") == 2, "A batch stops exactly when Belly becomes full.")
+	_expect(player.hunger == player.min_hunger and is_equal_approx(player.fatigue, 0.425) and Inventory.items.get("date_cluster") == 2, "A batch stops exactly when Belly becomes full.")
 	player.hunger = 0.5
 	player.fatigue = 0.5
 	await inventory_ui._execute_use_item("roasted_drumstick", 1)
 	_expect(is_equal_approx(player.hunger, 0.35) and is_equal_approx(player.fatigue, 0.47) and Inventory.items.get("roasted_drumstick") == 2, "Drumstick retains its existing Belly and Energy effects.")
-	player.hunger = 0.08
+	player.hunger = 0.14
 	player.fatigue = player.min_fatigue
 	await inventory_ui._execute_use_item("date_cluster", 1)
 	_expect(is_equal_approx(player.hunger, 0.04) and player.fatigue == player.min_fatigue and Inventory.items.get("date_cluster") == 1, "A hungry player can eat even with full Energy.")

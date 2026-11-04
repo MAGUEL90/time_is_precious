@@ -10,6 +10,7 @@ arrival_hour = 8
 departure_hour = 18
 starting_shekel = 120
 randomize_requests = true
+guaranteed_request_ids = Array[String](["wood_log"])
 offers = Array[Dictionary]([{
 "item_id": "clay_lump", "stock": 12, "buy_price": 2
 }, {

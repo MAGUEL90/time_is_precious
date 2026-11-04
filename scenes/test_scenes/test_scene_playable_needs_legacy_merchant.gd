@@ -59,20 +59,26 @@ func _run() -> void:
 	var merchant: Node = WorkStateRuntime.get_node("CommonTravelingMerchant")
 	var store: Node = WorkStateRuntime.get_node("CitySave")
 	if mode == "write":
+		# The pre-change roll deliberately requests only bricks, to verify that
+		# loading cannot retrofit a wood quota into an active visit.
+		merchant._request_rng.seed = 937
 		_expect(_advance_to(1, 8), "The baseline reaches the first scheduled visit.")
 		_expect(not merchant._offers.has("simple_clothes"), "Writer runs against the pre-offer baseline.")
+		_expect(int(merchant._demand.get("wood_log", 0)) == 0 and int(merchant._demand.get("sun_dried_mudbrick", 0)) > 0, "The baseline captured a brick-only visit.")
 		Inventory.add_item("shekel", 20)
 		_expect(bool(merchant.trade("clay_lump", 1, true).ok), "The baseline visit has an actual completed purchase.")
 		_expect(int(merchant._stock.get("clay_lump", -1)) == 11 and merchant.get_budget() == 122, "The partially traded visit is recorded.")
 		_expect(store.save_checkpoint(), "Baseline checkpoint saves: " + store.last_error)
 	else:
 		_expect(merchant.is_present() and not merchant._offers.has("simple_clothes"), "Loading a baseline visit does not invent mid-visit stock.")
+		_expect(int(merchant._demand.get("wood_log", 0)) == 0 and int(merchant._demand.get("sun_dried_mudbrick", 0)) > 0, "The old brick-only request remains unchanged during that visit.")
 		_expect(int(merchant._stock.get("clay_lump", -1)) == 11 and merchant.get_budget() == 122 and Inventory.items.get("shekel", 0) == 18 and Inventory.items.get("clay_lump", 0) == 1, "The original trade and balances survive Continue.")
 		var old_demand: Dictionary = merchant._demand.duplicate(true)
 		_expect(store.load_checkpoint(), "The same old checkpoint can be loaded again: " + store.last_error)
 		_expect(merchant._demand == old_demand and merchant.get_budget() == 122 and not merchant._offers.has("simple_clothes"), "Repeated old-save loads preserve visit demand, money and catalog.")
 		_expect(_advance_to(4, 8), "The next scheduled visit arrives.")
 		_expect(merchant.is_present() and merchant._offers.has("simple_clothes") and int(merchant._stock.get("simple_clothes", -1)) == 2, "The added item appears with its normal stock at the next arrival.")
+		_expect(int(merchant._demand.get("wood_log", 0)) >= 3 and int(merchant._demand.get("wood_log", 0)) <= 6, "The next visit adopts a normal, bounded wood request.")
 		_expect(bool(merchant.trade("simple_clothes", 1, true).ok), "The migrated merchant can sell a garment.")
 		var budget: int = merchant.get_budget()
 		TimeComponentManager.emit_time_signal()

@@ -17,6 +17,10 @@ var saw_empty_board: bool = false
 var saw_house_work_without_applicants: bool = false
 var minimum_satisfaction: float = 1.0
 var require_city_worksite_output: bool = true
+var skip_merchant_visits: int = 0
+var skipped_visit_days: Array[int] = []
+var maximum_player_hunger: float = 0.0
+var maximum_player_fatigue: float = 0.0
 
 
 func walk(target: Vector2, _door_target: bool = false) -> void:
@@ -35,7 +39,7 @@ func harvest() -> void:
 		if not is_instance_valid(tree) or tree.get_script() != TREE:
 			continue
 		for slot: Variant in tree._pickups.keys():
-			if int(Inventory.items.get("date_cluster", 0)) >= 22 or not Inventory.has_capacity_for("date_cluster", 1):
+			if int(Inventory.items.get("date_cluster", 0)) >= 14 or not Inventory.has_capacity_for("date_cluster", 1):
 				return
 			var pickup: Node2D = tree._pickups.get(slot)
 			if not is_instance_valid(pickup) or pickup.is_collecting:
@@ -60,7 +64,7 @@ func harvest() -> void:
 func supply_city() -> void:
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
 	var available: int = int(Inventory.items.get("date_cluster", 0))
-	var amount: int = mini(maxi(8 - storage.get_food_supply_points(), 0), maxi(available - 14, 0))
+	var amount: int = mini(maxi(8 - storage.get_food_supply_points(), 0), maxi(available - 6, 0))
 	var clothes: int = int(Inventory.items.get("simple_clothes", 0))
 	if amount <= 0 and clothes <= 0:
 		return
@@ -81,7 +85,7 @@ func upkeep() -> void:
 		return
 	_expect(not player.debug_disable_player_needs and not player.debug_disable_fatigue and not player.is_collapsing, "Player needs remain active and no collapse is bypassed.")
 	await eat()
-	if int(Inventory.items.get("date_cluster", 0)) < 18:
+	if int(Inventory.items.get("date_cluster", 0)) < 10:
 		await harvest()
 	await eat()
 	await supply_city()
@@ -99,6 +103,12 @@ func wait_minutes(minutes: int) -> void:
 		return
 	_expect(TimeComponentManager.advance_minutes(minutes), "Idle time advances through the real minute signals.")
 	await _frames(3)
+
+
+func _sample_player_conditions(_minute: int) -> void:
+	if is_instance_valid(player):
+		maximum_player_hunger = maxf(maximum_player_hunger, player.hunger)
+		maximum_player_fatigue = maxf(maximum_player_fatigue, player.fatigue)
 
 
 func gather(site_name: String) -> void:
@@ -146,15 +156,20 @@ func _market() -> void:
 	var merchant: Node = content.get_node("YSortWorld/TravelingMerchant")
 	if stopped or not merchant.state.is_present():
 		return
-	await _fetch_material("wood_log", 6)
 	var catalog: Array = merchant.state.get_catalog()
 	if not seen_visits.has(TimeComponentManager.current_day):
-		seen_visits[TimeComponentManager.current_day] = true
+		var skipped: bool = skipped_visit_days.size() < skip_merchant_visits
+		seen_visits[TimeComponentManager.current_day] = skipped
+		if skipped:
+			skipped_visit_days.append(TimeComponentManager.current_day)
 		var requests: Dictionary = {}
 		for row: Dictionary in catalog:
 			if int(row.demand) > 0:
 				requests[row.item_id] = row.demand
-		print("NEEDS_JOURNEY_VISIT ", {"day": TimeComponentManager.current_day, "requests": requests})
+		print("NEEDS_JOURNEY_VISIT ", {"day": TimeComponentManager.current_day, "requests": requests, "skipped": skipped})
+	if bool(seen_visits[TimeComponentManager.current_day]):
+		return
+	await _fetch_material("wood_log", 6)
 	var demand: int = 0
 	var stock: int = 0
 	for row: Dictionary in catalog:
@@ -164,9 +179,14 @@ func _market() -> void:
 			stock = int(row.stock)
 	var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 	var reserve: int = 4 if house.phase in ["uncleared", "clearing", "empty"] else 0
-	var sell: int = mini(demand, maxi(0, int(Inventory.items.get("wood_log", 0)) - reserve))
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
 	var want: int = mini(stock, maxi(0, 2 - storage.get_clothing_item_count() - int(Inventory.items.get("simple_clothes", 0))))
+	var wallet: int = int(Inventory.items.get("shekel", 0))
+	var wood_owned: int = int(Inventory.items.get("wood_log", 0))
+	# Selling construction wood is an explicit trade-off if it is the only way
+	# to afford clothing now; the player gathers the remainder for the house.
+	var needed_for_clothes: int = ceili(float(maxi(0, want * 2 - wallet)) / 2.0)
+	var sell: int = mini(demand, mini(wood_owned, maxi(maxi(0, wood_owned - reserve), needed_for_clothes)))
 	if sell <= 0 and (want <= 0 or int(Inventory.items.get("shekel", 0)) < 2):
 		return
 	await walk(merchant.global_position + Vector2(0, 6))
@@ -249,18 +269,29 @@ func _check_board(expected: int) -> void:
 
 func _run() -> void:
 	var merchant_seed: int = -1
+	var food_seed: int = -1
 	var expect_zero: bool = false
+	var maximum_recovery_day: int = -1
+	var maximum_harvest: int = -1
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--journey-phase="):
 			phase = arg.trim_prefix("--journey-phase=")
 		elif arg.begins_with("--merchant-request-seed="):
 			merchant_seed = int(arg.trim_prefix("--merchant-request-seed="))
+		elif arg.begins_with("--food-seed="):
+			food_seed = int(arg.trim_prefix("--food-seed="))
 		elif arg == "--expect-zero":
 			expect_zero = true
 		elif arg == "--expect-worksite-city":
 			require_city_worksite_output = true
 		elif arg == "--allow-legacy-player-worksite":
 			require_city_worksite_output = false
+		elif arg.begins_with("--skip-merchant-visits="):
+			skip_merchant_visits = int(arg.trim_prefix("--skip-merchant-visits="))
+		elif arg.begins_with("--max-recovery-day="):
+			maximum_recovery_day = int(arg.trim_prefix("--max-recovery-day="))
+		elif arg.begins_with("--max-harvest="):
+			maximum_harvest = int(arg.trim_prefix("--max-harvest="))
 	checkpoint_path = JOURNEY_DIR + "/checkpoint.json"
 	var root: String = OS.get_environment("XDG_DATA_HOME")
 	_expect(root.is_absolute_path() and ProjectSettings.globalize_path("user://").simplify_path().begins_with(root.simplify_path().trim_suffix("/") + "/"), "Use a disposable XDG_DATA_HOME.")
@@ -290,11 +321,19 @@ func _run() -> void:
 	if phase == "read":
 		await _verify_journey_continue()
 		return
+	TimeComponentManager.minute_changed.connect(_sample_player_conditions)
 	if merchant_seed >= 0:
 		# Sampling a reproducible request sequence is a fixture, not an assertion
 		# that the production merchant's natural RNG always follows it.
 		content.get_node("YSortWorld/TravelingMerchant").state._request_rng.seed = merchant_seed
 		print("NEEDS_JOURNEY_REQUEST_SEED ", merchant_seed)
+	if food_seed >= 0:
+		var index: int = 0
+		for tree: Node in content.get_node("YSortWorld").get_children():
+			if is_instance_valid(tree) and tree.get_script() == TREE:
+				tree.state._rng.seed = food_seed + 1009 * index
+				index += 1
+		print("NEEDS_JOURNEY_FOOD_SEED ", food_seed, " trees=", index)
 	if not require_city_worksite_output:
 		print("NEEDS_JOURNEY_LOGISTICS: legacy player output (pre-integration only)")
 	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "New Game begins without personal resources or hired workers.")
@@ -347,13 +386,17 @@ func _run() -> void:
 	_expect(first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and CitizenManager.get_all_applicants().size() >= 2, "Food, clothing and shelter recover both residents and their Job Board eligibility.")
 	if expect_zero:
 		_expect(is_zero_approx(minimum_satisfaction), "The selected long-delay fixture actually reaches zero satisfaction before recovering.")
+	if maximum_recovery_day >= 0:
+		_expect(TimeComponentManager.current_day <= maximum_recovery_day, "The journey recovers by the requested latest game day.")
+	if maximum_harvest >= 0:
+		_expect(harvested <= maximum_harvest, "The journey stays within the requested date pickup budget.")
 	if stopped:
 		return
 	while not WorkerDatabase.is_job_board_open() and not stopped:
 		await upkeep()
 		await wait_minutes(30)
 	await _check_board(2)
-	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps}))
+	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps, "skipped_visit_days": skipped_visit_days, "max_hunger": maximum_player_hunger, "max_fatigue": maximum_player_fatigue}))
 	# Save an ordinary sleep checkpoint after recovery, then verify in a new process.
 	while not player.can_sleep() and not stopped:
 		await upkeep()

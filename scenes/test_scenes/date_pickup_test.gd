@@ -50,7 +50,8 @@ func run() -> void:
 	player.fatigue = 0.5
 	ui.player_ref = player
 	await ui._execute_use_item("date_cluster", 1)
-	check(is_equal_approx(player.hunger, 0.46), "Existing date hunger effect")
+	check(is_equal_approx(player.hunger, 0.40), "A date cluster restores ten Belly points")
+	check(is_equal_approx(player.fatigue, 0.475), "A date cluster restores 2.5 Energy points")
 	check(Inventory.items.get("date_cluster", 0) == 2, "Eating consumes date")
 	print("DatePickupTest: ", "PASS" if failures == 0 else "FAIL")
 	var feedback_deadline: int = Time.get_ticks_msec() + 5000

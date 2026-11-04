@@ -16,3 +16,5 @@ extends Resource
 @export var randomize_requests: bool = false
 @export_range(1, 100) var request_count_min: int = 1
 @export_range(1, 100) var request_count_max: int = 2
+## Ensure these existing requests are included within the visit's maximum size.
+@export var guaranteed_request_ids: Array[String] = []
