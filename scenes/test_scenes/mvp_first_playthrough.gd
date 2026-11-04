@@ -342,13 +342,6 @@ func deposit(targets: Dictionary = {}) -> void:
 	if targets.is_empty():
 		for id in JOB.inputs:
 			targets[id] = JOB.inputs[id]
-		if WorkshopFacilityManager.get_facility_level("drying_yard") == 0:
-			for id in WorkshopFacilityManager.get_facility_upgrade_requirements("drying_yard", 1):
-				targets[id] = targets.get(id, 0) + WorkshopFacilityManager.get_facility_upgrade_requirements("drying_yard", 1)[id]
-		elif dried >= 1 and WorkshopFacilityManager.get_facility_level("drying_yard") == 1:
-			for id in WorkshopFacilityManager.get_facility_upgrade_requirements("drying_yard", 2):
-				if id != "sun_dried_mudbrick":
-					targets[id] = targets.get(id, 0) + WorkshopFacilityManager.get_facility_upgrade_requirements("drying_yard", 2)[id]
 	await open_workshop()
 	if stopped:
 		return
@@ -460,8 +453,8 @@ func withdraw_bricks() -> void:
 	var storage_ui = ui(WorkshopStorageMenuUI)
 	var slot = storage_ui.free_slots_by_item_id.get("sun_dried_mudbrick")
 	if slot != null:
-		# Leave room for normal food pickups and ten bricks for the yard upgrade.
-		var available: int = maxi(WorkShopStorage.get_free_item_quantity("sun_dried_mudbrick") - 10, 0)
+		# Move the level-2 upgrade's ten bricks into the player's Inventory.
+		var available: int = mini(WorkShopStorage.get_free_item_quantity("sun_dried_mudbrick"), 10)
 		var fits: int = maxi(floori((Inventory.get_remaining_capacity() - 8.0) / ItemDatabase.get_item_data("sun_dried_mudbrick").weight), 0)
 		for i in range(mini(available, fits)):
 			await press(slot)

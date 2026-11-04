@@ -21,6 +21,10 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	if OS.get_environment("TIP_TEST_LOGICAL_VIEWPORT") == "400x225":
+		# The headless display reports a square 64x64 window. Keep the authored
+		# 16:9 logical viewport for this explicit small-screen layout check.
+		get_window().content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	_prepare_fixture()
 	await _frames(3)
 	if not run_automatically:
@@ -38,6 +42,7 @@ func _run() -> void:
 	await _build_or_upgrade_yard(1)
 	await _dry_wet_bricks()
 	await _pay_output("sun_dried_mudbrick", "sun-dried")
+	await _withdraw_facility_material("sun_dried_mudbrick", 10)
 	await _build_or_upgrade_yard(2)
 	_expect(WorkShopStorage.get_free_item_quantity("sun_dried_mudbrick") == 10,
 		"The existing level-2 upgrade consumes ten finished bricks as visible progression.")
@@ -184,13 +189,17 @@ func _deposit_materials(menu: WorkshopMenuUI) -> void:
 	var storage_ui: WorkshopStorageMenuUI = _ui(WorkshopStorageMenuUI) as WorkshopStorageMenuUI
 	await _press(storage_ui.deposit_button)
 	var transfer: ItemTransferUI = _ui(ItemTransferUI) as ItemTransferUI
+	var production_materials: Dictionary = {}
+	for item_id_value: Variant in JOB.inputs:
+		var item_id: String = str(item_id_value)
+		production_materials[item_id] = int(JOB.inputs[item_id_value]) * 2
 	for slot: ItemSlot in transfer.grid_container.get_children():
-		var needed: int = int(initial_materials.get(slot._item_id, 0))
+		var needed: int = int(production_materials.get(slot._item_id, 0))
 		for index: int in range(needed):
 			slot.slot_clicked.emit(slot._item_id, slot._quantity, slot)
 	await _press(transfer.confirm_button)
-	_expect(WorkShopStorage.items == initial_materials,
-		"The player's selected raw materials reach Workshop Free Stock through Deposit.")
+	_expect(WorkShopStorage.items == production_materials,
+		"Only recipe inputs move to Workshop Free Stock; construction materials stay in Inventory.")
 	await _press(transfer.back_button)
 	storage_ui = _ui(WorkshopStorageMenuUI) as WorkshopStorageMenuUI
 	await _press(storage_ui.back_button)
@@ -260,12 +269,183 @@ func _pay_output(item_id: String, expected_next: String) -> void:
 
 
 func _build_or_upgrade_yard(target_level: int) -> void:
+	var requirements: Dictionary = WorkshopFacilityManager.get_facility_upgrade_requirements(
+		"drying_yard",
+		target_level
+	)
+	var inventory_before: Dictionary = Inventory.items.duplicate(true)
 	await _open_workshop()
 	var menu: WorkshopMenuUI = _ui(WorkshopMenuUI) as WorkshopMenuUI
 	await _press(menu.build_button)
 	var build: WorkshopBuildUI = _ui(WorkshopBuildUI) as WorkshopBuildUI
 	await _press(build.facility_list.get_child(0) as BaseButton)
-	_expect(not build.build_button.disabled, "Existing Free Stock requirements make the yard action available.")
+	_expect(not build.build_button.disabled, "Player Inventory requirements make the yard action available.")
+	if target_level == 1:
+		var saved_inventory_for_layout: Dictionary = Inventory.items.duplicate(true)
+		var saved_contributions_for_layout: Dictionary = WorkshopFacilityManager.facility_contributions.duplicate(true)
+		var saved_level_for_layout: int = WorkshopFacilityManager.get_facility_level("drying_yard")
+		var level_three_kit: Dictionary = WorkshopFacilityManager.get_facility_upgrade_requirements(
+			"drying_yard",
+			3
+		)
+		Inventory.items.clear()
+		WorkshopFacilityManager.facility_contributions.clear()
+		WorkshopFacilityManager.set_facility_level("drying_yard", 2)
+		WorkshopFacilityManager.facility_contributions["drying_yard"] = {
+			"target_level": 3,
+			"items": level_three_kit.duplicate(true)
+		}
+		build._refresh_facility()
+		await _press(build.refund_button)
+		_expect_confirmation_layout(
+			build,
+			"The longest level-3 partial refund confirmation fits within the 400x225 viewport."
+		)
+		await _press(build.confirm_panel.secondary_button)
+		WorkshopFacilityManager.facility_contributions.clear()
+		Inventory.items.clear()
+		Inventory.items.assign({
+			"wood_log": 6,
+			"reed_bundle": 10,
+			"sun_dried_mudbrick": 18
+		})
+		build._refresh_facility()
+		await _press(build.contribute_button)
+		_expect_confirmation_layout(
+			build,
+			"The longest level-3 contribution confirmation fits within the 400x225 viewport."
+		)
+		await _press(build.confirm_panel.secondary_button)
+		Inventory.items.clear()
+		WorkshopFacilityManager.set_facility_level("drying_yard", saved_level_for_layout)
+		for facility_id_value: Variant in saved_contributions_for_layout.keys():
+			WorkshopFacilityManager.facility_contributions[str(facility_id_value)] = saved_contributions_for_layout[facility_id_value]
+		Inventory.items.assign(saved_inventory_for_layout)
+		build._refresh_facility()
+		_expect(build.contribute_button.visible, "The UI offers an explicit contribution action for Inventory materials.")
+		await _press(build.contribute_button)
+		var contribution_confirmation: String = build.confirm_panel.message_label.text
+		for item_id_value: Variant in requirements.keys():
+			var item_id: String = str(item_id_value)
+			var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+			_expect(
+				contribution_confirmation.contains("%s x%d" % [
+					item_data.display_name,
+					int(requirements[item_id_value])
+				]),
+				"Contribution confirmation names the exact personal material batch: " + item_id
+			)
+		Inventory.remove_item("clay_lump", 1)
+		var inventory_after_quote_change: Dictionary = Inventory.items.duplicate(true)
+		await _press(build.confirm_panel.primary_button)
+		_expect(
+			Inventory.items == inventory_after_quote_change
+			and not WorkshopFacilityManager.facility_contributions.has("drying_yard")
+			and WorkshopFacilityManager.get_facility_level("drying_yard") == 0,
+			"A changed contribution batch is rejected without charging or committing anything."
+		)
+		Inventory.add_item("clay_lump", 1)
+		await _press(build.contribute_button)
+		await _press(build.confirm_panel.primary_button)
+		_expect(
+			build.refund_button.visible
+			and WorkshopFacilityManager.facility_contributions.has("drying_yard"),
+			"The UI exposes a refund for committed contributions."
+		)
+		var original_max_load: float = Inventory.max_load
+		var partial_refund_capacity: float = Inventory.get_total_inventory_weight() + 4.0
+		Inventory.max_load = partial_refund_capacity
+		build._refresh_facility()
+		var quoted_refund_preview: Dictionary = WorkshopFacilityManager.get_facility_upgrade_preview(
+			"drying_yard"
+		)
+		var quoted_refund_plan: Dictionary = quoted_refund_preview.get("refund_plan", {})
+		var quoted_refund_remaining: Dictionary = quoted_refund_preview.get(
+			"refund_remaining",
+			{}
+		)
+		_expect(
+			not quoted_refund_plan.is_empty() and not quoted_refund_remaining.is_empty(),
+			"The UI exposes a partial refund quote when only part of escrow fits."
+		)
+		await _press(build.refund_button)
+		var refund_confirmation: String = build.confirm_panel.message_label.text
+		_expect(
+			refund_confirmation.contains("this trip")
+			and refund_confirmation.contains("stay saved"),
+			"Partial refund confirmation explains the exact trip and committed remainder."
+		)
+		for item_id_value: Variant in quoted_refund_plan.keys():
+			var item_id: String = str(item_id_value)
+			var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+			_expect(
+				refund_confirmation.contains("%s x%d" % [
+					item_data.display_name,
+					int(quoted_refund_plan[item_id_value])
+				]),
+				"Refund confirmation lists the exact personal batch returned this trip: " + item_id
+			)
+		Inventory.max_load = Inventory.get_total_inventory_weight()
+		var inventory_after_stale_refund: Dictionary = Inventory.items.duplicate(true)
+		await _press(build.confirm_panel.primary_button)
+		_expect(
+			Inventory.items == inventory_after_stale_refund
+			and WorkshopFacilityManager.facility_contributions.has("drying_yard")
+			and not bool(WorkshopFacilityManager.get_facility_upgrade_preview("drying_yard").get("can_refund", true)),
+			"A refund quote is rejected when bag capacity changes before confirmation."
+		)
+		Inventory.max_load = partial_refund_capacity
+		build._refresh_facility()
+		await _press(build.refund_button)
+		await _press(build.confirm_panel.primary_button)
+		var contribution_after_ui_refund: Dictionary = WorkshopFacilityManager.facility_contributions.get(
+			"drying_yard",
+			{}
+		).get("items", {})
+		_expect(
+			contribution_after_ui_refund == quoted_refund_remaining,
+			"The UI refund commits only the quoted first-trip batch and retains the rest."
+		)
+		for item_id_value: Variant in quoted_refund_plan.keys():
+			Inventory.remove_item(
+				str(item_id_value),
+				int(quoted_refund_plan[item_id_value])
+			)
+		Inventory.max_load = original_max_load
+		build._refresh_facility()
+		await _press(build.refund_button)
+		await _press(build.confirm_panel.primary_button)
+		var bag_plus_unloaded_batch: Dictionary = Inventory.items.duplicate(true)
+		for item_id_value: Variant in quoted_refund_plan.keys():
+			var item_id: String = str(item_id_value)
+			bag_plus_unloaded_batch[item_id] = int(
+				bag_plus_unloaded_batch.get(item_id, 0)
+			) + int(quoted_refund_plan[item_id_value])
+		_expect(
+			bag_plus_unloaded_batch == inventory_before,
+			"The returned bag plus the explicitly unloaded first batch conserves the original Inventory snapshot."
+		)
+		_expect(
+			Inventory.try_add_bulk_items(quoted_refund_plan),
+			"The unloaded first refund batch fits when carried back on the next trip."
+		)
+		await _frames(2)
+		_expect(
+			not WorkshopFacilityManager.facility_contributions.has("drying_yard")
+			and Inventory.items == inventory_before
+			and not build.build_button.disabled,
+			"Both refund trips restore the original Inventory snapshot without changing the level."
+		)
+	await _press(build.build_button)
+	var inventory_before_stale_build: Dictionary = Inventory.items.duplicate(true)
+	WorkshopFacilityManager.set_facility_level("drying_yard", target_level)
+	await _press(build.confirm_panel.primary_button)
+	_expect(
+		Inventory.items == inventory_before_stale_build
+		and WorkshopFacilityManager.get_facility_level("drying_yard") == target_level,
+		"A stale build target is rejected without charging Inventory."
+	)
+	WorkshopFacilityManager.set_facility_level("drying_yard", target_level - 1)
 	await _press(build.build_button)
 	await _press(build.confirm_panel.secondary_button)
 	_expect(WorkshopFacilityManager.get_facility_level("drying_yard") == target_level - 1,
@@ -273,10 +453,40 @@ func _build_or_upgrade_yard(target_level: int) -> void:
 	await _press(build.build_button)
 	await _press(build.confirm_panel.primary_button)
 	_expect(WorkshopFacilityManager.get_facility_level("drying_yard") == target_level,
-		"Confirming consumes the existing requirements and visibly advances the yard.")
+		"Confirming Inventory materials visibly advances the yard.")
+	var inventory_after: Dictionary = inventory_before.duplicate(true)
+	for item_id_value: Variant in requirements.keys():
+		var item_id: String = str(item_id_value)
+		var remaining: int = int(inventory_after.get(item_id, 0)) - int(requirements[item_id_value])
+		if remaining > 0:
+			inventory_after[item_id] = remaining
+		else:
+			inventory_after.erase(item_id)
+	_expect(Inventory.items == inventory_after,
+		"The confirmed yard upgrade deducts its complete material bill from Inventory.")
 	await _capture("mvp-yard-level-%d.png" % target_level)
 	await _press(build.details_back_button)
 	await _press(build.selection_back_button)
+	menu = _ui(WorkshopMenuUI) as WorkshopMenuUI
+	await _press(menu.close_button)
+
+func _withdraw_facility_material(item_id: String, quantity: int) -> void:
+	await _open_workshop()
+	var menu: WorkshopMenuUI = _ui(WorkshopMenuUI) as WorkshopMenuUI
+	await _press(menu.manage_button)
+	var storage_ui: WorkshopStorageMenuUI = _ui(WorkshopStorageMenuUI) as WorkshopStorageMenuUI
+	var slot: ItemSlot = storage_ui.free_slots_by_item_id[item_id]
+	var inventory_before: int = int(Inventory.items.get(item_id, 0))
+	var storage_before: int = WorkShopStorage.get_free_item_quantity(item_id)
+	for index: int in range(quantity):
+		await _press(slot)
+	await _press(storage_ui.withdraw_button)
+	_expect(
+		int(Inventory.items.get(item_id, 0)) == inventory_before + quantity
+		and WorkShopStorage.get_free_item_quantity(item_id) == storage_before - quantity,
+		"Finished yard materials are withdrawn to Inventory before upgrading."
+	)
+	await _press(storage_ui.back_button)
 	menu = _ui(WorkshopMenuUI) as WorkshopMenuUI
 	await _press(menu.close_button)
 
@@ -396,6 +606,40 @@ func _press(button: BaseButton) -> void:
 	if is_instance_valid(button) and not button.disabled:
 		button.pressed.emit()
 	await _frames(3)
+
+
+func _expect_confirmation_layout(build: WorkshopBuildUI, message: String) -> void:
+	var viewport_rect: Rect2 = build.get_viewport().get_visible_rect()
+	var center_rect: Rect2 = build.get_node("Root/ConfirmOverlay/Center").get_global_rect()
+	var panel_rect: Rect2 = build.confirm_panel.get_global_rect()
+	var message_label: Label = build.confirm_panel.message_label
+	var primary_rect: Rect2 = build.confirm_panel.primary_button.get_global_rect()
+	var secondary_rect: Rect2 = build.confirm_panel.secondary_button.get_global_rect()
+	var geometry: String = "viewport=%s window=%s canvas_layer=%d center=%s panel=%s primary=%s secondary=%s" % [
+		str(viewport_rect),
+		str(Vector2(get_window().size)),
+		build.layer,
+		str(center_rect),
+		str(panel_rect),
+		str(primary_rect),
+		str(secondary_rect)
+	]
+	if OS.get_environment("TIP_TEST_LOGICAL_VIEWPORT") == "400x225":
+		_expect(viewport_rect.size.is_equal_approx(Vector2(400.0, 225.0)),
+			"The requested small logical viewport is active: " + geometry)
+	_expect(
+		message_label.get_visible_line_count() >= message_label.get_line_count(),
+		"Confirmation text is not clipped: %s %s" % [message, geometry]
+	)
+	_expect(
+		viewport_rect.encloses(panel_rect),
+		"Confirmation panel stays inside the visible logical viewport: %s %s" % [message, geometry]
+	)
+	_expect(
+		viewport_rect.encloses(primary_rect)
+		and viewport_rect.encloses(secondary_rect),
+		"Both confirmation buttons stay inside the visible logical viewport: %s %s" % [message, geometry]
+	)
 
 
 func _frames(count: int) -> void:

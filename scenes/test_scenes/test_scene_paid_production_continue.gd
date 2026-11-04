@@ -349,11 +349,24 @@ func _continue_shape_and_write_drying(city: Node, player: Player, store: Node) -
 	_check(bool(shape_fee.get("is_paid", false)), "The Shape job fee records payment once.")
 
 	# The built Drying Yard uses its real material and facility upgrade API.
-	WorkShopStorage.add_bulk_item({"wood_log": 2, "reed_bundle": 4, "clay_lump": 4})
+	var yard_materials: Dictionary = {"wood_log": 2, "reed_bundle": 4, "clay_lump": 4}
+	WorkShopStorage.add_bulk_item(yard_materials)
+	var workshop_stock_before_yard: Dictionary = WorkShopStorage.items.duplicate(true)
+	var storage_only_upgrade: Dictionary = WorkshopFacilityManager.upgrade_facility(
+		"drying_yard",
+		WorkShopStorage
+	)
+	_check(not bool(storage_only_upgrade.get("success", false))
+		and WorkshopFacilityManager.get_facility_level("drying_yard") == 0,
+		"The legacy storage argument cannot fund a facility without player Inventory materials.")
+	var inventory_before_yard: Dictionary = Inventory.items.duplicate(true)
+	_check(Inventory.try_add_bulk_items(yard_materials), "Yard materials fit in player Inventory.")
 	var upgrade: Dictionary = WorkshopFacilityManager.upgrade_facility("drying_yard", WorkShopStorage)
 	_check(bool(upgrade.get("success", false))
-		and WorkshopFacilityManager.get_facility_level("drying_yard") == 1,
-		"Fixture materials build one real Drying Yard station.")
+		and WorkshopFacilityManager.get_facility_level("drying_yard") == 1
+		and Inventory.items == inventory_before_yard
+		and WorkShopStorage.items == workshop_stock_before_yard,
+		"Player Inventory pays the newly granted kit once, preserves earlier surplus, and leaves Workshop Free Stock unchanged.")
 	TimeComponentManager.current_weather = "clear"
 	TimeComponentManager.emit_time_signal()
 	_check(ProcessManager.start_registered_process(DRYING_PROCESS_ID, 20),

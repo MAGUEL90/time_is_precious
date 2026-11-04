@@ -289,7 +289,7 @@ func give_wall_materials() -> bool:
 	if not OS.is_debug_build() or not can_advance():
 		return false
 	var state: Node = _get_raid_state()
-	if not is_instance_valid(state) or not is_instance_valid(state.storage):
+	if not is_instance_valid(state):
 		return false
 	var quote: Dictionary = state.get_work_quote()
 	# Supply the next eligible improvement when the current wall is already sound.
@@ -299,17 +299,18 @@ func give_wall_materials() -> bool:
 			if not improvement.materials.is_empty():
 				quote = improvement
 				break
-	var available: Dictionary = state.storage.get_available_items()
 	var missing: Dictionary = {}
 	for id: String in quote.materials:
-		var amount: int = maxi(0, int(quote.materials[id]) - int(available.get(id, 0)))
+		var amount: int = maxi(0, int(quote.materials[id]) - int(Inventory.items.get(id, 0)))
 		if amount > 0:
 			missing[id] = amount
 	if missing.is_empty():
 		return false
-	var result: bool = state.storage.refund_materials(missing)
+	var result: bool = Inventory.try_add_bulk_items(missing)
 	if result:
-		materials_status.text = "Wall materials added to City Storage (debug)."
+		materials_status.text = "Wall materials added to Inventory (debug)."
+	else:
+		materials_status.text = "Inventory full. Free space for wall materials."
 	_refresh_controls()
 	return result
 

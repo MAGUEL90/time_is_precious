@@ -3,7 +3,7 @@ extends RefCounted
 ## Scene-local snapshot adapter for the authored main-city worksite map.
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
-const SCHEMA_VERSION: int = 3
+const SCHEMA_VERSION: int = 4
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
@@ -142,7 +142,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		expected_fields.append("legacy_ground")
 	if not _has_exact_keys(data, expected_fields):
 		return _fail("Invalid worksite snapshot fields.")
-	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, SCHEMA_VERSION]:
+	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, SCHEMA_VERSION]:
 		return _fail("Unsupported worksite snapshot version.")
 	for field: String in ["sites", "storages", "jobs", "ledger", "contributions", "productive_days", "routes", "worker_journeys"]:
 		if typeof(data[field]) != TYPE_DICTIONARY:
@@ -212,25 +212,40 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
 	if int(data.schema_version) >= SCHEMA_VERSION:
 		return true
+	var previous_version: int = int(data.schema_version)
 	if not data.has("pending_output"):
 		data["pending_output"] = {}
 	if not data.has("pending_progress"):
 		data["pending_progress"] = {}
-	data["legacy_ground"] = []
-	for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
-		if not data.storages.has(endpoint_id):
-			continue
-		var record: Dictionary = LEGACY_STOCKPILES.STOCKPILES[endpoint_id]
-		var amount: int = int(data.storages[endpoint_id].quantity)
-		if amount > 0:
-			data.legacy_ground.append({"item_id": str(record.item_id), "quantity": amount,
-				"position": worksite.get_node("GroundOutput").to_local(worksite.to_global(record.position)),
-				"site_id": ""})
-		data.storages.erase(endpoint_id)
-	for route: Dictionary in data.routes.values():
-		route["resigning"] = bool(route.get("resigning", false))
-		route["removing"] = true
-		route["legacy_final"] = true
+	if previous_version < 3:
+		data["legacy_ground"] = []
+		for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+			if not data.storages.has(endpoint_id):
+				continue
+			var record: Dictionary = LEGACY_STOCKPILES.STOCKPILES[endpoint_id]
+			var amount: int = int(data.storages[endpoint_id].quantity)
+			if amount > 0:
+				data.legacy_ground.append({"item_id": str(record.item_id), "quantity": amount,
+					"position": worksite.get_node("GroundOutput").to_local(worksite.to_global(record.position)),
+					"site_id": ""})
+			data.storages.erase(endpoint_id)
+		for route: Dictionary in data.routes.values():
+			route["resigning"] = bool(route.get("resigning", false))
+			route["removing"] = true
+			route["legacy_final"] = true
+	# Before direct delivery, finished but unsettled output was player-pickable.
+	# Preserve its old ownership as separate world piles; do not reinterpret it
+	# as newly city-owned stock. The source file is never rewritten on load.
+	for site_id: String in data.jobs:
+		var job: Dictionary = data.jobs[site_id]
+		if int(job.units) > 0:
+			if not _stage_old_output(data, worksite, site_id, int(job.units)):
+				return false
+			job.units = 0
+	for site_id: String in data.pending_output:
+		if not _stage_old_output(data, worksite, site_id, int(data.pending_output[site_id])):
+			return false
+	data.pending_output.clear()
 	data.schema_version = SCHEMA_VERSION
 	# The codec stores dictionary entries in order. Match the current capture
 	# shape so a staged migration and a later capture encode identically.
@@ -240,6 +255,33 @@ func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
 		ordered[key] = data[key]
 	data.clear()
 	data.merge(ordered)
+	return true
+
+
+func _stage_old_output(data: Dictionary, worksite: Node, site_id: String, quantity: int) -> bool:
+	var marker: Node2D = _site_marker(worksite, site_id)
+	if not is_instance_valid(marker) or not worksite.sites.has(StringName(site_id)):
+		return _fail("The old worksite output has no authored site.")
+	var position: Vector2 = marker.global_position + Vector2(0, 24)
+	if site_id == "ReedSite":
+		# The authored City Storage board remains available on a parked city
+		# worksite even when its original Player was freed during a home visit.
+		var board: Node2D = worksite.get_node_or_null("CityStorageArea/Board") as Node2D
+		if not is_instance_valid(board):
+			return _fail("The old Reed output has no city access anchor.")
+		var desired: Vector2 = position
+		position = Vector2.INF
+		for offset: Vector2 in [Vector2(0, 13), Vector2(20, 15), Vector2(0, 30), Vector2(-20, 30), Vector2(20, 30)]:
+			var origin: Vector2 = board.global_position + offset
+			if not worksite.worksite_navigation.is_clear(origin):
+				continue
+			position = worksite.worksite_navigation.reachable_point(origin, desired)
+			if position.is_finite():
+				break
+		if not position.is_finite():
+			return _fail("The old Reed output cannot be placed at a reachable point.")
+	data.legacy_ground.append({"item_id": str(worksite.sites[StringName(site_id)].item_id),
+		"quantity": quantity, "position": worksite.get_node("GroundOutput").to_local(position), "site_id": ""})
 	return true
 
 
@@ -262,7 +304,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		var job: Dictionary = {
 			"ids": saved_job.ids.duplicate(),
 			"order": str(saved_job.order),
-			"drop": Callable(worksite, "_drop_daily_output").bind(_site_marker(worksite, site_id)),
+			"drop": Callable(worksite, "_deliver_daily_output").bind(_site_marker(worksite, site_id)),
 			"units": int(saved_job.units),
 			"progress": saved_job.progress.duplicate(true),
 			"starts": saved_job.starts.duplicate(true),
@@ -334,7 +376,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	for site_id: String in data.get("pending_output", {}):
 		daily.pending_output[StringName(site_id)] = {
 			"quantity": int(data.pending_output[site_id]),
-			"drop": Callable(worksite, "_drop_daily_output").bind(_site_marker(worksite, site_id)),
+			"drop": Callable(worksite, "_deliver_daily_output").bind(_site_marker(worksite, site_id)),
 		}
 	daily.pending_progress.clear()
 	for site_id: String in data.get("pending_progress", {}):

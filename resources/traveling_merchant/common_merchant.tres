@@ -20,6 +20,8 @@ offers = Array[Dictionary]([{
 }, {
 "item_id": "wood_log", "stock": 8, "buy_price": 4
 }, {
+"item_id": "stone", "stock": 12, "buy_price": 2
+}, {
 "item_id": "stone_hammer", "stock": 2, "buy_price": 15
 }, {
 "item_id": "simple_clothes", "stock": 2, "buy_price": 2

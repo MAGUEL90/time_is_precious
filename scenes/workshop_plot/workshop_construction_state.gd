@@ -183,9 +183,16 @@ func get_preview(selected_ids: Array[String], use_player: bool = false) -> Dicti
 	return preview
 
 func start_build(selected_ids: Array[String], use_player: bool = false) -> Dictionary:
+	if _starting:
+		return {"success": false, "message": "Starting construction."}
 	var preview: Dictionary = get_preview(selected_ids, use_player)
 	if not bool(preview.can_start):
 		return {"success": false, "message": preview.message}
+	var requirements: Dictionary = get_requirements()
+	if not Inventory.can_consume_bulk_items(requirements):
+		return {"success": false, "message": "Materials changed; construction was not started."}
+	if not _has_shelter_room():
+		return {"success": false, "message": "Shelter capacity is full; construction was not started."}
 	_starting = true
 	var reserved: Array[String] = []
 	for id: String in selected_ids:
@@ -195,25 +202,28 @@ func start_build(selected_ids: Array[String], use_player: bool = false) -> Dicti
 			return {"success": false, "message": "Worker availability changed."}
 		WorkerDatabase.get_worker_data(id).start_work(order_id, _worker_job_label(false))
 		reserved.append(id)
-	var requirements: Dictionary = get_requirements()
-	var consumed: Dictionary = {}
-	for id: String in requirements:
-		var quantity: int = int(requirements[id])
-		if not Inventory.remove_item(id, quantity):
-			for consumed_id: String in consumed:
-				Inventory.add_item(consumed_id, int(consumed[consumed_id]))
-			_release_workers(reserved)
-			_finish_transaction()
-			return {"success": false, "message": "Materials changed; construction was not started."}
-		consumed[id] = quantity
-	# Inventory removal emits callbacks. Capacity must still fit the entire house
-	# after those callbacks, before committing either the team or its materials.
-	if not _has_shelter_room():
-		for consumed_id: String in consumed:
-			Inventory.add_item(consumed_id, int(consumed[consumed_id]))
+	var payment_available: bool = Inventory.can_consume_bulk_items(requirements)
+	var shelter_available: bool = _has_shelter_room()
+	var workers_reserved: bool = _start_workers_are_reserved(reserved)
+	if not payment_available or not shelter_available or not workers_reserved:
 		_release_workers(reserved)
 		_finish_transaction()
-		return {"success": false, "message": "Shelter capacity is full; construction was not started."}
+		if not shelter_available:
+			return {"success": false, "message": "Shelter capacity is full; construction was not started."}
+		if not payment_available:
+			return {"success": false, "message": "Materials changed; construction was not started."}
+		return {"success": false, "message": "Worker availability changed."}
+	# Keep a complete pre-payment snapshot so an unexpected bulk rejection can
+	# restore the cleared plot without leaving a paid-looking or reserved job.
+	var previous_phase: String = phase
+	var previous_worker_ids: Array[String] = worker_ids.duplicate()
+	var previous_worker_capacity: int = worker_capacity
+	var previous_work_total_units: int = work_total_units
+	var previous_started_at: int = started_at
+	var previous_completes_at: int = completes_at
+	var previous_latest_time: int = _latest_time
+	var previous_payroll_work_remainder: int = payroll_work_remainder
+	var previous_player_building: bool = player_building
 	worker_ids = reserved
 	worker_capacity = 1 if use_player else reserved.size()
 	started_at = _now()
@@ -227,9 +237,58 @@ func start_build(selected_ids: Array[String], use_player: bool = false) -> Dicti
 	phase = "building"
 	if not use_player:
 		_initialize_approaches()
+	# Route setup can call scene code, so validate every mutable precondition
+	# again immediately before the one all-or-nothing debit.
+	payment_available = Inventory.can_consume_bulk_items(requirements)
+	shelter_available = _has_shelter_room()
+	workers_reserved = _start_workers_are_reserved(reserved)
+	if not payment_available or not shelter_available or not workers_reserved:
+		_release_workers(reserved)
+		phase = previous_phase
+		worker_ids = previous_worker_ids
+		worker_capacity = previous_worker_capacity
+		work_total_units = previous_work_total_units
+		started_at = previous_started_at
+		completes_at = previous_completes_at
+		_latest_time = previous_latest_time
+		payroll_work_remainder = previous_payroll_work_remainder
+		player_building = previous_player_building
+		_finish_transaction()
+		if not shelter_available:
+			return {"success": false, "message": "Shelter capacity is full; construction was not started."}
+		if not payment_available:
+			return {"success": false, "message": "Materials changed; construction was not started."}
+		return {"success": false, "message": "Worker availability changed."}
+	# The state and reservations are already committed when Inventory emits its
+	# single notification. Reentrant callbacks are blocked by _starting and the
+	# Inventory bulk guard; later capacity changes affect progress, not payment.
+	if not Inventory.consume_bulk_items(requirements):
+		_release_workers(reserved)
+		phase = previous_phase
+		worker_ids = previous_worker_ids
+		worker_capacity = previous_worker_capacity
+		work_total_units = previous_work_total_units
+		started_at = previous_started_at
+		completes_at = previous_completes_at
+		_latest_time = previous_latest_time
+		payroll_work_remainder = previous_payroll_work_remainder
+		player_building = previous_player_building
+		_finish_transaction()
+		return {"success": false, "message": "Materials changed; construction was not started."}
 	changed.emit()
 	_finish_transaction()
 	return {"success": true, "message": "Construction started."}
+
+
+func _start_workers_are_reserved(ids: Array[String]) -> bool:
+	for id: String in ids:
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker == null or worker.current_order_id != order_id or worker.current_job_id != _worker_job_label(false) or not worker.is_reserved():
+			return false
+		var citizen: CitizenData = worker.get_linked_citizen()
+		if citizen != null and citizen.employment_status != CitizenData.EmploymentStatus.ASSIGNED:
+			return false
+	return true
 
 func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> void:
 	if phase not in ["building", "clearing"]:

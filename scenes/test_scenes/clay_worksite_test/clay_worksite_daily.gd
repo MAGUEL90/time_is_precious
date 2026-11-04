@@ -183,12 +183,19 @@ func discard_setup(site_id: StringName) -> void:
 	selected[site_id] = []
 
 func withdraw(site_id: StringName, id: String) -> bool:
-	if not jobs.has(site_id) or not jobs[site_id].ids.has(id):
+	# Receipt callbacks can be synchronous. A second withdrawal during a clock
+	# tick or another release could retain already-delivered units a second time.
+	if _ticking or _handling_resignations or not jobs.has(site_id) or not jobs[site_id].ids.has(id):
 		return false
+	_handling_resignations = true
 	_settle(site_id)
 	if is_hauler(id) and hauling != null and not hauling.withdraw(id):
-		return true
-	_finish_withdraw(site_id, id)
+		pass # The loaded trip finishes before releasing the assignment.
+	else:
+		_finish_withdraw(site_id, id)
+	_handling_resignations = false
+	_drain_queued_resignations()
+	settlement_finished.emit()
 	return true
 
 ## A true result means the caller can finish dismissal now. False means this
@@ -262,7 +269,7 @@ func _drain_queued_resignations() -> void:
 					ready.append(id)
 				continue
 			var site_id: StringName = _assigned_site(id)
-			if not site_id.is_empty() and _resign_from_site(site_id, id):
+			if site_id.is_empty() or _resign_from_site(site_id, id):
 				if not ready.has(id):
 					ready.append(id)
 	_handling_resignations = false
@@ -297,6 +304,8 @@ func progress_rows(site_id: StringName) -> Array[Dictionary]:
 	return rows
 
 func start(site_id: StringName, drop: Callable) -> bool:
+	if _ticking or _handling_resignations:
+		return false
 	var ids: Array = selected[site_id]
 	for id: String in ids:
 		if not allow_haulers and is_hauler(id):
@@ -473,11 +482,12 @@ func tick() -> void:
 					if not job.stats[id].days.has(day):
 						job.stats[id].days.append(day)
 					gathered.emit(id, gathered_units)
-					_settle(site_id)
 				else:
 					job.progress[id] = progress
-			if session.stock <= 0 or minute == SHIFT_END - 1:
-				_settle(site_id)
+	# An earlier receipt can fail even after work ends. Retry retained output on
+	# every clock tick, including off shift, instead of waiting for another item.
+	for site_id: Variant in jobs.keys():
+		_settle(StringName(site_id))
 	# Replace only unharvested natural stock; ground output is never rerolled.
 	var current_day: int = current / 1440
 	if current_day != last_stock_day:

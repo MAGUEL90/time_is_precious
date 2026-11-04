@@ -5,6 +5,9 @@ const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 const LEGACY_RELIABILITY = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
 const CHECKPOINT_PATH: String = "user://city_save_test/checkpoint.json"
 var store: Node
+var _payment_clock_before: int = -1
+var _payment_clock_after: int = -1
+var _payment_guard_seen: bool = false
 
 func _run() -> void:
 	_snapshot_globals()
@@ -53,6 +56,7 @@ func _run() -> void:
 	var saved_raw: Dictionary = codec.decode(before.state)
 	_test_player_condition_migration(before, saved_raw)
 	_test_reliability_migration(before, saved_raw)
+	_test_wall_paid_source_migration(before, saved_raw)
 	_expect(saved_raw.pickup_sources is Dictionary and saved_raw.pickup_sources.size() == 6,
 		"The version-4 snapshot records exactly the six authored pickup-source identities.")
 	_expect(is_equal_approx(saved_raw.clock._timer, 0.375), "The fractional clock tick is captured alongside pending palm timers.")
@@ -74,6 +78,8 @@ func _run() -> void:
 	await _assert_refill_boundaries(before, saved_raw)
 	await _assert_future_palm_rng_sequence(saved_raw)
 	_expect(store.load_checkpoint(), "Palm RNG sequence probing is rolled back by another Load: " + store.last_error)
+	await _assert_seed(saved_raw.pickup_sources)
+	_test_pending_wall_refund_roundtrip(before)
 	await _assert_seed(saved_raw.pickup_sources)
 	# Reject malformed palm ledgers through the disk boundary and prove each Load
 	# leaves every live owner untouched.
@@ -207,7 +213,7 @@ func _seed() -> void:
 	# This fixture jumps the clock directly; worksite time normally advances via
 	# per-minute signals, so settle its idle ledger before capturing the world.
 	content.get_node("YSortWorld/WorkerRuntime").daily.tick()
-	Inventory.items.assign({"shekel": 17, "stone": 3})
+	Inventory.items.assign({"shekel": 17, "stone": 13, "wood_log": 5})
 	storage.items = {"stone": 100, "wood_log": 100, "egg": 5}
 	player.fatigue = 0.75
 	var pickup: PickUpItem = preload("res://scenes/pickup_item/pickup_item.tscn").instantiate()
@@ -215,7 +221,15 @@ func _seed() -> void:
 	pickup.quantity = 4
 	pickup.position = Vector2(-210, -260)
 	content.get_node("YSortWorld").add_child(pickup)
-	_expect(state.request_wall_work(state.get_work_quote()), "The save fixture starts paid construction.")
+	_payment_clock_before = _clock_minute()
+	_payment_clock_after = -1
+	_payment_guard_seen = false
+	Inventory.items_changed.connect(_try_advance_clock_during_wall_payment)
+	var wall_started: bool = state.request_wall_work(state.get_work_quote())
+	Inventory.items_changed.disconnect(_try_advance_clock_during_wall_payment)
+	_expect(wall_started, "The save fixture starts paid construction.")
+	_expect(_payment_guard_seen and _payment_clock_after == _payment_clock_before,
+		"A payment observer cannot advance city time while the wall ledger and Inventory debit are being published.")
 	WorkStateRuntime.get_node("CityProgression").progress = 35
 	await _seed_authored_palms()
 	TimeComponentManager._timer = 0.375
@@ -243,15 +257,64 @@ func _assert_seed(expected_palms: Dictionary = {}) -> void:
 	_expect(Inventory.items.get("date_cluster", 0) == 6, "Six collected date clusters remain in personal inventory across Load.")
 	var drops: Array = store.snapshot._capture_city_drops(content)
 	_expect(drops.size() == 1 and drops[0].quantity == 4 and drops[0].item_id == "clay_lump", "Dropped inventory items survive without duplication.")
-	_expect(Inventory.items.get("shekel") == 17 and Inventory.items.get("stone") == 3, "Player inventory survives the checkpoint.")
-	_expect(storage.items.get("stone") == 90 and storage.items.get("wood_log") == 95, "Materials already paid for construction remain paid exactly once.")
-	_expect(state._work_remaining == 120 and state._work_kind == "build" and state.wall_hp == 0, "Unfinished wall work retains its timer and ruined wall.")
+	_expect(Inventory.items.get("shekel") == 17 and Inventory.items.get("stone") == 3 and Inventory.items.get("wood_log", 0) == 0, "Player inventory preserves the one-time wall payment across the checkpoint.")
+	_expect(storage.items.get("stone") == 100 and storage.items.get("wood_log") == 100, "Wall materials are not taken from City Storage.")
+	_expect(state._work_remaining == 120 and state._work_kind == "build" and state._work_paid_source == "inventory" and state.wall_hp == 0, "Unfinished wall work retains its timer, payment source, and ruined wall.")
 	_expect(WorkStateRuntime.get_node("CityProgression").progress == 35 and is_equal_approx(player.fatigue, 0.75), "City progress and player conditions survive.")
 
 func _clean_files() -> void:
 	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
 		if FileAccess.file_exists(CHECKPOINT_PATH + suffix):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(CHECKPOINT_PATH + suffix))
+
+func _try_advance_clock_during_wall_payment() -> void:
+	var raid: Node = WorkStateRuntime.get_node("CityRaid")
+	_payment_guard_seen = raid.is_transaction_busy()
+	TimeComponentManager.advance_one_minute()
+	_payment_clock_after = _clock_minute()
+
+func _test_pending_wall_refund_roundtrip(current: Dictionary) -> void:
+	var original_bytes: String = JSON.stringify(current, "", true, true)
+	var original_capacity: float = Inventory.max_load
+	state.wall_level = 1
+	state.wall_hp = 40
+	state.phase = "safe"
+	state._work_kind = "repair"
+	state._work_remaining = 30
+	state._work_total = 60
+	state._work_restore_hp = 10
+	state._work_base_max_hp = 50
+	state._work_paid = {"stone": 2}
+	state._work_paid_source = "inventory"
+	state._refund_pending = false
+	Inventory.items["stone"] = maxi(0, int(Inventory.items.get("stone", 0)) - 2)
+	Inventory.max_load = Inventory.get_total_inventory_weight()
+	state._refund_interrupted_repair()
+	_expect(state._refund_pending and state._work_paid == {"stone": 2},
+		"A full Inventory leaves an unfinished repair refund pending.")
+	_expect(store.save_checkpoint(), "A pending wall refund can be saved without losing its original payment: " + store.last_error)
+	var pending_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var pending_raw: Dictionary = VALUES.new().decode(pending_document.state)
+	_expect(pending_document.schema_version == CODEC.VERSION and pending_raw.raid._refund_pending and pending_raw.raid._work_paid == {"stone": 2},
+		"The current checkpoint records the pending refund and retained materials.")
+	state._refund_pending = false
+	state._work_kind = ""
+	state._work_paid.clear()
+	state._work_paid_source = ""
+	_expect(store.load_checkpoint(), "A pending wall refund restores from its checkpoint: " + store.last_error)
+	_expect(state._refund_pending and state._work_paid == {"stone": 2} and state._work_paid_source == "inventory",
+		"Loading restores the pending repair and its Inventory refund provider.")
+	Inventory.max_load = maxf(original_capacity, Inventory.get_total_inventory_weight() + 2.0)
+	state._refund_interrupted_repair()
+	_expect(not state._refund_pending and state._work_kind.is_empty() and Inventory.items.get("stone", 0) == 3,
+		"A restored refund retries when Inventory capacity becomes available.")
+	var after_refund: int = int(Inventory.items.get("stone", 0))
+	state._refund_interrupted_repair()
+	_expect(Inventory.items.get("stone", 0) == after_refund,
+		"A restored pending refund cannot be applied twice.")
+	Inventory.max_load = original_capacity
+	_write_text(CHECKPOINT_PATH, original_bytes)
+	_expect(store.load_checkpoint(), "The original wall checkpoint restores after pending-refund coverage: " + store.last_error)
 
 func _seed_authored_palms() -> void:
 	await get_tree().process_frame
@@ -453,6 +516,65 @@ func _assert_legacy_validation_only(document: Dictionary) -> void:
 	_expect(store.snapshot.prepare(document, content), "Legacy data validates before applying fallback.")
 	_expect(store.snapshot.capture(content) == baseline, "Legacy validation alone leaves all owners, slots, timers and RNG untouched.")
 
+func _test_wall_paid_source_migration(current: Dictionary, raw: Dictionary) -> void:
+	var values = VALUES.new()
+	_expect(current.schema_version == CODEC.VERSION and raw.raid._work_paid_source == "inventory", "Current saves record the new wall project's Inventory payment source.")
+	var sentinel: Dictionary = store.snapshot.capture(content)
+	for invalid_source: Variant in ["", "workshop_storage", 7]:
+		var bad_raw: Dictionary = raw.duplicate(true)
+		bad_raw.raid._work_paid_source = invalid_source
+		var bad: Dictionary = current.duplicate(true)
+		bad.state = values.encode(bad_raw)
+		_expect(not store.snapshot.prepare(bad, content), "Current saves reject invalid wall payment source: " + str(invalid_source))
+		_expect(store.snapshot.capture(content) == sentinel, "Rejected wall payment source leaves live owners unchanged.")
+	var missing_source_raw: Dictionary = raw.duplicate(true)
+	missing_source_raw.raid.erase("_work_paid_source")
+	var missing_source: Dictionary = current.duplicate(true)
+	missing_source.state = values.encode(missing_source_raw)
+	_expect(not store.snapshot.prepare(missing_source, content), "Current saves require the wall payment source field.")
+	_expect(store.snapshot.capture(content) == sentinel, "A missing source field leaves the live project unchanged.")
+
+	var legacy_raw: Dictionary = raw.duplicate(true)
+	legacy_raw.raid.phase = "safe"
+	legacy_raw.raid.wall_level = 1
+	legacy_raw.raid.wall_hp = 40
+	legacy_raw.raid._work_kind = "repair"
+	legacy_raw.raid._work_remaining = 30
+	legacy_raw.raid._work_total = 60
+	legacy_raw.raid._work_restore_hp = 10
+	legacy_raw.raid._work_base_max_hp = 50
+	legacy_raw.raid._work_paid = {"stone": 2}
+	legacy_raw.city_storage.items["stone"] = 98
+	LEGACY_RELIABILITY.strip_v16_owners(legacy_raw)
+	var legacy: Dictionary = current.duplicate(true)
+	legacy.schema_version = 15
+	legacy.state = values.encode(legacy_raw)
+	_expect(store.snapshot.prepare(legacy, content), "A strict v15 save stages the legacy City Storage payment source.")
+	_expect(store.snapshot.prepared.raid._work_paid_source == "city_storage" and store.snapshot.capture(content) == sentinel,
+		"Legacy source migration is in-memory and does not change the live project.")
+	var current_bytes: String = FileAccess.get_file_as_string(CHECKPOINT_PATH)
+	var legacy_bytes: String = JSON.stringify(legacy, "", true, true)
+	_write_text(CHECKPOINT_PATH, legacy_bytes)
+	_expect(store.load_checkpoint(), "A v15 project loads with its original City Storage payment source: " + store.last_error)
+	_expect(state._work_paid_source == "city_storage" and state._work_kind == "repair" and FileAccess.get_file_as_string(CHECKPOINT_PATH) == legacy_bytes,
+		"Loading v15 stages City Storage as the refund source without rewriting saved bytes.")
+	_expect(store.save_checkpoint(), "Saving the migrated legacy project writes the current schema: " + store.last_error)
+	_expect(FileAccess.get_file_as_string(CHECKPOINT_PATH + ".bak") == legacy_bytes,
+		"The explicit save preserves the original v15 bytes in the normal backup.")
+	var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CHECKPOINT_PATH))
+	var upgraded_raw: Dictionary = values.decode(upgraded.state)
+	_expect(upgraded.schema_version == CODEC.VERSION and upgraded_raw.raid._work_kind == "repair" and upgraded_raw.raid._work_paid_source == "city_storage",
+		"The first explicit v16 save retains the legacy repair's City Storage refund source.")
+	var inventory_before_legacy_refund: Dictionary = Inventory.items.duplicate(true)
+	state._refund_interrupted_repair()
+	_expect(storage.items.get("stone", 0) == 100 and Inventory.items == inventory_before_legacy_refund and state._work_kind.is_empty(),
+		"The migrated repair returns its paid materials to City Storage without touching Inventory.")
+	state._refund_interrupted_repair()
+	_expect(storage.items.get("stone", 0) == 100, "A migrated City Storage refund cannot be duplicated.")
+	_write_text(CHECKPOINT_PATH, current_bytes)
+	_expect(store.load_checkpoint() and store.snapshot.capture(content) == sentinel,
+		"The original Inventory-funded project restores after the migration test.")
+
 func _strip_post_v3_worker_fields(value: Variant) -> void:
 	if value is Dictionary:
 		if value.get("$type") == "object" and value.get("class") == "WorkerData":
@@ -505,6 +627,7 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 
 func _strip_post_v3_owner_fields(raw: Dictionary) -> void:
 	# Pseudo-legacy documents omit owner fields absent in those schemas.
+	LEGACY_RELIABILITY.strip_v16_owners(raw)
 	raw.player["focus"] = 0.75
 	raw.raid.erase("notification_seen_keys")
 	for plot: Dictionary in raw.plots.values():

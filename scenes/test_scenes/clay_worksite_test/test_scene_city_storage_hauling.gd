@@ -240,6 +240,14 @@ func _check_wall_deposit_and_direct_delivery() -> void:
 
 
 func _check_clay_destination_gate() -> void:
+	# The current city deliberately blocks new Hauler assignments after removal
+	# of material stockpiles. Exercise that guard before enabling the isolated
+	# historical fixture to cover its still-supported routing/policy behavior.
+	_expect(not worksite.daily.allow_haulers and worksite.daily.unavailable(HAULER) == "Unavailable"
+		and not worksite.daily.select_hauler(SITE, HAULER, worksite.get_path_to(storage_a), "Storage A", 3)
+		and not worksite.daily.selected[SITE].has(HAULER),
+		"The current content adapter rejects new Hauler assignments even for an available destination.")
+	worksite.daily.allow_haulers = true
 	var choices: Array[Dictionary] = worksite._storage_choices()
 	var names: Array[String] = []
 	var city_choice: Dictionary = {}
@@ -335,6 +343,7 @@ func _check_clay_destination_gate() -> void:
 		and worksite.hauling.routes[HAULER].destination_path == worksite.get_path_to(storage_a),
 		"Storage A can still be assigned and started for clay through the existing UI.")
 	worksite.daily.cleanup()
+	worksite.daily.allow_haulers = false
 	worksite._close_inspector()
 
 
@@ -528,7 +537,7 @@ func _check_positive_hauling(cargo_item: String) -> void:
 
 
 func _check_stock_ui() -> void:
-	player.global_position = destination.get_arrival_position()
+	player.global_position = area.get_node("Board").global_position + Vector2(-17, 13)
 	for _index: int in range(3):
 		await get_tree().physics_frame
 	var interact := InputEventAction.new()

@@ -141,23 +141,26 @@ func _run() -> void:
 		and _wood_total() == 72,
 		"The restored cargo reaches City Storage once while the site remains conserved.")
 
-	# Save a completed output plus pending ground yield. Let the active worker
-	# produce one more log, reload, and continue to prove neither ledger duplicates.
-	var ground_deadline: int = _clock_minute() + 240
-	while runtime._daily_output_count(WOOD_SITE) == 0 and _clock_minute() < ground_deadline:
+	# After Continue, new worker output goes directly to the city. Save alongside
+	# the completed workshop output and prove that both ledgers resume only once.
+	var city_before: int = int(city_storage.items.get("wood_log", 0))
+	var output_deadline: int = _clock_minute() + 240
+	while int(city_storage.items.get("wood_log", 0)) == city_before and _clock_minute() < output_deadline:
 		TimeComponentManager.advance_minutes(1)
-	_expect(runtime._daily_output_count(WOOD_SITE) == 1,
-		"The assigned laborer leaves one real pending ground output after the checkpointed delivery.")
+	_expect(int(city_storage.items.get("wood_log", 0)) == city_before + 1
+		and runtime._daily_output_count(WOOD_SITE) == 0,
+		"The assigned laborer sends the next completed log directly to City Storage.")
 	var completed_snapshot: Dictionary = store.snapshot.capture(content)
-	_expect(store.save_checkpoint(), "Completed workshop output and pending ground yield save: " + store.last_error)
+	_expect(store.save_checkpoint(), "Completed workshop output and City Storage stock save: " + store.last_error)
 	TimeComponentManager.advance_minutes(20)
-	_expect(runtime._daily_output_count(WOOD_SITE) == 2, "Natural work adds one new ground output after the completed checkpoint.")
-	_expect(store.load_checkpoint(), "Completed output and ground yield reload: " + store.last_error)
+	_expect(int(city_storage.items.get("wood_log", 0)) == city_before + 2, "Natural work adds one city-owned log after the completed checkpoint.")
+	_expect(store.load_checkpoint(), "Completed output and City Storage stock reload: " + store.last_error)
 	_expect(_same_snapshot(store.snapshot.capture(content), completed_snapshot),
-		"Reload restores the one saved ground output and completed fee/output ledger exactly.")
+		"Reload restores the saved city stock and completed fee/output ledger exactly.")
 	TimeComponentManager.advance_minutes(20)
-	_expect(runtime._daily_output_count(WOOD_SITE) == 2 and _wood_total() == 72,
-		"Continuing after Load adds one ground output without losing or duplicating stock.")
+	_expect(int(city_storage.items.get("wood_log", 0)) == city_before + 2
+		and runtime._daily_output_count(WOOD_SITE) == 0 and _wood_total() == 72,
+		"Continuing after Load adds one city-owned log without losing or duplicating stock.")
 	_expect(WorkShopStorage.output_lots.size() == 1
 		and WorkShopStorage.unpaid_claims_ledger.size() == 1
 		and WorkShopStorage.items.get("sun_dried_mudbrick", 0) == 20,

@@ -912,6 +912,28 @@ enters personal inventory; workshop production continues to follow its own stora
 
 ### 20.2 Approved Storage Structure and City Ownership
 
+**2026-11-04 implementation clarification.** Daily worker output goes directly
+to Central City Storage; new worksite-to-storage Hauler assignments are disabled.
+The player can order a paid, idle Laborer or legacy Hauler equipped with a city
+Cart to carry up to three counted city-owned items between Central Storage and a
+city-owned Annex. The Annex does not supply citizen needs until goods return to
+Central Storage. The temporary assignment does not change a Laborer's profession.
+Manual Hourly gathering still goes to the player's Inventory (with the existing
+ground overflow) so the player can obtain personal construction materials; the
+broader interpretation of “worksite output” for that player-only mode remains
+open for review. Existing pre-change output is not silently converted to city
+property.
+
+Workshop and house plots, timed wall work, Watchtower work, and Drying Yard
+construction/upgrades use the player's Inventory. The Drying Yard accepts
+explicit, refundable personal contributions over multiple visits; this allows its
+level-three material kit to exceed normal bag capacity without changing that
+capacity. As a provisional way to obtain defense materials, the traveling
+merchant offers 12 Stone at 2 Shekels each per visit; existing offers, wages and
+material quantities are unchanged. Earlier city-funded wall work retains its
+original refund owner. See the [task report](task_reports/city-transport-and-player-construction-2026-11-04.md)
+for implementation details and save-migration limits.
+
 Approved by the Game Director on 2026-09-20 from Canva slide 2, **Storage Flow - Rekomendasi**,
 with one explicit amendment: items in City Storage cannot be taken back by the player.
 This replaces the earlier withdrawable-city-stock direction. Design approval is distinct

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 ; Resource positions on the authored map are temporary, pending layout decisions.
 
@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site_content.png" id="site_Reed"]
 
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="12_city_storage"]
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_annex.tscn" id="13_city_annex"]
 
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
@@ -185,6 +186,9 @@ autowrap_mode = 2
 
 [node name="CityStorageArea" parent="." instance=ExtResource("12_city_storage")]
 position = Vector2(-120, 55)
+
+[node name="CityStorageAnnex" parent="." instance=ExtResource("13_city_annex")]
+position = Vector2(-40, 67)
 
 [editable path="WorksiteMarkers/ClaySiteA"]
 [editable path="WorksiteMarkers/WoodSite"]

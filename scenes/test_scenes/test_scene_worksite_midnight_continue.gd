@@ -19,6 +19,8 @@ func _run() -> void:
 	for _frame: int in range(2):
 		await get_tree().process_frame
 	runtime = content.get_node("YSortWorld/WorkerRuntime")
+	# Both phases reconstruct the same isolated pre-removal Hauler fixture.
+	runtime.daily.allow_haulers = true
 	city_storage = WorkStateRuntime.get_node("CityToolStorage")
 	wood_storage = runtime.get_node("CityStorageArea/DeliveryPoint")
 	store = WorkStateRuntime.get_node("CitySave")

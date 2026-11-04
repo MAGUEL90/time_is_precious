@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scenes/storage_destination/city_storage_area.gd" id="1_area"]
+[ext_resource type="PackedScene" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="2_prompt"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
+[ext_resource type="Texture2D" path="res://assets/objects/object_board_0.png" id="4_board"]
+
+[sub_resource type="RectangleShape2D" id="AccessShape"]
+size = Vector2(40, 32)
+
+[node name="CityStorageAnnexArea" type="Area2D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_area")
+storage_id = "annex"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 8)
+shape = SubResource("AccessShape")
+
+[node name="Board" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("4_board")
+
+[node name="AnnexLabel" type="Label" parent="."]
+offset_left = -38.0
+offset_top = -19.0
+offset_right = 38.0
+offset_bottom = -11.0
+theme = ExtResource("3_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "CITY-OWNED ANNEX"
+horizontal_alignment = 1
+mouse_filter = 2
+
+[node name="InteractableLabelComponent" parent="." instance=ExtResource("2_prompt")]
+
+[node name="DeliveryPoint" type="Marker2D" parent="."]

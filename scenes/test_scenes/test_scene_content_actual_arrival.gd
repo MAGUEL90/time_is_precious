@@ -186,6 +186,11 @@ func _set_clock(day: int, hour: int, minute: int) -> void:
 	TimeComponentManager.current_day = day
 	TimeComponentManager.current_hour = hour
 	TimeComponentManager.current_minute = minute
+	# This fixture jumps the clock directly rather than emitting elapsed time.
+	# Keep the otherwise idle workshop and process cursors at that same instant.
+	var absolute_minute: int = day * 1440 + hour * 60 + minute
+	WorkManager._last_total_minutes = absolute_minute
+	ProcessManager._last_total_minutes = absolute_minute
 
 func _test_obstacle_route() -> void:
 	var navigation = NAVIGATION.new()

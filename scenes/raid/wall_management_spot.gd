@@ -133,12 +133,12 @@ func wall_improvement_quote_summary() -> String:
 	var kind: String = str(_quoted_work.get("kind", ""))
 	var materials: String = _format_quote_materials(_quoted_work.get("materials", {}))
 	var duration: String = _format_quote_duration(int(_quoted_work.get("duration_minutes", 0)))
-	var readiness: String = "Ready" if bool(_quoted_work.get("can_start", false)) else "Need supplies"
+	var readiness: String = "Ready" if bool(_quoted_work.get("can_start", false)) else "Need Inventory supplies"
 	match kind:
 		"upgrade":
-			return "Lv.%d: %d HP / DEF %d\n%s\n%s / City Storage\n%s" % [int(_quoted_work.get("target_level", 0)), int(_quoted_work.get("target_hp", 0)), int(_quoted_work.get("target_defend", 0)), materials, duration, readiness]
+			return "Lv.%d: %d HP / DEF %d\n%s\n%s / Inventory\n%s" % [int(_quoted_work.get("target_level", 0)), int(_quoted_work.get("target_hp", 0)), int(_quoted_work.get("target_defend", 0)), materials, duration, readiness]
 		"watchtower":
-			return "Detect %d days early\nUnlocks raider Inspect\n%s\n%s / %s" % [int(_quoted_work.get("warning_days", 0)), materials, duration, readiness]
+			return "Detect %d days early\nUnlocks raider Inspect\n%s\n%s / Inventory\n%s" % [int(_quoted_work.get("warning_days", 0)), materials, duration, readiness]
 		_:
 			return "This project is unavailable."
 
@@ -187,7 +187,7 @@ func wall_work_summary() -> String:
 		var display_name: String = item.display_name.replace("Wood Log", "Wood") if item != null else id
 		parts.append("%d %s" % [int(quote.materials[id]), display_name])
 	var cost: String = " + ".join(parts) if not parts.is_empty() else "No materials"
-	var availability: String = "Uses City Storage." if quote.can_start else "City Storage is short."
+	var availability: String = "Uses Inventory." if quote.can_start else "Inventory is short."
 	return "%s: %d min\n%s\n%s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
 
 func wall_select_work() -> void:

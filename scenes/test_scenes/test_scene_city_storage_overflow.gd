@@ -1,6 +1,7 @@
 extends Node
 
 const STORAGE_SCRIPT: Script = preload("res://scenes/storage_destination/city_tool_storage.gd")
+const DAILY_SCRIPT: Script = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_daily.gd")
 const MAX_INT_VALUE: int = 9223372036854775807
 
 var failures: int = 0
@@ -22,6 +23,8 @@ func _run() -> void:
 	_test_exact_max_deposit(storage)
 	_test_batch_deposit_atomicity(storage)
 	_test_cargo_receipt(storage)
+	_test_worksite_receipt(storage)
+	_test_retry_after_shift(storage)
 	_test_malformed_stack_validation(storage)
 	_test_invalid_deposit_quantities(storage)
 
@@ -98,6 +101,56 @@ func _test_cargo_receipt(storage: Node) -> void:
 	_expect(Inventory.items == inventory_before and storage_changed_count == 1
 		and inventory_changed_count == 0,
 		"Successful cargo receipt changes City Storage only and emits one storage notification.")
+
+
+func _test_worksite_receipt(storage: Node) -> void:
+	_reset(storage, {"clay_lump": MAX_INT_VALUE - 1}, {"clay_lump": 4})
+	var inventory_before: Dictionary = Inventory.items.duplicate(true)
+	_expect(not storage.has_capacity_for("clay_lump", 1) and not storage.try_add_item("clay_lump", 1),
+		"Ordinary cargo still respects the existing raw-material intake filter.")
+	_expect(not storage.try_add_worksite_output("missing_item", 1)
+		and not storage.try_add_worksite_output("clay_lump", 0)
+		and not storage.try_add_worksite_output("clay_lump", 2),
+		"Worksite receipt rejects unknown items, nonpositive amounts and overflow.")
+	_expect(int(storage.items.clay_lump) == MAX_INT_VALUE - 1 and storage_changed_count == 0,
+		"Rejected worksite receipts leave the entire city stack unchanged and emit no signal.")
+	_expect(storage.try_add_worksite_output("clay_lump", 1)
+		and int(storage.items.clay_lump) == MAX_INT_VALUE and Inventory.items == inventory_before
+		and storage_changed_count == 1 and inventory_changed_count == 0,
+		"Worksite receipt accepts raw output to the exact integer limit once without touching Inventory.")
+	storage._transfer_in_progress = true
+	_expect(not storage.try_add_worksite_output("reed_bundle", 1)
+		and not storage.items.has("reed_bundle") and storage_changed_count == 1,
+		"A worksite receipt cannot reenter a city transaction.")
+	storage._transfer_in_progress = false
+
+
+func _test_retry_after_shift(storage: Node) -> void:
+	_reset(storage, {"clay_lump": MAX_INT_VALUE - 2}, {})
+	var old_clock: Array[int] = [TimeComponentManager.current_day, TimeComponentManager.current_hour,
+		TimeComponentManager.current_minute]
+	TimeComponentManager.current_day = 5
+	TimeComponentManager.current_hour = 16
+	TimeComponentManager.current_minute = 0
+	var daily = DAILY_SCRIPT.new()
+	daily.last_tick = daily.now() - 1
+	daily.last_stock_day = TimeComponentManager.current_day
+	daily.jobs[&"TestSite"] = {"ids": [], "units": 3,
+		"drop": func(quantity: int) -> bool: return storage.try_add_worksite_output("clay_lump", quantity)}
+	daily.tick()
+	_expect(int(daily.jobs[&"TestSite"].units) == 3 and storage_changed_count == 0,
+		"A full store retains the completed work after the 15:00 shift.")
+	storage.items["clay_lump"] = MAX_INT_VALUE - 3 # Simulate freed space.
+	TimeComponentManager.current_minute += 1
+	daily.tick()
+	TimeComponentManager.current_minute += 1
+	daily.tick()
+	_expect(int(daily.jobs[&"TestSite"].units) == 0 and int(storage.items.clay_lump) == MAX_INT_VALUE
+		and storage_changed_count == 1,
+		"The next off-shift minute retries exactly once without gathering another item.")
+	TimeComponentManager.current_day = old_clock[0]
+	TimeComponentManager.current_hour = old_clock[1]
+	TimeComponentManager.current_minute = old_clock[2]
 
 
 func _test_malformed_stack_validation(storage: Node) -> void:

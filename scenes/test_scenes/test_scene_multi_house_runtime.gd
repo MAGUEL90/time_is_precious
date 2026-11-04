@@ -19,6 +19,9 @@ var saved_workers: Dictionary
 var saved_shelter: int
 var saved_workshop_capacity: float
 var saved_clock: Dictionary
+var _house_payment_state: Node
+var _house_callback_saw_staged: bool = false
+var _house_callback_reentrant_result: Dictionary = {}
 
 
 func _ready() -> void:
@@ -127,11 +130,22 @@ func _run() -> void:
 	_expect(b.phase == "empty", "The second site finishes clearing independently.")
 	CityStockManager.shelter_capacity = CityStockManager.MAX_SHELTER_CAPACITY - 6
 	Inventory.items.assign({"wood_log": 8, "clay_lump": 16, "reed_bundle": 12})
+	_house_payment_state = a
+	_house_callback_saw_staged = false
+	_house_callback_reentrant_result.clear()
+	Inventory.items_changed.connect(_invalidate_shelter_during_house_payment)
 	var first: Dictionary = a.start_build([] as Array[String], true)
+	if Inventory.items_changed.is_connected(_invalidate_shelter_during_house_payment):
+		Inventory.items_changed.disconnect(_invalidate_shelter_during_house_payment)
 	_expect(bool(first.get("success", false)) and a.player_building and a.work_total_units == 2880
 		and b.phase == "empty", "Player construction starts only the selected house.")
+	_expect(_house_callback_saw_staged and not bool(_house_callback_reentrant_result.get("success", true)),
+		"A payment observer sees the complete house job and cannot reenter its start transaction.")
+	_expect(CityStockManager.shelter_capacity == CityStockManager.MAX_SHELTER_CAPACITY,
+		"The payment observer can invalidate shelter capacity after the start has committed.")
 	_expect(int(Inventory.items.get("wood_log", 0)) == 4 and int(Inventory.items.get("clay_lump", 0)) == 8
-		and int(Inventory.items.get("reed_bundle", 0)) == 6, "The first house consumes its material cost once.")
+		and int(Inventory.items.get("reed_bundle", 0)) == 6, "The first house consumes its material cost once without a capacity-sensitive refund.")
+	CityStockManager.shelter_capacity = CityStockManager.MAX_SHELTER_CAPACITY - 6
 	_tick(a, 2880)
 	_expect(a.phase == "built" and b.phase == "empty"
 		and CityStockManager.shelter_capacity == CityStockManager.MAX_SHELTER_CAPACITY - 3,
@@ -177,6 +191,14 @@ func _run() -> void:
 func _tick(state: Node, elapsed: int) -> void:
 	var total: int = state._latest_time + elapsed
 	state._on_time_changed(int(total / 1440), int((total % 1440) / 60), total % 60, "clear")
+
+
+func _invalidate_shelter_during_house_payment() -> void:
+	if _house_payment_state == null:
+		return
+	_house_callback_saw_staged = _house_payment_state.phase == "building" and _house_payment_state.player_building
+	CityStockManager.shelter_capacity = CityStockManager.MAX_SHELTER_CAPACITY
+	_house_callback_reentrant_result = _house_payment_state.start_build([] as Array[String], true)
 
 
 func _test_workshop_completion(state: Node) -> void:

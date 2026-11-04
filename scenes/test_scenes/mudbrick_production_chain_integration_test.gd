@@ -5,6 +5,14 @@ const DRYING_PROCESS: ProcessData = preload(
 )
 
 var failures: int = 0
+var _watch_facility_transaction: bool = false
+var _facility_busy_observed: bool = false
+var _time_advance_rejected: bool = false
+var _reentrant_upgrade_result: Dictionary = {}
+var _facility_level_signal_saw_paid_inventory: bool = false
+var _reentrant_level_change_rejected: bool = false
+var _new_slot_process_started: bool = false
+var _expected_inventory_at_level_signal: Dictionary = {}
 
 func _ready() -> void:
 	WorkerDatabase.reload_workers()
@@ -30,6 +38,7 @@ func _reset_runtime_state() -> void:
 	TimeComponentManager.current_hour = 0
 	TimeComponentManager.current_minute = 0
 	Inventory.items.clear()
+	Inventory.max_load = 100.0
 	WorkShopStorage.items.clear()
 	WorkShopStorage.output_lots.clear()
 	WorkShopStorage.claimable_outputs.clear()
@@ -39,6 +48,7 @@ func _reset_runtime_state() -> void:
 	WorkShopStorage.overdue_penalty_percent_per_day = 10
 	WorkShopStorage.overdue_fee_max_multiplier = 2.0
 	ProcessManager.stations.clear()
+	WorkshopFacilityManager.facility_contributions.clear()
 	WorkshopFacilityManager.reset_facilities()
 	ProcessManager.processes.clear()
 	ProcessManager._auto_pull_batch_size.clear()
@@ -80,46 +90,117 @@ func _run_facility_level_test() -> void:
 	)
 	WorkShopStorage.remove_item("wet_mudbrick", 20)
 
-	var missing_preview: Dictionary = (
-		WorkshopFacilityManager.get_facility_upgrade_preview(
+	var first_level_requirements: Dictionary = (
+		WorkshopFacilityManager.get_facility_upgrade_requirements(
 			"drying_yard",
-			WorkShopStorage
+			1
 		)
+	)
+	WorkShopStorage.add_bulk_item(first_level_requirements)
+	WorkShopStorage.add_item("wet_mudbrick", 20)
+	var missing_preview: Dictionary = (
+		WorkshopFacilityManager.get_facility_upgrade_preview("drying_yard")
 	)
 	_expect(
 		not bool(missing_preview.get("can_upgrade", true))
 		and not missing_preview.get("missing_items", {}).is_empty(),
-		"Drying Yard construction should require Workshop Free Stock materials."
+		"Drying Yard construction must not count materials in Workshop Free Stock."
 	)
 
-	for level: int in range(1, 4):
+	_facility_busy_observed = false
+	_time_advance_rejected = false
+	_reentrant_upgrade_result.clear()
+	_facility_level_signal_saw_paid_inventory = false
+	_reentrant_level_change_rejected = false
+	_new_slot_process_started = false
+	_watch_facility_transaction = true
+	Inventory.items_changed.connect(_observe_facility_upgrade_transaction)
+	WorkshopFacilityManager.facility_level_changed.connect(
+		_observe_facility_level_commit
+	)
+	var workshop_stock_after_first_upgrade: Dictionary = {}
+	for level: int in range(1, 3):
 		var requirements: Dictionary = (
 			WorkshopFacilityManager.get_facility_upgrade_requirements(
 				"drying_yard",
 				level
 			)
 		)
-		WorkShopStorage.add_bulk_item(requirements)
+		_expect(
+			Inventory.try_add_bulk_items(requirements),
+			"Level %d materials fit in a normal Inventory trip." % level
+		)
+		var inventory_before_upgrades: Dictionary = Inventory.items.duplicate(true)
+
+		if level == 1:
+			_expected_inventory_at_level_signal = inventory_before_upgrades.duplicate(true)
+			for item_id_value: Variant in requirements.keys():
+				var item_id: String = str(item_id_value)
+				var remaining: int = int(_expected_inventory_at_level_signal.get(item_id, 0)) - int(requirements[item_id_value])
+				if remaining > 0:
+					_expected_inventory_at_level_signal[item_id] = remaining
+				else:
+					_expected_inventory_at_level_signal.erase(item_id)
 		var upgrade_result: Dictionary = (
 			WorkshopFacilityManager.upgrade_facility(
-				"drying_yard",
-				WorkShopStorage
+				"drying_yard"
 			)
 		)
 		_expect(
 			bool(upgrade_result.get("success", false)),
-			"Drying Yard level %d should consume its materials and build."
+			"Drying Yard level %d should consume player Inventory materials and build."
 			% level
 		)
+		var expected_inventory: Dictionary = inventory_before_upgrades.duplicate(true)
 		for item_id_value in requirements.keys():
 			var item_id: String = str(item_id_value)
+			var expected_quantity: int = int(expected_inventory.get(item_id, 0)) - int(requirements[item_id_value])
+			if expected_quantity > 0:
+				expected_inventory[item_id] = expected_quantity
+			else:
+				expected_inventory.erase(item_id)
 			_expect(
-				WorkShopStorage.get_free_item_quantity(item_id) == 0,
-				"Level %d should consume required %s Free Stock." % [
+				int(Inventory.items.get(item_id, 0)) == expected_quantity,
+				"Level %d should charge required %s to player Inventory." % [
 					level,
 					item_id
 				]
 			)
+		_expect(
+			Inventory.items == expected_inventory,
+			"Level %d should consume the complete material batch atomically." % level
+		)
+		if level == 1:
+			for item_id_value: Variant in first_level_requirements.keys():
+				var item_id: String = str(item_id_value)
+				_expect(
+					WorkShopStorage.get_free_item_quantity(item_id) == int(first_level_requirements[item_id_value]),
+					"Building the Yard must not charge %s from Workshop Free Stock." % item_id
+				)
+			_expect(
+				_facility_busy_observed
+				and _time_advance_rejected
+				and not bool(_reentrant_upgrade_result.get("success", true)),
+				"Inventory callbacks must see the facility transaction lock, reject clock advancement, and reject a nested upgrade."
+			)
+			_expect(
+				WorkshopFacilityManager.get_facility_level("drying_yard") == 1,
+				"A nested upgrade must not advance the Yard twice."
+			)
+			_expect(
+				_facility_level_signal_saw_paid_inventory
+				and _reentrant_level_change_rejected
+				and _new_slot_process_started
+				and WorkShopStorage.get_free_item_quantity("wet_mudbrick") == 0,
+				"Level observers must run after the Inventory payment commits; a process may then occupy the paid-for slot and consume workshop input."
+			)
+			workshop_stock_after_first_upgrade = WorkShopStorage.items.duplicate(true)
+		else:
+			_expect(
+				WorkShopStorage.items == workshop_stock_after_first_upgrade,
+				"Level %d should leave Workshop Free Stock unchanged." % level
+			)
+		_watch_facility_transaction = false
 		var availability: Dictionary = (
 			ProcessManager.get_process_availability("drying_mudbrick")
 		)
@@ -132,6 +213,197 @@ func _run_facility_level_test() -> void:
 			]
 		)
 
+	var third_level_requirements: Dictionary = (
+		WorkshopFacilityManager.get_facility_upgrade_requirements(
+			"drying_yard",
+			3
+		)
+	)
+	var first_trip: Dictionary = {
+		"wood_log": 6,
+		"reed_bundle": 10,
+		"sun_dried_mudbrick": 18
+	}
+	_expect(
+		is_equal_approx(
+			Inventory.get_bulk_item_total_weight(first_trip),
+			Inventory.max_load
+		)
+		and Inventory.try_add_bulk_items(first_trip),
+		"The first level-3 material trip exactly fits the normal 100-weight Inventory."
+	)
+	var first_contribution: Dictionary = WorkshopFacilityManager.contribute_facility_materials(
+		"drying_yard"
+	)
+	_expect(
+		bool(first_contribution.get("success", false))
+		and Inventory.items.is_empty()
+		and WorkshopFacilityManager.facility_contributions.get("drying_yard", {}).get("items", {}) == first_trip,
+		"A full first trip is atomically stored as a partial level-3 contribution."
+	)
+	var partial_preview: Dictionary = WorkshopFacilityManager.get_facility_upgrade_preview(
+		"drying_yard"
+	)
+	_expect(
+		not bool(partial_preview.get("can_upgrade", true))
+		and partial_preview.get("missing_items", {}).get("sun_dried_mudbrick", 0) == 2,
+		"The Yard still needs two bricks after the first contribution trip."
+	)
+	var full_inventory_quantity: int = floori(
+		Inventory.max_load / Inventory.get_item_data("clay_lump").weight
+	)
+	_expect(
+		Inventory.try_add_item("clay_lump", full_inventory_quantity),
+		"The test can fill the player's bag with other carried materials."
+	)
+	var full_inventory_before_refund: Dictionary = Inventory.items.duplicate(true)
+	var blocked_refund: Dictionary = WorkshopFacilityManager.refund_facility_contributions(
+		"drying_yard"
+	)
+	_expect(
+		not bool(blocked_refund.get("success", true))
+		and Inventory.items == full_inventory_before_refund
+		and WorkshopFacilityManager.facility_contributions.has("drying_yard"),
+		"A full-bag refund must preserve both Inventory and committed materials."
+	)
+	Inventory.remove_item("clay_lump", full_inventory_quantity)
+	var successful_refund: Dictionary = WorkshopFacilityManager.refund_facility_contributions(
+		"drying_yard"
+	)
+	_expect(
+		bool(successful_refund.get("success", false))
+		and Inventory.items == first_trip
+		and not WorkshopFacilityManager.facility_contributions.has("drying_yard"),
+		"After freeing capacity, refund returns every contributed item exactly once."
+	)
+	_expect(
+		bool(WorkshopFacilityManager.contribute_facility_materials("drying_yard").get("success", false)),
+		"The refunded first trip can be explicitly contributed again."
+	)
+	_expect(
+		Inventory.try_add_item(
+			"sun_dried_mudbrick",
+			int(third_level_requirements.get("sun_dried_mudbrick", 0)) - 18
+		),
+		"The remaining level-3 bricks fit on a second Inventory trip."
+	)
+	_expect(
+		bool(WorkshopFacilityManager.contribute_facility_materials("drying_yard").get("success", false)),
+		"The second trip completes the level-3 contribution escrow."
+	)
+	var complete_contribution_preview: Dictionary = WorkshopFacilityManager.get_facility_upgrade_preview(
+		"drying_yard"
+	)
+	_expect(
+		bool(complete_contribution_preview.get("can_upgrade", false))
+		and complete_contribution_preview.get("missing_items", {}).is_empty()
+		and Inventory.items.is_empty(),
+		"Two trips fully fund level 3 while respecting the normal Inventory capacity."
+	)
+	var complete_escrow: Dictionary = WorkshopFacilityManager.facility_contributions.get(
+		"drying_yard",
+		{}
+	).get("items", {}).duplicate(true)
+	var complete_refund_plan: Dictionary = complete_contribution_preview.get(
+		"refund_plan",
+		{}
+	)
+	_expect(
+		is_equal_approx(
+			Inventory.get_bulk_item_total_weight(complete_escrow),
+			108.0
+		)
+		and Inventory.get_bulk_item_total_weight(complete_escrow) > Inventory.max_load
+		and not complete_refund_plan.is_empty()
+		and complete_refund_plan != complete_escrow
+		and Inventory.get_bulk_item_total_weight(complete_refund_plan) <= Inventory.max_load,
+		"A complete 108-weight level-3 escrow previews a bounded partial refund trip."
+	)
+	var first_refund_trip: Dictionary = WorkshopFacilityManager.refund_facility_contributions(
+		"drying_yard"
+	)
+	var escrow_after_first_refund: Dictionary = WorkshopFacilityManager.facility_contributions.get(
+		"drying_yard",
+	{}
+	).get("items", {})
+	var expected_escrow_after_first_refund: Dictionary = complete_escrow.duplicate(true)
+	for item_id_value: Variant in complete_refund_plan.keys():
+		var item_id: String = str(item_id_value)
+		var remaining_quantity: int = int(expected_escrow_after_first_refund[item_id]) - int(
+			complete_refund_plan[item_id_value]
+		)
+		if remaining_quantity > 0:
+			expected_escrow_after_first_refund[item_id] = remaining_quantity
+		else:
+			expected_escrow_after_first_refund.erase(item_id)
+	_expect(
+		bool(first_refund_trip.get("success", false))
+		and first_refund_trip.get("refunded_this_batch", {}) == complete_refund_plan
+		and Inventory.items == complete_refund_plan
+		and escrow_after_first_refund == expected_escrow_after_first_refund,
+		"The first refund trip returns only the quoted batch and keeps the exact remainder committed."
+	)
+	for item_id_value: Variant in complete_refund_plan.keys():
+		Inventory.remove_item(
+			str(item_id_value),
+			int(complete_refund_plan[item_id_value])
+		)
+	var second_refund_preview: Dictionary = WorkshopFacilityManager.get_facility_upgrade_preview(
+		"drying_yard"
+	)
+	var second_refund_plan: Dictionary = second_refund_preview.get("refund_plan", {})
+	var second_refund_trip: Dictionary = WorkshopFacilityManager.refund_facility_contributions(
+		"drying_yard"
+	)
+	_expect(
+		second_refund_plan == escrow_after_first_refund
+		and bool(second_refund_trip.get("success", false))
+		and second_refund_trip.get("refunded_this_batch", {}) == escrow_after_first_refund
+		and Inventory.items == escrow_after_first_refund
+		and not WorkshopFacilityManager.facility_contributions.has("drying_yard"),
+		"After unloading Inventory, the second refund trip returns the remaining escrow exactly once."
+	)
+	var recontribute_remainder: Dictionary = WorkshopFacilityManager.contribute_facility_materials(
+		"drying_yard"
+	)
+	_expect(
+		bool(recontribute_remainder.get("success", false))
+		and Inventory.items.is_empty(),
+		"The refunded remainder can be committed again before returning for the first batch."
+	)
+	_expect(
+		Inventory.try_add_bulk_items(complete_refund_plan),
+		"The first refund batch fits on a separate trip after the remainder was committed."
+	)
+	var recontribute_first_batch: Dictionary = WorkshopFacilityManager.contribute_facility_materials(
+		"drying_yard"
+	)
+	_expect(
+		bool(recontribute_first_batch.get("success", false))
+		and Inventory.items.is_empty()
+		and WorkshopFacilityManager.facility_contributions.get("drying_yard", {}).get("items", {}) == complete_escrow,
+		"Both explicit trips restore the complete level-3 escrow without losing or duplicating items."
+	)
+	var level_three_result: Dictionary = WorkshopFacilityManager.upgrade_facility(
+		"drying_yard"
+	)
+	_expect(
+		bool(level_three_result.get("success", false))
+		and WorkshopFacilityManager.get_facility_level("drying_yard") == 3
+		and Inventory.items.is_empty()
+		and not WorkshopFacilityManager.facility_contributions.has("drying_yard"),
+		"Level 3 consumes committed materials exactly once and completes without exceeding Inventory capacity."
+	)
+
+	if Inventory.items_changed.is_connected(_observe_facility_upgrade_transaction):
+		Inventory.items_changed.disconnect(_observe_facility_upgrade_transaction)
+	if WorkshopFacilityManager.facility_level_changed.is_connected(_observe_facility_level_commit):
+		WorkshopFacilityManager.facility_level_changed.disconnect(_observe_facility_level_commit)
+	_watch_facility_transaction = false
+	_expect(
+		not WorkshopFacilityManager.is_transaction_busy(),
+		"Facility transaction lock must be released after payment."
+	)
 	_expect(
 		not WorkshopFacilityManager.set_facility_level(
 			"drying_yard",
@@ -431,3 +703,31 @@ func _expect(condition: bool, message: String) -> void:
 
 	failures += 1
 	push_error(message)
+
+func _observe_facility_upgrade_transaction() -> void:
+	if not _watch_facility_transaction:
+		return
+	_facility_busy_observed = WorkshopFacilityManager.is_transaction_busy()
+	_time_advance_rejected = not TimeComponentManager.can_advance_time()
+	_reentrant_upgrade_result = WorkshopFacilityManager.upgrade_facility(
+		"drying_yard"
+	)
+
+func _observe_facility_level_commit(
+	facility_id: String,
+	level: int,
+	_station_slots: int
+) -> void:
+	if not _watch_facility_transaction or facility_id != "drying_yard" or level != 1:
+		return
+	_facility_level_signal_saw_paid_inventory = (
+		Inventory.items == _expected_inventory_at_level_signal
+	)
+	_reentrant_level_change_rejected = not WorkshopFacilityManager.set_facility_level(
+		"drying_yard",
+		2
+	)
+	_new_slot_process_started = ProcessManager.start_registered_process(
+		"drying_mudbrick",
+		20
+	)

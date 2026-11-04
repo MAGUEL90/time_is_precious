@@ -74,6 +74,21 @@ func _ready() -> void:
 	var city_storage_area: Node = get_node_or_null("CityStorageArea")
 	if city_storage_area != null:
 		city_storage_area.configure(player, city_tools, _can_open_worker_hub)
+	var city_storage_annex: Node = get_node_or_null("CityStorageAnnex")
+	if city_storage_area != null and city_storage_annex != null:
+		# Both providers are city property. Keep the annex and in-flight cargo in
+		# the existing persistent world host during the city/home handoff.
+		var transport: Node = WorkStateRuntime.get_node_or_null("CityStorageTransport")
+		if transport == null:
+			transport = preload("res://scenes/storage_destination/city_storage_transport.gd").new()
+			transport.name = "CityStorageTransport"
+			var annex: Node = preload("res://scenes/storage_destination/city_tool_storage.gd").new()
+			annex.name = "Annex"
+			transport.add_child(annex)
+			WorkStateRuntime.add_child(transport)
+		transport.configure(city_tools, city_storage_area.get_node("DeliveryPoint").global_position,
+			city_storage_annex.get_node("DeliveryPoint").global_position)
+		city_storage_annex.configure(player, transport.get_storage("annex"), _can_open_worker_hub)
 	if seed_playtest_equipment:
 		city_tools.add_tool_unit("content_cart", "cart", "Cart")
 		city_tools.add_tool_unit("content_glove", "basic_glove", "Basic Glove")
@@ -263,6 +278,13 @@ func _update_parked_plot_geometry(state_id: int, previous: String, next: String)
 		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
 	return true
+
+## New worker production is received once by City Storage. Old ground piles
+## and returned legacy cargo still use _drop_daily_output and remain collectable.
+func _deliver_daily_output(quantity: int, site: Marker2D) -> bool:
+	if not is_instance_valid(site) or not sites.has(site.name) or not is_instance_valid(city_tools):
+		return false
+	return bool(city_tools.try_add_worksite_output(str(sites[site.name].item_id), quantity))
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if site.name != &"ReedSite":
@@ -500,7 +522,7 @@ func _restore_resource_stock() -> void:
 		var site_id := StringName(saved_id)
 		if sites.has(site_id):
 			daily.pending_output[site_id] = {"quantity": int(snapshot.pending_output[saved_id]),
-				"drop": _drop_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))}
+				"drop": _deliver_daily_output.bind(get_node("WorksiteMarkers/" + str(site_id)))}
 	for saved_id: Variant in snapshot.get("pending_progress", {}):
 		var site_id := StringName(saved_id)
 		if sites.has(site_id):

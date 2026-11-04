@@ -32,6 +32,31 @@ v1/v2/v3 compatibility paths. Merchant gameplay rolls 1–2 requests per visit
 The production chain and output uses exist; normal first-playthrough validation
 is tracked separately in `ROADMAP.md`. This clarification changes no architecture.
 
+## Direct worksite supply — 2026-11-04 branch under review
+
+The Game Director's newer direction sends completed Daily worker gathering directly
+to City Storage. The worksite scheduler still owns natural stock, partial work and
+any completed units waiting for a rejected receipt. It retries that receipt on each
+clock tick, including outside the work shift. The content adapter selects the site's
+authored item; CityToolStorage commits the counted stock atomically. The temporary
+city capacity remains the pre-existing effectively unbounded integer range, avoiding
+any change to old balances. Player deposits retain their existing filter. Manual
+player gathering still goes to personal Inventory or its existing overflow ground
+pickup, so initial construction continues to consume player materials.
+
+New Hauler worksite assignments remain disabled. The requested future Hauler role is
+storage-to-storage only; no such route or recruitment UI is implemented by this
+checkpoint. Workshop storage is currently player-owned and does not distinguish
+city-owned lots, so an outward City Storage transfer must not be enabled until its
+ownership, access, cargo, and persistence boundaries are implemented together.
+
+City checkpoint v15 uses worksite snapshot v4 to distinguish this routing change.
+On an older snapshot, already-grounded piles and cargo stay at their prior locations;
+completed but undelivered worksite goods become player-pickable ground piles rather
+than silently becoming city-owned. The original checkpoint remains untouched on
+Continue, and the next successful save retains it in the normal backup. New v15
+pending receipts remain worksite-owned until City Storage accepts them exactly once.
+
 ## Worker shifts and needs — 2026-11-01
 
 The approved worker-needs revision uses a 07:00–15:00 game-time shift for

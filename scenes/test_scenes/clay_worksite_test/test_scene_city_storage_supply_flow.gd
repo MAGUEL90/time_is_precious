@@ -151,7 +151,7 @@ func _test_physical_city_storage() -> void:
 	await _wait_frames(2)
 	_expect(not is_instance_valid(_area_menu()), "Distant E input does not open City Storage.")
 
-	player.global_position = area_origin + Vector2(0, 12)
+	player.global_position = area.get_node("Board").global_position + Vector2(-17, 13)
 	await _physics_frames(3)
 	_expect(_area_has_access(), "Player enters the City Storage Area2D access shape.")
 	get_viewport().push_input(_action("interact"))
@@ -249,8 +249,14 @@ func _test_physical_city_storage() -> void:
 		and CityStockManager.food_supply == original_food_supply
 		and CityStockManager.clothing_supply == original_clothing_supply,
 		"Mixed physical deposit sends Shekel to treasury and other accepted goods to physical storage.")
-	_expect(view.visible and get_tree().paused and not is_instance_valid(_area_transfer(access_ui)),
-		"Repeated stale Deposit confirmation preserves the area menu pause and transfers once.")
+	_expect(is_instance_valid(_area_transfer(access_ui)) and deposit_transfer.visible
+		and deposit_transfer.selected_items.is_empty() and deposit_transfer.confirm_button.disabled
+		and get_tree().paused and not player.can_move,
+		"Repeated confirmation transfers once, clears the selection and keeps the quantity dialog paused.")
+	deposit_transfer.close_button.pressed.emit()
+	await _wait_frames(3)
+	_expect(view.is_visible_in_tree() and get_tree().paused and not is_instance_valid(_area_transfer(access_ui)),
+		"Closing the quantity dialog returns to City Storage with its pause retained.")
 
 	# Legacy city stock remains visible even though new deposits reject it.
 	storage.items["clay_lump"] = 2
@@ -274,6 +280,8 @@ func _test_physical_city_storage() -> void:
 	deposited_unit_id = _find_unallocated_unit("cart")
 	_expect(not deposited_unit_id.is_empty() and _inventory_quantity("cart") == 0,
 		"Cart deposit creates a free physical unit for Worker Hub equip.")
+	cart_transfer.close_button.pressed.emit()
+	await _wait_frames(2)
 
 	# Leave-area confirmation must hit the live position guard before any commit.
 	var leave_inventory: Dictionary = Inventory.items.duplicate(true)
@@ -438,7 +446,7 @@ func _physics_frames(count: int) -> void:
 func _move_to_storage(origin: Vector2) -> void:
 	player.global_position = origin + Vector2(100, 0)
 	await _physics_frames(3)
-	player.global_position = origin + Vector2(0, 12)
+	player.global_position = area.get_node("Board").global_position + Vector2(-17, 13)
 	await _physics_frames(3)
 
 

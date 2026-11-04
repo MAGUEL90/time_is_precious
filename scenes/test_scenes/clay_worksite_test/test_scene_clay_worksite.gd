@@ -401,7 +401,7 @@ func _start_work(minutes: int) -> void:
 		inspector.refresh_team()
 		return
 	if inspector.work_mode == "Daily":
-		if daily.start(_selected_site.name, _drop_daily_output.bind(_selected_site)):
+		if daily.start(_selected_site.name, _deliver_daily_output.bind(_selected_site)):
 			_close_inspector()
 		else:
 			inspector.refresh_team()
@@ -467,6 +467,11 @@ func _fade_work(alpha: float) -> void:
 func _drop_output(quantity: int) -> bool:
 	var resource_id: String = sites[_selected_site.name].item_id if is_instance_valid(_selected_site) else "clay_lump"
 	return _drop_output_at(quantity, $GroundOutput.to_local(player.global_position + Vector2(0, 16)), Callable(), resource_id)
+
+## The isolated worksite fixture still creates ground output. Content maps may
+## choose another owner for new Daily production without changing old piles.
+func _deliver_daily_output(quantity: int, site: Marker2D) -> bool:
+	return _drop_daily_output(quantity, site)
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if not is_inside_tree() or is_queued_for_deletion():

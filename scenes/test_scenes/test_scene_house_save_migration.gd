@@ -24,7 +24,7 @@ func _run() -> void:
 	Inventory.add_item("clay_lump", 13)
 	Inventory.add_item("reed_bundle", 9)
 	house_state = content.get_node("YSortWorld/CitizenHousePlot").construction
-	_expect(store.snapshot.VERSION == 14 and house_state.order_id == HOUSE_ORDER
+	_expect(store.snapshot.VERSION == 15 and house_state.order_id == HOUSE_ORDER
 		and store.snapshot.plots(content).get(house_key) == house_state,
 		"The authored house retains its plot identity in the current checkpoint schema.")
 	_test_v11_continue()

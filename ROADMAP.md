@@ -1,6 +1,6 @@
 # ROADMAP - Time is Precious
 
-Last updated: 2026-10-18
+Last updated: 2026-11-04
 
 ## Purpose of This Document
 
@@ -18,6 +18,27 @@ Other documents have different jobs:
 - `DEMO_DISTRIBUTION.md` = demo rollout strategy after the prototype is ready.
 
 Do not use an old PR list, branch list, or technical root map as the main indicator of current progress.
+
+## City supply and construction — branch under review (2026-11-04)
+
+The Game Director's latest direction sends Daily worker worksite output directly to
+City Storage; manual player gathering continues to supply personal construction
+materials. The city store retains its existing effectively unbounded temporary
+capacity. This branch implements and tests that handoff and non-destructive old-save
+migration; it has not yet received human acceptance or been merged.
+Workshop and house plots, wall/Watchtower work and Drying Yard upgrades use personal
+Inventory. The Yard can receive and refund explicitly confirmed contributions over
+multiple trips, so its existing level-three kit fits the normal bag capacity. Stone
+has a provisional normal acquisition path: the existing merchant offers 12 at 2
+Shekels each per visit. Prices and availability need human balance review.
+
+Haulers are limited to storage-to-storage transport. No new worksite Hauler task is
+exposed. A one-trip city-owned route links Central Storage and a new city-owned Annex;
+the player assigns a paid idle Laborer or legacy Hauler with a Cart. Cargo, blocked
+receipts, cancellation, resignation and save/Continue retain explicit ownership.
+See [the implementation report](docs/task_reports/city-transport-and-player-construction-2026-11-04.md)
+for the scope, validation and remaining decisions. Manual Hourly work remains
+personal; whether the broad worksite-output instruction includes it requires review.
 
 ## Current merged baseline — PR #115 (2026-10-18)
 
@@ -50,10 +71,10 @@ branch fixes a detached merchant view still receiving runtime-ledger signals.
 See `docs/task_reports/mvp-first-playthrough-2026-10-18.md` for runs and limitations.
 
 **Overall acceptance remains partial:** automated workshop progression is proven
-for the recorded samples, but human understanding/visuals are untested. Clothing,
-shelter and Stone have no normal supply path on this map, so city level-up and
-wall preparation are blocked by content/design decisions. First financing can
-wait multiple merchant visits. Existing fixture passes remain separate evidence.
+for the recorded samples, but human understanding/visuals are untested. Clothing
+and shelter remain separate progression gates in this baseline. A provisional Stone
+offer now provides an acquisition path; first financing can still wait multiple
+merchant visits. Existing fixture passes remain separate evidence.
 
 ## Historical implementation checkpoints
 

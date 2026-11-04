@@ -92,7 +92,9 @@ func _test_storage_deposit_and_raid() -> void:
 	_expect(area.storage == storage and area.delivery_point.get_storage() == storage,
 		"The main-map storage access and delivery point bind the actual raid stock provider.")
 	ui.close_details()
-	player.global_position = area.global_position + Vector2(0, 10)
+	# Place the player at the center of the authored access collision shape, whose
+	# top-left origin is offset from the storage area's scene origin.
+	player.global_position = area.global_position + Vector2(22, 16)
 	await _settle_physics()
 	player._refresh_current_interactable()
 	Inventory.add_item("stone", 1) # Synthetic acquisition; production grants nothing.
@@ -148,21 +150,23 @@ func _assert_approved_profile() -> void:
 
 func _test_main_map_expedition() -> void:
 	var base_minute: int = _clock_minute()
+	Inventory.items.clear()
+	Inventory.items_changed.emit()
 	storage.items = {"stone": 9, "wood_log": 5}
 	var short_stock: Dictionary = storage.items.duplicate(true)
 	var quote: Dictionary = state.get_work_quote()
 	_expect(quote.kind == "build" and quote.materials == {"stone": 10, "wood_log": 5}
-		and int(quote.duration_minutes) == 120 and not quote.can_start,
-		"The live City Storage shortage is reflected in the build quote.")
+		and int(quote.duration_minutes) == 120 and not quote.can_start and quote.reason == "Not enough materials in Inventory.",
+		"The live Inventory shortage is reflected in the build quote even when City Storage has most materials.")
 	_expect(not state.request_wall_work(quote) and storage.items == short_stock
 		and state._work_kind.is_empty(),
-		"Insufficient City Storage rejects paid construction without charging or starting work.")
+		"Insufficient Inventory rejects paid construction without charging or starting work.")
 
 	var greeting: BaseGameDialogueBalloon = await _open_wall_greeting()
 	if is_instance_valid(greeting):
 		await _advance_to_work_summary(greeting)
-		_expect(greeting.dialogue_line.text.contains("City Storage is short"),
-			"Iddin-Sin explains that City Storage is short on the main-map quote.")
+		_expect(greeting.dialogue_line.text.contains("Inventory is short"),
+			"Iddin-Sin explains that Inventory is short on the main-map quote.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
 		_expect(responses.has("Not now") and not responses.has("Repair"),
@@ -170,31 +174,34 @@ func _test_main_map_expedition() -> void:
 		_choose_response(greeting, "Not now")
 		await _wait_for_greeting_end()
 	_expect(storage.items == short_stock and state._work_kind.is_empty(),
-		"Declining an unaffordable wall quote preserves the exact City Storage stock.")
+		"Declining an unaffordable wall quote preserves City Storage stock.")
 
 	storage.items.clear()
 	var debug_overlay: Node = content.get_node("TimeDebugOverlay")
 	var inventory_before_debug_supply: Dictionary = Inventory.items.duplicate(true)
+	var expected_inventory_after_debug_supply: Dictionary = inventory_before_debug_supply.duplicate(true)
+	for item_id: String in quote.materials:
+		expected_inventory_after_debug_supply[item_id] = int(expected_inventory_after_debug_supply.get(item_id, 0)) + int(quote.materials[item_id])
 	_expect(bool(debug_overlay.call("give_wall_materials"))
-		and storage.items == quote.materials,
-		"The explicit debug wall-material action adds exactly the current quote to City Storage.")
-	_expect(Inventory.items == inventory_before_debug_supply,
-		"Debug wall materials go to City Storage without changing Player Inventory.")
-	var topped_up_stock: Dictionary = storage.items.duplicate(true)
-	_expect(not bool(debug_overlay.call("give_wall_materials")) and storage.items == topped_up_stock,
-		"Repeating debug wall-material supply returns false and adds no extra stock.")
+		and Inventory.items == expected_inventory_after_debug_supply and storage.items.is_empty(),
+		"The explicit debug wall-material action adds exactly the current quote to Inventory.")
+	_expect(str(debug_overlay.materials_status.text).contains("Inventory"),
+		"The debug wall-material status identifies Inventory as its destination.")
+	var topped_up_inventory: Dictionary = Inventory.items.duplicate(true)
+	_expect(not bool(debug_overlay.call("give_wall_materials")) and Inventory.items == topped_up_inventory and storage.items.is_empty(),
+		"Repeating debug wall-material supply returns false and adds no extra Inventory stock.")
 	get_tree().paused = true
 	var paused_supply_result: bool = bool(debug_overlay.call("give_wall_materials"))
 	get_tree().paused = false
-	_expect(not paused_supply_result and storage.items == topped_up_stock,
-		"The debug wall-material action rejects while paused without changing City Storage.")
+	_expect(not paused_supply_result and Inventory.items == topped_up_inventory and storage.items.is_empty(),
+		"The debug wall-material action rejects while paused without changing Inventory.")
 
 	greeting = await _open_wall_greeting()
 	if is_instance_valid(greeting):
 		await _advance_to_work_summary(greeting)
 		var quoted_text: String = greeting.dialogue_line.text
 		_expect(quoted_text.contains("120 min") and quoted_text.contains("10 Stone")
-			and quoted_text.contains("5 Wood") and quoted_text.contains("City Storage"),
+			and quoted_text.contains("5 Wood") and quoted_text.contains("Inventory"),
 			"Iddin-Sin's native dialogue quotes the build duration and named materials.")
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
@@ -205,8 +212,8 @@ func _test_main_map_expedition() -> void:
 	_expect(state._work_kind == "build" and state._work_remaining == 120
 		and state.wall_hp == 0 and state.wall_level == 0,
 		"Choosing Start wall work starts a pending build while the ruined wall still has zero HP.")
-	_expect(storage.items.is_empty(),
-		"Starting main-map construction consumes exactly the quoted stone and wood log once.")
+	_expect(Inventory.items == inventory_before_debug_supply and storage.items.is_empty(),
+		"Starting main-map construction consumes exactly the quoted Inventory materials and leaves City Storage untouched.")
 	await _reload_main_map_during_build()
 
 	_set_clock_minute(base_minute + 119)
@@ -242,9 +249,17 @@ func _test_main_map_expedition() -> void:
 		"Pressing the debug dispatch action during travel cannot start instant combat or move arrival.")
 
 	# Stage one damaged wall step to exercise the configured repair quote through Iddin-Sin.
+	debug_overlay = content.get_node("TimeDebugOverlay")
 	state.wall_hp = 45
 	state.changed.emit()
 	storage.items = {"stone": 1}
+	var repair_city_stock: Dictionary = storage.items.duplicate(true)
+	var repair_inventory_before: Dictionary = Inventory.items.duplicate(true)
+	var repair_quote: Dictionary = state.get_work_quote("repair")
+	_expect(not repair_quote.can_start and repair_quote.materials == {"stone": 1},
+		"City Storage cannot pay for a repair when Player Inventory is empty.")
+	_expect(bool(debug_overlay.call("give_wall_materials")) and Inventory.items.get("stone", 0) == 1 and storage.items == repair_city_stock,
+		"Debug repair supplies add one quoted stone to Inventory while preserving City Storage.")
 	greeting = await _open_wall_greeting()
 	if is_instance_valid(greeting):
 		await _advance_to_work_summary(greeting)
@@ -254,13 +269,13 @@ func _test_main_map_expedition() -> void:
 		await _show_responses(greeting)
 		var responses: Array[String] = _visible_responses(greeting)
 		_expect(responses.has("Repair"),
-			"The live caretaker offers a paid repair while City Storage has the quoted stone.")
+			"The live caretaker offers a paid repair after Inventory receives the quoted stone.")
 		_choose_response(greeting, "Repair")
 		await _wait_for_greeting_end()
 	var repair_started_at: int = _clock_minute()
 	_expect(state._work_kind == "repair" and state._work_remaining == 60
-		and state.wall_hp == 45 and storage.items.is_empty(),
-		"Starting the native repair choice consumes its stone and leaves HP unchanged until work finishes.")
+		and state.wall_hp == 45 and Inventory.items == repair_inventory_before and storage.items == repair_city_stock,
+		"Starting the native repair choice consumes its Inventory stone and leaves HP and City Storage unchanged until work finishes.")
 	_set_clock_minute(repair_started_at + 60)
 	_expect(state._work_kind.is_empty() and state.wall_hp == 50
 		and state._attack_at == build_complete_at + initial_travel_minutes,
@@ -361,8 +376,14 @@ func _test_main_map_expedition() -> void:
 	_expect(_clock_minute() == second_arrival + 59,
 		"Resumed acceleration adds only the new frame's minutes, without leftover pre-raid time.")
 	time_debug.set_speed(1)
+	Inventory.items.assign(inventory_before)
+	Inventory.items_changed.emit()
 
 func _test_late_warning_does_not_move_arrival() -> void:
+	var inventory_before_fixture: Dictionary = Inventory.items.duplicate(true)
+	var inventory_capacity_before: float = Inventory.max_load
+	Inventory.max_load = 100000.0
+	Inventory.items.assign({"stone": 10, "wood_log": 5})
 	var fixture_storage: Node = CITY_STORAGE_SCRIPT.new()
 	fixture_storage.name = "ExpeditionScheduleFixtureStorage"
 	add_child(fixture_storage)
@@ -388,6 +409,8 @@ func _test_late_warning_does_not_move_arrival() -> void:
 	_expect(fixture.phase == "attacking" and fixture._attack_at == arrival_at,
 		"A late warning still transitions into an attack at the original arrival time.")
 	_disconnect_and_free_fixture(fixture, fixture_storage)
+	Inventory.items.assign(inventory_before_fixture)
+	Inventory.max_load = inventory_capacity_before
 
 func _reload_main_map_during_build() -> void:
 	var original_state: Node = state
