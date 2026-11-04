@@ -446,6 +446,55 @@ func try_add_item(item_id: String, quantity: int) -> bool:
 	_commit_city_receipt(next_units, next_items, next_sequence)
 	return true
 
+## Explicit debug supply. Commit food, clothing and shelter together so a
+## storage observer never sees only part of the testing setup.
+func debug_supply_resident_needs(additions: Dictionary, minimum_shelter: int) -> bool:
+	if not OS.is_debug_build() or _transfer_in_progress:
+		return false
+	if minimum_shelter < 0 or minimum_shelter > CityStockManager.MAX_SHELTER_CAPACITY \
+		or CityStockManager.shelter_capacity < 0 or CityStockManager.shelter_capacity > CityStockManager.MAX_SHELTER_CAPACITY:
+		return false
+	var food_state: Dictionary = _validated_food_state()
+	var clothing_state: Dictionary = _validated_clothing_state()
+	if not bool(food_state.ok) or not bool(clothing_state.ok):
+		return false
+	var food_points: int = int(food_state.total_points)
+	var clothing_count: int = int(clothing_state.count)
+	var next_items: Dictionary = items.duplicate(true)
+	for key: Variant in additions:
+		if not key is String or not additions[key] is int or int(additions[key]) <= 0:
+			return false
+		var item_id: String = key
+		var quantity: int = int(additions[key])
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if not _can_receive_item(item_id, quantity):
+			return false
+		if _is_ready_food(item_data):
+			var points: Dictionary = _safe_nonnegative_product(quantity, item_data.food_supply_value)
+			if not bool(points.ok):
+				return false
+			var total: Dictionary = _safe_nonnegative_add(food_points, int(points.value))
+			if not bool(total.ok):
+				return false
+			food_points = int(total.value)
+		elif CLOTHING_ITEM_IDS.has(item_id):
+			var total: Dictionary = _safe_nonnegative_add(clothing_count, quantity)
+			if not bool(total.ok):
+				return false
+			clothing_count = int(total.value)
+		else:
+			return false
+		next_items[item_id] = int(next_items.get(item_id, 0)) + quantity
+	if additions.is_empty() and minimum_shelter <= CityStockManager.shelter_capacity:
+		return false
+	_transfer_in_progress = true
+	items = next_items
+	if minimum_shelter > CityStockManager.shelter_capacity:
+		CityStockManager.add_shelter_capacity(minimum_shelter - CityStockManager.shelter_capacity)
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
 func add_tool_unit(unit_id: String, tool_id: String, display_name: String) -> bool:
 	if _transfer_in_progress or unit_id.is_empty() or tool_id.is_empty() or units.has(unit_id):
 		return false

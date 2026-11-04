@@ -530,6 +530,13 @@ Its explicit Build materials button tops personal Inventory up to one constructi
 kit using the construction state's requirements. It preserves surplus, preflights
 the complete missing weight and grants nothing automatically. Unlike clock controls,
 supplies remain available in a paused build menu, refreshing via items_changed.
+The explicit resident-needs debug action tops City Storage up to seven days of
+food and one spare garment per current consumer, and raises shelter capacity
+to cover that same set without creating houses or residents. It preserves
+surplus and leaves the normal midnight needs and Satisfaction rules in charge.
+The action does not save by itself; a later checkpoint, including sleep, saves
+these ordinary stock and shelter values. Loading an earlier checkpoint restores
+its original values. No debug flag or new save field is introduced.
 
 UI scripts/scenes may adapt layout, but they must not change `project.godot` display configuration as a local fix.
 
