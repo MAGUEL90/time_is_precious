@@ -34,6 +34,7 @@ case, use the same fresh directory for its phases and run one engine at a time.
 | `test_scene_review_default_save.tscn` | With `TIP_ISOLATED_DATA_ROOT` set to a fresh absolute data root, run `-- --review-save=write`, `read`, then `restart`; checks the distinct map slot and unchanged synthetic old save/recovery files |
 | `test_scene_review_resource_paths.tscn` | Actual player pickup and worker path clearance at each of the five temporary resource sites |
 | `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
+| `test_scene_multi_worker_navigation.tscn` | Actual Wood Site worker replacement, blocked-route recovery, shared stock, shift boundaries and checkpoint compatibility. Run `-- --navigation-phase=write`, then `read` in separate processes with the same fresh `XDG_DATA_HOME` and `TIP_ISOLATED_DATA_ROOT`; use a separate fresh profile for `--navigation-phase=hire` to test the starting resident hires. |
 
 The multi-day needs journey is a controlled fixture, not an unassisted run. It
 grants wallet funds and construction materials, seeds the first hired worker at
