@@ -5,6 +5,8 @@ extends Node
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
 const NAV = preload("res://scenes/content_scene/worksites/worksite_navigation.gd")
 const HOUSE_ID: String = "construction:citizen_house_1"
+enum RecoveryMode { ONE_FRAME, ACROSS_FRAMES, PLAYER_SLEEP }
+@export var recovery_mode: RecoveryMode = RecoveryMode.ONE_FRAME
 var failures: int = 0
 var runtime: Node
 var visuals: Node
@@ -192,7 +194,32 @@ func _run() -> void:
 	for worker: WorkerData in blocked:
 		_expect(not worker.physical_approach.get("arrived", false), "A newly opened route is never assumed to have been traveled")
 	await get_tree().process_frame
-	_expect(TimeComponentManager.advance_minutes(120), "The next frame can resume bounded searches")
+	var recovery_clock: int = _now()
+	var recovery_frame: int = Engine.get_process_frames()
+	var recovery_credit: int = credited
+	var recovery_work: int = state._remaining_work_units()
+	if recovery_mode == RecoveryMode.ACROSS_FRAMES:
+		for batch: int in range(12):
+			if batch > 0:
+				await get_tree().process_frame
+			_expect(TimeComponentManager.advance_minutes(10), "Each recovery batch advances ten minutes")
+	elif recovery_mode == RecoveryMode.PLAYER_SLEEP:
+		_expect(player.sleep_for_minutes(120), "The player's actual sleep path advances 120 minutes")
+	else:
+		# Keep the original single-frame +120 behavior as a separate regression.
+		_expect(TimeComponentManager.advance_minutes(120), "The next frame can resume bounded searches")
+	var recovery_frames: int = Engine.get_process_frames() - recovery_frame
+	_expect(_now() == recovery_clock + 120, "Each recovery scenario advances exactly 120 game minutes")
+	_expect(recovery_frames >= 11 if recovery_mode == RecoveryMode.ACROSS_FRAMES else recovery_frames == 0,
+		"The multi-frame and synchronous recovery scenarios retain their distinct frame semantics")
+	var diagnostic: Dictionary = {}
+	for worker: WorkerData in blocked + [open_worker]:
+		var route_state: Dictionary = visuals.plot_presence.states.get(worker.worker_id, {})
+		diagnostic[worker.worker_id] = {"status": route_state.get("status", "absent"),
+			"arrived": worker.physical_approach.get("arrived", false), "position": worker.physical_approach.get("position", Vector2.INF)}
+	print("ROUTE_RECOVERY mode=", recovery_mode, " minutes=", _now() - recovery_clock, " frames=", recovery_frames,
+		" credit_delta=", credited - recovery_credit, " work_delta=", recovery_work - state._remaining_work_units(),
+		" remaining_usec=", visuals.plot_presence.route_budget_usec, " remaining_ops=", visuals.plot_presence.route_budget_operations, " workers=", diagnostic)
 	for worker: WorkerData in blocked:
 		_expect(worker.physical_approach.get("arrived", false), "A worker retries and reaches the plot after geometry revision")
 	_expect(initial_work - state._remaining_work_units() == credited,
@@ -241,5 +268,10 @@ func _run() -> void:
 	_finish()
 
 func _finish() -> void:
-	print("WorkerRouteBudgetTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
+	var label: String = "WorkerRouteBudgetTest"
+	if recovery_mode == RecoveryMode.ACROSS_FRAMES:
+		label = "WorkerRouteBudgetMultiFrameTest"
+	elif recovery_mode == RecoveryMode.PLAYER_SLEEP:
+		label = "WorkerRouteBudgetSleepTest"
+	print(label, ": ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
 	get_tree().quit(0 if failures == 0 else 1)
