@@ -24,6 +24,35 @@ func _run() -> void:
 		await get_tree().physics_frame
 	var wall: CanvasItem = content.get_node("YSortWorld/WallStone")
 	_expect(not wall.visible, "The old wall artwork does not cover the authored layout.")
+	var keeper_plot: Node2D = content.get_node("YSortWorld/WorkshopPlot")
+	var keeper: Node2D = keeper_plot.get_node("Craftsman")
+	if not await _walk_to(keeper.global_position + Vector2(0, 12), "main workshop keeper"):
+		_finish_layout()
+		return
+	_expect(player.current_interactable == keeper_plot and keeper_plot.has_player_access(),
+		"Normal walking reaches the main workshop keeper.")
+	await _press_interact()
+	_expect(is_instance_valid(keeper_plot.keeper_dialogue), "The keeper opens the native workshop dialogue.")
+	keeper_plot.close_menu()
+	for frame: int in range(4):
+		await get_tree().physics_frame
+	_expect(player.can_move, "Closing the keeper dialogue returns player control.")
+	var other_plot: Node2D = content.get_node("YSortWorld/WorkshopPlot2")
+	var other_access: Node2D = other_plot.get_node("InteractableComponent")
+	if not await _walk_to(other_access.global_position + Vector2(0, 8), "second workshop plot"):
+		_finish_layout()
+		return
+	_expect(player.current_interactable == other_plot and other_plot.has_player_access(),
+		"Normal walking reaches the second workshop plot.")
+	await _press_interact()
+	_expect(is_instance_valid(other_plot.menu), "The second workshop opens its native construction menu.")
+	other_plot.close_menu()
+	for frame: int in range(4):
+		await get_tree().physics_frame
+	_expect(player.can_move, "Closing the second workshop returns player control.")
+	if failures > 0:
+		_finish_layout()
+		return
 	var storage: Area2D = content.get_node("YSortWorld/WorkerRuntime/CityStorageArea")
 	_expect(not storage.get_node("Sprite2D").visible and storage.get_node("Board").visible
 		and storage.get_node("BuildingBody/CollisionShape2D").disabled,
@@ -41,6 +70,42 @@ func _run() -> void:
 		await get_tree().physics_frame
 	_expect(player.can_move, "Closing City Storage returns player control.")
 	if failures > 0:
+		_finish_layout()
+		return
+	# Activate the existing finished visuals only as a fixture, from a safe
+	# distance. Then walk back to both real production-menu interactions.
+	for plot: Node2D in [keeper_plot, other_plot]:
+		plot.construction.phase = "built"
+		plot.construction.changed.emit()
+	for frame: int in range(8):
+		await get_tree().physics_frame
+	for entry: Array in [[keeper_plot, keeper.global_position + Vector2(0, 12)],
+			[other_plot, other_access.global_position + Vector2(0, 8)]]:
+		var plot: Node2D = entry[0]
+		var backend: WorkShop = plot.get_node_or_null("BuiltWorkshop") as WorkShop
+		_expect(is_instance_valid(backend), "The built plot exposes its real workshop backend.")
+		if not is_instance_valid(backend) or not await _walk_to(entry[1], "built workshop " + str(plot.name)):
+			_finish_layout()
+			return
+		_expect(player.current_interactable == backend, "Walking selects the built workshop backend.")
+		await _press_interact()
+		var workshop_menu: WorkshopMenuUI
+		for child: Node in content.get_children():
+			if child is WorkshopMenuUI:
+				workshop_menu = child
+				break
+		_expect(is_instance_valid(workshop_menu) and player.claim_menu_workshop == backend,
+			"The built workshop opens its own production menu.")
+		if is_instance_valid(workshop_menu):
+			workshop_menu._on_close_button_pressed()
+		for frame: int in range(4):
+			await get_tree().physics_frame
+		_expect(player.can_move, "Closing the built workshop returns player control.")
+		if failures > 0:
+			_finish_layout()
+			return
+	var tower_anchor: Node2D = content.get_node("YSortWorld/WatchtowerDisplayAnchor")
+	if not await _walk_to(tower_anchor.global_position, "temporary watchtower position"):
 		_finish_layout()
 		return
 	var palm: Node2D = content.get_node("YSortWorld/DatePalmTree3")

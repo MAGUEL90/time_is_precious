@@ -86,7 +86,9 @@ func _run() -> void:
 	_expect(not ui.status_panel.visible, "The persistent bottom-right raid card stays hidden.")
 	_expect(ui.notification_button.visible, "The exclamation shortcut is available on the city map.")
 	_expect(not ui.raid_notice.visible, "Detected raid text no longer overlaps the top HUD.")
-	_expect(world_indicator.visible and world_indicator.progress_bar.value == 32.0, "An active raid shows current wall HP above the wall.")
+	_expect(world_indicator.visible and world_indicator.progress_bar.value == 32.0
+		and world_indicator.health_label.visible and world_indicator.health_label.text == "Wall HP",
+		"An active raid labels the world health bar as wall HP.")
 	_expect(ui.hp_bar.value == 32 and ui.hp_bar.max_value == 50, "HP display follows authoritative current/max values.")
 	_expect("60" in ui.time_left_label.text, "Fractional remaining seconds round up so the first second stays visible.")
 	_expect(not ui.details_panel.visible, "An active raid keeps City Management closed until the player opens it.")
@@ -265,7 +267,9 @@ func _run() -> void:
 	ui.close_details()
 	_expect(not ui.travel_progress.visible, "The City Management travel row is hidden before detection.")
 	_expect(world_indicator.visible, "Construction progress appears above the wall while work is active.")
-	_expect(world_indicator.work_progress.progress_bar.value == 60.0 and not world_indicator.progress_bar.visible, "World construction uses its icon bar while leaving the attack HP bar hidden.")
+	_expect(world_indicator.work_progress.progress_bar.value == 60.0 and not world_indicator.progress_bar.visible
+		and not world_indicator.health_label.visible,
+		"World construction uses its icon bar while leaving the attack HP bar and label hidden.")
 	_expect(not ui.status_detail_label.visible and ui.status_detail_label.text.is_empty()
 		and ui.notification_button.scale == Vector2.ONE and ui.notification_button.modulate == Color.WHITE,
 		"Safe construction clears routine feedback and resets the emergency icon.")
@@ -284,6 +288,23 @@ func _run() -> void:
 		and ui.construction_progress.progress_bar.value == 90.0 and world_indicator.work_progress.progress_bar.value == 90.0
 		and ui.wall_meter.value == 50.0, "Watchtower uses its own icon/progress in both views without replacing wall HP.")
 	await _capture("watchtower-construction-icons.png")
+	state.status.refund_pending = true
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(not world_indicator.visible and ui.construction_row.visible and not ui.construction_progress.visible
+		and ui.construction_label.text == "Refund pending" and ui.time_left_label.text == "Refund pending",
+		"Stopped work awaiting refund is labeled without an active construction bar.")
+	await _capture("watchtower-refund-pending.png")
+	state.status.phase = "attacking"
+	state.changed.emit()
+	await get_tree().process_frame
+	_expect(world_indicator.visible and world_indicator.health_label.visible
+		and world_indicator.progress_bar.value == 50.0 and ui.construction_label.text == "Refund pending",
+		"An attack still shows wall HP while its interrupted project's refund is pending.")
+	state.status.phase = "safe"
+	state.status.refund_pending = false
+	state.changed.emit()
+	await get_tree().process_frame
 	ui.close_details()
 	state.status.work_kind = ""
 	state.status.work_remaining = 0

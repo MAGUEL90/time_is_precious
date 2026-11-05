@@ -42,6 +42,10 @@ func _run() -> void:
 	await capture_defense("city-hub-supply.png")
 	ui._select_hub_tab(false)
 	ui.close_details()
+	var build_indicator: WallWorldIndicator = content.get_node("RaidBootstrap/WallWorldIndicator")
+	_expect(build_indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18))
+		and build_indicator.work_progress.work_kind == "build" and not build_indicator.health_label.visible,
+		"On the authored map, wall work appears at its caretaker instead of the invisible old wall.")
 	await capture_defense("wall-build-world-polish.png")
 	_set_clock_minute(_clock_minute() + 60)
 	var arrival: int = state._attack_at
@@ -104,8 +108,23 @@ func _run() -> void:
 	_set_clock_minute(_clock_minute() + 90)
 	var indicator: Node2D = content.get_node("RaidBootstrap/WallWorldIndicator")
 	var tower: Node2D = content.get_node("RaidBootstrap/WatchtowerVisual")
-	_expect(indicator.work_progress.work_kind == "watchtower" and indicator.global_position.x == tower.global_position.x,
-		"Watchtower construction has its own icon above the tower location on the map.")
+	var tower_anchor: Node2D = content.get_node("YSortWorld/WatchtowerDisplayAnchor")
+	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
+	var base: TileMapLayer = content.get_node("AuthoredMap/Ground/Base")
+	var base2: TileMapLayer = content.get_node("AuthoredMap/Ground/Base2")
+	_expect(base.get_cell_source_id(base.local_to_map(base.to_local(tower_anchor.global_position))) >= 0
+		or base2.get_cell_source_id(base2.local_to_map(base2.to_local(tower_anchor.global_position))) >= 0,
+		"The temporary tower position is on authored land.")
+	for site: Node2D in runtime.get_node("WorksiteMarkers").get_children():
+		for offset: Vector2 in runtime.RESOURCE_OFFSETS:
+			_expect(tower_anchor.global_position.distance_to(site.global_position + offset) > 50.0,
+				"The temporary tower stays clear of a legacy saved position for " + str(site.name))
+	_expect(indicator.work_progress.work_kind == "watchtower"
+		and indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18))
+		and tower.global_position.is_equal_approx(tower_anchor.global_position)
+		and tower.visible and tower.constructing and not state.watchtower_built,
+		"The caretaker shows watchtower progress and a separate scaffold marks the unfinished tower.")
+	await capture_defense("watchtower-work-caretaker.png")
 	ui.open_details()
 	_expect(ui.wall_meter.value == 80 and ui.construction_progress.progress_bar.value == 90,
 		"The actual city panel keeps 80 wall HP while showing a halfway watchtower project.")
@@ -133,8 +152,15 @@ func _run() -> void:
 		_expect(displayed == "x%d" % int(departing_party.units[index].count), "Native Inspect quantities match the party ledger.")
 	await capture_defense("raider-inspect-live.png")
 	ui.close_details()
-	_expect(content.get_node("RaidBootstrap/WatchtowerVisual").visible, "Completed watchtower is visible on the actual wall.")
+	_expect(tower.visible and not tower.constructing and tower.global_position.is_equal_approx(tower_anchor.global_position),
+		"The completed watchtower replaces the scaffold at its temporary display position.")
 	await capture_defense("watchtower-world.png")
+	var before_tower_capture: Vector2 = player.global_position
+	player.global_position = tower.global_position + Vector2(-64, -32)
+	await _settle_physics()
+	await capture_defense("watchtower-complete-location.png")
+	player.global_position = before_tower_capture
+	await _settle_physics()
 	await capture_emergency_pulse()
 
 	await _open_wall_greeting()
@@ -143,6 +169,12 @@ func _run() -> void:
 	_expect(not _visible_responses(wall_spot.greeting_balloon).has("Improve"), "Both completed improvements disappear from the project menu.")
 	_choose_response(wall_spot.greeting_balloon, "Not now")
 	await _wait_for_greeting_end()
+	_set_clock_minute(arrival)
+	_expect(state.phase == "attacking" and indicator.visible and indicator.health_label.visible
+		and indicator.health_label.text == "Wall HP" and indicator.progress_bar.value == state.wall_hp
+		and indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18)),
+		"An actual raid shows labeled wall HP at the caretaker, not the hidden wall.")
+	await capture_defense("raid-wall-hp-caretaker.png")
 	content.queue_free()
 	await get_tree().process_frame
 	_restore_clock()

@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/raid/wall_world_indicator.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://scenes/raid/defense_work_progress.tscn" id="2_work"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
 
 [sub_resource type="StyleBoxFlat" id="ProgressBackground"]
 bg_color = Color(0.18, 0.11, 0.07, 1)
@@ -32,6 +33,18 @@ mouse_filter = 2
 show_percentage = false
 theme_override_styles/background = SubResource("ProgressBackground")
 theme_override_styles/fill = SubResource("ProgressFill")
+
+[node name="HealthLabel" type="Label" parent="."]
+offset_left = -32.0
+offset_top = -26.0
+offset_right = 32.0
+offset_bottom = -18.0
+mouse_filter = 2
+theme = ExtResource("3_theme")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Wall HP"
+horizontal_alignment = 1
 
 [node name="WorkProgress" parent="." instance=ExtResource("2_work")]
 offset_left = -39.0

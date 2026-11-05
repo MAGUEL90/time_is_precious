@@ -785,6 +785,8 @@ func _render_status() -> void:
 	if bool(_status_data.get("raids_enabled", true)) and phase in ["attacking", "looting"]:
 		var seconds_left: float = maxf(0.0, float(_status_data.get("seconds_left", 0.0)))
 		time_left_label.text = ("Looting: %ds" if phase == "looting" else "Raid: %ds") % int(ceil(seconds_left))
+	elif bool(_status_data.get("refund_pending", false)):
+		time_left_label.text = "Refund pending"
 	elif not str(_status_data.get("work_kind", "")).is_empty():
 		time_left_label.text = "Work: %dm" % int(_status_data.get("work_remaining", 0))
 	elif level <= 0:
@@ -1167,7 +1169,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	construction_progress.show_work(_status_data)
 	if not work_kind.is_empty():
 		var remaining: int = maxi(0, int(_status_data.get("work_remaining", 0)))
-		construction_label.text = "Paused" if construction_progress.paused else _format_travel_time(remaining)
+		construction_label.text = "Refund pending" if bool(_status_data.get("refund_pending", false)) else ("Paused" if construction_progress.paused else _format_travel_time(remaining))
 	status_detail_label.text = {"attacking": "Wall under attack", "looting": "City Storage under attack"}.get(phase, "")
 	status_detail_label.visible = phase in ["attacking", "looting"] and not viewing_report
 	travel_progress.visible = detected and not viewing_report

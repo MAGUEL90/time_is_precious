@@ -186,7 +186,7 @@ func get_status() -> Dictionary:
 		"status_text": message, "can_build": _valid and (config.instant_build_enabled or config.timed_work_enabled) and _work_kind.is_empty() and not _starting_work and not _refunding and wall_hp == 0 and not is_raid_active() and not _resolving,
 		"watchtower_built": watchtower_built, "warning_days": get_warning_days(),
 		"can_inspect": can_inspect_raiders(), "raider_type": config.party_profile.display_name if can_inspect_raiders() else "Unknown",
-		"can_repair": can_repair_wall(), "work_kind": _work_kind, "work_remaining": _work_remaining,
+		"can_repair": can_repair_wall(), "work_kind": _work_kind, "refund_pending": _refund_pending, "work_remaining": _work_remaining,
 		"work_total": _work_total, "work_message": last_work_message,
 		"stolen_so_far": _stolen.duplicate(true), "loot_weight": _loot_weight,
 		"storage_item_count": _storage_item_count(),

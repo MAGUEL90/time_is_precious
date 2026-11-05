@@ -1,6 +1,7 @@
 class_name WallWorldIndicator extends Node2D
 
 @onready var progress_bar: ProgressBar = $ProgressBar
+@onready var health_label: Label = $HealthLabel
 @onready var work_progress: Control = $WorkProgress
 
 var raid_state: Node
@@ -35,13 +36,15 @@ func refresh() -> void:
 	var phase: String = str(status.get("phase", ""))
 	work_progress.hide()
 	progress_bar.hide()
+	health_label.hide()
 	if phase in ["attacking", "looting"]:
 		progress_bar.show()
+		health_label.show()
 		_render_wall_hp(status)
 		visible = true
 		return
 	var work_kind: String = str(status.get("work_kind", ""))
-	if work_kind.is_empty():
+	if work_kind.is_empty() or bool(status.get("refund_pending", false)):
 		visible = false
 		return
 	work_progress.show_work(status)
