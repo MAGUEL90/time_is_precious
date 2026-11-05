@@ -364,7 +364,7 @@ func _preview_work(minutes: int) -> Dictionary:
 				reason = "Selected worker is unavailable."
 		if reason.is_empty():
 			reason = daily.start_reason(_selected_site.name)
-		return {"units": 0, "minutes": 0, "reason": reason, "worker_count": ids.size() + active_ids.size(),
+		return {"units": 0, "minutes": 0, "stock": session.stock, "finite_resource": session.finite_resource, "deposit_capacity": session.deposit_capacity, "reason": reason, "worker_count": ids.size() + active_ids.size(),
 			"active_count": active_ids.size(), "has_draft": not ids.is_empty(),
 			"worker_progress": daily.progress_rows(_selected_site.name),
 			"worker_capacity": 2, "includes_player": false, "working": false,

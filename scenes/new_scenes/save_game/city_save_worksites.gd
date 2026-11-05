@@ -3,7 +3,7 @@ extends RefCounted
 ## Scene-local snapshot adapter for the authored main-city worksite map.
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
-const SCHEMA_VERSION: int = 4
+const SCHEMA_VERSION: int = 5
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
@@ -77,7 +77,13 @@ func capture(worksite: Node) -> Dictionary:
 		if not _valid_id(site_id) or sites.has(site_id) or not _valid_item_id(str(session.item_id)):
 			_fail("The worksite registry contains an unsupported site or item.")
 			return {}
-		sites[site_id] = {"stock": int(session.stock)}
+		var site_record: Dictionary = {"stock": int(session.stock)}
+		var offset: Vector2 = worksite.resource_site_offset(StringName(site_id))
+		# The authored position is the default; omit it to keep old saves near
+		# the codec's file-size limit loadable without changing their meaning.
+		if offset != Vector2.ZERO:
+			site_record["offset"] = offset
+		sites[site_id] = site_record
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
 	for endpoint: StorageDestination in endpoints.values():
@@ -142,7 +148,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		expected_fields.append("legacy_ground")
 	if not _has_exact_keys(data, expected_fields):
 		return _fail("Invalid worksite snapshot fields.")
-	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, SCHEMA_VERSION]:
+	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, 4, SCHEMA_VERSION]:
 		return _fail("Unsupported worksite snapshot version.")
 	for field: String in ["sites", "storages", "jobs", "ledger", "contributions", "productive_days", "routes", "worker_journeys"]:
 		if typeof(data[field]) != TYPE_DICTIONARY:
@@ -158,10 +164,16 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 	if not _same_keys(data.sites, site_ids):
 		return _fail("Worksite registry differs from the saved city.")
 	for site_id: String in data.sites:
-		if not _has_exact_keys(data.sites[site_id], ["stock"]):
+		if not data.sites[site_id] is Dictionary:
+			return _fail("Invalid worksite stock record.")
+		var has_offset: bool = data.sites[site_id].has("offset")
+		var fields: Array = ["stock", "offset"] if int(data.schema_version) >= 5 and has_offset else ["stock"]
+		if not _has_exact_keys(data.sites[site_id], fields):
 			return _fail("Invalid worksite stock record.")
 		if not _is_count(data.sites[site_id].stock, 0, MAX_COUNT):
 			return _fail("Invalid worksite stock quantity.")
+		if has_offset and (not _is_vector(data.sites[site_id].offset) or not worksite.resource_offset_valid(data.sites[site_id].offset)):
+			return _fail("Invalid worksite deposit location.")
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
 	if int(data.schema_version) < 3:
@@ -236,16 +248,19 @@ func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
 	# Before direct delivery, finished but unsettled output was player-pickable.
 	# Preserve its old ownership as separate world piles; do not reinterpret it
 	# as newly city-owned stock. The source file is never rewritten on load.
-	for site_id: String in data.jobs:
-		var job: Dictionary = data.jobs[site_id]
-		if int(job.units) > 0:
-			if not _stage_old_output(data, worksite, site_id, int(job.units)):
+	if previous_version < 4:
+		for site_id: String in data.jobs:
+			var job: Dictionary = data.jobs[site_id]
+			if int(job.units) > 0:
+				if not _stage_old_output(data, worksite, site_id, int(job.units)):
+					return false
+				job.units = 0
+		for site_id: String in data.pending_output:
+			if not _stage_old_output(data, worksite, site_id, int(data.pending_output[site_id])):
 				return false
-			job.units = 0
-	for site_id: String in data.pending_output:
-		if not _stage_old_output(data, worksite, site_id, int(data.pending_output[site_id])):
-			return false
-	data.pending_output.clear()
+		data.pending_output.clear()
+	# Older deposits had no persistent location. An omitted offset means the
+	# authored marker, so their stock and serialized size are preserved.
 	data.schema_version = SCHEMA_VERSION
 	# The codec stores dictionary entries in order. Match the current capture
 	# shape so a staged migration and a later capture encode identically.
@@ -355,6 +370,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var daily = worksite.daily
 	for site_id: String in data.sites:
 		worksite.sites[StringName(site_id)].stock = int(data.sites[site_id].stock)
+	worksite.restore_resource_offsets(data.sites)
 	for endpoint_id: String in data.storages:
 		var endpoint: StorageDestination = endpoints[endpoint_id]
 		endpoint.accepting_deliveries = bool(data.storages[endpoint_id].accepting)

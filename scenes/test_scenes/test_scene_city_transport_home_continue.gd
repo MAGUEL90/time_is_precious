@@ -44,20 +44,29 @@ func _run() -> void:
 		await _write_flow()
 		if stopped:
 			return
+		# Simulate the final unit having just been gathered, before its deferred
+		# relocation. The parked runtime must never refill at an unverified spot.
+		runtime.sites[&"ClaySiteA"].stock = 0
 		content.get_node("YSortWorld/HomeDoor")._on_body_entered(player)
 		await _wait_for_scene(store.snapshot.HOME_PATH)
 		_expect(store.snapshot.is_home(get_tree().current_scene) and is_instance_valid(store.parked_worksite), "A loaded courier survives the actual city-to-home handoff.")
+		_expect(store.parked_worksite.sites[&"ClaySiteA"].stock == 0, "An exhausted deposit stays exhausted while the city is parked.")
 		_expect(store.save_checkpoint(), "Save in-flight city cargo from the home: " + store.last_error)
 	else:
 		_expect(FileAccess.get_file_as_bytes(HOME_SAVE_PATH) == original_bytes and store.snapshot.is_home(get_tree().current_scene), "Continue restores the home without rewriting its checkpoint.")
 		_expect(int(transport.route.get("quantity", -1)) == 3 and int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 0, "The home checkpoint restores the city route and both stock owners.")
+		_expect(store.parked_worksite.sites[&"ClaySiteA"].stock == 0, "Continue at home preserves the exhausted deposit.")
 		await _finish_route()
+		_expect(store.parked_worksite.sites[&"ClaySiteA"].stock == 0, "Elapsed time at home does not refill the parked deposit.")
 		_expect(int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 3 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "Parked city navigation completes the delivery while the player is home.")
 		_expect(store.save_checkpoint(), "Save the completed route from home: " + store.last_error)
 		var home: Node = get_tree().current_scene
 		home.get_node("YSortWorld/ExitDoor")._on_body_entered(home.get_node("YSortWorld/Player"))
 		await _wait_for_scene("res://scenes/content_scene/content_scene.tscn")
 		bind_map()
+		_expect(TimeComponentManager.advance_minutes(1), "Resume the city clock after returning home.")
+		await _frames(3)
+		_expect(runtime.sites[&"ClaySiteA"].stock == 240 and runtime.resource_site_offset(&"ClaySiteA") != Vector2.ZERO, "The exhausted deposit relocates after the live city returns.")
 		_expect(runtime.has_node("CityStorageAnnex") and transport.route.is_empty() and int(annex.items.get(ITEM_ID, 0)) == 3, "Returning to the city keeps the delivered annex goods and released courier.")
 	if stopped:
 		return

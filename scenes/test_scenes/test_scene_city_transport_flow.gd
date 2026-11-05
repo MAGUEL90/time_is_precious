@@ -4,7 +4,8 @@ extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 ## checkpoint boundary and reverse/cancel/overflow recovery. The initial stock
 ## and wallet are explicit isolated test grants, not changes to New Game.
 const SAVE_PATH: String = "user://city_transport_flow/checkpoint.json"
-const WORKER_ID: String = "initial_workshop_laborer"
+var worker_id: String = "initial_workshop_laborer"
+var hauler_mode: bool = false
 const ITEM_ID: String = "wood_log"
 const MAX_COUNT: int = 9223372036854775807
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
@@ -19,6 +20,9 @@ func _run() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--transport-phase="):
 			phase = argument.trim_prefix("--transport-phase=")
+		elif argument == "--transport-hauler":
+			hauler_mode = true
+			worker_id = "initial_city_storage_hauler"
 	_expect(phase in ["write", "read"], "Choose --transport-phase=write or read.")
 	if stopped:
 		return
@@ -65,9 +69,31 @@ func _run() -> void:
 func _write_flow() -> void:
 	Inventory.add_item("shekel", 10) # Explicit fixture funding for a normal contract.
 	Inventory.add_item(ITEM_ID, 4) # A separate player-owned stock sentinel.
-	var courier: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 3)
-	_expect(courier != null and not courier.is_payroll_blocked(), "Hire the authored worker using a paid contract.")
-	_expect(central.allocate("initial_worksite_cart", WORKER_ID), "Equip the existing city Cart.")
+	var courier: WorkerData
+	if hauler_mode:
+		var job_board: JobBoard = content.get_node("YSortWorld/InitialWorksites/JobBoard")
+		await walk(job_board.get_node("InteractableComponent").global_position + Vector2(0, 8))
+		await interact(job_board)
+		_expect(is_instance_valid(job_board.job_board_ui), "Open the real Job Board for the Hauler.")
+		if stopped:
+			return
+		var candidate_index: int = -1
+		for index: int in range(job_board.job_board_ui.applicants.size()):
+			if job_board.job_board_ui.applicants[index].citizen_id == worker_id:
+				candidate_index = index
+		_expect(candidate_index >= 0, "The real Job Board offers the authored Hauler.")
+		if stopped:
+			return
+		job_board.job_board_ui.applicant_list.select(candidate_index)
+		job_board.job_board_ui.hire_button.pressed.emit()
+		job_board.job_board_ui.confirm_hire_button.pressed.emit()
+		courier = WorkerDatabase.get_worker_data(worker_id)
+		job_board.job_board_ui.close_button.pressed.emit()
+		await _frames()
+	else:
+		courier = WorkerDatabase.hire_applicant(worker_id, 3)
+	_expect(courier != null and not courier.is_payroll_blocked() and (not hauler_mode or courier.profession == WorkerData.Profession.HAULER), "Hire the authored worker using a paid contract.")
+	_expect(central.allocate("initial_worksite_cart", worker_id), "Equip the existing city Cart.")
 	_expect(central.try_add_worksite_output(ITEM_ID, 6), "Seed six city-owned logs through the city receipt API.")
 	if stopped:
 		return
@@ -92,7 +118,7 @@ func _write_flow() -> void:
 	if stopped:
 		return
 	var access: Node = area.menu
-	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button), "The real city storage board offers Haul.")
+	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button) and access.haul_button.text == "Send", "The real city storage board offers Send.")
 	if stopped:
 		return
 	await press(access.haul_button)
@@ -117,7 +143,7 @@ func _write_flow() -> void:
 	_expect(get_viewport().get_visible_rect().encloses(panel.get_global_rect()), "The hauling panel fits the logical gameplay viewport.")
 	for action: Control in [dialog.start_button, dialog.cancel_button, dialog.source_option, dialog.worker_option, dialog.item_option, dialog.quantity_spin]:
 		_expect(panel.get_global_rect().encloses(action.get_global_rect()), "The hauling control stays inside the panel: " + str(action.name))
-	var found_worker: bool = _select_metadata(dialog.worker_option, WORKER_ID)
+	var found_worker: bool = _select_metadata(dialog.worker_option, worker_id)
 	var found_item: bool = _select_metadata(dialog.item_option, ITEM_ID)
 	_expect(found_worker and found_item, "The panel lists the cart-equipped worker and city-owned logs.")
 	dialog.quantity_spin.value = 3
@@ -131,11 +157,11 @@ func _write_flow() -> void:
 	await press(dialog.start_button)
 	central.changed.disconnect(observe_pickup)
 	_expect(int(probe.calls) > 0 and bool(probe.conserved) and not bool(probe.reentered), "Pickup observers see exactly one stock owner and cannot reenter the route or advance time.")
-	_expect(not transport.route.is_empty() and transport.route.worker_id == WORKER_ID and int(transport.route.quantity) == 3, "The real Start button creates an outbound three-log cargo.")
+	_expect(not transport.route.is_empty() and transport.route.worker_id == worker_id and int(transport.route.quantity) == 3, "The real Start button creates an outbound three-log cargo.")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 0 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "Pickup moves city stock to cargo once, without touching player stock.")
 	_expect(dialog.start_button.disabled and not dialog.cancel_button.disabled and dialog.route_label.text.contains("x3"), "The active panel shows its cargo and offers cancellation.")
 	await _capture_haul_ui("active")
-	_expect(not central.release("initial_worksite_cart", WORKER_ID) and central.has_equipped(WORKER_ID, "cart"), "The active courier's cart cannot be removed mid-shipment.")
+	_expect(not central.release("initial_worksite_cart", worker_id) and central.has_equipped(worker_id, "cart"), "The active courier's cart cannot be removed mid-shipment.")
 	dialog.close()
 	access.close()
 	await _frames()
@@ -165,7 +191,7 @@ func _assert_invalid_snapshots() -> void:
 			"extra_field": raw.transport.route["forged"] = true
 			"cursor": raw.transport.last_tick += 1
 			"origin": raw.transport.route.leg_origin = Vector2(9999, 9999)
-			"reservation": raw.workers.workers_by_id[WORKER_ID].current_job_id = ""
+			"reservation": raw.workers.workers_by_id[worker_id].current_job_id = ""
 		var invalid: Dictionary = document.duplicate(true)
 		invalid.state = codec.encode(raw)
 		_expect(not store.snapshot.prepare(invalid, content), "Reject malformed route checkpoint: " + invalid_case)
@@ -175,7 +201,7 @@ func _read_flow() -> void:
 	print("Transport flow: restored cargo")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 0 and int(transport.route.get("quantity", -1)) == 3, "Continue restores source, empty destination and in-flight cargo together.")
 	_expect(int(Inventory.items.get(ITEM_ID, 0)) == 4, "Continue preserves the separate player-owned materials.")
-	_expect(WorkerDatabase.get_worker_data(WORKER_ID).is_reserved(), "The in-flight worker remains reserved.")
+	_expect(WorkerDatabase.get_worker_data(worker_id).is_reserved(), "The in-flight worker remains reserved.")
 	if stopped:
 		return
 	await _finish_route()
@@ -192,7 +218,7 @@ func _read_flow() -> void:
 	_expect(is_instance_valid(access) and access.storage_id == "annex" and access.deposit_button.disabled, "The reachable annex shows city-owned stock and disallows player deposits.")
 	await press(access.haul_button)
 	var dialog: Node = access.haul_ui
-	_expect(_select_metadata(dialog.worker_option, WORKER_ID) and _select_metadata(dialog.item_option, ITEM_ID), "The annex offers the same worker and delivered city stock.")
+	_expect(_select_metadata(dialog.worker_option, worker_id) and _select_metadata(dialog.item_option, ITEM_ID), "The annex offers the same worker and delivered city stock.")
 	dialog.quantity_spin.value = 2
 	await press(dialog.start_button)
 	dialog.close()
@@ -201,7 +227,7 @@ func _read_flow() -> void:
 	await _finish_route()
 	print("Transport flow: reverse delivery completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 5 and int(annex.items.get(ITEM_ID, 0)) == 1, "A second trip moves two logs back to Central Storage.")
-	_expect(transport.start(WORKER_ID, "annex", ITEM_ID, 1), "A third shipment can be scheduled.")
+	_expect(transport.start(worker_id, "annex", ITEM_ID, 1), "A third shipment can be scheduled.")
 	await interact(area)
 	access = area.menu
 	_expect(is_instance_valid(access), "The annex board reopens while cargo is in transit.")
@@ -222,13 +248,13 @@ func _read_flow() -> void:
 	await _finish_route()
 	print("Transport flow: cancellation completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 5 and int(annex.items.get(ITEM_ID, 0)) == 1 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "Cancellation returns the cargo to its source without duplication or player debit.")
-	# Model an already-hired legacy Hauler; new hiring remains unchanged.
-	var legacy_hauler: WorkerData = WorkerDatabase.get_worker_data(WORKER_ID)
+	# The Laborer variant also models a legacy Hauler for the XP and cargo checks.
+	var legacy_hauler: WorkerData = WorkerDatabase.get_worker_data(worker_id)
 	legacy_hauler.profession = WorkerData.Profession.HAULER
-	CitizenManager.get_citizen(WORKER_ID).profession = WorkerData.Profession.HAULER
+	CitizenManager.get_citizen(worker_id).profession = WorkerData.Profession.HAULER
 	var xp_before: int = legacy_hauler.profession_xp
 	# Saturate the destination only after pickup: an arrival can no longer fit.
-	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 1), "Begin a city-owned shipment before capacity is exhausted.")
+	_expect(transport.start(worker_id, "city", ITEM_ID, 1), "Begin a city-owned shipment before capacity is exhausted.")
 	annex.items[ITEM_ID] = MAX_COUNT # Explicit integer-limit test fixture.
 	for _minute: int in range(60):
 		if now() >= int(transport.route.get("arrival", MAX_COUNT)):
@@ -242,19 +268,19 @@ func _read_flow() -> void:
 	annex.items[ITEM_ID] = 1 # Simulate the extra capacity becoming available.
 	await _finish_route()
 	print("Transport flow: refused delivery retried")
-	_expect(int(central.items.get(ITEM_ID, 0)) == 4 and int(annex.items.get(ITEM_ID, 0)) == 2 and int(Inventory.items.get(ITEM_ID, 0)) == 4 and WorkerDatabase.get_worker_data(WORKER_ID).profession_xp == xp_before + 1, "A refused delivery retries once and awards one Hauler XP after capacity is freed.")
+	_expect(int(central.items.get(ITEM_ID, 0)) == 4 and int(annex.items.get(ITEM_ID, 0)) == 2 and int(Inventory.items.get(ITEM_ID, 0)) == 4 and WorkerDatabase.get_worker_data(worker_id).profession_xp == xp_before + 1, "A refused delivery retries once and awards one Hauler XP after capacity is freed.")
 	# Daily receipts include these resources even though the city does not
 	# accept every one as a personal deposit. Exercise actual city-to-city
 	# transport rather than assuming the wood route covers the other goods.
 	for resource_id: String in ["clay_lump", "reed_bundle", "straw_bundle", "water_jar"]:
 		var owned_before: int = int(Inventory.items.get(resource_id, 0))
 		_expect(central.try_add_worksite_output(resource_id, 1), "The city receives one fixture worksite output: " + resource_id)
-		_expect(transport.available_items("city").has(resource_id) and transport.start(WORKER_ID, "city", resource_id, 1), "The courier picks up the city-owned output: " + resource_id)
+		_expect(transport.available_items("city").has(resource_id) and transport.start(worker_id, "city", resource_id, 1), "The courier picks up the city-owned output: " + resource_id)
 		await _finish_route()
 		_expect(int(central.items.get(resource_id, 0)) == 0 and int(annex.items.get(resource_id, 0)) == 1 and int(Inventory.items.get(resource_id, 0)) == owned_before,
 			"The non-wood shipment arrives exactly once without taking player goods: " + resource_id)
-	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 1), "Start a shipment before worker resignation.")
-	var citizen: CitizenData = CitizenManager.get_citizen(WORKER_ID)
+	_expect(transport.start(worker_id, "city", ITEM_ID, 1), "Start a shipment before worker resignation.")
+	var citizen: CitizenData = CitizenManager.get_citizen(worker_id)
 	_expect(citizen != null, "The courier has its real citizen record.")
 	if stopped:
 		return
@@ -264,7 +290,7 @@ func _read_flow() -> void:
 	await _finish_route()
 	print("Transport flow: resignation cargo settled")
 	await _frames()
-	_expect(not WorkerDatabase.has_worker_data(WORKER_ID) and int(central.items.get(ITEM_ID, 0)) + int(annex.items.get(ITEM_ID, 0)) == 6 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "A resigning courier settles city cargo before leaving, without loss or player debit.")
+	_expect(not WorkerDatabase.has_worker_data(worker_id) and int(central.items.get(ITEM_ID, 0)) + int(annex.items.get(ITEM_ID, 0)) == 6 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "A resigning courier settles city cargo before leaving, without loss or player debit.")
 
 func _capture_haul_ui(label: String) -> void:
 	var directory: String = OS.get_environment("TIP_HAUL_CAPTURE_DIR")

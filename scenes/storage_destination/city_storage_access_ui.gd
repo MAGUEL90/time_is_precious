@@ -143,7 +143,7 @@ func _ensure_haul_button() -> void:
 		return
 	if is_instance_valid(haul_button):
 		return
-	haul_button = _make_button("Haul", deposit_button.get_parent())
+	haul_button = _make_button("Send", deposit_button.get_parent())
 	haul_button.pressed.connect(_open_haul)
 
 func _open_haul() -> void:

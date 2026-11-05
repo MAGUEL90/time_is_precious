@@ -45,19 +45,26 @@ func _run() -> void:
 	_expect(house.global_position == marker.global_position, "The review house matches the authored first marker.")
 	var binding := city.get_node("ReviewHouseBinding")
 	await get_tree().process_frame
+	var annex: Node2D = city.get_node("YSortWorld/WorkerRuntime/CityStorageAnnex")
+	var annex_label: Label = annex.get_node("AnnexLabel")
+	_expect(annex.position == Vector2(-40, 67) and annex_label.text == "ANNEX", "The readable Annex label changes no storage endpoint position.")
+	for marker_name: String in ["ToBeClean1", "ToBeClean2", "ToBeClean3", "ToBeClean4"]:
+		var authored_marker: Sprite2D = authored.get_node("YSortWorld/" + marker_name)
+		var marker_bounds: Rect2 = authored_marker.global_transform * authored_marker.get_rect()
+		_expect(not annex_label.get_global_rect().intersects(marker_bounds), "The Annex label does not cover authored plot " + marker_name)
 	for phase in ["uncleared", "clearing", "empty", "building", "built", "empty", "uncleared"]:
 		state.set("phase", phase)
 		state.emit_signal("changed")
 		state.emit_signal("changed")
 		await get_tree().process_frame
-		var showing: bool = phase in ["empty", "building"]
+		var showing: bool = phase in ["uncleared", "clearing", "empty", "building"]
 		_expect(marker.visible == (phase in ["uncleared", "clearing"]), "The authored marker disappears when cleaning completes: " + phase)
 		_expect(not house.get_node("ToBeClean").visible, "The duplicate house rubble remains hidden: " + phase)
 		_expect(not house.get_node("SiteHouse").visible, "Legacy site art does not cover the authored footprint.")
 		_expect(house.get_node("FinishedHouse").visible == (phase == "built"), "Finished house matches phase " + phase)
 		for cell in PLOT:
 			_expect((_cell(layer, cell) == original[cell]) if showing else layer.get_cell_source_id(cell) == -1,
-				"The original footprint is shown only for cleared/building: " + phase)
+				"The original footprint remains visible until the house is built: " + phase)
 		for cell in original:
 			if cell not in PLOT:
 				_expect(_cell(layer, cell) == original[cell], "The separately painted path remains unchanged.")

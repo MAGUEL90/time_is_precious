@@ -49,7 +49,9 @@ func _ready() -> void:
 func _sync_footprint() -> void:
 	var phase: String = str(_construction.get("phase"))
 	_marker.visible = _marker_was_visible and phase in ["uncleared", "clearing"]
-	var show_site: bool = phase in ["empty", "building"]
+	# The artist's source already shows this footprint beneath the rubble. Keep
+	# it visible until the finished house replaces the plot.
+	var show_site: bool = phase in ["uncleared", "clearing", "empty", "building"]
 	if _displayed == show_site:
 		return
 	for entry: Dictionary in _cells:

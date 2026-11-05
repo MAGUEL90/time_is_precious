@@ -1,6 +1,6 @@
 extends Node
 
-## Current-map Laborer hiring and retained legacy Hauler equipment/dismissal.
+## Current-map Laborer and Hauler hiring, equipment and dismissal.
 
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
 const STARTUP = preload("res://scenes/content_scene/startup/initial_worksites.gd")
@@ -55,10 +55,10 @@ func _run() -> void:
 	await _load_map()
 	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "Map startup does not auto-hire workers or grant personal materials.")
 	_expect(worker_runtime.city_tools.units.size() == 1 and worker_runtime.city_tools.units.has(STARTUP.CART_UNIT_ID), "Normal startup supplies exactly one city-owned Cart.")
-	var hauler_citizen: CitizenData = CitizenManager.get_citizen(STARTUP.HAULER_APPLICANT_ID)
+	var hauler_citizen: CitizenData = CitizenManager.get_citizen(STARTUP.CITY_HAULER_APPLICANT_ID)
 	var laborer_citizen: CitizenData = CitizenManager.get_citizen(STARTUP.APPLICANT_ID)
-	_expect(hauler_citizen != null and hauler_citizen.profession == WorkerData.Profession.LABORER, "Normal startup registers the second citizen as a Laborer.")
-	_expect(laborer_citizen != null and CitizenManager.get_all_applicants().size() == 2, "Both initial Laborers are retained.")
+	_expect(hauler_citizen != null and hauler_citizen.profession == WorkerData.Profession.HAULER, "Normal startup registers the Hauler.")
+	_expect(laborer_citizen != null and CitizenManager.get_all_applicants().size() == 3, "Both Laborers and the Hauler are retained.")
 	var board: JobBoard = content.get_node("YSortWorld/InitialWorksites/JobBoard")
 	player.global_position = board.global_position + Vector2(0, 12)
 	await _settle()
@@ -81,33 +81,30 @@ func _run() -> void:
 	await _capture("job-board-hover-no-tooltip.png")
 	get_viewport().warp_mouse(Vector2.ZERO)
 	# This ownership fixture funds exactly the two existing three-day contracts.
-	var hiring_funds: int = 2 * WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3)
+	var hiring_funds: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3) + WorkerDatabase.get_contract_price(WorkerData.Profession.HAULER, 3)
 	Inventory.add_item("shekel", hiring_funds)
-	_hire(board.job_board_ui, STARTUP.HAULER_APPLICANT_ID)
-	var hauler: WorkerData = WorkerDatabase.get_worker_data(STARTUP.HAULER_APPLICANT_ID)
-	_expect(hauler != null and hauler.profession == WorkerData.Profession.LABORER and hauler.get_linked_citizen() == hauler_citizen, "Job Board hires the second Laborer with its existing citizen identity.")
-	_expect(hauler != null and hauler.wage_shekel_per_day == board.default_daily_wage, "Existing daily wage is retained for Laborer hiring.")
-	# Reconstruct an existing legacy Hauler for equipment and dismissal checks.
-	if hauler != null:
-		hauler.profession = WorkerData.Profession.HAULER
-		hauler_citizen.profession = WorkerData.Profession.HAULER
+	_hire(board.job_board_ui, STARTUP.CITY_HAULER_APPLICANT_ID)
+	var hauler: WorkerData = WorkerDatabase.get_worker_data(STARTUP.CITY_HAULER_APPLICANT_ID)
+	_expect(hauler != null and hauler.profession == WorkerData.Profession.HAULER and hauler.get_linked_citizen() == hauler_citizen, "Job Board hires the Hauler with its existing citizen identity.")
+	_expect(hauler != null and hauler.wage_shekel_per_day == board.default_daily_wage, "Existing daily wage is retained for Hauler hiring.")
 	_hire(board.job_board_ui, STARTUP.APPLICANT_ID)
-	_expect(board.job_board_ui.applicants.is_empty() and board.job_board_ui.hire_button.disabled, "Both hires consume their applicants without automatic replacements.")
+	_expect(board.job_board_ui.applicants.size() == 1 and board.job_board_ui.hire_button.disabled, "Both hires leave the other Laborer available without automatic replacements.")
 	board.job_board_ui.close_button.pressed.emit()
 	await _settle()
-	_expect(worker_runtime.daily.unavailable(STARTUP.HAULER_APPLICANT_ID) == "Unavailable", "Legacy Hauler cannot start a new resource-worksite assignment.")
+	_expect(worker_runtime.daily.unavailable(STARTUP.CITY_HAULER_APPLICANT_ID) == "Unavailable", "Hauler cannot start a new resource-worksite assignment.")
 	await _equip_cart()
 	var provider: Node = worker_runtime.city_tools
 	content.free()
 	await _load_map()
-	_expect(worker_runtime.city_tools == provider and WorkerDatabase.get_worker_data(STARTUP.HAULER_APPLICANT_ID) == hauler, "Map reload retains city supplies and the actual hired Hauler.")
+	_expect(worker_runtime.city_tools == provider and WorkerDatabase.get_worker_data(STARTUP.CITY_HAULER_APPLICANT_ID) == hauler, "Map reload retains city supplies and the actual hired Hauler.")
 	_expect(provider.units.size() == 1 and provider.has_equipped(hauler.worker_id, "cart"), "Reload preserves the equipped Cart without creating another unit.")
-	_expect(CitizenManager.get_all_applicants().is_empty() and WorkerDatabase.get_all_workers().size() == 2, "Reload cannot duplicate either hire.")
-	_expect(worker_runtime.worker_management.fire(STARTUP.HAULER_APPLICANT_ID) == "Worker fired. Tools returned to City Storage.", "Idle Hauler can be fired through worker management.")
+	_expect(CitizenManager.get_all_applicants().size() == 1 and CitizenManager.get_all_applicants()[0].citizen_id == STARTUP.HAULER_APPLICANT_ID
+		and WorkerDatabase.get_all_workers().size() == 2, "Reload retains the other Laborer without duplicating either hire.")
+	_expect(worker_runtime.worker_management.fire(STARTUP.CITY_HAULER_APPLICANT_ID) == "Worker fired. Tools returned to City Storage.", "Idle Hauler can be fired through worker management.")
 	_expect(str(provider.units[STARTUP.CART_UNIT_ID].worker_id).is_empty(), "Firing returns the physical Cart to available city stock.")
 	content.free()
 	await _load_map()
-	_expect(not WorkerDatabase.has_worker_data(STARTUP.HAULER_APPLICANT_ID) and hauler_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED, "Reload preserves dismissal instead of respawning the Hauler.")
+	_expect(not WorkerDatabase.has_worker_data(STARTUP.CITY_HAULER_APPLICANT_ID) and hauler_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED, "Reload preserves dismissal instead of respawning the Hauler.")
 	provider.units.erase(STARTUP.CART_UNIT_ID)
 	content.free()
 	await _load_map()
@@ -126,7 +123,7 @@ func _equip_cart() -> void:
 	_expect(hub.visible and get_tree().paused, "Worker Hub opens for equipment preparation.")
 	hub.tools_tab_button.pressed.emit()
 	for card: Node in hub.tools_worker_list.get_children():
-		if card.worker_id == STARTUP.HAULER_APPLICANT_ID:
+		if card.worker_id == STARTUP.CITY_HAULER_APPLICANT_ID:
 			card.pressed.emit()
 			break
 	hub.tools_tool_button.pressed.emit()
@@ -147,8 +144,8 @@ func _equip_cart() -> void:
 	await _capture("main-map-hauler-cart-equip.png")
 	hub.city_action_panel.use_button.pressed.emit()
 	await _settle()
-	_expect(worker_runtime.city_tools.has_equipped(STARTUP.HAULER_APPLICANT_ID, "cart"), "Equip allocates the actual city-owned Cart to the hired Hauler.")
-	_expect(worker_runtime.daily.unavailable(STARTUP.HAULER_APPLICANT_ID) == "Unavailable", "An equipped legacy Hauler still cannot start a new resource-worksite assignment.")
+	_expect(worker_runtime.city_tools.has_equipped(STARTUP.CITY_HAULER_APPLICANT_ID, "cart"), "Equip allocates the actual city-owned Cart to the hired Hauler.")
+	_expect(worker_runtime.daily.unavailable(STARTUP.CITY_HAULER_APPLICANT_ID) == "Unavailable", "An equipped legacy Hauler still cannot start a new resource-worksite assignment.")
 	_expect(worker_runtime.worker_management.equip(STARTUP.APPLICANT_ID, STARTUP.CART_UNIT_ID) != "Tool equipped.", "One physical Cart cannot be shared between workers.")
 	_expect(Inventory.items.is_empty(), "Cart allocation never enters personal Inventory.")
 	hub.city_storage_view.get_node("Close").pressed.emit()

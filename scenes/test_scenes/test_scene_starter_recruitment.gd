@@ -57,8 +57,8 @@ func _run() -> void:
 	var minute_of_day: int = TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 	_check(TimeComponentManager.advance_minutes(1440 - minute_of_day + 8 * 60), "The fixture reaches the first normal Job Board opening.")
 	_check(is_equal_approx(first.satisfaction, 0.5) and is_equal_approx(second.satisfaction, 0.5)
-		and CitizenManager.get_all_applicants().size() == 2,
-		"One unmet day leaves both starters eligible at the unchanged 50% threshold.")
+		and CitizenManager.get_all_applicants().size() == 3,
+		"One unmet day leaves the three starters eligible at the unchanged 50% threshold.")
 	var store: Node = WorkStateRuntime.get_node("CitySave")
 	_check(store.save_checkpoint(), "The 50% starter state saves: " + store.last_error)
 	_check(TimeComponentManager.advance_minutes(1440), "The fixture reaches the second daily settlement.")
@@ -72,7 +72,7 @@ func _run() -> void:
 	first = CitizenManager.get_citizen(STARTERS.APPLICANT_ID)
 	second = CitizenManager.get_citizen(STARTERS.HAULER_APPLICANT_ID)
 	_check(first != null and second != null and is_equal_approx(first.satisfaction, 0.5)
-		and is_equal_approx(second.satisfaction, 0.5) and CitizenManager.get_all_applicants().size() == 2,
-		"Loading preserves saved satisfaction rather than reapplying the starter buffer.")
+		and is_equal_approx(second.satisfaction, 0.5) and CitizenManager.get_all_applicants().size() == 3,
+		"Loading preserves saved satisfaction and all three applicants.")
 	print("StarterRecruitmentTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)

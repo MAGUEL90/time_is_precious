@@ -7,7 +7,8 @@ extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 ## are checked separately for safe rejection by the house migration fixture.
 const TEST_DIR: String = "user://no_hauler_job_board_test"
 const LABORER_ID: String = "initial_workshop_laborer"
-const SECOND_ID: String = "initial_worksite_hauler" # Stable ID in old and new games.
+const SECOND_ID: String = "initial_city_storage_hauler"
+const LEGACY_HAULER_ID: String = "initial_worksite_hauler"
 const LEGACY_FIXTURES: String = "res://scenes/test_scenes/fixtures/legacy_stockpile_v12/"
 var store: Node
 var board: JobBoard
@@ -115,53 +116,66 @@ func _index(ui: JobBoardUI, id: String) -> int:
 
 func _verify_board(ui: JobBoardUI) -> void:
 	_expect(ui.cards.size() == ui.applicants.size() and ui.applicant_list.item_count == ui.applicants.size(), "Job Board cards and selection indices agree.")
-	for citizen: CitizenData in ui.applicants:
-		_expect(citizen.profession != WorkerData.Profession.HAULER, "No Hauler is offered on the Job Board.")
+	for index: int in range(ui.applicants.size()):
+		var citizen: CitizenData = ui.applicants[index]
+		_expect(ui.cards[index].citizen_id == citizen.citizen_id, "Each card belongs to its selectable citizen.")
+		if citizen.profession == WorkerData.Profession.HAULER:
+			_expect(ui.cards[index].duty_label.text.contains("between city storages"), "The Hauler card describes storage-to-storage deliveries.")
 
 func _hire_via_board(ui: JobBoardUI, id: String) -> void:
 	var index: int = _index(ui, id)
-	_expect(index >= 0, "Expected Laborer is offered: " + id)
+	_expect(index >= 0, "Expected applicant is offered: " + id)
 	if stopped:
 		return
+	var profession: WorkerData.Profession = ui.applicants[index].profession
 	var before: int = int(Inventory.items.get("shekel", 0))
-	var price: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3)
+	var price: int = WorkerDatabase.get_contract_price(profession, 3)
 	ui.applicant_list.select(index)
 	ui.hire_button.pressed.emit()
-	_expect(ui.confirmation_open and not ui.confirm_hire_button.disabled, "Laborer selection opens a valid confirmation.")
+	_expect(ui.confirmation_open and not ui.confirm_hire_button.disabled, "Selection opens a valid confirmation.")
 	if stopped:
 		return
 	ui.confirm_hire_button.pressed.emit()
-	_expect(WorkerDatabase.get_worker_data(id) != null and WorkerDatabase.get_worker_data(id).profession == WorkerData.Profession.LABORER
-		and int(Inventory.items.get("shekel", 0)) == before - price and not _contains(ui, id), "The real UI hires the Laborer and charges the quoted price once.")
+	_expect(WorkerDatabase.get_worker_data(id) != null and WorkerDatabase.get_worker_data(id).profession == profession
+		and int(Inventory.items.get("shekel", 0)) == before - price and not _contains(ui, id), "The real UI hires the selected profession and charges once.")
 	ui.confirm_hire_button.pressed.emit()
 	_expect(int(Inventory.items.get("shekel", 0)) == before - price, "Repeated confirmation does not charge again.")
 
 func _new_write() -> void:
 	var first: CitizenData = CitizenManager.get_citizen(LABORER_ID)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND_ID)
-	_expect(first != null and second != null and first.profession == WorkerData.Profession.LABORER and second.profession == WorkerData.Profession.LABORER, "New Game keeps both original citizens as Laborers.")
+	var original_laborer: CitizenData = CitizenManager.get_citizen(LEGACY_HAULER_ID)
+	_expect(first != null and original_laborer != null and second != null and first.profession == WorkerData.Profession.LABORER and original_laborer.profession == WorkerData.Profession.LABORER and second.profession == WorkerData.Profession.HAULER, "New Game retains two Laborers and adds one Hauler.")
 	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "New Game has no added wallet grant or worker.")
+	# Recreate a pre-update roster with both existing Laborers and no new ID.
+	CitizenManager.citizens_by_id.erase(SECOND_ID)
+	_expect(store.save_checkpoint(), "The preceding two-Laborer checkpoint saves.")
+	_expect(store.load_checkpoint(), "The preceding two-Laborer checkpoint continues.")
+	second = CitizenManager.get_citizen(SECOND_ID)
+	original_laborer = CitizenManager.get_citizen(LEGACY_HAULER_ID)
+	_expect(second != null and second.profession == WorkerData.Profession.HAULER and original_laborer.profession == WorkerData.Profession.LABORER, "Continue adds a separate Hauler without changing the old Laborer.")
 	Inventory.add_item("shekel", 5) # Test-only funds for real prepaid hiring.
 	var ui: JobBoardUI = _open_board()
 	if stopped:
 		return
 	_verify_board(ui)
-	_expect(ui.applicants.size() == 2 and _contains(ui, LABORER_ID) and _contains(ui, SECOND_ID), "Both initial Laborers are offered.")
+	_expect(second.profession == WorkerData.Profession.HAULER and ui.applicants.size() == 3 and _contains(ui, LABORER_ID) and _contains(ui, LEGACY_HAULER_ID) and _contains(ui, SECOND_ID), "The board offers both preserved Laborers and the separate Hauler.")
+	await _capture_review("job-board-hauler.png")
 	var second_index: int = _index(ui, SECOND_ID)
 	ui.applicant_list.select(second_index)
 	ui.hire_button.pressed.emit()
 	_expect(ui.confirmation_open, "The stale-selection check begins from a real confirmation.")
 	var funds_before: int = int(Inventory.items.get("shekel", 0))
-	second.profession = WorkerData.Profession.HAULER # Simulate a stale legacy selection.
-	_expect(not bool(ui._quote_for_ids(PackedStringArray([SECOND_ID]), 3).get("valid", true)), "A changed profession invalidates an open quote.")
+	second.satisfaction = 0.49
+	_expect(not bool(ui._quote_for_ids(PackedStringArray([SECOND_ID]), 3).get("valid", true)), "A newly ineligible applicant invalidates an open quote.")
 	ui.confirm_hire_button.pressed.emit()
-	_expect(WorkerDatabase.get_worker_data(SECOND_ID) == null and int(Inventory.items.get("shekel", 0)) == funds_before, "Confirming a stale Hauler neither hires nor debits.")
+	_expect(WorkerDatabase.get_worker_data(SECOND_ID) == null and int(Inventory.items.get("shekel", 0)) == funds_before, "Confirming a stale applicant neither hires nor debits.")
 	ui._cancel_confirmation(false)
 	ui._poll_applicants()
-	_expect(not _contains(ui, SECOND_ID), "Polling removes a now-ineligible Hauler without an index mismatch.")
-	second.profession = WorkerData.Profession.LABORER
+	_expect(not _contains(ui, SECOND_ID), "Polling removes the now-ineligible Hauler without an index mismatch.")
+	second.satisfaction = 0.55
 	ui._poll_applicants()
-	_expect(_contains(ui, SECOND_ID), "Polling restores the otherwise eligible Laborer.")
+	_expect(_contains(ui, SECOND_ID), "Polling restores the recovered Hauler.")
 	_verify_board(ui)
 	_hire_via_board(ui, LABORER_ID)
 	ui.close_button.pressed.emit()
@@ -169,72 +183,82 @@ func _new_write() -> void:
 	if stopped:
 		return
 	ui = _open_board()
-	_expect(ui.applicants.size() == 1 and _contains(ui, SECOND_ID), "Reopening the board retains the other Laborer without duplicates.")
+	_expect(ui.applicants.size() == 2 and _contains(ui, SECOND_ID) and _contains(ui, LEGACY_HAULER_ID), "Reopening retains both other applicants without duplicates.")
 	ui.close_button.pressed.emit()
 	await _frames()
 	_expect(store.save_checkpoint(), "The new-game state saves: " + store.last_error)
 
 func _new_read() -> void:
 	var second: CitizenData = CitizenManager.get_citizen(SECOND_ID)
-	_expect(WorkerDatabase.get_worker_data(LABORER_ID) != null and second != null and second.profession == WorkerData.Profession.LABORER, "Continue retains the paid Laborer and the other Laborer applicant.")
+	_expect(WorkerDatabase.get_worker_data(LABORER_ID) != null and second != null and second.profession == WorkerData.Profession.HAULER, "Continue retains the paid Laborer and Hauler applicant.")
 	var ui: JobBoardUI = _open_board()
 	if stopped:
 		return
 	_verify_board(ui)
-	_expect(ui.applicants.size() == 1 and _contains(ui, SECOND_ID), "The saved Job Board has only its remaining Laborer.")
+	_expect(ui.applicants.size() == 2 and _contains(ui, SECOND_ID) and _contains(ui, LEGACY_HAULER_ID), "The saved board retains the remaining Laborer and Hauler.")
 	_hire_via_board(ui, SECOND_ID)
 	ui.close_button.pressed.emit()
 	await _frames()
 	_expect(store.save_checkpoint() and store.load_checkpoint(), "The second paid hire saves and reloads.")
-	_expect(WorkerDatabase.get_worker_data(SECOND_ID) != null and WorkerDatabase.get_worker_data(SECOND_ID).profession == WorkerData.Profession.LABORER, "Reload retains the second paid Laborer.")
+	_expect(WorkerDatabase.get_worker_data(SECOND_ID) != null and WorkerDatabase.get_worker_data(SECOND_ID).profession == WorkerData.Profession.HAULER, "Reload retains the paid Hauler.")
 
 func _legacy_applicant(source: PackedByteArray) -> void:
-	var legacy: CitizenData = CitizenManager.get_citizen(SECOND_ID)
-	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT and is_equal_approx(legacy.satisfaction, 0.5), "The actual old applicant record and satisfaction survive Continue.")
+	var legacy: CitizenData = CitizenManager.get_citizen(LEGACY_HAULER_ID)
+	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT and is_equal_approx(legacy.satisfaction, 0.5), "The old applicant record and satisfaction survive Continue.")
 	var ui: JobBoardUI = _open_board()
 	if stopped:
 		return
 	_verify_board(ui)
-	_expect(_contains(ui, LABORER_ID) and not _contains(ui, SECOND_ID), "The legacy Hauler is hidden while the Laborer is offered.")
+	_expect(_contains(ui, LABORER_ID) and _contains(ui, LEGACY_HAULER_ID), "The eligible legacy Hauler is offered alongside the Laborer.")
 	ui._poll_applicants()
 	ui._refresh_applicants()
-	_expect(not _contains(ui, SECOND_ID) and CitizenManager.get_citizen(SECOND_ID) == legacy, "Refresh and poll keep the legacy citizen without offering it.")
+	_expect(_contains(ui, LEGACY_HAULER_ID) and CitizenManager.get_citizen(LEGACY_HAULER_ID) == legacy, "Refresh and poll retain the same legacy citizen.")
 	var wallet: int = int(Inventory.items.get("shekel", 0))
-	_expect(WorkerDatabase.hire_applicant(SECOND_ID) == null and WorkerDatabase.hire_applicants(PackedStringArray([LABORER_ID, SECOND_ID])).is_empty(), "Direct single and mixed batch reject the legacy Hauler.")
-	_expect(int(Inventory.items.get("shekel", 0)) == wallet and WorkerDatabase.get_all_workers().is_empty(), "Rejections preserve the wallet and roster.")
+	Inventory.items["shekel"] = 0 # Fixture-only insufficient funds.
+	_expect(WorkerDatabase.hire_applicant(LEGACY_HAULER_ID) == null and WorkerDatabase.hire_applicants(PackedStringArray([LABORER_ID, LEGACY_HAULER_ID])).is_empty(), "Insufficient funds reject single and mixed hires.")
+	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.get_all_workers().is_empty(), "Rejected hires leave the roster and wallet unchanged.")
+	Inventory.items["shekel"] = wallet
 	ui.close_button.pressed.emit()
 	await _frames()
 	_expect(store.save_checkpoint(), "A new explicit save upgrades the legacy applicant checkpoint.")
 	_expect(FileAccess.get_file_as_bytes(store.disk.path + ".bak") == source, "The original v12 save is retained as backup.")
 	_expect(store.load_checkpoint(), "The upgraded checkpoint loads.")
-	legacy = CitizenManager.get_citizen(SECOND_ID)
-	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT, "Save/Continue preserves the hidden legacy applicant unchanged.")
+	legacy = CitizenManager.get_citizen(LEGACY_HAULER_ID)
+	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT, "Save/Continue preserves the legacy applicant.")
 	legacy.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	legacy.satisfaction = 0.8 # Test-only recovered former Hauler before midnight.
 	var day: int = TimeComponentManager.current_day
 	var minutes: int = 1440 - TimeComponentManager.current_hour * 60 - TimeComponentManager.current_minute
 	_expect(TimeComponentManager.advance_minutes(minutes), "The game clock reaches midnight.")
-	_expect(TimeComponentManager.current_day == day + 1 and legacy.satisfaction >= 0.5 and legacy.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED and legacy.profession == WorkerData.Profession.HAULER, "Daily needs/application evaluation does not re-offer the recovered former Hauler.")
-	_expect(CitizenManager.evaluate_daily_applications() == 0 and not CitizenManager.get_all_applicants().has(legacy), "Repeated application evaluation does not create a Hauler candidate.")
+	_expect(TimeComponentManager.current_day == day + 1 and legacy.satisfaction >= 0.5 and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT and legacy.profession == WorkerData.Profession.HAULER, "Daily evaluation re-offers the recovered former Hauler.")
+	_expect(CitizenManager.evaluate_daily_applications() == 0 and CitizenManager.get_all_applicants().has(legacy), "Repeated evaluation does not duplicate an applicant.")
 	_expect(store.save_checkpoint() and store.load_checkpoint(), "The post-midnight legacy state saves and reloads.")
-	legacy = CitizenManager.get_citizen(SECOND_ID)
-	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED, "Post-midnight Continue retains the legacy citizen and profession.")
+	legacy = CitizenManager.get_citizen(LEGACY_HAULER_ID)
+	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT, "Post-midnight Continue retains the applicant and profession.")
+
+func _capture_review(filename: String) -> void:
+	var directory: String = OS.get_environment("TIP_REVIEW_CAPTURE_DIR")
+	if directory.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	DirAccess.make_dir_recursive_absolute(directory)
+	await RenderingServer.frame_post_draw
+	_expect(get_viewport().get_texture().get_image().save_png(directory.path_join(filename)) == OK, "The requested UI evidence is captured.")
 
 func _legacy_worker(source: PackedByteArray) -> void:
-	var legacy: WorkerData = WorkerDatabase.get_worker_data(SECOND_ID)
+	var legacy: WorkerData = WorkerDatabase.get_worker_data(LEGACY_HAULER_ID)
 	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER, "An already-hired Hauler is restored from the synthetic v12 worker copy.")
 	if stopped:
 		return
 	var previous_end: int = legacy.payroll_paid_until_day
 	var previous_xp: int = legacy.profession_xp
-	var previous_status: int = CitizenManager.get_citizen(SECOND_ID).employment_status
+	var previous_status: int = CitizenManager.get_citizen(LEGACY_HAULER_ID).employment_status
 	_expect(store.save_checkpoint() and FileAccess.get_file_as_bytes(store.disk.path + ".bak") == source and store.load_checkpoint(), "The synthetic worker copy upgrades while preserving its exact input as backup.")
-	legacy = WorkerDatabase.get_worker_data(SECOND_ID)
-	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.payroll_paid_until_day == previous_end and legacy.profession_xp == previous_xp and CitizenManager.get_citizen(SECOND_ID).employment_status == previous_status, "Save/Continue retains the existing Hauler, XP and paid contract.")
+	legacy = WorkerDatabase.get_worker_data(LEGACY_HAULER_ID)
+	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.payroll_paid_until_day == previous_end and legacy.profession_xp == previous_xp and CitizenManager.get_citizen(LEGACY_HAULER_ID).employment_status == previous_status, "Save/Continue retains the existing Hauler, XP and paid contract.")
 	Inventory.add_item("shekel", 3) # Test-only funds for an existing worker renewal.
 	var before: int = int(Inventory.items.get("shekel", 0))
 	var price: int = WorkerDatabase.get_contract_price(WorkerData.Profession.HAULER, 3)
-	_expect(WorkerDatabase.renew_contract(SECOND_ID, 3) and legacy.payroll_paid_until_day == previous_end + 3 and int(Inventory.items.get("shekel", 0)) == before - price, "A retained legacy Hauler can still renew its existing contract.")
+	_expect(WorkerDatabase.renew_contract(LEGACY_HAULER_ID, 3) and legacy.payroll_paid_until_day == previous_end + 3 and int(Inventory.items.get("shekel", 0)) == before - price, "A retained legacy Hauler can still renew its existing contract.")
 	_expect(store.save_checkpoint() and store.load_checkpoint(), "The renewed legacy contract saves and reloads.")
-	legacy = WorkerDatabase.get_worker_data(SECOND_ID)
+	legacy = WorkerDatabase.get_worker_data(LEGACY_HAULER_ID)
 	_expect(legacy != null and legacy.profession == WorkerData.Profession.HAULER and legacy.payroll_paid_until_day == previous_end + 3 and legacy.profession_xp == previous_xp, "Continue preserves the renewed worker without converting its profession.")

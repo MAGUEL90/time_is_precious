@@ -24,6 +24,26 @@ func _write_scenario() -> void:
 	_check(first > 0 and second > 0, "Both workers contribute after arriving")
 	_check(int(city_storage.items.get("wood_log", 0)) - city_before == first + second and stock_before - site.stock == first + second, "Both outputs move from natural stock into City Storage exactly once")
 	_check(int(job.units) == 0 and runtime._daily_output_count(SITE) == 0 and int(Inventory.items.get("wood_log", 0)) == bag_before, "No output remains in the job, on the ground or in the player's bag")
+	# Arrange one remaining unit and nearly completed work for both employees.
+	# The first completion owns that single unit; both retain their assignment
+	# and must walk to the replacement deposit before continuing.
+	var old_position: Vector2 = runtime.get_node("WorksiteMarkers/WoodSite").position
+	site.stock = 1
+	for id: String in IDS.slice(0, 2):
+		job.progress[id] = site.minutes_per_unit - 1.0
+	var before_last: int = int(city_storage.items.get("wood_log", 0))
+	_check(TimeComponentManager.advance_minutes(1), "Advance both workers against the final unit")
+	_check(site.stock == 0 and int(city_storage.items.get("wood_log", 0)) == before_last + 1, "The shared final unit reaches City Storage exactly once")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(site.stock == 240 and runtime.get_node("WorksiteMarkers/WoodSite").position != old_position, "An exhausted Wood Site appears at a new location")
+	_check(job.ids == IDS.slice(0, 2) and not _worker(IDS[0]).physical_approach.arrived and not _worker(IDS[1]).physical_approach.arrived
+		and _worker(IDS[0]).physical_approach.target != _worker(IDS[1]).physical_approach.target, "Both assigned workers must walk to distinct entries at the replacement site")
+	if failures:
+		return
+	_walk_until_arrived(IDS.slice(0, 2))
+	first = int(job.stats[IDS[0]].output)
+	second = int(job.stats[IDS[1]].output)
 	_check(store.save_checkpoint(), "Save both working city-supply assignments: " + store.last_error)
 	if failures:
 		return

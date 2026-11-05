@@ -164,10 +164,23 @@ func _ids(data: Array[CitizenData]) -> PackedStringArray:
 		result.append(citizen.citizen_id)
 	return result
 
+func _board_applicants() -> Array[CitizenData]:
+	var result: Array[CitizenData] = CitizenManager.get_all_applicants()
+	# Keep the new Hauler visible without requiring an initial scroll, and use
+	# the same deterministic order for refresh/poll and selection indices.
+	result.sort_custom(func(a: CitizenData, b: CitizenData) -> bool:
+		var a_hauler: bool = a.profession == WorkerData.Profession.HAULER
+		var b_hauler: bool = b.profession == WorkerData.Profession.HAULER
+		if a_hauler != b_hauler:
+			return a_hauler
+		return a.citizen_id.naturalnocasecmp_to(b.citizen_id) < 0
+	)
+	return result
+
 func _poll_applicants() -> void:
 	if not visible or _hiring:
 		return
-	var current: Array[CitizenData] = CitizenManager.get_all_applicants()
+	var current: Array[CitizenData] = _board_applicants()
 	if _ids(current) != _ids(applicants):
 		_refresh_applicants()
 	else:
@@ -187,7 +200,7 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 		card.queue_free()
 	cards.clear()
 	applicant_list.clear()
-	applicants = CitizenManager.get_all_applicants()
+	applicants = _board_applicants()
 	for citizen: CitizenData in applicants:
 		INITIAL_APPLICANTS.normalize_legacy_applicant_name(citizen)
 		var index: int = applicant_list.add_item("%s | %s" % [citizen.display_name, _get_profession_name(citizen.profession)])
@@ -210,7 +223,6 @@ func _get_empty_state_message() -> String:
 	for person: CitizenData in CitizenManager.get_all_residents():
 		var can_apply_later: bool = (
 			person.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
-			and person.profession != WorkerData.Profession.HAULER
 		) or (
 			person.employment_status == CitizenData.EmploymentStatus.APPLICANT
 			and CitizenManager.is_profession_recruitable(person.profession)

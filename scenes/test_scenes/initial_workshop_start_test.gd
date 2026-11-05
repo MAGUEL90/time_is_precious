@@ -77,7 +77,7 @@ func _run() -> void:
 	if not is_instance_valid(board.job_board_ui):
 		_finish()
 		return
-	_expect(board.job_board_ui.applicants.size() == 2, "Both initial Laborer applicants are visible.")
+	_expect(board.job_board_ui.applicants.size() == 3, "Both Laborers and the Hauler are visible.")
 	_expect(board.job_board_ui.applicant_list.get_selected_items().is_empty()
 		and board.job_board_ui.hire_button.disabled,
 		"Opening Job Board does not select an applicant or enable Hire.")
@@ -89,7 +89,7 @@ func _run() -> void:
 		"The two legacy placeholders resolve to stable individual names without changing IDs, professions, or the generator counter.")
 	var hauler_applicant_id: String = start.HAULER_APPLICANT_ID
 	var hauler_applicant: CitizenData = CitizenManager.get_citizen(hauler_applicant_id)
-	_expect(hauler_applicant != null and hauler_applicant.profession == WorkerData.Profession.LABORER, "The second initial Laborer uses the existing citizen hiring flow.")
+	_expect(hauler_applicant != null and hauler_applicant.profession == WorkerData.Profession.LABORER, "The original second Laborer uses the existing citizen hiring flow.")
 	var laborer_index: int = -1
 	var hauler_index: int = -1
 	for index: int in range(board.job_board_ui.applicants.size()):
@@ -98,7 +98,7 @@ func _run() -> void:
 		elif board.job_board_ui.applicants[index].citizen_id == start.HAULER_APPLICANT_ID:
 			hauler_index = index
 	_expect(laborer_index >= 0, "The authored Laborer applicant is available for manual selection.")
-	_expect(hauler_index >= 0, "The second authored Laborer applicant remains available.")
+	_expect(hauler_index >= 0, "The second authored Laborer remains available.")
 	if laborer_index < 0 or hauler_index < 0:
 		_finish()
 		return
@@ -210,7 +210,7 @@ func _run() -> void:
 	add_child(content)
 	await _frames()
 	_expect(CitizenManager.get_citizen(applicant_id) == citizen and WorkerDatabase.get_worker_data(applicant_id) == worker, "Reload keeps the existing hire instead of recreating the applicant.")
-	_expect(CitizenManager.get_all_applicants().size() == 1 and CitizenManager.get_citizen(hauler_applicant_id) == hauler_applicant, "Reload keeps the unhired Laborer without recreating the hired Laborer.")
+	_expect(CitizenManager.get_all_applicants().size() == 2 and CitizenManager.get_citizen(hauler_applicant_id) == hauler_applicant, "Reload keeps the unhired Laborer and Hauler without recreating the hired worker.")
 	_finish()
 
 func _complete_fixture_plot_arrival(worker: WorkerData, plot: Node, phase: String) -> void:

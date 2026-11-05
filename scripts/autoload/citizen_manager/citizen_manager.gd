@@ -95,9 +95,8 @@ func get_all_residents() -> Array[CitizenData]:
 
 # Employment lifecycle
 
-## Haulers from older saves remain citizens/workers, but cannot be recruited.
 func is_profession_recruitable(profession: WorkerData.Profession) -> bool:
-	return profession != WorkerData.Profession.NONE and profession != WorkerData.Profession.HAULER
+	return profession != WorkerData.Profession.NONE
 
 func register_applicant(
 	citizen_id: String,

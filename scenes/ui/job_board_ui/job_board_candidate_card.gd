@@ -39,7 +39,7 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 	name_label.text = _short_display_name(_full_display_name)
 	name_label.accessibility_name = _full_display_name
 	role_label.text = "Job: " + profession_name
-	duty_label.text = "Hauls worksite goods to assigned storage." if citizen.profession == WorkerData.Profession.HAULER else ""
+	duty_label.text = "Transports goods between city storages." if citizen.profession == WorkerData.Profession.HAULER else ""
 	if citizen.profession == WorkerData.Profession.LABORER:
 		duty_label.text = "Gathers resources and works at workshops."
 	portrait.texture = HAULER_ICON if citizen.profession == WorkerData.Profession.HAULER else WORKER_ICON

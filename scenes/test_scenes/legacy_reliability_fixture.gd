@@ -43,6 +43,8 @@ static func encode_v10(codec: RefCounted, raw: Dictionary, retained_stockpiles: 
 		plot.erase("worker_capacity")
 		plot.erase("work_total_units")
 	legacy.worksites.schema_version = 1
+	for site: Dictionary in legacy.worksites.sites.values():
+		site.erase("offset")
 	_add_old_empty_stockpiles(legacy.worksites, retained_stockpiles)
 	legacy.worksites.erase("pending_output")
 	legacy.worksites.erase("pending_progress")
@@ -62,6 +64,8 @@ static func encode_v11(codec: RefCounted, raw: Dictionary) -> Variant:
 	strip_v16_owners(legacy)
 	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
 	legacy.worksites.schema_version = 2
+	for site: Dictionary in legacy.worksites.sites.values():
+		site.erase("offset")
 	_add_old_empty_stockpiles(legacy.worksites)
 	legacy.worksites.erase("legacy_ground")
 	for route: Dictionary in legacy.worksites.routes.values():

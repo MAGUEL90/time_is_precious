@@ -8,6 +8,18 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var seed_playtest_hauler: bool = false
 @export var enable_time_shortcuts: bool = true
 @export var retain_resource_stock: bool = false
+@export var finite_resource_sites: bool = false
+# Provisional review value: five ideal 8-hour clay shifts at 10 min per unit.
+@export_range(1, 10000, 1) var finite_site_capacity: int = 240
+const RESOURCE_OFFSETS: Array[Vector2] = [
+	Vector2.ZERO, Vector2(-48, 0), Vector2(48, 0), Vector2(0, -48), Vector2(0, 48),
+	Vector2(-48, -48), Vector2(48, -48), Vector2(-48, 48), Vector2(48, 48),
+	Vector2(-72, 0), Vector2(72, 0), Vector2(0, -72), Vector2(0, 72),
+]
+const RESOURCE_ROUTE_BUDGET_USEC: int = 15000
+var _site_origins: Dictionary = {}
+var _relocation_queued: bool = false
+var _last_relocation_attempt: Dictionary = {}
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
@@ -55,7 +67,16 @@ func _ready() -> void:
 	daily.allow_haulers = false
 	super._ready()
 	for site: Node2D in $WorksiteMarkers.get_children():
+		_site_origins[site.name] = site.position
+		if finite_resource_sites:
+			var session = sites[site.name]
+			session.finite_resource = true
+			session.deposit_capacity = finite_site_capacity
+			session.stock = finite_site_capacity
 		RESOURCE_PRESENTATION.configure(site)
+	if finite_resource_sites:
+		daily.settlement_finished.connect(_queue_depleted_sites)
+		work_finished.connect(_queue_depleted_sites)
 	_refresh_navigation()
 	# Other plot views may still have deferred their initial collider toggles.
 	# Recollect after those toggles before allowing simulated travel.
@@ -102,6 +123,162 @@ func _ready() -> void:
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
 
+## Save an offset relative to the authored marker, not a node path or world
+## coordinate. Only this bounded list is accepted when loading a checkpoint.
+func resource_site_offset(site_id: StringName) -> Vector2:
+	var marker: Node2D = $WorksiteMarkers.get_node_or_null(NodePath(str(site_id)))
+	if marker == null or not _site_origins.has(site_id):
+		return Vector2.ZERO
+	return marker.position - Vector2(_site_origins[site_id])
+
+func resource_offset_valid(offset: Vector2) -> bool:
+	return offset in RESOURCE_OFFSETS
+
+func restore_resource_offsets(saved_sites: Dictionary) -> void:
+	for site_id: String in saved_sites:
+		var key := StringName(site_id)
+		var marker: Node2D = $WorksiteMarkers.get_node_or_null(NodePath(site_id))
+		if marker != null and _site_origins.has(key):
+			marker.position = Vector2(_site_origins[key]) + Vector2(saved_sites[site_id].get("offset", Vector2.ZERO))
+	_refresh_navigation()
+	# Save restoration also changes building phases before their colliders are
+	# deferred. Recollect once those physics updates have finished.
+	navigation_refresh_pending = true
+	_queue_navigation_after_colliders.call_deferred()
+	_queue_depleted_sites()
+
+func _queue_depleted_sites() -> void:
+	if not finite_resource_sites or _relocation_queued:
+		return
+	for session in sites.values():
+		if session.stock <= 0 and not session.working:
+			_relocation_queued = true
+			_relocate_depleted_sites.call_deferred()
+			return
+
+func _relocate_depleted_sites() -> void:
+	_relocation_queued = false
+	# A parked runtime continues worker time but has no live map to validate a
+	# new location. Wait until the city is restored; do not conjure resources.
+	if not is_inside_tree() or checkpoint_handoff or _working or daily.is_settlement_busy() or navigation_refresh_pending or get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
+		return
+	var map: Node = navigation_map.get_ref() if navigation_map != null else null
+	if not is_instance_valid(map) or not map.is_ancestor_of(self):
+		return
+	# Regression fixtures can wrap the city in a test node. Terrain belongs to
+	# the nearest city ancestor rather than necessarily the outer navigation root.
+	var terrain_map: Node = self
+	while terrain_map != null and not terrain_map.has_node("AuthoredMap/Ground/Base"):
+		terrain_map = terrain_map.get_parent()
+	if terrain_map == null:
+		return
+	for key: Variant in sites:
+		var site_id := StringName(key)
+		var session = sites[site_id]
+		if session.stock > 0 or session.working:
+			continue
+		var now: int = daily.now()
+		if now - int(_last_relocation_attempt.get(site_id, -1000000)) < 60:
+			continue
+		_last_relocation_attempt[site_id] = now
+		var marker: Node2D = $WorksiteMarkers.get_node(NodePath(str(site_id)))
+		var current_offset: Vector2 = resource_site_offset(site_id)
+		for offset: Vector2 in RESOURCE_OFFSETS:
+			if offset == current_offset:
+				continue
+			var candidate: Vector2 = marker.get_parent().to_global(Vector2(_site_origins[site_id]) + offset)
+			if not _resource_candidate_clear(terrain_map, marker, candidate):
+				continue
+			# The old deposit vanishes and the replacement receives its own stock.
+			# Workers keep their assignment but must physically reach the new site.
+			marker.position = Vector2(_site_origins[site_id]) + offset
+			session.stock = session.deposit_capacity
+			worker_journeys.clear()
+			_refresh_navigation()
+			if daily.jobs.has(site_id):
+				var ids: Array[String] = []
+				ids.assign(daily.jobs[site_id].ids)
+				_begin_site_assignments(site_id, ids)
+			break
+
+func _resource_candidate_clear(map: Node, marker: Node2D, candidate: Vector2) -> bool:
+	var base: TileMapLayer = map.get_node_or_null("AuthoredMap/Ground/Base") as TileMapLayer
+	var base2: TileMapLayer = map.get_node_or_null("AuthoredMap/Ground/Base2") as TileMapLayer
+	if base == null or base2 == null or not is_instance_valid(player) or not player.is_inside_tree():
+		return false
+	if is_instance_valid(player) and candidate.distance_to(player.global_position + Vector2(0, 16)) < 28.0:
+		return false
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		for actor: Node2D in visuals.actors.values():
+			if is_instance_valid(actor) and actor.visible and candidate.distance_to(actor.global_position + Vector2(0, 16)) < 28.0:
+				return false
+	for other: Node2D in $WorksiteMarkers.get_children():
+		if other != marker and candidate.distance_to(other.global_position) < 40.0:
+			return false
+	# Authored plot art has no physics collider before construction, so test it
+	# explicitly instead of allowing a resource deposit to cover a future plot.
+	var authored_world: Node = map.get_node_or_null("AuthoredMap/YSortWorld")
+	if authored_world == null:
+		return false
+	var candidate_bounds := Rect2(candidate - Vector2(20, 20), Vector2(40, 40))
+	for object: Node in authored_world.get_children():
+		if object is Sprite2D and str(object.name).begins_with("ToBeClean"):
+			var plot_bounds: Rect2 = object.global_transform * object.get_rect()
+			if candidate_bounds.intersects(plot_bounds):
+				return false
+	var bottom: float = float(worksite_navigation.resource_bottoms.get(str(marker.name), marker.global_position.y)) - marker.global_position.y
+	var feet_y: float = maxf(8.0, bottom + worksite_navigation.CLEARANCE + 1.0)
+	var checks: Array[Vector2] = [Vector2(-16, -10), Vector2(16, -10), Vector2(-16, 12), Vector2(16, 12), Vector2.ZERO, Vector2(-10, feet_y), Vector2(10, feet_y)]
+	for delta: Vector2 in checks:
+		var point: Vector2 = candidate + delta
+		if not worksite_navigation.is_clear(point):
+			return false
+		if base.get_cell_source_id(base.local_to_map(base.to_local(point))) < 0 and base2.get_cell_source_id(base2.local_to_map(base2.to_local(point))) < 0:
+			return false
+	var origin: Vector2 = player.global_position + Vector2(0, 16)
+	if not worksite_navigation.is_clear(origin):
+		return false
+	for x: float in [-10.0, 10.0]:
+		var route: PackedVector2Array = _bounded_resource_route(origin, candidate + Vector2(x, feet_y))
+		if not _route_on_land(route, base, base2):
+			return false
+	var job: Dictionary = daily.jobs.get(marker.name, {})
+	for id: String in job.get("ids", []):
+		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+		if worker == null or worker.physical_approach.is_empty():
+			continue
+		var worker_feet: Vector2 = worker.physical_approach.position
+		var slot: int = job.ids.find(id)
+		if not worksite_navigation.is_clear(worker_feet):
+			return false
+		var worker_route: PackedVector2Array = _bounded_resource_route(worker_feet, candidate + Vector2(-10 + slot * 20, feet_y))
+		if not _route_on_land(worker_route, base, base2):
+			return false
+	return true
+
+func _bounded_resource_route(origin: Vector2, target: Vector2) -> PackedVector2Array:
+	if worksite_navigation.segment_clear(origin, target):
+		return PackedVector2Array([origin, target])
+	# A blocked candidate must not stall the game while a visibility-grid
+	# search expands. An unfinished search is never treated as a valid route.
+	var search: RefCounted = worksite_navigation.begin_bounded_route(origin, target)
+	search.step(100000, Time.get_ticks_usec() + RESOURCE_ROUTE_BUDGET_USEC)
+	return search.path if search.status == "found" else PackedVector2Array()
+
+func _route_on_land(route: PackedVector2Array, base: TileMapLayer, base2: TileMapLayer) -> bool:
+	if route.is_empty():
+		return false
+	for index: int in range(1, route.size()):
+		var start: Vector2 = route[index - 1]
+		var finish: Vector2 = route[index]
+		var steps: int = maxi(1, ceili(start.distance_to(finish) / 4.0))
+		for step: int in range(steps + 1):
+			var point: Vector2 = start.lerp(finish, float(step) / steps)
+			if base.get_cell_source_id(base.local_to_map(base.to_local(point))) < 0 and base2.get_cell_source_id(base2.local_to_map(base2.to_local(point))) < 0:
+				return false
+	return true
+
 func _refresh_navigation() -> void:
 	var map: Node = navigation_map.get_ref() if navigation_map != null else null
 	if navigation_map == null:
@@ -121,6 +298,7 @@ func _refresh_navigation() -> void:
 		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
 	navigation_refresh_pending = false
+	_queue_depleted_sites()
 
 func _watch_navigation_changes(node: Node) -> void:
 	if node.is_in_group("workshop_plots") and node.construction != null:
@@ -387,6 +565,13 @@ func site_slot_destination(site_id: StringName, slot: int) -> Vector2:
 		destination.y = maxf(destination.y, float(worksite_navigation.resource_bottoms[str(site_id)]) + worksite_navigation.CLEARANCE + 1.0)
 	return destination
 
+## Validation must compare a saved approach with the saved deposit position,
+## not with whichever location happens to be live before the load commits.
+func site_slot_destination_at_offset(site_id: StringName, slot: int, offset: Vector2) -> Vector2:
+	var marker: Node2D = $WorksiteMarkers.get_node(NodePath(str(site_id)))
+	var movement: Vector2 = marker.get_parent().global_transform.basis_xform(offset - resource_site_offset(site_id))
+	return site_slot_destination(site_id, slot) + movement
+
 func site_approach_task(site_id: StringName, id: String, day: int) -> String:
 	var job: Dictionary = daily.jobs[site_id]
 	return "%s:%d:%d" % [job.order, int(job.starts[id]), day]
@@ -468,7 +653,7 @@ func _exit_tree() -> void:
 			session.cancel()
 		var snapshot: Dictionary = {"day": TimeComponentManager.current_day, "sites": {}, "storages": {}, "ground": [], "pending_output": {}, "pending_progress": {}}
 		for id: StringName in sites:
-			snapshot.sites[id] = sites[id].stock
+			snapshot.sites[id] = {"stock": sites[id].stock, "offset": resource_site_offset(id)} if finite_resource_sites else sites[id].stock
 		for id: StringName in storage_destinations:
 			var endpoint: Node = get_node_or_null(storage_destinations[id])
 			if endpoint != null:
@@ -488,10 +673,18 @@ func _restore_resource_stock() -> void:
 	var snapshot: Dictionary = WorkStateRuntime.get_meta(RESOURCE_STOCK_META, {})
 	if snapshot.is_empty():
 		return
-	if int(snapshot.day) == TimeComponentManager.current_day:
-		for id: StringName in sites:
-			if snapshot.sites.has(id):
-				sites[id].stock = int(snapshot.sites[id])
+	var saved_offsets: Dictionary = {}
+	for id: StringName in sites:
+		if not snapshot.sites.has(id):
+			continue
+		var record: Variant = snapshot.sites[id]
+		if finite_resource_sites and record is Dictionary and record.has("stock") and resource_offset_valid(record.get("offset", Vector2.ZERO)):
+			sites[id].stock = int(record.stock)
+			saved_offsets[str(id)] = record
+		elif int(snapshot.day) == TimeComponentManager.current_day and record is int:
+			sites[id].stock = int(record)
+	if not saved_offsets.is_empty():
+		restore_resource_offsets(saved_offsets)
 	for id: StringName in storage_destinations:
 		if snapshot.storages.has(id):
 			var storage: Node = get_node(storage_destinations[id]).get_storage()

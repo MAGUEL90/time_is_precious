@@ -421,7 +421,7 @@ func status(site_id: StringName) -> String:
 	if minute < SHIFT_START or minute >= SHIFT_END:
 		return "Resting until 07:00"
 	if sites[site_id].stock <= 0:
-		return "Waiting for resources. Returning tomorrow."
+		return "Deposit depleted; searching for a new site." if sites[site_id].finite_resource else "Waiting for resources. Returning tomorrow."
 	for id: String in jobs[site_id].ids:
 		if activity(site_id, id) == WorkerData.WorkStatus.TRAVELLING:
 			return "Workers travelling to worksite."
@@ -492,7 +492,8 @@ func tick() -> void:
 	var current_day: int = current / 1440
 	if current_day != last_stock_day:
 		for session in sites.values():
-			session.stock = rng.randi_range(session.daily_stock_min if session.daily_stock_min >= 0 else stock_min, session.daily_stock_max if session.daily_stock_max >= 0 else stock_max)
+			if not session.finite_resource:
+				session.stock = rng.randi_range(session.daily_stock_min if session.daily_stock_min >= 0 else stock_min, session.daily_stock_max if session.daily_stock_max >= 0 else stock_max)
 		last_stock_day = current_day
 	for site_id: Variant in pending_output.keys():
 		_settle_pending_output(StringName(site_id))

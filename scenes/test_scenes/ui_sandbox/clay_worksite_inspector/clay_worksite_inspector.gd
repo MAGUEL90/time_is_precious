@@ -47,9 +47,18 @@ var _owns_pause: bool = false
 var _preview_provider: Callable
 var _scene_panel_sizes: Dictionary = {}
 var _panel_fit_queued: bool = false
+var reserve_label: Label
 
 func _ready() -> void:
 	hide()
+	reserve_label = Label.new()
+	reserve_label.name = "ReserveLabel"
+	reserve_label.theme_type_variation = &"HudLabelShortcut"
+	reserve_label.add_theme_font_size_override("font_size", 6)
+	reserve_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var main_box: VBoxContainer = $Center/TextureWindow/Margin/MainVBox
+	main_box.add_child(reserve_label)
+	main_box.move_child(reserve_label, 1)
 	_build_progress_panel()
 	_build_remove_confirmation()
 	progress_button.pressed.connect(func(): _show_progress(true))
@@ -250,6 +259,12 @@ func _request_work() -> void:
 func _refresh_preview() -> void:
 	if not visible:
 		return
+	if _preview_provider.is_valid():
+		var reserve: Dictionary = _preview_provider.call(get_duration_minutes())
+		reserve_label.visible = bool(reserve.get("finite_resource", false))
+		reserve_label.text = "Remaining: %d / %d" % [int(reserve.get("stock", 0)), int(reserve.get("deposit_capacity", 0))]
+	else:
+		reserve_label.hide()
 	if _progress_open:
 		_refresh_progress_rows()
 		return

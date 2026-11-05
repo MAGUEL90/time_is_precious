@@ -13,6 +13,10 @@ var minutes_per_unit: float = MINUTES_PER_CLAY
 var daily_stock_min: int = -1
 var daily_stock_max: int = -1
 var stock: int = INITIAL_STOCK
+## Production maps can opt into exhaustible deposits. Prototype fixtures retain
+## their existing daily replenishment unless they explicitly opt in.
+var finite_resource: bool = false
+var deposit_capacity: int = 0
 var working: bool = false
 var participants: Array[String] = []
 var reserved_slots: Callable
@@ -82,7 +86,7 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 			if not participant_unavailable_reason(id).is_empty():
 				reason = "Selected worker is unavailable."
 				break
-	return {"units": units, "minutes": minutes, "duration": requested_minutes, "energy_start": forecast.energy_start, "energy_end": forecast.energy_end, "stock": stock, "reason": reason,
+	return {"units": units, "minutes": minutes, "duration": requested_minutes, "energy_start": forecast.energy_start, "energy_end": forecast.energy_end, "stock": stock, "finite_resource": finite_resource, "deposit_capacity": deposit_capacity, "reason": reason,
 		"to_bag": mini(units, capacity) if includes_player else 0,
 		"to_ground": maxi(units - capacity, 0) if includes_player else units,
 		"worker_capacity": WORKER_CAPACITY, "worker_count": participants.size(),

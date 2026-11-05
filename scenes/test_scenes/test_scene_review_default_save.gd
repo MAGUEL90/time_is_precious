@@ -98,11 +98,11 @@ func _run() -> void:
 		_expect(bool(house.start_clearing([] as Array[String], true).get("success", false)), "Player begins clearing.")
 		_expect(TimeComponentManager.advance_minutes(30), "Thirty clearing minutes advance.")
 		house.interrupt_player_work()
-		_expect(house.clearing_remaining == 150 and marker.visible and footprint.get_used_cells().size() == 4, "The partial job keeps its pre-cleaning visual.")
+		_expect(house.clearing_remaining == 150 and marker.visible and footprint.get_used_cells().size() == 13, "The partial job keeps the authored rubble and plot border visible.")
 		_expect(store.save_checkpoint() and FileAccess.file_exists(SAVE), "The authored-map checkpoint saves: " + store.last_error)
 	elif phase == "read":
 		_expect(FileAccess.get_file_as_bytes(SAVE) == bytes_before and house.clearing_remaining == 150
-			and marker.visible and footprint.get_used_cells().size() == 4,
+			and marker.visible and footprint.get_used_cells().size() == 13,
 			"Continue restores the partial house without rewriting the save.")
 		var player: Player = city.get_node("YSortWorld/Player")
 		city.get_node("YSortWorld/HomeDoor")._on_body_entered(player)

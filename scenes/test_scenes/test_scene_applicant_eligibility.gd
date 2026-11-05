@@ -13,8 +13,9 @@ func _run() -> void:
 	_test_stale_single_hire_and_visibility()
 	_test_stale_batch_is_atomic()
 	_test_unemployed_recovery_and_paid_rehire()
-	_test_legacy_hauler_is_not_recruited()
-	_test_legacy_hauler_does_not_reapply()
+	_test_hauler_recruitment()
+	_test_hauler_reapplies()
+	_test_hauler_migration_preserves_workers()
 	_test_empty_board_guidance()
 	print("ApplicantEligibilityTest: %s (%d checks failed)" % ["PASS" if failures == 0 else "FAIL", failures])
 	get_tree().quit(0 if failures == 0 else 1)
@@ -32,7 +33,7 @@ func _test_empty_board_guidance() -> void:
 	var hint: String = board._get_empty_state_message()
 	_expect(hint.contains("Food") and hint.contains("Clothing") and hint.contains("Shelter") and hint.contains("50%"), "An unhappy recruitable resident gets the recovery guidance.")
 	resident.profession = WorkerData.Profession.HAULER
-	_expect(board._get_empty_state_message() == "No applicants available.", "A legacy Hauler alone does not promise a recruitable applicant.")
+	_expect(board._get_empty_state_message().contains("50%"), "An unhappy Hauler receives the same recovery guidance.")
 	resident.profession = WorkerData.Profession.LABORER
 	resident.employment_status = CitizenData.EmploymentStatus.HIRED
 	_expect(board._get_empty_state_message() == "No applicants available.", "A low-satisfaction worker already hired does not trigger misleading applicant guidance.")
@@ -159,30 +160,28 @@ func _test_unemployed_recovery_and_paid_rehire() -> void:
 		and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - FIXTURE_RATE,
 		"A repeated hire neither succeeds nor charges again.")
 
-func _test_legacy_hauler_is_not_recruited() -> void:
+func _test_hauler_recruitment() -> void:
 	_reset_fixture()
 	var laborer: CitizenData = _add_applicant("valid_laborer")
-	var legacy: CitizenData = _add_resident("legacy_hauler", 0.8)
-	legacy.profession = WorkerData.Profession.HAULER
-	legacy.employment_status = CitizenData.EmploymentStatus.APPLICANT
-	_expect(legacy.can_be_hired() and WorkerDatabase.get_contract_price(legacy.profession, 3) == FIXTURE_RATE,
-		"The old applicant is otherwise eligible and its legacy contract price remains available.")
-	_expect(not CitizenManager.get_all_applicants().has(legacy) and CitizenManager.get_all_applicants().has(laborer),
-		"An old Hauler applicant stays in the population but is absent from the board list.")
-	_expect(WorkerDatabase.hire_applicant(legacy.citizen_id) == null,
-		"A direct single hire rejects an otherwise eligible legacy Hauler.")
-	for ids: PackedStringArray in [PackedStringArray([laborer.citizen_id, legacy.citizen_id]), PackedStringArray([legacy.citizen_id, laborer.citizen_id])]:
-		_expect(WorkerDatabase.hire_applicants(ids).is_empty(), "Mixed batches reject a Hauler in either order.")
-		_expect(Inventory.items.get("shekel", 0) == FIXTURE_WALLET and WorkerDatabase.workers_by_id.is_empty()
-			and laborer.employment_status == CitizenData.EmploymentStatus.APPLICANT
-			and legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT,
-			"Rejected single and batch hires preserve funds, workers and both citizen records.")
-	var hired: Array[WorkerData] = WorkerDatabase.hire_applicants(PackedStringArray([laborer.citizen_id]))
-	_expect(hired.size() == 1 and hired[0].profession == WorkerData.Profession.LABORER
-		and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - FIXTURE_RATE,
-		"The normal Laborer hire still succeeds and charges exactly once.")
+	var hauler: CitizenData = _add_resident("legacy_hauler", 0.8)
+	hauler.profession = WorkerData.Profession.HAULER
+	hauler.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	_expect(CitizenManager.get_all_applicants().has(hauler) and CitizenManager.get_all_applicants().has(laborer),
+		"Both Laborer and legacy Hauler applicants appear when eligible.")
+	hauler.satisfaction = 0.49
+	for ids: PackedStringArray in [PackedStringArray([laborer.citizen_id, hauler.citizen_id]), PackedStringArray([hauler.citizen_id, laborer.citizen_id])]:
+		_expect(WorkerDatabase.hire_applicants(ids).is_empty(), "Mixed batches reject a stale Hauler in either order.")
+		_expect(Inventory.items.get("shekel", 0) == FIXTURE_WALLET and WorkerDatabase.workers_by_id.is_empty(),
+			"A rejected mixed batch changes neither wallet nor worker roster.")
+	hauler.satisfaction = 0.8
+	var hired: Array[WorkerData] = WorkerDatabase.hire_applicants(PackedStringArray([laborer.citizen_id, hauler.citizen_id]))
+	_expect(hired.size() == 2 and hired[0].profession == WorkerData.Profession.LABORER and hired[1].profession == WorkerData.Profession.HAULER
+		and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - 2 * FIXTURE_RATE,
+		"An eligible mixed hire charges both contracts exactly once.")
+	_expect(WorkerDatabase.hire_applicant(hauler.citizen_id) == null and Inventory.items.get("shekel", 0) == FIXTURE_WALLET - 2 * FIXTURE_RATE,
+		"Repeated hire does not debit again.")
 
-func _test_legacy_hauler_does_not_reapply() -> void:
+func _test_hauler_reapplies() -> void:
 	_reset_fixture()
 	var citizen: CitizenData = _add_resident("former_hauler", CitizenData.MIN_APPLICANT_SATISFACTION)
 	citizen.profession = WorkerData.Profession.HAULER
@@ -191,11 +190,41 @@ func _test_legacy_hauler_does_not_reapply() -> void:
 	archived.profession = WorkerData.Profession.HAULER
 	archived.profession_xp = 17
 	WorkerDatabase.dismissed_workers[citizen.citizen_id] = archived
-	_expect(not CitizenManager.register_applicant(citizen.citizen_id, WorkerData.Profession.HAULER),
-		"An old Hauler cannot register a new application directly.")
-	_expect(CitizenManager.evaluate_daily_applications() == 0 and CitizenManager.evaluate_daily_applications() == 0,
-		"Repeated daily evaluations do not re-register an old Hauler at 50%.")
-	_expect(citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
-		and citizen.profession == WorkerData.Profession.HAULER and CitizenManager.get_citizen(citizen.citizen_id) == citizen
-		and WorkerDatabase.dismissed_workers.get(citizen.citizen_id) == archived and archived.profession_xp == 17,
-		"The former worker remains an unemployed citizen with the original profession and archived XP.")
+	_expect(CitizenManager.evaluate_daily_applications() == 1 and CitizenManager.evaluate_daily_applications() == 0
+		and CitizenManager.get_all_applicants().has(citizen), "A recovered former Hauler reapplies once at the normal threshold.")
+	var hired: WorkerData = WorkerDatabase.hire_applicant(citizen.citizen_id)
+	_expect(hired == archived and hired.profession_xp == 17 and hired.profession == WorkerData.Profession.HAULER,
+		"Paid Hauler rehire preserves archived profession and XP.")
+	_expect(Inventory.items.get("shekel", 0) == FIXTURE_WALLET - FIXTURE_RATE and not WorkerDatabase.dismissed_workers.has(citizen.citizen_id),
+		"Rehire debits the contract once and removes the archive entry.")
+
+func _test_hauler_migration_preserves_workers() -> void:
+	_reset_fixture()
+	var starters = preload("res://scenes/content_scene/startup/initial_worksites.gd")
+	var person: CitizenData = _add_resident(starters.HAULER_APPLICANT_ID, 0.8)
+	var existing := WorkerData.new()
+	existing.worker_id = person.citizen_id
+	existing.profession = WorkerData.Profession.LABORER
+	existing.profession_xp = 17
+	person.employment_status = CitizenData.EmploymentStatus.HIRED
+	WorkerDatabase.workers_by_id[person.citizen_id] = existing
+	starters.ensure_city_hauler_applicant()
+	var hauler: CitizenData = CitizenManager.get_citizen(starters.CITY_HAULER_APPLICANT_ID)
+	_expect(person.profession == WorkerData.Profession.LABORER and existing.profession == WorkerData.Profession.LABORER and existing.profession_xp == 17,
+		"An already-hired Laborer is never converted or stripped of progress.")
+	_expect(hauler != null and hauler.profession == WorkerData.Profession.HAULER and CitizenManager.get_all_applicants().has(hauler),
+		"A separate Hauler applicant is added when an old save has none.")
+	var count: int = CitizenManager.citizens_by_id.size()
+	starters.ensure_city_hauler_applicant()
+	_expect(CitizenManager.citizens_by_id.size() == count, "Repeated migration does not duplicate the candidate.")
+	if hauler != null:
+		hauler.population_status = CitizenData.PopulationStatus.LEFT_CITY
+		starters.ensure_city_hauler_applicant()
+		_expect(CitizenManager.get_citizen(hauler.citizen_id) == hauler and hauler.population_status == CitizenData.PopulationStatus.LEFT_CITY,
+			"A departed candidate is not silently recreated.")
+	CitizenManager.citizens_by_id.erase(starters.CITY_HAULER_APPLICANT_ID)
+	person.profession = WorkerData.Profession.HAULER
+	existing.profession = WorkerData.Profession.HAULER
+	starters.ensure_city_hauler_applicant()
+	_expect(CitizenManager.get_citizen(starters.CITY_HAULER_APPLICANT_ID) == null and existing.profession_xp == 17,
+		"A pre-existing legacy Hauler prevents a duplicate and keeps XP.")

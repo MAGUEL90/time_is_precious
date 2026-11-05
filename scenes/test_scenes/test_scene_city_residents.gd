@@ -3,6 +3,7 @@ extends Node
 const MENU: PackedScene = preload("res://scenes/ui/start_menu/start_menu.tscn")
 const FIRST_ID: String = "initial_workshop_laborer"
 const SECOND_ID: String = "initial_worksite_hauler"
+const HAULER_ID: String = "initial_city_storage_hauler"
 const EXTRA_ID: String = "resident_visibility_fixture"
 const SAVE_PATH: String = "user://city_resident_test/checkpoint.json"
 var launched: bool = false
@@ -56,17 +57,17 @@ func _run() -> void:
 	for person: CitizenData in residents:
 		print("RESIDENT_START_PERSON id=", person.citizen_id, " satisfaction=", person.satisfaction, " employment=", person.employment_status)
 	_expect(TimeComponentManager.is_processing() and TimeComponentManager.current_day == 0 and CitizenNeedsManager.last_processed_day == -1, "Day-zero startup runs the clock without settling daily needs.")
-	_expect(residents.size() == 2 and applicants.size() == 2, "The original residents are eligible applicants on day zero.")
+	_expect(residents.size() == 3 and applicants.size() == 3, "The two Laborers and Hauler are eligible on day zero.")
 	await _capture("day0-city")
 	var board: JobBoard = city.get_node("YSortWorld/InitialWorksites/JobBoard")
 	board.on_player_interact(city.get_node("YSortWorld/Player"))
-	_expect(board.job_board_ui != null and board.job_board_ui.visible and board.job_board_ui.cards.size() == 2, "The real Job Board displays both cards without any wallet grant.")
+	_expect(board.job_board_ui != null and board.job_board_ui.visible and board.job_board_ui.cards.size() == 3, "The real Job Board displays all three cards without any wallet grant.")
 	await _capture("day0-board")
 	if board.job_board_ui != null:
 		board.job_board_ui.close()
 	var visuals: Node = city.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
 	var population_label: Label = city.get_node("TopHUD").population_label
-	_expect(visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID), "Both actual residents have world actors.")
+	_expect(visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID) and visuals.actors.has(HAULER_ID), "All initial residents have world actors.")
 	_expect(visuals.actors.size() == residents.size() and CitizenNeedsManager.get_daily_shelter_capacity_need() == residents.size() and population_label.text == str(residents.size()), "The world, HUD and resident need count agree on day zero.")
 	for person: CitizenData in residents:
 		_expect(visuals.actors.has(person.citizen_id) and visuals.actors[person.citizen_id].is_visible_in_tree(), "Each initial resident is visibly represented by identity.")
@@ -81,13 +82,13 @@ func _run() -> void:
 	extra.visual_profile.skin_tone = "dark"
 	extra.visual_profile.hair_style = "brown_female_01"
 	CitizenManager.add_citizen(extra)
-	_expect(visuals.actors.size() == 3 and visuals.actors.has(EXTRA_ID) and visuals.actors[EXTRA_ID].is_visible_in_tree(), "An ineligible unemployed resident appears without an application.")
+	_expect(visuals.actors.size() == 4 and visuals.actors.has(EXTRA_ID) and visuals.actors[EXTRA_ID].is_visible_in_tree(), "An ineligible unemployed resident appears without an application.")
 	if visuals.actors.has(EXTRA_ID):
 		var extra_actor: Node = visuals.actors[EXTRA_ID]
 		_expect(extra_actor.skin_tone == "dark" and extra_actor.hair_style == "brown_female_01", "The resident visual uses the person's own profile.")
-	_expect(CitizenNeedsManager.get_daily_shelter_capacity_need() == 3 and population_label.text == "3" and CitizenManager.get_all_applicants().size() == 2, "Population counts the additional resident once, while the Job Board does not offer them.")
+	_expect(CitizenNeedsManager.get_daily_shelter_capacity_need() == 4 and population_label.text == "4" and CitizenManager.get_all_applicants().size() == 3, "Population counts the additional resident once, while the Job Board does not offer them.")
 	_expect(CitizenManager.leave_city(EXTRA_ID) and not visuals.actors.has(EXTRA_ID), "A departed citizen is removed from the world immediately.")
-	_expect(CitizenManager.get_all_residents().size() == 2 and CitizenNeedsManager.get_daily_shelter_capacity_need() == 2 and population_label.text == "2", "Departure immediately reduces the actual population, HUD and need.")
+	_expect(CitizenManager.get_all_residents().size() == 3 and CitizenNeedsManager.get_daily_shelter_capacity_need() == 3 and population_label.text == "3", "Departure immediately reduces the actual population, HUD and need.")
 
 	# Advance the real clock over midnight with no supplies. Player protection is
 	# test-only and does not affect citizen needs, payroll or applicant rules.
@@ -100,10 +101,10 @@ func _run() -> void:
 	var second: CitizenData = CitizenManager.get_citizen(SECOND_ID)
 	print("RESIDENT_DAY1 day=", TimeComponentManager.current_day, " needs_day=", CitizenNeedsManager.last_processed_day, " satisfaction=", first.satisfaction, ",", second.satisfaction, " applicants=", CitizenManager.get_all_applicants().size())
 	_expect(TimeComponentManager.current_day == 1 and CitizenNeedsManager.last_processed_day == 1 and is_equal_approx(first.satisfaction, 0.5) and is_equal_approx(second.satisfaction, 0.5), "One unmet day lowers the starting residents from 55% to 50%.")
-	_expect(CitizenManager.get_all_applicants().size() == 2, "Both starters remain eligible through the first merchant visit.")
+	_expect(CitizenManager.get_all_applicants().size() == 3, "All starters remain eligible through the first merchant visit.")
 	_expect(TimeComponentManager.advance_minutes(1440), "The real clock reaches the second daily settlement.")
 	_expect(TimeComponentManager.current_day == 2 and CitizenNeedsManager.last_processed_day == 2 and is_equal_approx(first.satisfaction, 0.45) and is_equal_approx(second.satisfaction, 0.45), "A second unmet day lowers both starting residents to 45%.")
-	_expect(CitizenManager.get_all_applicants().is_empty() and CitizenManager.get_all_residents().size() == 2 and visuals.actors.size() == 2, "Both ineligible applicants remain real, visible residents on day two.")
+	_expect(CitizenManager.get_all_applicants().is_empty() and CitizenManager.get_all_residents().size() == 3 and visuals.actors.size() == 3, "All ineligible applicants remain real, visible residents on day two.")
 	for person: CitizenData in CitizenManager.get_all_residents():
 		_expect(visuals.actors.has(person.citizen_id) and visuals.actors[person.citizen_id].is_visible_in_tree(), "Day-two residents remain visible despite ineligibility.")
 	board.on_player_interact(player)
@@ -139,7 +140,7 @@ func _run() -> void:
 	ui.applicant_list.select(0)
 	ui.hire_button.pressed.emit()
 	ui.confirm_hire_button.pressed.emit()
-	_expect(WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors[FIRST_ID] == first_actor and visuals.actors.size() == 2, "Hiring retains exactly the existing resident visual.")
+	_expect(WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors[FIRST_ID] == first_actor and visuals.actors.size() == 3, "Hiring retains exactly the existing resident visual.")
 	ui.close()
 	await get_tree().process_frame
 	var construction: Node = city.get_node("YSortWorld/CitizenHousePlot").construction
@@ -150,29 +151,29 @@ func _run() -> void:
 	var start: Dictionary = construction.start_build(ids)
 	_expect(bool(start.get("success", false)), "The paid resident can be assigned to build: " + str(start))
 	await get_tree().process_frame
-	_expect(visuals.actors.get(FIRST_ID) == first_actor and CitizenManager.get_all_residents().size() == 2 and visuals.actors.size() == 2, "Assignment reuses the same identity without changing population.")
+	_expect(visuals.actors.get(FIRST_ID) == first_actor and CitizenManager.get_all_residents().size() == 3 and visuals.actors.size() == 3, "Assignment reuses the same identity without changing population.")
 	var worker: WorkerData = WorkerDatabase.get_worker_data(FIRST_ID)
 	_expect(worker != null and not worker.physical_approach.is_empty(), "The assigned resident uses the normal physical approach.")
 
 	store.disk.path = SAVE_PATH.get_base_dir().path_join("assigned.json")
 	_expect(store.save_checkpoint(), "The real city saves its existing schema: " + store.last_error)
 	_expect(CitizenManager.leave_city(SECOND_ID) and not visuals.actors.has(SECOND_ID), "An unsaved departure updates the world.")
-	_expect(population_label.text == "1", "The HUD immediately reflects the unsaved departure.")
+	_expect(population_label.text == "2", "The HUD immediately reflects the unsaved departure.")
 	_expect(store.load_checkpoint(), "The isolated city checkpoint loads: " + store.last_error)
 	for frame: int in range(4):
 		await get_tree().process_frame
-	_expect(CitizenManager.get_all_residents().size() == 2 and population_label.text == "2" and visuals.actors.size() == 2 and visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID), "Load updates the HUD and rebuilds exactly one visual per restored resident.")
+	_expect(CitizenManager.get_all_residents().size() == 3 and population_label.text == "3" and visuals.actors.size() == 3 and visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID), "Load updates the HUD and rebuilds exactly one visual per restored resident.")
 	worker = WorkerDatabase.get_worker_data(FIRST_ID)
 	_expect(worker != null and worker.is_reserved() and not worker.physical_approach.is_empty(), "Load retains the assigned worker and commute.")
 	_expect(store.load_checkpoint(), "The same checkpoint can be loaded again: " + store.last_error)
 	for frame: int in range(4):
 		await get_tree().process_frame
-	_expect(visuals.actors.size() == 2 and visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID), "Repeated load does not duplicate resident visuals.")
+	_expect(visuals.actors.size() == 3 and visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID) and visuals.actors.has(HAULER_ID), "Repeated load does not duplicate resident visuals.")
 	_expect(visuals.plot_presence.tracked.has(FIRST_ID), "The assigned worker is tracked by the plot visual owner.")
 	store.disk.path = SAVE_PATH
 	_expect(store.load_checkpoint(), "The earlier idle-resident checkpoint loads: " + store.last_error)
 	for frame: int in range(4):
 		await get_tree().process_frame
-	_expect(not WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors.size() == 2 and visuals.actors.has(FIRST_ID) and visuals.actors[FIRST_ID].is_visible_in_tree(), "Loading an idle resident after an assigned worker leaves no stale hidden work visual.")
+	_expect(not WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors.size() == 3 and visuals.actors.has(FIRST_ID) and visuals.actors[FIRST_ID].is_visible_in_tree(), "Loading an idle resident after an assigned worker leaves no stale hidden work visual.")
 	print("CityResidentTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
 	get_tree().quit(0 if failures == 0 else 1)

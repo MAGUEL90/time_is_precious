@@ -8,6 +8,7 @@ const PALMS = preload("res://scenes/new_scenes/save_game/city_save_palms.gd")
 const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sources.gd")
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
+const STARTERS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
 const VERSION: int = 16
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
@@ -298,6 +299,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not _sites.migrate_legacy(raw.worksites, worksite(map)) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
 			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
+	_stage_city_hauler_applicant(raw)
 	if migrated_worksites or version < VERSION:
 		# Do not apply a legacy state that cannot be written by the existing
 		# bounded codec/disk format. The original checkpoint remains untouched.
@@ -310,6 +312,36 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail("Migrated checkpoint exceeds the existing save size limit.")
 	prepared = raw
 	return true
+
+## Stage the requested candidate without changing live state or save bytes.
+## A nearly full valid checkpoint remains loadable even if one more citizen
+## cannot fit in the existing bounded codec or disk format.
+func _stage_city_hauler_applicant(raw: Dictionary) -> void:
+	var people: Dictionary = raw.citizens.citizens_by_id
+	var id: String = STARTERS.CITY_HAULER_APPLICANT_ID
+	if people.has(id) or raw.workers.workers_by_id.has(id) or raw.workers.dismissed_workers.has(id) or people.size() >= VALUES.MAX_COLLECTION_SIZE:
+		return
+	for person: CitizenData in people.values():
+		if person.population_status == CitizenData.PopulationStatus.RESIDENT and person.profession == WorkerData.Profession.HAULER:
+			return
+	var candidate := CitizenData.new()
+	candidate.citizen_id = id
+	candidate.display_name = STARTERS.CITY_HAULER_NAME
+	candidate.population_status = CitizenData.PopulationStatus.RESIDENT
+	candidate.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	candidate.profession = WorkerData.Profession.HAULER
+	candidate.satisfaction = STARTERS.INITIAL_APPLICANT_SATISFACTION
+	var original_citizens: Dictionary = raw.citizens
+	var staged_citizens: Dictionary = original_citizens.duplicate()
+	var staged_people: Dictionary = people.duplicate()
+	staged_people[id] = candidate
+	staged_citizens.citizens_by_id = staged_people
+	raw.citizens = staged_citizens
+	var codec = VALUES.new()
+	var encoded: Variant = codec.encode(raw)
+	var document: Dictionary = {"schema_version": VERSION, "scenario": "city_mvp", "location": prepared_location, "state": encoded}
+	if not codec.error.is_empty() or JSON.stringify(document, "\t", true, true).to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
+		raw.citizens = original_citizens
 
 func _stage_legacy_stone_offer(raw: Dictionary, merchant: Node) -> bool:
 	# Preserve an ongoing legacy visit exactly: the new offer has zero stock
@@ -810,7 +842,12 @@ func _validate_approaches(raw: Dictionary, map: Node) -> bool:
 					return fail("Worker physical approach has no authored site marker.")
 				var left_entry: Vector2 = marker.global_position + Vector2(-10, 8)
 				var right_entry: Vector2 = marker.global_position + Vector2(10, 8)
-				if worksite(map).has_method("site_slot_destination"):
+				if worksite(map).has_method("site_slot_destination_at_offset"):
+					var saved_site: Dictionary = raw.worksites.sites.get(approach.owner, {})
+					var offset: Vector2 = saved_site.get("offset", Vector2.ZERO)
+					left_entry = worksite(map).site_slot_destination_at_offset(StringName(approach.owner), 0, offset)
+					right_entry = worksite(map).site_slot_destination_at_offset(StringName(approach.owner), 1, offset)
+				elif worksite(map).has_method("site_slot_destination"):
 					left_entry = worksite(map).site_slot_destination(StringName(approach.owner), 0)
 					right_entry = worksite(map).site_slot_destination(StringName(approach.owner), 1)
 				if approach.target.distance_to(left_entry) > 0.1 and approach.target.distance_to(right_entry) > 0.1:

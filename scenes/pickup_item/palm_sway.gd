@@ -3,7 +3,7 @@ extends Node
 ## Render-only motion. The palm source, pickup locations and save identity never move.
 const SWAY_SHADER: Shader = preload("res://scenes/pickup_item/palm_sway.gdshader")
 const PERIOD: float = 5.0
-const AMPLITUDE_PIXELS: float = 2.0
+const AMPLITUDE_PIXELS: float = 1.0
 
 var sprite: Sprite2D
 var original_material: Material

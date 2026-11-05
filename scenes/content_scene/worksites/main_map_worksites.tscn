@@ -21,6 +21,7 @@
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_runtime")
+finite_resource_sites = true
 player_path = NodePath("../Player")
 inventory_ui_path = NodePath("../../InventoryUI")
 
