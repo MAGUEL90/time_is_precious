@@ -3,11 +3,16 @@ extends RefCounted
 ## Scene-local snapshot adapter for the authored main-city worksite map.
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
-const SCHEMA_VERSION: int = 5
+const SCHEMA_VERSION: int = 6
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
 const MAX_POSITION: float = 1000000.0
+const MIN_RESPAWN_DELAY_MINUTES: int = 2880
+const MAX_RESPAWN_DELAY_MINUTES: int = 4320
+const MAX_RESPAWN_MINUTE: int = 9223372036854775807
+const LEGACY_SITE_IDS: Array[String] = ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]
+const NEW_SITE_IDS: Array[String] = ["ClaySiteB", "WoodSiteB", "WoodSiteC", "ReedSiteB"]
 
 var error: String = ""
 var _restored_storage_notifications: Array[WeakRef] = []
@@ -83,6 +88,17 @@ func capture(worksite: Node) -> Dictionary:
 		# the codec's file-size limit loadable without changing their meaning.
 		if offset != Vector2.ZERO:
 			site_record["offset"] = offset
+		if int(session.stock) == 0 and bool(session.get("finite_resource")):
+			if not _has_property(session, "respawn_started_at") or not _has_property(session, "respawn_due_at"):
+				_fail("A depleted finite worksite has no saved respawn timer.")
+				return {}
+			var started_at: Variant = session.get("respawn_started_at")
+			var due_at: Variant = session.get("respawn_due_at")
+			if not _valid_respawn_pair(started_at, due_at, int(worksite.daily.now())):
+				_fail("A depleted finite worksite has an invalid respawn timer.")
+				return {}
+			site_record["respawn_started_at"] = started_at
+			site_record["respawn_due_at"] = due_at
 		sites[site_id] = site_record
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
@@ -133,7 +149,7 @@ func capture(worksite: Node) -> Dictionary:
 	return data
 
 
-func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_workers: Dictionary = {}) -> bool:
+func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_workers: Dictionary = {}, checkpoint_minute: int = -1) -> bool:
 	error = ""
 	if not _has_worksite_context(worksite):
 		return _fail("The current worksite map is unavailable.")
@@ -148,7 +164,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		expected_fields.append("legacy_ground")
 	if not _has_exact_keys(data, expected_fields):
 		return _fail("Invalid worksite snapshot fields.")
-	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, 4, SCHEMA_VERSION]:
+	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, 4, 5, SCHEMA_VERSION]:
 		return _fail("Unsupported worksite snapshot version.")
 	for field: String in ["sites", "storages", "jobs", "ledger", "contributions", "productive_days", "routes", "worker_journeys"]:
 		if typeof(data[field]) != TYPE_DICTIONARY:
@@ -161,19 +177,47 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		return _fail("Invalid worksite commute cache day.")
 
 	var site_ids: Dictionary = _site_registry(worksite)
-	if not _same_keys(data.sites, site_ids):
+	var schema_version: int = int(data.schema_version)
+	if schema_version < 6:
+		var legacy_site_ids: Dictionary = {}
+		for site_id: String in LEGACY_SITE_IDS:
+			if not site_ids.has(site_id) or not worksite.sites.has(StringName(site_id)):
+				return _fail("Legacy worksite registry differs from the saved city.")
+			legacy_site_ids[site_id] = true
+		if not _same_keys(data.sites, legacy_site_ids):
+			return _fail("Legacy worksite registry differs from the saved city.")
+	elif not _same_keys(data.sites, site_ids):
 		return _fail("Worksite registry differs from the saved city.")
 	for site_id: String in data.sites:
 		if not data.sites[site_id] is Dictionary:
 			return _fail("Invalid worksite stock record.")
-		var has_offset: bool = data.sites[site_id].has("offset")
-		var fields: Array = ["stock", "offset"] if int(data.schema_version) >= 5 and has_offset else ["stock"]
+		var record: Dictionary = data.sites[site_id]
+		var has_offset: bool = record.has("offset")
+		var has_started_at: bool = record.has("respawn_started_at")
+		var has_due_at: bool = record.has("respawn_due_at")
+		var fields: Array = ["stock"]
+		if schema_version >= 5 and has_offset:
+			fields.append("offset")
+		if schema_version >= 6 and has_started_at and has_due_at:
+			fields.append("respawn_started_at")
+			fields.append("respawn_due_at")
 		if not _has_exact_keys(data.sites[site_id], fields):
 			return _fail("Invalid worksite stock record.")
-		if not _is_count(data.sites[site_id].stock, 0, MAX_COUNT):
+		if not _is_count(record.stock, 0, MAX_COUNT):
 			return _fail("Invalid worksite stock quantity.")
-		if has_offset and (not _is_vector(data.sites[site_id].offset) or not worksite.resource_offset_valid(data.sites[site_id].offset)):
+		if has_offset and (schema_version < 5 or not _is_vector(record.offset) or not worksite.resource_offset_valid(record.offset, StringName(site_id))):
 			return _fail("Invalid worksite deposit location.")
+		if schema_version >= 6:
+			var session = worksite.sites[StringName(site_id)]
+			var finite_resource: bool = bool(session.get("finite_resource"))
+			if has_started_at != has_due_at:
+				return _fail("A worksite respawn timer must include both timestamps.")
+			if int(record.stock) == 0 and finite_resource:
+				var saved_minute: Variant = checkpoint_minute if checkpoint_minute >= 0 else data.ledger.get("last_tick")
+				if not has_started_at or not _is_count(saved_minute, 0, MAX_COUNT) or not _valid_respawn_pair(record.respawn_started_at, record.respawn_due_at, int(saved_minute)):
+					return _fail("A depleted finite worksite has an invalid respawn timer.")
+			elif has_started_at:
+				return _fail("A worksite respawn timer is only valid for an empty finite deposit.")
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
 	if int(data.schema_version) < 3:
@@ -221,7 +265,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 
 ## Called only on a fully validated staged checkpoint, before applying it.
 ## The original file stays untouched until the player's next successful save.
-func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
+func migrate_legacy(data: Dictionary, worksite: Node, checkpoint_minute: int = -1) -> bool:
 	if int(data.schema_version) >= SCHEMA_VERSION:
 		return true
 	var previous_version: int = int(data.schema_version)
@@ -259,6 +303,32 @@ func migrate_legacy(data: Dictionary, worksite: Node) -> bool:
 			if not _stage_old_output(data, worksite, site_id, int(data.pending_output[site_id])):
 				return false
 		data.pending_output.clear()
+	# A legacy zero has no known depletion instant. Give finite deposits the
+	# conservative maximum delay from the saved clock, without consuming RNG.
+	if checkpoint_minute < 0 or checkpoint_minute > MAX_RESPAWN_MINUTE - MAX_RESPAWN_DELAY_MINUTES:
+		for site_id: String in data.sites:
+			var session = worksite.sites[StringName(site_id)]
+			if int(data.sites[site_id].stock) == 0 and bool(session.get("finite_resource")):
+				return _fail("A legacy depleted deposit has no safe checkpoint time.")
+	for site_id: String in data.sites:
+		var session = worksite.sites[StringName(site_id)]
+		var legacy_site: Dictionary = data.sites[site_id]
+		if int(legacy_site.stock) == 0 and bool(session.get("finite_resource")):
+			legacy_site["respawn_started_at"] = checkpoint_minute
+			legacy_site["respawn_due_at"] = checkpoint_minute + MAX_RESPAWN_DELAY_MINUTES
+	# New authored sites are initialized only when present. Capacity comes from
+	# the configured runtime session; no stock is added to city or player stores.
+	var site_ids: Dictionary = _site_registry(worksite)
+	for site_id: String in NEW_SITE_IDS:
+		if not site_ids.has(site_id) or not worksite.sites.has(StringName(site_id)):
+			continue
+		var session = worksite.sites[StringName(site_id)]
+		var capacity: Variant = session.get("deposit_capacity")
+		if typeof(capacity) != TYPE_INT or int(capacity) <= 0:
+			return _fail("A newly authored finite worksite has no configured deposit capacity.")
+		# Missing from the old file means the new authored origin, even if the
+		# currently running city previously moved this site somewhere else.
+		data.sites[site_id] = {"stock": int(capacity)}
 	# Older deposits had no persistent location. An omitted offset means the
 	# authored marker, so their stock and serialized size are preserved.
 	data.schema_version = SCHEMA_VERSION
@@ -369,7 +439,12 @@ func restore(data: Dictionary, worksite: Node) -> void:
 
 	var daily = worksite.daily
 	for site_id: String in data.sites:
-		worksite.sites[StringName(site_id)].stock = int(data.sites[site_id].stock)
+		var session = worksite.sites[StringName(site_id)]
+		var saved_site: Dictionary = data.sites[site_id]
+		session.stock = int(saved_site.stock)
+		if _has_property(session, "respawn_started_at") and _has_property(session, "respawn_due_at"):
+			session.respawn_started_at = int(saved_site.get("respawn_started_at", -1))
+			session.respawn_due_at = int(saved_site.get("respawn_due_at", -1))
 	worksite.restore_resource_offsets(data.sites)
 	for endpoint_id: String in data.storages:
 		var endpoint: StorageDestination = endpoints[endpoint_id]
@@ -945,6 +1020,17 @@ func _same_keys(left: Dictionary, right: Dictionary) -> bool:
 
 func _is_count(value: Variant, minimum: int, maximum: int) -> bool:
 	return typeof(value) == TYPE_INT and int(value) >= minimum and int(value) <= maximum
+
+
+func _valid_respawn_pair(started_at: Variant, due_at: Variant, checkpoint_minute: int) -> bool:
+	if typeof(started_at) != TYPE_INT or typeof(due_at) != TYPE_INT:
+		return false
+	var started: int = int(started_at)
+	var due: int = int(due_at)
+	if started < 0 or started > checkpoint_minute or due < started or due > MAX_RESPAWN_MINUTE:
+		return false
+	var delay: int = due - started
+	return delay >= MIN_RESPAWN_DELAY_MINUTES and delay <= MAX_RESPAWN_DELAY_MINUTES
 
 
 func _is_finite_number(value: Variant) -> bool:

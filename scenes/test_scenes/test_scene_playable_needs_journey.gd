@@ -8,6 +8,7 @@ extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 ## evidence that a person can navigate or discover the route unaided.
 const FIRST: String = "initial_workshop_laborer"
 const SECOND: String = "initial_worksite_hauler"
+const THIRD: String = "initial_city_storage_hauler"
 const JOURNEY_DIR: String = "user://playable_needs_journey"
 var bought_clothes: int = 0
 var deposited_clothes: int = 0
@@ -114,8 +115,25 @@ func _sample_player_conditions(_minute: int) -> void:
 		maximum_player_fatigue = maxf(maximum_player_fatigue, player.fatigue)
 
 
+func _available_site(site_name: String) -> String:
+	var item_id: String = runtime.sites[site_name].item_id
+	var deadline: int = now() + 5 * 1440
+	while not stopped and now() < deadline:
+		if int(runtime.sites[site_name].stock) > 0:
+			return site_name
+		for key: Variant in runtime.sites:
+			if runtime.sites[key].item_id == item_id and int(runtime.sites[key].stock) > 0:
+				return str(key)
+		await upkeep()
+		await wait_minutes(60)
+	_expect(false, "A resource site becomes available again within five game days: " + item_id)
+	return ""
+
 func gather(site_name: String) -> void:
 	await upkeep()
+	if stopped:
+		return
+	site_name = await _available_site(site_name)
 	if stopped:
 		return
 	var site: Node2D = runtime.get_node("WorksiteMarkers/" + site_name)
@@ -139,7 +157,8 @@ func gather(site_name: String) -> void:
 	var day_before: int = TimeComponentManager.current_day
 	await runtime._start_work(180)
 	var result: Dictionary = runtime.last_work_result
-	_expect(result.minutes == 180 and not result.interrupted and int(result.units) > 0, "A normal three-hour work session yields its output: " + site_name)
+	_expect(int(result.minutes) > 0 and int(result.minutes) <= 180 and not result.interrupted and int(result.units) > 0
+		and (int(result.minutes) == 180 or int(runtime.sites[site_name].stock) == 0), "Hourly work yields output and only ends early if the deposit is exhausted: " + site_name)
 	_expect(int(Inventory.items.get(item_id, 0)) - player_before == int(result.to_bag)
 		and _personal_ground_quantity(item_id) - ground_before == int(result.to_ground)
 		and int(result.to_bag) + int(result.to_ground) == int(result.units)
@@ -278,7 +297,11 @@ func _market() -> void:
 	var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 	var reserve: int = 4 if house.phase in ["uncleared", "clearing", "empty"] else 0
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
-	var want: int = mini(stock, maxi(0, 2 - storage.get_clothing_item_count() - int(Inventory.items.get("simple_clothes", 0))))
+	var clothed: int = 0
+	for resident: CitizenData in CitizenManager.get_all_residents():
+		if resident.clothing_fulfilled:
+			clothed += 1
+	var want: int = mini(stock, maxi(0, CitizenManager.get_all_residents().size() - clothed - storage.get_clothing_item_count() - int(Inventory.items.get("simple_clothes", 0))))
 	var wallet: int = int(Inventory.items.get("shekel", 0))
 	var wood_owned: int = int(Inventory.items.get("wood_log", 0))
 	# Selling construction wood is an explicit trade-off if it is the only way
@@ -434,8 +457,8 @@ func _run() -> void:
 		print("NEEDS_JOURNEY_FOOD_SEED ", food_seed, " trees=", index)
 	print("NEEDS_JOURNEY_LOGISTICS: player Hourly output remains personal; Daily worker output belongs to the city")
 	_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "New Game begins without personal resources or hired workers.")
-	_expect(CitizenManager.get_all_residents().size() == 2 and CitizenManager.get_all_applicants().size() == 2, "The normal two residents are initially eligible.")
-	await _check_board(2)
+	_expect(CitizenManager.get_all_residents().size() == 3 and CitizenManager.get_all_applicants().size() == 3, "The three residents, including the Hauler applicant, are initially eligible.")
+	await _check_board(3)
 	var sites: Dictionary = {"wood_log": "WoodSite", "clay_lump": "ClaySiteA", "reed_bundle": "ReedSite"}
 	while not stopped and TimeComponentManager.current_day < 35:
 		await upkeep()
@@ -443,12 +466,13 @@ func _run() -> void:
 			break
 		var first: CitizenData = CitizenManager.get_citizen(FIRST)
 		var second: CitizenData = CitizenManager.get_citizen(SECOND)
-		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, second.satisfaction))
+		var third: CitizenData = CitizenManager.get_citizen(THIRD)
+		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, minf(second.satisfaction, third.satisfaction)))
 		var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 		if not saw_empty_board and WorkerDatabase.is_job_board_open() and CitizenManager.get_all_applicants().is_empty() and first.satisfaction < 0.5 and second.satisfaction < 0.5:
 			await _check_board(0)
 			saw_empty_board = true
-		if house.phase == "built" and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled():
+		if house.phase == "built" and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5 and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled():
 			break
 		await _market()
 		if stopped:
@@ -476,9 +500,10 @@ func _run() -> void:
 	var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 	var first: CitizenData = CitizenManager.get_citizen(FIRST)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND)
+	var third: CitizenData = CitizenManager.get_citizen(THIRD)
 	_expect(saw_empty_board and saw_house_work_without_applicants and house.phase == "built" and CityStockManager.shelter_capacity == 3, "Manual construction makes progress with no applicants or workers, then grants shelter.")
-	_expect(bought_clothes >= 2 and deposited_clothes >= 2 and paid_wood >= 4, "Wood income actually buys and deposits clothing.")
-	_expect(first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and CitizenManager.get_all_applicants().size() >= 2, "Food, clothing and shelter recover both residents and their Job Board eligibility.")
+	_expect(bought_clothes >= 3 and deposited_clothes >= 3 and paid_wood >= 4, "Wood income actually buys and deposits clothing for all three residents.")
+	_expect(first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5 and CitizenManager.get_all_applicants().size() >= 3, "Food, clothing and shelter recover all three residents and their Job Board eligibility.")
 	if expect_zero:
 		_expect(is_zero_approx(minimum_satisfaction), "The selected long-delay fixture actually reaches zero satisfaction before recovering.")
 	if maximum_recovery_day >= 0:
@@ -490,7 +515,7 @@ func _run() -> void:
 	while not WorkerDatabase.is_job_board_open() and not stopped:
 		await upkeep()
 		await wait_minutes(30)
-	await _check_board(2)
+	await _check_board(3)
 	print("NEEDS_JOURNEY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "satisfaction": [first.satisfaction, second.satisfaction], "minimum_satisfaction": minimum_satisfaction, "house_sessions": house_sessions, "harvested": harvested, "harvest_interactions": harvest_interactions, "bought_clothes": bought_clothes, "wood_income": paid_wood, "sleeps": sleeps, "skipped_visit_days": skipped_visit_days, "max_hunger": maximum_player_hunger, "max_fatigue": maximum_player_fatigue}))
 	if audit_material_sources:
 		await _audit_material_sources()

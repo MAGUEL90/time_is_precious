@@ -263,6 +263,11 @@ func _refresh_preview() -> void:
 		var reserve: Dictionary = _preview_provider.call(get_duration_minutes())
 		reserve_label.visible = bool(reserve.get("finite_resource", false))
 		reserve_label.text = "Remaining: %d / %d" % [int(reserve.get("stock", 0)), int(reserve.get("deposit_capacity", 0))]
+		var remaining: int = int(reserve.get("respawn_minutes", -1))
+		if int(reserve.get("stock", 0)) == 0 and remaining > 0:
+			reserve_label.text += "  |  Respawn: %dd %02dh" % [remaining / 1440, (remaining % 1440) / 60]
+		elif int(reserve.get("stock", 0)) == 0 and remaining == 0:
+			reserve_label.text += "  |  Awaiting safe location"
 	else:
 		reserve_label.hide()
 	if _progress_open:

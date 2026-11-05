@@ -217,13 +217,14 @@ func _write_scenario() -> void:
 	_check(session.stock == 0 and total_after == total_before + 1,
 		"Two workers competing for the final unit cannot duplicate or make stock negative")
 
-	# The long stock is a fixture; the next midnight restores authored stock.
+	# The long stock is a fixture; finite deposits do not replenish at midnight.
 	session.stock = 1000
 	var to_1459: int = 14 * 60 + 59 - (runtime.daily.now() % 1440)
 	TimeComponentManager.advance_minutes(to_1459)
 	TimeComponentManager.advance_minutes(1)
 	var minutes_at_close: Dictionary = runtime.daily.minutes_by_worker.duplicate()
 	var output_at_close: int = int(job.stats[IDS[1]].output) + int(job.stats[IDS[2]].output)
+	var stock_at_close: int = session.stock
 	_check(_worker(IDS[1]).current_work_status == WorkerData.WorkStatus.RESTING
 		and _worker(IDS[2]).current_work_status == WorkerData.WorkStatus.RESTING, "Both workers rest at 15:00")
 	TimeComponentManager.advance_minutes(1)
@@ -240,7 +241,7 @@ func _write_scenario() -> void:
 	TimeComponentManager.advance_minutes(16 * 60 + 59)
 	_check(TimeComponentManager.current_day == 21 and TimeComponentManager.current_hour == 8,
 		"The real clock reaches the next day after the midnight settlement")
-	_check(session.stock == 72, "Midnight replenishes authored stock without changing either job")
+	_check(session.stock == stock_at_close, "Midnight preserves the remaining finite stock without changing either job")
 	var outputs_before_walk: Array[int] = [int(job.stats[IDS[1]].output), int(job.stats[IDS[2]].output)]
 	TimeComponentManager.advance_minutes(1)
 	_check(int(job.stats[IDS[1]].output) == outputs_before_walk[0] and int(job.stats[IDS[2]].output) == outputs_before_walk[1],

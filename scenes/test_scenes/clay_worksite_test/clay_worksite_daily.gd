@@ -421,7 +421,12 @@ func status(site_id: StringName) -> String:
 	if minute < SHIFT_START or minute >= SHIFT_END:
 		return "Resting until 07:00"
 	if sites[site_id].stock <= 0:
-		return "Deposit depleted; searching for a new site." if sites[site_id].finite_resource else "Waiting for resources. Returning tomorrow."
+		if not sites[site_id].finite_resource:
+			return "Waiting for resources. Returning tomorrow."
+		var remaining: int = sites[site_id].respawn_due_at - now()
+		if remaining > 0:
+			return "Deposit depleted; respawns in %dd %02dh." % [remaining / 1440, (remaining % 1440) / 60]
+		return "Deposit depleted; waiting for a safe location."
 	for id: String in jobs[site_id].ids:
 		if activity(site_id, id) == WorkerData.WorkStatus.TRAVELLING:
 			return "Workers travelling to worksite."

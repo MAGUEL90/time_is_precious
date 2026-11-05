@@ -34,13 +34,23 @@ func _write_scenario() -> void:
 	var before_last: int = int(city_storage.items.get("wood_log", 0))
 	_check(TimeComponentManager.advance_minutes(1), "Advance both workers against the final unit")
 	_check(site.stock == 0 and int(city_storage.items.get("wood_log", 0)) == before_last + 1, "The shared final unit reaches City Storage exactly once")
+	var due: int = site.respawn_due_at
+	_check(due - site.respawn_started_at >= 2880 and due - site.respawn_started_at <= 4320, "The shared deposit waits 2–3 game days")
 	await get_tree().process_frame
-	await get_tree().process_frame
-	_check(site.stock == 240 and runtime.get_node("WorksiteMarkers/WoodSite").position != old_position, "An exhausted Wood Site appears at a new location")
+	_check(site.stock == 0 and runtime.get_node("WorksiteMarkers/WoodSite").position == old_position, "The deposit stays empty before the deadline")
+	_check(TimeComponentManager.advance_minutes(due - runtime.daily.now()), "Advance to the saved deadline")
+	for i: int in range(4):
+		await get_tree().process_frame
+	_check(site.stock == 24 and runtime.get_node("WorksiteMarkers/WoodSite").position != old_position, "An exhausted Wood Site appears at a temporary location after its deadline")
 	_check(job.ids == IDS.slice(0, 2) and not _worker(IDS[0]).physical_approach.arrived and not _worker(IDS[1]).physical_approach.arrived
 		and _worker(IDS[0]).physical_approach.target != _worker(IDS[1]).physical_approach.target, "Both assigned workers must walk to distinct entries at the replacement site")
 	if failures:
 		return
+	var minute_of_day: int = runtime.daily.now() % 1440
+	if minute_of_day < runtime.daily.SHIFT_START:
+		_check(TimeComponentManager.advance_minutes(runtime.daily.SHIFT_START - minute_of_day), "Reach the next shift before walking")
+	elif minute_of_day >= runtime.daily.SHIFT_END:
+		_check(TimeComponentManager.advance_minutes(1440 - minute_of_day + runtime.daily.SHIFT_START), "Reach the following shift before walking")
 	_walk_until_arrived(IDS.slice(0, 2))
 	first = int(job.stats[IDS[0]].output)
 	second = int(job.stats[IDS[1]].output)

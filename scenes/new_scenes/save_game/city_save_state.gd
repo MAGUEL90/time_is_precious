@@ -261,7 +261,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return fail("Invalid initial supplies.")
 	if not _validate_core(raw, map) or not _validate_people(raw) or not _validate_work(raw, map, int(version)) or not _validate_records(raw):
 		return false
-	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
+	var checkpoint_minute: int = _checkpoint_minute(raw.clock)
+	if not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers, checkpoint_minute):
 		return fail(_sites.error)
 	if not _validate_transport(raw, nodes.transport):
 		return false
@@ -296,7 +297,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	var migrated_worksites: bool = int(raw.worksites.schema_version) < _sites.SCHEMA_VERSION
 	if migrated_worksites:
-		if not _sites.migrate_legacy(raw.worksites, worksite(map)) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers):
+		if not _sites.migrate_legacy(raw.worksites, worksite(map), checkpoint_minute) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers, checkpoint_minute):
 			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
 	_stage_city_hauler_applicant(raw)
@@ -308,7 +309,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not next_values.error.is_empty():
 			return fail("Migrated checkpoint cannot be encoded. " + next_values.error)
 		var next_document: Dictionary = {"schema_version": VERSION, "scenario": "city_mvp", "location": prepared_location, "state": encoded}
-		if JSON.stringify(next_document, "\t", true, true).to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
+		if not _within_save_size_limit(next_document):
 			return fail("Migrated checkpoint exceeds the existing save size limit.")
 	prepared = raw
 	return true
@@ -340,8 +341,15 @@ func _stage_city_hauler_applicant(raw: Dictionary) -> void:
 	var codec = VALUES.new()
 	var encoded: Variant = codec.encode(raw)
 	var document: Dictionary = {"schema_version": VERSION, "scenario": "city_mvp", "location": prepared_location, "state": encoded}
-	if not codec.error.is_empty() or JSON.stringify(document, "\t", true, true).to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
+	if not codec.error.is_empty() or not _within_save_size_limit(document):
 		raw.citizens = original_citizens
+
+
+func _within_save_size_limit(document: Dictionary) -> bool:
+	var serialized: String = JSON.stringify(document, "\t", true, true)
+	if serialized.to_utf8_buffer().size() > SAVE_FILE.MAX_FILE_BYTES:
+		serialized = JSON.stringify(document, "", true, true)
+	return serialized.to_utf8_buffer().size() <= SAVE_FILE.MAX_FILE_BYTES
 
 func _stage_legacy_stone_offer(raw: Dictionary, merchant: Node) -> bool:
 	# Preserve an ongoing legacy visit exactly: the new offer has zero stock
@@ -422,6 +430,18 @@ func _new_house_record(order_id: String, clock: Dictionary) -> Dictionary:
 		"_latest_time": saved_time,
 		"payroll_work_remainder": 0
 	}
+
+
+func _checkpoint_minute(clock: Dictionary) -> int:
+	var day: int = int(clock.current_day)
+	var minute_of_day: int = int(clock.current_hour) * 60 + int(clock.current_minute)
+	var maximum_minute: int = 9223372036854775807
+	if day < 0 or day > 6405119470038038:
+		return -1
+	var day_minute: int = day * 1440
+	if day_minute > maximum_minute - minute_of_day:
+		return -1
+	return day_minute + minute_of_day
 
 
 func _valid_settled_time_cursors(raw: Dictionary) -> bool:
@@ -518,7 +538,10 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 		if not prepared.order_plots[id].is_empty():
 			order.set_meta("visual_plot_id", prepared.order_plots[id])
 	nodes.city_storage.set_meta("initial_worksite_cart_supplied", prepared.initial_cart_supplied)
-	_sites.restore(prepared.worksites, worksite(map))
+	var restored_worksite: Node = worksite(map)
+	_sites.restore(prepared.worksites, restored_worksite)
+	if restored_worksite.has_method("sync_resource_presentation"):
+		restored_worksite.sync_resource_presentation()
 	_restore_city_drops(prepared.city_drops, map)
 	_restore_party_icons(nodes.raid._party, nodes.raid.config.party_profile)
 	_restore_party_icons(nodes.raid._report, nodes.raid.config.party_profile)

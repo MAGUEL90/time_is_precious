@@ -3,7 +3,7 @@ extends RefCounted
 ## Contact geometry follows the authored art, without changing its visible pixels.
 static func configure(site: Node2D) -> void:
 	var icon: Sprite2D = site.get_node_or_null("ResourceIcon")
-	if site.name in [&"ClaySiteA", &"ReedSite"] and site.has_node("Label"):
+	if site.name in [&"ClaySiteA", &"ClaySiteB", &"ReedSite", &"ReedSiteB"] and site.has_node("Label"):
 		site.get_node("Label").hide()
 	if icon != null and icon.texture != null:
 		position_prompt(site, icon)

@@ -130,6 +130,89 @@ text = "Water Site"
 texture_filter = 1
 texture = ExtResource("icon_Water")
 
+[node name="ClaySiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-115, 127)
+
+[node name="Footprint" parent="WorksiteMarkers/ClaySiteB" index="0"]
+visible = false
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/ClaySiteB" index="1"]
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = -16.0
+text = "Clay Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ClaySiteB"]
+texture_filter = 1
+position = Vector2(17, -7)
+texture = ExtResource("site_Clay")
+
+[node name="ReedSiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-70, 127)
+script = ExtResource("6_resource_site")
+item_id = "reed_bundle"
+minutes_per_unit = 7.5
+
+[node name="Footprint" parent="WorksiteMarkers/ReedSiteB" index="0"]
+visible = false
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/ReedSiteB" index="1"]
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = -16.0
+text = "Reed Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ReedSiteB"]
+texture_filter = 1
+position = Vector2(0, -5)
+texture = ExtResource("site_Reed")
+
+[node name="WoodSiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteB" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteB" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteB"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteC" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(115, 142)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteC" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteC" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteC"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
 [node name="WorkerDeparture" type="Marker2D" parent="."]
 position = Vector2(0, 56)
 
@@ -196,3 +279,8 @@ position = Vector2(-40, 67)
 [editable path="WorksiteMarkers/ReedSite"]
 [editable path="WorksiteMarkers/StrawSite"]
 [editable path="WorksiteMarkers/WaterSite"]
+
+[editable path="WorksiteMarkers/ClaySiteB"]
+[editable path="WorksiteMarkers/ReedSiteB"]
+[editable path="WorksiteMarkers/WoodSiteB"]
+[editable path="WorksiteMarkers/WoodSiteC"]

@@ -364,7 +364,7 @@ func _preview_work(minutes: int) -> Dictionary:
 				reason = "Selected worker is unavailable."
 		if reason.is_empty():
 			reason = daily.start_reason(_selected_site.name)
-		return {"units": 0, "minutes": 0, "stock": session.stock, "finite_resource": session.finite_resource, "deposit_capacity": session.deposit_capacity, "reason": reason, "worker_count": ids.size() + active_ids.size(),
+		return {"units": 0, "minutes": 0, "stock": session.stock, "finite_resource": session.finite_resource, "deposit_capacity": session.deposit_capacity, "respawn_minutes": maxi(session.respawn_due_at - daily.now(), 0) if session.respawn_due_at >= 0 else -1, "reason": reason, "worker_count": ids.size() + active_ids.size(),
 			"active_count": active_ids.size(), "has_draft": not ids.is_empty(),
 			"worker_progress": daily.progress_rows(_selected_site.name),
 			"worker_capacity": 2, "includes_player": false, "working": false,
@@ -374,7 +374,9 @@ func _preview_work(minutes: int) -> Dictionary:
 				DailySchedule.SHIFT_START % 60, floori(DailySchedule.SHIFT_END / 60.0),
 				DailySchedule.SHIFT_END % 60]}
 	session.participants.assign(["player"])
-	return session.preview(minutes, player)
+	var preview: Dictionary = session.preview(minutes, player)
+	preview["respawn_minutes"] = maxi(session.respawn_due_at - daily.now(), 0) if session.respawn_due_at >= 0 else -1
+	return preview
 
 func _get_roster() -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []

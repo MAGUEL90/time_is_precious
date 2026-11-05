@@ -52,6 +52,8 @@ func _run() -> void:
 	var codec := CitySaveValues.new()
 	var raw: Dictionary = codec.decode(almost_full.state)
 	raw.worksites.schema_version = 4
+	for added: String in ["ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
+		raw.worksites.sites.erase(added)
 	for site_id: String in raw.worksites.sites:
 		raw.worksites.sites[site_id].erase("offset")
 	var old_person: CitizenData = raw.citizens.citizens_by_id[STARTERS.HAULER_APPLICANT_ID]
@@ -65,7 +67,17 @@ func _run() -> void:
 	var near_limit_prepared: bool = store.snapshot.prepare(almost_full, city)
 	_check(near_limit_prepared, "A near-limit old checkpoint can still be prepared: " + store.snapshot.error)
 	if near_limit_prepared:
-		_check(not store.snapshot.prepared.citizens.citizens_by_id.has(STARTERS.CITY_HAULER_APPLICANT_ID), "The extra applicant is skipped when it would exceed the file-size limit.")
+		# Compact JSON can fit the added fields even when indented JSON cannot.
+		# If the applicant still cannot fit, migration must remain valid without it.
+		var prepared_raw: Dictionary = store.snapshot.prepared
+		var added_applicant: CitizenData = prepared_raw.citizens.citizens_by_id.get(STARTERS.CITY_HAULER_APPLICANT_ID)
+		_check(added_applicant == null or added_applicant.profession == WorkerData.Profession.HAULER, "Any migrated applicant keeps the intended Hauler identity.")
+		var migrated: Dictionary = almost_full.duplicate(true)
+		migrated.state = codec.encode(prepared_raw)
+		var compact_disk = SAVE_FILE.new()
+		compact_disk.path = "user://hauler_migration/near_limit.json"
+		compact_disk.read_snapshot(func(_document: Dictionary) -> bool: return true)
+		_check(compact_disk.write_snapshot(migrated, func(document: Dictionary) -> bool: return store.snapshot.prepare(document, city)), "The migrated near-limit checkpoint can be safely written: " + compact_disk.error)
 	_check(FileAccess.get_file_as_bytes(store.disk.path) == original, "Near-limit validation does not rewrite the existing save.")
 	old_worker.profession_xp = 99
 	_check(store.load_checkpoint() and FileAccess.get_file_as_bytes(store.disk.path) == original, "Continue preserves the original checkpoint bytes.")

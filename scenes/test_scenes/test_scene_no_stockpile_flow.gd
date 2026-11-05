@@ -287,8 +287,12 @@ func _test_legacy_pending_migration(pending: int) -> void:
 	# Synthetic v14: a job-owned wood unit and departed workers' clay and Reed
 	# were awaiting their old ground drop when the checkpoint was written.
 	raw.worksites.schema_version = 3
+	for added: String in ["ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
+		raw.worksites.sites.erase(added)
 	for site: Dictionary in raw.worksites.sites.values():
 		site.erase("offset")
+		site.erase("respawn_started_at")
+		site.erase("respawn_due_at")
 	raw.worksites.sites.ClaySiteA.stock -= 2
 	raw.worksites.sites.ReedSite.stock -= 3
 	raw.worksites.pending_output["ClaySiteA"] = 2

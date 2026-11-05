@@ -22,11 +22,11 @@ func _run() -> void:
 	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
 	TimeComponentManager.set_process(false)
 	var origin: Vector2 = runtime.get_node("WorkerDeparture/NearSpawn").global_position
-	for id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
+	for id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite", "ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
 		var marker: Node2D = runtime.get_node("WorksiteMarkers/" + id)
 		for slot: int in [0, 1]:
 			var target: Vector2 = runtime.site_slot_destination(StringName(id), slot)
-			_expect(not runtime.worksite_navigation.route(origin, target).is_empty(),
+			_expect(not runtime.site_approach_route(origin, target).is_empty(),
 				"A worker can reach %s slot %d from the real departure point." % [id, slot])
 		if failures > 0:
 			_finish_review()
@@ -43,7 +43,18 @@ func _run() -> void:
 		if not is_instance_valid(pile):
 			_finish_review()
 			return
-		if not await _walk_to(pile.global_position + Vector2(0, -5), "ground output at " + id):
+		var destination: Vector2 = pile.global_position + Vector2(0, -5)
+		var authored: Node2D = content.get_node("AuthoredMap")
+		var from_inside: bool = authored.to_local(player.global_position).y < -56.0
+		var to_inside: bool = authored.to_local(destination).y < -56.0
+		if from_inside != to_inside:
+			var gate_points: Array[Vector2] = []
+			gate_points.assign([Vector2(0, -75), Vector2(0, -40)] if from_inside else [Vector2(0, -40), Vector2(0, -75)])
+			for point: Vector2 in gate_points:
+				if not await _walk_to(authored.to_global(point), "temporary south gate"):
+					_finish_review()
+					return
+		if not await _walk_to(destination, "ground output at " + id):
 			_finish_review()
 			return
 		_expect(player.current_interactable == pile, "The player can select the %s pickup." % id)

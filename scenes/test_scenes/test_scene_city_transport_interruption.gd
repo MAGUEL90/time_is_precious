@@ -6,6 +6,7 @@ extends "res://scenes/test_scenes/test_scene_city_transport_flow.gd"
 const INTERRUPTION_SAVE: String = "user://city_transport_interruption/checkpoint.json"
 
 func _run() -> void:
+	worker_id = "initial_city_storage_hauler" # Exercise the actual Hauler applicant.
 	var data_root: String = OS.get_environment("XDG_DATA_HOME")
 	_expect(data_root.is_absolute_path() and ProjectSettings.globalize_path("user://").simplify_path().begins_with(data_root.simplify_path().trim_suffix("/") + "/"), "Use a disposable XDG data directory.")
 	_expect(not FileAccess.file_exists(INTERRUPTION_SAVE), "Use a fresh interruption checkpoint.")
@@ -41,16 +42,16 @@ func _run() -> void:
 	_place_fixture_clock(17, 8, 0)
 	Inventory.add_item("shekel", 10)
 	Inventory.add_item(ITEM_ID, 4)
-	var courier: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 3)
+	var courier: WorkerData = WorkerDatabase.hire_applicant(worker_id, 3)
 	_expect(courier != null and not courier.is_payroll_blocked(), "A real three-day contract is purchased for the courier.")
 	if stopped:
 		return
-	_expect(central.allocate("initial_worksite_cart", WORKER_ID), "Equip the city's existing cart.")
+	_expect(central.allocate("initial_worksite_cart", worker_id), "Equip the city's existing cart.")
 	_expect(central.try_add_worksite_output(ITEM_ID, 6), "Seed six city-owned logs through the worksite receipt.")
 	_place_fixture_clock(courier.payroll_paid_until_day, 14, 55)
 	var expiry: int = courier.get_paid_end_minute()
 	_expect(expiry == (TimeComponentManager.current_day + 1) * 1440 + 7 * 60 and not courier.is_payroll_blocked(), "The normal contract expires at the next 07:00 boundary.")
-	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 3), "A paid courier picks up a three-log shipment.")
+	_expect(transport.start(worker_id, "city", ITEM_ID, 3), "A paid courier picks up a three-log shipment.")
 	if stopped:
 		return
 	_expect(TimeComponentManager.advance_minutes(1), "The courier moves one minute before the obstruction.")
@@ -81,32 +82,32 @@ func _run() -> void:
 	transport = WorkStateRuntime.get_node("CityStorageTransport")
 	central = transport.get_storage("city")
 	annex = transport.get_storage("annex")
-	courier = WorkerDatabase.get_worker_data(WORKER_ID)
+	courier = WorkerDatabase.get_worker_data(worker_id)
 	_expect(courier != null and courier.is_payroll_blocked() and int(transport.route.get("quantity", 0)) == 3 and _city_total() == 6, "Continue preserves the unpaid courier, reservation and single cargo owner.")
 	if stopped:
 		return
 	var price: int = WorkerDatabase.get_contract_price(courier.profession, 3)
 	var wallet_before: int = int(Inventory.items.get("shekel", 0))
-	_expect(WorkerDatabase.renew_contract(WORKER_ID, 3), "Renew the expired contract through the normal paid backend.")
+	_expect(WorkerDatabase.renew_contract(worker_id, 3), "Renew the expired contract through the normal paid backend.")
 	_expect(not courier.is_payroll_blocked() and int(Inventory.items.get("shekel", 0)) == wallet_before - price and _city_total() == 6, "Renewal charges once and preserves the cargo.")
 	await _finish_route()
 	_expect(transport.route.is_empty() and int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 3 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "After renewal the shipment arrives once; city and personal stock remain separate.")
 	if stopped:
 		return
-	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 1), "Start another shipment under the renewed, still-active contract.")
+	_expect(transport.start(worker_id, "city", ITEM_ID, 1), "Start another shipment under the renewed, still-active contract.")
 	var active_route: Dictionary = transport.route.duplicate(true)
 	var previous_end: int = courier.payroll_paid_until_day
 	wallet_before = int(Inventory.items.get("shekel", 0))
-	_expect(WorkerDatabase.renew_contract(WORKER_ID, 3), "Extend an active contract while the courier carries cargo.")
+	_expect(WorkerDatabase.renew_contract(worker_id, 3), "Extend an active contract while the courier carries cargo.")
 	_expect(courier.payroll_paid_until_day == previous_end + 3 and int(Inventory.items.get("shekel", 0)) == wallet_before - price and transport.route == active_route and _city_total() == 6, "An active extension charges once, extends the paid period and leaves the shipment intact.")
 	await _finish_route()
 	_expect(transport.route.is_empty() and int(central.items.get(ITEM_ID, 0)) == 2 and int(annex.items.get(ITEM_ID, 0)) == 4 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "The actively extended courier delivers the second shipment exactly once.")
 	if stopped:
 		return
-	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 1) and TimeComponentManager.advance_minutes(1), "A third courier load begins its outward route.")
+	_expect(transport.start(worker_id, "city", ITEM_ID, 1) and TimeComponentManager.advance_minutes(1), "A third courier load begins its outward route.")
 	var visuals: Node = runtime.get_node("WorkerVisuals")
 	visuals._process(0.01)
-	var actor: Node = visuals.actors.get(WORKER_ID)
+	var actor: Node = visuals.actors.get(worker_id)
 	var cargo_label: Label = actor.get_node_or_null("CargoLabel") if is_instance_valid(actor) else null
 	_expect(cargo_label != null and not cargo_label.text.is_empty(), "The moving courier visibly identifies its cargo.")
 	_expect(transport.cancel(), "Cancel the loaded courier while it is travelling.")

@@ -1,5 +1,9 @@
 extends RefCounted
 
+## Emitted only after an Hourly transaction has committed or returned its
+## unfinished output. Daily jobs have their own settlement_finished signal.
+signal stock_settled
+
 # Approved test balance, deliberately local to the playable fixture.
 const MINUTES_PER_CLAY: int = 10
 const INITIAL_STOCK: int = 72
@@ -17,6 +21,9 @@ var stock: int = INITIAL_STOCK
 ## their existing daily replenishment unless they explicitly opt in.
 var finite_resource: bool = false
 var deposit_capacity: int = 0
+## Absolute game minutes. -1 means the current deposit is not waiting.
+var respawn_started_at: int = -1
+var respawn_due_at: int = -1
 var working: bool = false
 var participants: Array[String] = []
 var reserved_slots: Callable
@@ -215,6 +222,7 @@ func _finish() -> void:
 			result.interrupted = true
 	last_result = result.duplicate()
 	_clear_session()
+	stock_settled.emit()
 
 func cancel() -> void:
 	# Unsettled hourly output returns to natural stock on fixture teardown.
@@ -227,6 +235,7 @@ func cancel() -> void:
 		_cancelled = true
 		last_result = _result.duplicate()
 		_clear_session()
+		stock_settled.emit()
 
 func _clear_session() -> void:
 	_drop_output = Callable()

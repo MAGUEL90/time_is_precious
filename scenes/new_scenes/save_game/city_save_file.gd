@@ -123,6 +123,12 @@ func write_snapshot(data: Dictionary, validator: Callable) -> bool:
 	var serialized: String = JSON.stringify(data, "\t", true, true)
 	var serialized_bytes: PackedByteArray = serialized.to_utf8_buffer()
 	if serialized_bytes.size() > MAX_FILE_BYTES:
+		# Older checkpoints close to the size limit may gain small migration
+		# fields. Compact JSON preserves the same data without wasting space on
+		# indentation; still enforce the limit before touching the existing file.
+		serialized = JSON.stringify(data, "", true, true)
+		serialized_bytes = serialized.to_utf8_buffer()
+	if serialized_bytes.size() > MAX_FILE_BYTES:
 		error = "size_limit"
 		return false
 	var absolute_path: String = ProjectSettings.globalize_path(path)

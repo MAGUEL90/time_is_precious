@@ -126,6 +126,20 @@ func _walk_to_interactable(target: Node2D) -> void:
 	_expect(false, "Normal walking selects the requested interactable: " + str(target.name))
 
 func walk(target: Vector2, door_target: bool = false) -> void:
+	if is_instance_valid(content) and content.has_node("AuthoredMap"):
+		var authored: Node2D = content.get_node("AuthoredMap")
+		var from_inside: bool = authored.to_local(player.global_position).y < -56.0
+		var to_inside: bool = authored.to_local(target).y < -56.0
+		if from_inside != to_inside:
+			var gate_points: Array[Vector2] = []
+			gate_points.assign([Vector2(0, -75), Vector2(0, -40)] if from_inside else [Vector2(0, -40), Vector2(0, -75)])
+			for point: Vector2 in gate_points:
+				await _walk_leg(authored.to_global(point))
+				if stopped:
+					return
+	await _walk_leg(target, door_target)
+
+func _walk_leg(target: Vector2, door_target: bool = false) -> void:
 	if stopped:
 		return
 	await _walk_out_of_overlap()
@@ -207,6 +221,9 @@ func gather(site_name: String) -> void:
 	if stopped:
 		return
 	await _walk_out_of_overlap()
+	site_name = await _available_site(site_name)
+	if stopped:
+		return
 	var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_name)
 	await walk_to_site(site)
 	await interact()
@@ -224,7 +241,8 @@ func gather(site_name: String) -> void:
 	while runtime._working and not stopped:
 		await get_tree().process_frame
 	var result: Dictionary = runtime.last_work_result
-	_expect(result.minutes == 180 and not result.interrupted and int(result.units) > 0
+	_expect(int(result.minutes) > 0 and int(result.minutes) <= 180 and not result.interrupted and int(result.units) > 0
+		and (int(result.minutes) == 180 or int(runtime.sites[site_name].stock) == 0)
 		and int(Inventory.items.get(item_id, 0)) - bag_before == int(result.to_bag)
 		and _personal_ground_quantity(item_id) - ground_before == int(result.to_ground)
 		and int(result.to_bag) + int(result.to_ground) == int(result.units)
@@ -280,7 +298,11 @@ func _market() -> void:
 	var reserve: int = 4 if house.phase in ["uncleared", "clearing", "empty"] else (6 if workshop_materials_phase else 0)
 	var sell: int = mini(demand, maxi(0, int(Inventory.items.get("wood_log", 0)) - reserve))
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
-	var want: int = mini(clothes_stock, maxi(0, 2 - storage.get_clothing_item_count() - int(Inventory.items.get("simple_clothes", 0))))
+	var clothed: int = 0
+	for resident: CitizenData in CitizenManager.get_all_residents():
+		if resident.clothing_fulfilled:
+			clothed += 1
+	var want: int = mini(clothes_stock, maxi(0, CitizenManager.get_all_residents().size() - clothed - storage.get_clothing_item_count() - int(Inventory.items.get("simple_clothes", 0))))
 	if sell == 0 and (want == 0 or int(Inventory.items.get("shekel", 0)) < 2):
 		return
 	await walk(merchant.global_position + Vector2(0, 6))
@@ -500,18 +522,19 @@ func _run() -> void:
 		print("WALKED_CITY_RESUME ", JSON.stringify({"day": TimeComponentManager.current_day, "walked": walked, "house_sessions": house_sessions}))
 	else:
 		_expect(Inventory.items.is_empty() and WorkerDatabase.get_all_workers().is_empty(), "New Game starts without personal materials or workers.")
-		await _check_board(2)
+		await _check_board(3)
 	var sites: Dictionary = {"wood_log": "WoodSite", "clay_lump": "ClaySiteA", "reed_bundle": "ReedSite"}
 	while not stopped and TimeComponentManager.current_day < 35:
 		await upkeep()
 		var first: CitizenData = CitizenManager.get_citizen(FIRST)
 		var second: CitizenData = CitizenManager.get_citizen(SECOND)
-		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, second.satisfaction))
+		var third: CitizenData = CitizenManager.get_citizen(THIRD)
+		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, minf(second.satisfaction, third.satisfaction)))
 		var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 		if not saw_empty_board and WorkerDatabase.is_job_board_open() and CitizenManager.get_all_applicants().is_empty():
 			await _check_board(0)
 			saw_empty_board = true
-		if house.phase == "built" and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5:
+		if house.phase == "built" and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5:
 			break
 		await _market()
 		if house.phase in ["uncleared", "clearing", "building"]:
@@ -534,11 +557,12 @@ func _run() -> void:
 		return
 	var first: CitizenData = CitizenManager.get_citizen(FIRST)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND)
-	_expect(saw_empty_board and saw_house_work_without_applicants and bought_clothes >= 2 and deposited_clothes >= 2
+	var third: CitizenData = CitizenManager.get_citizen(THIRD)
+	_expect(saw_empty_board and saw_house_work_without_applicants and bought_clothes >= 3 and deposited_clothes >= 3
 		and content.get_node("YSortWorld/CitizenHousePlot").construction.phase == "built"
-		and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled()
-		and first.satisfaction >= 0.5 and second.satisfaction >= 0.5,
-		"Walking and earned supplies recover both residents after the empty-board state.")
+		and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled()
+		and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5,
+		"Walking and earned supplies recover all three residents after the empty-board state.")
 	if stopped:
 		return
 	print("WALKED_CITY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "walked": walked, "satisfaction": [first.satisfaction, second.satisfaction], "house_sessions": house_sessions, "clothes": bought_clothes, "income": paid_wood}))

@@ -47,6 +47,7 @@ func _run() -> void:
 		# Simulate the final unit having just been gathered, before its deferred
 		# relocation. The parked runtime must never refill at an unverified spot.
 		runtime.sites[&"ClaySiteA"].stock = 0
+		runtime._sync_site_timer(&"ClaySiteA") # Committed fixture depletion.
 		content.get_node("YSortWorld/HomeDoor")._on_body_entered(player)
 		await _wait_for_scene(store.snapshot.HOME_PATH)
 		_expect(store.snapshot.is_home(get_tree().current_scene) and is_instance_valid(store.parked_worksite), "A loaded courier survives the actual city-to-home handoff.")
@@ -66,7 +67,11 @@ func _run() -> void:
 		bind_map()
 		_expect(TimeComponentManager.advance_minutes(1), "Resume the city clock after returning home.")
 		await _frames(3)
-		_expect(runtime.sites[&"ClaySiteA"].stock == 240 and runtime.resource_site_offset(&"ClaySiteA") != Vector2.ZERO, "The exhausted deposit relocates after the live city returns.")
+		var session = runtime.sites[&"ClaySiteA"]
+		_expect(session.stock == 0 and session.respawn_due_at > runtime.daily.now(), "The exhausted deposit still waits after the live city returns.")
+		_expect(TimeComponentManager.advance_minutes(session.respawn_due_at - runtime.daily.now()), "Advance the remaining respawn delay on the game clock.")
+		await _frames(4)
+		_expect(session.stock == 36 and runtime.resource_site_offset(&"ClaySiteA") != Vector2.ZERO, "The exhausted deposit relocates at its saved deadline after the city returns.")
 		_expect(runtime.has_node("CityStorageAnnex") and transport.route.is_empty() and int(annex.items.get(ITEM_ID, 0)) == 3, "Returning to the city keeps the delivered annex goods and released courier.")
 	if stopped:
 		return
