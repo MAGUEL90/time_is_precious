@@ -555,6 +555,14 @@ func _assert_full_snapshot_unchanged(label: String) -> void:
 		label + ": every serialized owner, ID, contract, stock, RNG and needs field matches the source snapshot exactly.")
 	_expect(FileAccess.get_file_as_bytes(SAVE_PATH) == initial_bytes,
 		label + ": the checkpoint's bytes are unchanged.")
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	var progress_before: int = progression.progress
+	var day_before: int = progression.last_awarded_day
+	var daily_before: Dictionary = progression.last_daily.duplicate(true)
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(progression.progress == progress_before and progression.last_awarded_day == day_before
+		and progression.last_daily == daily_before,
+		label + ": a same-day needs refresh cannot award city progress again after Continue.")
 
 
 func _parse_document(bytes: PackedByteArray) -> Dictionary:

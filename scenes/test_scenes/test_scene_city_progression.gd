@@ -43,9 +43,11 @@ func _run() -> void:
 
 	_test_threat_stages_and_manual_level_up()
 	_test_direct_daily_settlement()
+	_test_satisfaction_threshold_precision()
 	_test_needs_processing_awards_consumed_food()
 	_test_real_breach_and_breach_deduplication()
 	_test_missing_wall_penalty_after_breach()
+	_test_multi_day_resident_average()
 
 	_cleanup_fixture()
 	_restore_globals()
@@ -207,6 +209,47 @@ func _test_direct_daily_settlement() -> void:
 		"A zero-resident day grants no food, clothing, or satisfaction bonuses.")
 
 
+func _test_satisfaction_threshold_precision() -> void:
+	# A mathematically exact 70% average can land just below 0.7 in floating
+	# point; permutations must not change the awarded bonus.
+	var threshold_progress: Node = CITY_PROGRESS_SCRIPT.new()
+	add_child(threshold_progress)
+	var day: int = TimeComponentManager.current_day + 1
+	var exact_cohorts: Array = [
+		[0.12, 0.99, 0.99],
+		[0.99, 0.12, 0.99],
+		[0.99, 0.99, 0.12],
+	]
+	for scores: Array in exact_cohorts:
+		var residents: Array[Dictionary] = []
+		for score: float in scores:
+			residents.append(_needs_result(day, true, true, score))
+		threshold_progress.call("settle_day", day, residents, true)
+		_expect(int(threshold_progress.get("last_daily").get("satisfaction", 0)) == 5,
+			"An exactly 70%% resident average earns +5 regardless of cohort order: %s." % [scores])
+		day += 1
+
+	# A genuine shortfall at the needs system's 1e-9 precision stays below.
+	var below: Array[Dictionary] = [
+		_needs_result(day, true, true, 0.12),
+		_needs_result(day, true, true, 0.99),
+		_needs_result(day, true, true, 0.989999999),
+	]
+	threshold_progress.call("settle_day", day, below, true)
+	_expect(int(threshold_progress.get("last_daily").get("satisfaction", -1)) == 0,
+		"One resident's 1e-9 shortfall below an exact 70% average does not earn the bonus.")
+	day += 1
+	var above: Array[Dictionary] = [
+		_needs_result(day, true, true, 0.120000001),
+		_needs_result(day, true, true, 0.99),
+		_needs_result(day, true, true, 0.99),
+	]
+	threshold_progress.call("settle_day", day, above, true)
+	_expect(int(threshold_progress.get("last_daily").get("satisfaction", -1)) == 5,
+		"One resident's 1e-9 increase above an exact 70% average earns the bonus.")
+	threshold_progress.free()
+
+
 func _test_needs_processing_awards_consumed_food() -> void:
 	var day: int = int(original_clock.day) + 4
 	var resident: CitizenData = _make_resident(TEST_CITIZEN_ID)
@@ -310,6 +353,66 @@ func _test_missing_wall_penalty_after_breach() -> void:
 		and int(daily.get("wall", 0)) == -5
 		and int(daily.get("total", 0)) == 10,
 		"An absent wall applies the daily -5 penalty alongside otherwise earned bonuses.")
+
+
+func _test_multi_day_resident_average() -> void:
+	# Use actual daily needs results, including a linked worker and a legacy
+	# unlinked worker, to verify the resident-only city cohort over three days.
+	CitizenManager.citizens_by_id.clear()
+	WorkerDatabase.workers_by_id.clear()
+	WorkerDatabase.dismissed_workers.clear()
+	var scores: Array[float] = [0.07, 0.94, 0.94]
+	for index: int in range(scores.size()):
+		var resident: CitizenData = _make_resident("average_resident_%d" % index)
+		resident.satisfaction = scores[index]
+		if index == 1:
+			resident.employment_status = CitizenData.EmploymentStatus.HIRED
+			var linked: WorkerData = WorkerData.new()
+			linked.worker_id = resident.citizen_id
+			linked.satisfaction = 0.10
+			WorkerDatabase.workers_by_id[linked.worker_id] = linked
+		CitizenManager.add_citizen(resident)
+	var legacy: WorkerData = WorkerData.new()
+	legacy.worker_id = "average_legacy_worker"
+	legacy.satisfaction = 0.20
+	WorkerDatabase.workers_by_id[legacy.worker_id] = legacy
+	CityStockManager.shelter_capacity = 3
+	storage.set("items", {"barley_bread": 3, "simple_clothes": 3})
+	storage.set("food_portions", {})
+	CitizenNeedsManager.clothing_allocations.clear()
+	raid_state.set("wall_hp", 50)
+	city_progress.set("progress", 0)
+
+	var day: int = int(original_clock.day) + 6
+	TimeComponentManager.current_day = day
+	CitizenNeedsManager.process_daily_needs()
+	var daily: Dictionary = city_progress.get("last_daily")
+	_expect(is_equal_approx(CitizenNeedsManager.get_average_satisfaction(), 0.70)
+		and int(daily.get("satisfaction", -1)) == 5
+		and int(daily.get("total", -1)) == 15,
+		"Real needs settlement awards +5 for three residents at 12%, 99%, and 99%; the linked worker is counted once and the unlinked worker is excluded.")
+	_expect(int(city_progress.get("progress")) == 15, "The first settled day adds 15 progress with a standing wall.")
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(int(city_progress.get("progress")) == 15, "A duplicate same-day signal adds no progress.")
+
+	day += 1
+	TimeComponentManager.current_day = day
+	CitizenNeedsManager.process_daily_needs()
+	daily = city_progress.get("last_daily")
+	_expect(int(daily.get("food", -1)) == 0 and int(daily.get("clothing", -1)) == 5
+		and int(daily.get("satisfaction", -1)) == 0 and int(city_progress.get("progress")) == 20,
+		"The next day lacks food, falls below 70%, and awards clothing only.")
+
+	storage.set("items", {"barley_bread": 3})
+	day += 1
+	TimeComponentManager.current_day = day
+	CitizenNeedsManager.process_daily_needs()
+	daily = city_progress.get("last_daily")
+	_expect(int(daily.get("food", -1)) == 5 and int(daily.get("clothing", -1)) == 5
+		and int(daily.get("satisfaction", -1)) == 5 and int(city_progress.get("progress")) == 35,
+		"Replenishing food lets the resident average recover above 70% and restores the daily bonuses.")
+	CitizenNeedsManager.process_daily_needs()
+	_expect(int(city_progress.get("progress")) == 35, "Repeated needs processing on the recovery day remains idempotent.")
 
 
 func _settle_day(day: int, residents: Array[Dictionary], wall_standing: bool) -> bool:
