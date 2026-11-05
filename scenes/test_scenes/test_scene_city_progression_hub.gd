@@ -5,16 +5,29 @@ func _run() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
 	get_tree().paused = false
+	var original_window_size: Vector2i = get_window().size
+	get_window().size = Vector2i(1200, 675)
+	var original_inventory: Dictionary = Inventory.items.duplicate(true)
+	var original_capacity: float = Inventory.max_load
+	Inventory.max_load = 100000.0
+	Inventory.items.assign({"stone": 100, "wood_log": 100})
 	await load_content()
+	_expect(get_viewport().get_visible_rect().size == Vector2(400, 225),
+		"The fixture uses the project's 400 x 225 logical viewport.")
 	var city: Node = WorkStateRuntime.get_node("CityProgression")
 	_expect(city.level == 1 and city.progress == 0, "A new city starts at level 1 with zero progress.")
 	storage.items = {"stone": 100, "wood_log": 100}
 	_expect(state.request_wall_work(state.get_work_quote()), "Wall construction starts with actual materials.")
+	_expect(Inventory.items == {"stone": 90, "wood_log": 95}
+		and storage.items == {"stone": 100, "wood_log": 100},
+		"Wall construction spends player Inventory and leaves City Storage untouched.")
 	var results: Array[Dictionary] = [{"food": true, "clothing": true, "satisfaction": 0.8}]
 	for day: int in range(1, 11):
 		city.settle_day(city.last_awarded_day + 1, results, false)
 	_expect(city.progress == 100 and city.level == 1, "Progress caps at100 and waits for an explicit Level Up.")
 	ui.open_details()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await capture_defense("city-progress-ready.png")
 	var management_rect: Rect2 = ui.details_panel.get_global_rect()
 	_expect(not ui.storage_summary.visible and not ui.watchtower_status_label.visible, "Management omits the requested storage/watchtower feedback.")
@@ -24,6 +37,8 @@ func _run() -> void:
 	_expect(city.level == 2, "Repeated button activation cannot buy another level.")
 	city.settle_day(city.last_awarded_day + 1, results, false)
 	ui._select_hub_tab(true)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await capture_defense("city-progress-supply.png")
 	_expect(ui.details_panel.get_global_rect() == management_rect, "Switching to Supply preserves the exact panel size and position.")
 	for summary: Label in [ui.supply_food, ui.supply_clothing, ui.supply_shelter]:
@@ -60,13 +75,16 @@ func _run() -> void:
 	_set_clock_minute(arrival)
 	state.set_process(false)
 	ui.open_details()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await capture_defense("city-progress-under-attack.png")
 	_expect(ui.details_panel.get_global_rect() == management_rect, "Construction and attack status preserve the same City Hub frame.")
 	var footer: Control = ui.details_panel.get_node("Margin/Contents/FooterRow")
 	_expect(footer.get_global_rect().end.y <= ui.details_panel.get_global_rect().end.y - 8,
 		"Progress plus attack plus paused construction keep the footer within the frame.")
-	_expect(ui.details_panel.get_global_rect().position.y >= 0 and ui.details_panel.get_global_rect().end.y <= 225,
-		"The dense City Hub fits the logical viewport.")
+	var dense_rect: Rect2 = ui.details_panel.get_global_rect()
+	_expect(dense_rect.position.y >= 0 and dense_rect.end.y <= 225,
+		"The dense City Hub fits the logical viewport (panel: %s, viewport: %s)." % [dense_rect, get_viewport().get_visible_rect()])
 	city.settle_day(city.last_awarded_day + 1, results, true)
 	_expect(city.progress == 15, "The fixture has earned progress before the actual breach.")
 	state.advance_attack(60.0)
@@ -77,5 +95,8 @@ func _run() -> void:
 	content.queue_free()
 	await get_tree().process_frame
 	_restore_clock()
+	get_window().size = original_window_size
+	Inventory.items.assign(original_inventory)
+	Inventory.max_load = original_capacity
 	print("CityProgressionHubTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)

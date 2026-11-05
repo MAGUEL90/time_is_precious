@@ -110,6 +110,7 @@ hiring and construction. These fixtures do not prove the complete economy from z
 | `test_scene_clock_state_broadcast.tscn` | State refresh updates the time label without needs drain, duplicated work or day ticks; real minute/midnight advancement still works |
 | `test_scene_transition_timing.tscn` | Actual Home ExitDoor transition, movement on both sides of the fade, failed transition restrictions, playable Nightmare timing and return |
 | `test_scene_dialogue_runtime_regression.tscn` | Plugin singleton, runtime compilation, mutation/conditional choices and two real Player/NPC/balloon open/close cycles |
+| `test_scene_city_progression_hub.tscn` | Player-funded wall work, progress and manual Level Up, map reload, raid and dense City Hub layout. The fixture sets and verifies the 1200×675 window / 400×225 logical viewport in headless and graphical runs. |
 
 The existing City Storage supply/content tests expect the approved single,
 unallocated startup Cart. The hauling fixture exposes seven authored destinations;
@@ -130,12 +131,8 @@ Use `mudbrick_main_map_flow_test.tscn` for supplied integration coverage and
 `mvp_first_playthrough.tscn` for normal-start evidence. The old failure is retained
 in the audit report; do not count a timeout/forced shutdown as PASS.
 
-`test_scene_city_progression_hub.tscn` currently fails the dense attack/construction
-viewport check on the imported d6ea244 baseline as well as this branch. Its
-headless capture helper also returns before layout settling; a temporary
-three-frame probe removes the frame-equality failure but not viewport overflow.
-`test_scene_wall_build.tscn` also fails its older caretaker-dialogue assertions.
-See the 2026-10-18 audit evidence; neither is accepted as a passing suite.
+`test_scene_wall_build.tscn` fails its older caretaker-dialogue assertions.
+See the 2026-10-18 audit evidence; it is not accepted as a passing suite.
 
 ## Reading results
 

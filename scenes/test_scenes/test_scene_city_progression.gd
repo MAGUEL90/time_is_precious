@@ -414,6 +414,27 @@ func _test_multi_day_resident_average() -> void:
 	CitizenNeedsManager.process_daily_needs()
 	_expect(int(city_progress.get("progress")) == 35, "Repeated needs processing on the recovery day remains idempotent.")
 
+	var settled_daily: Dictionary = city_progress.get("last_daily").duplicate(true)
+	var settled_needs: Dictionary = CitizenNeedsManager.last_needs_results.duplicate(true)
+	raid_state.config.set("satisfaction_penalty", 0.05)
+	raid_state.call("_apply_population_losses")
+	_expect(CitizenNeedsManager.get_average_satisfaction() < 0.70
+		and CitizenNeedsManager.last_needs_results == settled_needs
+		and city_progress.get("last_daily") == settled_daily,
+		"A raid's actual resident losses can lower the live average below 70% without rewriting the completed day's needs or city bonus.")
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(int(city_progress.get("progress")) == 35 and city_progress.get("last_daily") == settled_daily,
+		"Refreshing needs after the raid cannot resettle the same day or remove its earned bonus.")
+
+	# Seed the existing progress target to verify that today's live satisfaction
+	# is not an additional hard requirement for the already available Level Up.
+	var previous_level: int = int(city_progress.get("level"))
+	city_progress.set("progress", 100)
+	_expect(bool(city_progress.call("request_level_up"))
+		and int(city_progress.get("level")) == previous_level + 1
+		and int(city_progress.get("progress")) == 0,
+		"At 100 progress, manual Level Up succeeds even when the current live resident average is below 70%.")
+
 
 func _settle_day(day: int, residents: Array[Dictionary], wall_standing: bool) -> bool:
 	return bool(city_progress.call("settle_day", day, residents, wall_standing))
