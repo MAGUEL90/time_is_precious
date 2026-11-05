@@ -21,6 +21,18 @@ func _frames(count: int = 4) -> void:
 	for i: int in range(count):
 		await get_tree().process_frame
 
+func _click_control(control: Control) -> void:
+	var point: Vector2 = control.get_global_rect().get_center()
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+		event.pressed = pressed
+		event.position = point
+		event.global_position = point
+		get_viewport().push_input(event)
+		await get_tree().process_frame
+
 func _run() -> void:
 	var root_path: String = OS.get_environment("XDG_DATA_HOME")
 	_check(root_path.is_absolute_path() and ProjectSettings.globalize_path("user://").begins_with(root_path.trim_suffix("/") + "/"), "A disposable XDG_DATA_HOME is required.")
@@ -48,6 +60,11 @@ func _run() -> void:
 		return
 	TimeComponentManager.set_process(false)
 	await _frames()
+	_check(not lab.ui.panel.visible, "The lab starts with its controls collapsed so the map is visible.")
+	await _click_control(lab.ui.panel_toggle)
+	_check(lab.ui.panel.visible, "The lab controls can be opened.")
+	await _click_control(lab.ui.panel_toggle)
+	_check(not lab.ui.panel.visible, "The lab controls can be collapsed again.")
 	if phase == "write":
 		_check(lab._add_test_worker(), "A normally assigned, paid fixture worker can be added.")
 		await _frames()
@@ -77,9 +94,13 @@ func _run() -> void:
 		_check(new_offset != old_offset and int(lab.work.sites[&"ClaySiteA"].stock) == lab.TEST_CAPACITY, "A fresh fixture deposit appears at the test point.")
 		_check(worker != null and not worker.physical_approach.arrived and Vector2(worker.physical_approach.target) != old_target, "The assigned worker must travel to the new point.")
 		if worker != null:
-			var authored: Node2D = lab.city.get_node("AuthoredMap")
 			var route: PackedVector2Array = lab.work.site_approach_route(worker.physical_approach.position, worker.physical_approach.target)
-			_check(authored.to_global(Vector2(0, -75)) in route and authored.to_global(Vector2(0, -40)) in route, "The temporary worker route goes through both gate waypoints.")
+			_check(route.size() >= 2 and route[0].is_equal_approx(worker.physical_approach.position)
+				and route[route.size() - 1].is_equal_approx(worker.physical_approach.target),
+				"The worker route connects its current position to the new site.")
+			for index: int in range(1, route.size()):
+				_check(lab.work.worksite_navigation.segment_clear(route[index - 1], route[index]),
+					"Each segment of the worker route avoids the current collision geometry.")
 		await _frames()
 		_check(lab._save_debug(), "The moving worker and finished timer save in the debug slot.")
 		var next_expected: FileAccess = FileAccess.open(EXPECTED_PATH, FileAccess.WRITE)

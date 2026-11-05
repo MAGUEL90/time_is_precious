@@ -31,6 +31,8 @@ func _run() -> void:
 	TimeComponentManager.current_day = 20
 	TimeComponentManager.current_hour = 11
 	TimeComponentManager.current_minute = 0
+	# Keep the workshop/process clocks aligned with this explicit fixture time.
+	TimeComponentManager.emit_time_signal()
 	city = CONTENT.instantiate()
 	add_child(city)
 	runtime = city.get_node("YSortWorld/WorkerRuntime")

@@ -17,6 +17,8 @@ var deplete_button: Button
 var finish_button: Button
 var save_button: Button
 var continue_button: Button
+var panel: PanelContainer
+var panel_toggle: Button
 
 var _action_buttons: Array[Button] = []
 var _busy: bool = false
@@ -68,11 +70,18 @@ func set_busy(busy: bool) -> void:
 
 
 func _build_ui() -> void:
-	var panel: PanelContainer = PanelContainer.new()
+	panel_toggle = _make_button("Open Lab Controls", Vector2(96.0, 18.0))
+	panel_toggle.name = "LabControlsToggle"
+	panel_toggle.position = Vector2(8.0, 8.0)
+	panel_toggle.pressed.connect(_toggle_panel)
+	add_child(panel_toggle)
+
+	panel = PanelContainer.new()
 	panel.name = "ResourceRespawnLabPanel"
-	panel.position = Vector2(8.0, 8.0)
+	panel.position = Vector2(8.0, 29.0)
 	panel.size = PANEL_SIZE
 	panel.custom_minimum_size = PANEL_SIZE
+	panel.visible = false
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.035, 0.055, 0.075, 0.94)
@@ -166,6 +175,11 @@ func _build_ui() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	set_busy(_busy)
+
+
+func _toggle_panel() -> void:
+	panel.visible = not panel.visible
+	panel_toggle.text = "Hide Lab Controls" if panel.visible else "Open Lab Controls"
 
 
 func _make_button(caption: String, minimum_size: Vector2) -> Button:

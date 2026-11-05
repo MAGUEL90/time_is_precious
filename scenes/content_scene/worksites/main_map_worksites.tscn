@@ -271,6 +271,19 @@ autowrap_mode = 2
 [node name="CityStorageArea" parent="." instance=ExtResource("12_city_storage")]
 position = Vector2(-120, 55)
 
+[node name="Sprite2D" parent="CityStorageArea" index="1"]
+visible = false
+
+[node name="CollisionShape2D" parent="CityStorageArea/BuildingBody" index="0"]
+disabled = true
+
+[node name="Label" parent="CityStorageArea" index="4"]
+visible = true
+offset_left = -26.0
+offset_top = 24.0
+offset_right = 70.0
+offset_bottom = 32.0
+
 [node name="CityStorageAnnex" parent="." instance=ExtResource("13_city_annex")]
 position = Vector2(-40, 67)
 
@@ -284,3 +297,4 @@ position = Vector2(-40, 67)
 [editable path="WorksiteMarkers/ReedSiteB"]
 [editable path="WorksiteMarkers/WoodSiteB"]
 [editable path="WorksiteMarkers/WoodSiteC"]
+[editable path="CityStorageArea"]

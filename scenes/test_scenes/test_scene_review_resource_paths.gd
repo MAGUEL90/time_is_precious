@@ -44,16 +44,6 @@ func _run() -> void:
 			_finish_review()
 			return
 		var destination: Vector2 = pile.global_position + Vector2(0, -5)
-		var authored: Node2D = content.get_node("AuthoredMap")
-		var from_inside: bool = authored.to_local(player.global_position).y < -56.0
-		var to_inside: bool = authored.to_local(destination).y < -56.0
-		if from_inside != to_inside:
-			var gate_points: Array[Vector2] = []
-			gate_points.assign([Vector2(0, -75), Vector2(0, -40)] if from_inside else [Vector2(0, -40), Vector2(0, -75)])
-			for point: Vector2 in gate_points:
-				if not await _walk_to(authored.to_global(point), "temporary south gate"):
-					_finish_review()
-					return
 		if not await _walk_to(destination, "ground output at " + id):
 			_finish_review()
 			return

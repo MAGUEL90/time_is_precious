@@ -20,8 +20,8 @@ const RESOURCE_OFFSETS: Array[Vector2] = [
 	Vector2(-48, -48), Vector2(48, -48), Vector2(-48, 48), Vector2(48, 48),
 	Vector2(-72, 0), Vector2(72, 0), Vector2(0, -72), Vector2(0, 72),
 ]
-# Temporary review points in WorksiteMarkers-local coordinates, outside the
-# south wall. These are not the game's final random placement policy.
+# Temporary review points in WorksiteMarkers-local coordinates, south of the
+# authored lots. These are not the game's final random placement policy.
 const TEMP_RELOCATION_POINTS: Array[Vector2] = [
 	Vector2(65, 177),
 	Vector2(-40, 217), Vector2(40, 217), Vector2(120, 217),
@@ -356,39 +356,13 @@ func _resource_candidate_clear(map: Node, marker: Node2D, candidate: Vector2) ->
 func _bounded_resource_route(origin: Vector2, target: Vector2) -> PackedVector2Array:
 	return _site_route(origin, target, true)
 
-## The temporary sites are south of the visual-only wall. Direct navigation
-## otherwise cuts through its artwork because WallStone has no physics layer.
-## These two waypoints are a review-only gate route, not a final map policy.
+## Route around real collision geometry. The old village wall is no longer
+## shown, so there is no visual gate that workers need to pass through.
 func site_approach_route(origin: Vector2, target: Vector2) -> PackedVector2Array:
 	return _site_route(origin, target, false)
 
 func _site_route(origin: Vector2, target: Vector2, bounded: bool) -> PackedVector2Array:
-	var stops: Array[Vector2] = []
-	var city: Node = self
-	while city != null and not city.has_node("AuthoredMap"):
-		city = city.get_parent()
-	if city != null:
-		var authored: Node2D = city.get_node("AuthoredMap")
-		var from_local: Vector2 = authored.to_local(origin)
-		var to_local: Vector2 = authored.to_local(target)
-		if (from_local.y < -56.0) != (to_local.y < -56.0):
-			var inside: Vector2 = authored.to_global(Vector2(0, -75))
-			var outside: Vector2 = authored.to_global(Vector2(0, -40))
-			if from_local.y < -56.0:
-				stops.append_array([inside, outside])
-			else:
-				stops.append_array([outside, inside])
-	stops.append(target)
-	var result := PackedVector2Array([origin])
-	var cursor: Vector2 = origin
-	for stop: Vector2 in stops:
-		var section: PackedVector2Array = _bounded_direct_resource_route(cursor, stop) if bounded else worksite_navigation.route(cursor, stop)
-		if section.is_empty():
-			return PackedVector2Array()
-		for index: int in range(1, section.size()):
-			result.append(section[index])
-		cursor = stop
-	return result
+	return _bounded_direct_resource_route(origin, target) if bounded else worksite_navigation.route(origin, target)
 
 func _bounded_direct_resource_route(origin: Vector2, target: Vector2) -> PackedVector2Array:
 	if worksite_navigation.segment_clear(origin, target):

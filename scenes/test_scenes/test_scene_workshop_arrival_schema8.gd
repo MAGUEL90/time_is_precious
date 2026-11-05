@@ -65,7 +65,7 @@ func _run() -> void:
 	_assert_legacy_migrations()
 	_assert_invalid_approaches()
 	_assert_overlap_accounting()
-	_assert_home_route_pause()
+	await _assert_home_route_pause()
 	_expect(SHIFT_DRIVER.work_minutes(construction.CLEARING_MINUTES - 1, arrival_visuals, [ARRIVAL_WORKER] as Array[String]), "The cleaner returns as needed to complete the remaining shifts.")
 	_expect(construction.phase == "empty", "Native clearing releases its worker on completion.")
 	for item_id: String in construction.REQUIREMENTS:
@@ -322,6 +322,12 @@ func _assert_home_route_pause() -> void:
 	_move_actor_to_departure()
 	arrival_plot.begin_worker_approach(ARRIVAL_WORKER, construction.order_id + ":" + construction.phase)
 	arrival_visuals.plot_presence.states.clear()
+	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
+	for frame: int in range(8):
+		if not runtime.navigation_refresh_pending:
+			break
+		await get_tree().process_frame
+	_expect(not runtime.navigation_refresh_pending, "Deferred plot navigation has settled before the home handoff.")
 	var world: Node = content.get_node("YSortWorld")
 	_expect(store.prepare_home_departure(content, arrival_snapshot.HOME_PATH), "Native home handoff retains the worker visual owner.")
 	world.remove_child(arrival_plot)

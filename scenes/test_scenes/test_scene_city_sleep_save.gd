@@ -89,6 +89,12 @@ func _run() -> void:
 		palm.state.remaining_minutes = 10 if index == 0 else 1000 - index * 17
 	var sources_before_sleep: Dictionary = store.snapshot._sources.capture()
 	var original_runtime: Node = runtime
+	# Plot changes above defer navigation rebuilding until the next frame.
+	for frame: int in range(8):
+		if not runtime.navigation_refresh_pending:
+			break
+		await get_tree().process_frame
+	_expect(not runtime.navigation_refresh_pending, "Deferred plot navigation has settled before the home handoff.")
 	var before_departure: Dictionary = store.snapshot._sites.capture(runtime)
 	_expect(store.prepare_home_departure(content, store.snapshot.HOME_PATH), "The city can prepare a home handoff.")
 	_expect(WorkerDatabase.payroll_changed.is_connected(Callable(visuals, "_on_worker_roster_changed")), "The parked visual owner keeps its worker roster connection.")
@@ -316,9 +322,12 @@ func _verify_return_to_city() -> void:
 	var site_wood: int = int(runtime.sites[WOOD_SITE].stock)
 	var cargo_wood: int = int(runtime.daily.hauling.routes.get(HAULER_ID, {}).get("cargo", {}).get("quantity", 0))
 	var conserved_wood: int = city_wood + daily_ground_wood + legacy_ground_wood + site_wood + cargo_wood
-	_expect(conserved_wood == 77,
-		"Wood balances to 77 across City Storage %d, Daily ground %d, legacy ground %d, site %d, and cargo %d."
-		% [city_wood, daily_ground_wood, legacy_ground_wood, site_wood, cargo_wood])
+	# The fixture adds five logs to storage after gathering begins. Site capacity
+	# is a temporary balance parameter, so conserve its configured initial stock.
+	var expected_wood: int = int(runtime.sites[WOOD_SITE].deposit_capacity) + 5
+	_expect(conserved_wood == expected_wood,
+		"Wood balances to %d across City Storage %d, Daily ground %d, legacy ground %d, site %d, and cargo %d."
+		% [expected_wood, city_wood, daily_ground_wood, legacy_ground_wood, site_wood, cargo_wood])
 	_expect(store.snapshot._sources.capture() == palms_before, "Home/city transition preserves every palm slot, timer and RNG.")
 	var view_count: int = 0
 	for index: int in range(6):
