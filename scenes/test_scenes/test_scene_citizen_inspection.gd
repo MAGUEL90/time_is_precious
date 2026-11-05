@@ -120,6 +120,8 @@ func _run() -> void:
 		await _test_needs_and_storage()
 		await _test_hire_reuses_and_tracks_actor()
 		await _test_modal_pause_and_close_button()
+		await _test_city_management_precedence()
+		await _test_home_transition()
 	await _finish()
 
 
@@ -168,6 +170,33 @@ func _mouse_click(viewport_position: Vector2) -> void:
 	release.global_position = viewport_position
 	get_viewport().push_input(release, true)
 	await get_tree().process_frame
+
+
+func _press_key(keycode: Key) -> void:
+	var press := InputEventKey.new()
+	press.keycode = keycode
+	press.physical_keycode = keycode
+	press.pressed = true
+	get_viewport().push_input(press)
+	await get_tree().process_frame
+	var release := InputEventKey.new()
+	release.keycode = keycode
+	release.physical_keycode = keycode
+	release.pressed = false
+	get_viewport().push_input(release)
+	await get_tree().process_frame
+
+
+func _wait_for_scene(path: String) -> bool:
+	var deadline: int = Time.get_ticks_msec() + 10000
+	while Time.get_ticks_msec() < deadline:
+		var scene: Node = get_tree().current_scene
+		if scene != null and scene.scene_file_path == path and not SceneTransition.is_transitioning:
+			await _frames(3)
+			return true
+		await get_tree().process_frame
+	_expect(false, "The real door transition completes to " + path)
+	return false
 
 
 func _click_actor(actor: Node2D) -> void:
@@ -414,6 +443,238 @@ func _test_modal_pause_and_close_button() -> void:
 	TimeComponentManager.is_paused = false
 
 
+func _test_city_management_precedence() -> void:
+	if not is_instance_valid(primary_actor):
+		return
+	var city_ui: RaidUI = get_tree().get_first_node_in_group("city_notification_ui") as RaidUI
+	_expect(is_instance_valid(city_ui), "The real city scene provides the City Management dashboard and notification popup.")
+	if not is_instance_valid(city_ui):
+		return
+
+	if not panel.visible:
+		_position_actor_on_screen(primary_actor, Vector2(90, 80))
+		await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"The resident panel is open before testing the City Management shortcut.")
+	var prior_tree_pause: bool = get_tree().paused
+	var prior_clock_pause: bool = TimeComponentManager.is_paused
+	await _press_key(KEY_C)
+	await _frames(2)
+	_expect(city_ui.details_panel.visible,
+		"Pressing C through real viewport input opens City Management over the main map.")
+	_expect(not panel.visible and str(panel.get("selected_id")).is_empty(),
+		"Opening City Management closes the higher-layer citizen card.")
+	_expect(get_tree().paused == prior_tree_pause and TimeComponentManager.is_paused == prior_clock_pause,
+		"Opening City Management and dismissing the citizen card preserve the existing pause state.")
+
+	# The dashboard is centered, leaving a narrow visible strip of world at the
+	# left. Use a real actor in that strip to exercise unhandled mouse routing.
+	var world_screen_position: Vector2 = Vector2(35, 80)
+	_position_actor_on_screen(primary_actor, world_screen_position)
+	var details_rect: Rect2 = city_ui.details_panel.get_global_rect()
+	_expect(not details_rect.has_point(world_screen_position),
+		"The click-through probe is in visible world space outside the City Management panel.")
+	await _click_actor(primary_actor)
+	_expect(city_ui.details_panel.visible and not panel.visible and str(panel.get("selected_id")).is_empty(),
+		"Clicking a world actor outside the dashboard cannot open inspection or disturb City Management.")
+	_expect(get_tree().paused == prior_tree_pause and TimeComponentManager.is_paused == prior_clock_pause,
+		"The blocked world click leaves the dashboard pause state unchanged.")
+
+	await _press_key(KEY_C)
+	await _frames(2)
+	_expect(not city_ui.details_panel.visible and not city_ui.notifications_popup.visible,
+		"Pressing C again closes City Management and its related surfaces.")
+	_position_actor_on_screen(primary_actor, Vector2(90, 80))
+	await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"After City Management closes, a real viewport click can inspect the resident again.")
+	prior_tree_pause = get_tree().paused
+	prior_clock_pause = TimeComponentManager.is_paused
+	await _press_key(KEY_ESCAPE)
+	_expect(not panel.visible and str(panel.get("selected_id")).is_empty()
+		and get_tree().paused == prior_tree_pause and TimeComponentManager.is_paused == prior_clock_pause,
+		"Escape closes the citizen card without changing either pause state.")
+	await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"The citizen card can be reopened after Escape closes it.")
+
+	# Notifications are another foreground City Management surface. Confirm its
+	# real button opens the popup, blocks an actor underneath, and can be closed.
+	var notification_button: Button = city_ui.notification_button
+	_expect(is_instance_valid(notification_button) and notification_button.is_visible_in_tree(),
+		"The main city exposes its notifications button for the input check.")
+	if is_instance_valid(notification_button) and notification_button.is_visible_in_tree():
+		await _mouse_click(notification_button.get_global_rect().get_center())
+		await _frames(2)
+		_expect(city_ui.notifications_popup.visible and not city_ui.details_panel.visible,
+			"The real notifications button opens its popup above the city world.")
+		_expect(not panel.visible and str(panel.get("selected_id")).is_empty(),
+			"Opening the notifications popup closes the citizen card.")
+		var popup_rect: Rect2 = city_ui.notifications_popup.get_global_rect()
+		var popup_probe: Vector2 = popup_rect.position + Vector2(2, 2)
+		_position_actor_on_screen(primary_actor, popup_probe)
+		await _click_actor(primary_actor)
+		_expect(city_ui.notifications_popup.visible and not panel.visible and str(panel.get("selected_id")).is_empty(),
+			"Clicking a real actor behind the notifications frame cannot open citizen inspection.")
+		var outside_popup: Vector2 = Vector2(popup_rect.end.x + 20.0, popup_rect.position.y + 25.0)
+		_expect(not popup_rect.has_point(outside_popup) and get_viewport().get_visible_rect().has_point(outside_popup),
+			"The second notifications probe is visible world outside the popup.")
+		_position_actor_on_screen(primary_actor, outside_popup)
+		await _click_actor(primary_actor)
+		_expect(city_ui.notifications_popup.visible and not panel.visible and str(panel.get("selected_id")).is_empty(),
+			"Clicking world outside the open notifications popup cannot reopen the citizen card.")
+		var popup_close: Control = city_ui.get_node("Root/NotificationsPopup/Margin/Contents/ActionsRow/CloseButton") as Control
+		await _mouse_click(popup_close.get_global_rect().get_center())
+		_expect(not city_ui.notifications_popup.visible,
+			"The notifications popup closes through its real close button.")
+		_position_actor_on_screen(primary_actor, Vector2(90, 80))
+		await _click_actor(primary_actor)
+		_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+			"The resident remains inspectable after the notifications popup closes.")
+		var citizen_close: Control = panel.get_node("Root/Frame/Margin/Contents/NameRow/CloseButton") as Control
+		await _mouse_click(citizen_close.get_global_rect().get_center())
+		_expect(not panel.visible, "The citizen card closes after the notifications input check.")
+	else:
+		# The City Management check above is mandatory; notification availability
+		# is optional for isolated map variants.
+		if panel.visible:
+			panel.call("close")
+	city_ui.call("close_details")
+	city_ui.call("_close_notifications")
+	_expect(not panel.visible and not city_ui.details_panel.visible and not city_ui.notifications_popup.visible,
+		"The dashboard, notifications, and citizen card are all closed after this test.")
+
+
+func _test_home_transition() -> void:
+	if not is_instance_valid(primary_actor) or not is_instance_valid(content):
+		return
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	var home_door: Node = content.get_node_or_null("YSortWorld/HomeDoor")
+	_expect(is_instance_valid(store) and is_instance_valid(home_door),
+		"The real city map provides its CitySave handoff and HomeDoor.")
+	if not is_instance_valid(store) or not is_instance_valid(home_door):
+		return
+
+	# Let normal authored collider refreshes settle before using the production
+	# handoff guard. This exercises the in-memory city park, without save I/O.
+	for _frame: int in range(60):
+		if not bool(runtime.get("navigation_refresh_pending")):
+			break
+		await get_tree().process_frame
+	_expect(not bool(runtime.get("navigation_refresh_pending")) and not bool(runtime.get("_working")),
+		"The real city runtime is ready for a home handoff without an active work transaction.")
+	if bool(runtime.get("navigation_refresh_pending")) or bool(runtime.get("_working")):
+		return
+
+	if not panel.visible:
+		_position_actor_on_screen(primary_actor, Vector2(90, 80))
+		await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"The citizen card is open before entering home through HomeDoor.")
+	var city_panel: CanvasLayer = panel
+	var inventory_before: Dictionary = Inventory.items.duplicate(true)
+	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
+	var storage_items_before: Dictionary = storage.get("items").duplicate(true)
+	var storage_units_before: Dictionary = storage.get("units").duplicate(true)
+	var needs_before: Dictionary = CitizenNeedsManager.last_needs_results.duplicate(true)
+	var satisfaction_before: float = primary_citizen.satisfaction
+	var clock_before: Dictionary = {
+		"day": TimeComponentManager.current_day,
+		"hour": TimeComponentManager.current_hour,
+		"minute": TimeComponentManager.current_minute,
+		"clock_paused": TimeComponentManager.is_paused,
+		"tree_paused": get_tree().paused,
+	}
+	var save_status_before: String = str(store.get("status"))
+	var parked_runtime: Node = runtime
+
+	# Calling the real Area2D body callback is the same interaction entry used
+	# after physics reports the player overlap; SceneTransition performs the fade
+	# and scene swap asynchronously.
+	home_door.call("_on_body_entered", content.get_node("YSortWorld/Player"))
+	var home_path: String = store.snapshot.HOME_PATH
+	if not await _wait_for_scene(home_path):
+		return
+	var home: Node = get_tree().current_scene
+	_expect(store.get("map") == home and store.get("parked_worksite") == parked_runtime
+		and parked_runtime.get_parent() == store and bool(parked_runtime.get("checkpoint_handoff"))
+		and not parked_runtime.visible,
+		"HomeDoor parks the same live city runtime in CitySave without serializing a checkpoint.")
+	_expect(not city_panel.visible and str(city_panel.get("selected_id")).is_empty(),
+		"The citizen inspection card closes as the city runtime is handed to the home scene.")
+	_expect(not get_tree().paused and not TimeComponentManager.is_paused
+		and TimeComponentManager.current_day == int(clock_before.day)
+		and TimeComponentManager.current_hour == int(clock_before.hour)
+		and TimeComponentManager.current_minute == int(clock_before.minute)
+		and str(store.get("status")) == save_status_before,
+		"The in-memory home handoff neither pauses nor advances the clock, nor writes a save.")
+	_expect(Inventory.items == inventory_before and storage.get("items") == storage_items_before
+		and storage.get("units") == storage_units_before
+		and CitizenNeedsManager.last_needs_results == needs_before
+		and primary_citizen.satisfaction == satisfaction_before,
+		"Entering home leaves Inventory, City Storage, the daily needs ledger, and resident Satisfaction unchanged.")
+	if home == null or not home.has_node("YSortWorld/ExitDoor"):
+		_expect(false, "The real home scene provides its ExitDoor for the return trip.")
+		return
+
+	var home_player: Node = home.get_node("YSortWorld/Player")
+	home.get_node("YSortWorld/ExitDoor").call("_on_body_entered", home_player)
+	if not await _wait_for_scene("res://scenes/content_scene/content_scene.tscn"):
+		return
+	content = get_tree().current_scene
+	get_tree().current_scene = content
+	runtime = content.get_node_or_null("YSortWorld/WorkerRuntime")
+	visuals = runtime.get_node_or_null("WorkerVisuals") if is_instance_valid(runtime) else null
+	controller = runtime.get_node_or_null("CitizenInspectionController") if is_instance_valid(runtime) else null
+	panel = controller.get("panel") as CanvasLayer if is_instance_valid(controller) else null
+	inventory_ui = content.get_node_or_null("InventoryUI") as InventoryUI
+	for _frame: int in range(120):
+		if store.get("parked_worksite") == null:
+			break
+		await get_tree().process_frame
+	_expect(store.get("map") == content and store.get("parked_worksite") == null
+		and not store.snapshot.is_home(content),
+		"ExitDoor returns to the city and CitySave adopts the live runtime into the new map.")
+	_expect(is_instance_valid(runtime) and is_instance_valid(visuals) and is_instance_valid(controller) and is_instance_valid(panel),
+		"The returned ContentScene installs a fresh, usable citizen inspection controller.")
+	_expect(not get_tree().paused and not TimeComponentManager.is_paused
+		and TimeComponentManager.current_day == int(clock_before.day)
+		and TimeComponentManager.current_hour == int(clock_before.hour)
+		and TimeComponentManager.current_minute == int(clock_before.minute),
+		"Returning from home preserves the unpaused city clock without advancing it.")
+	_expect(Inventory.items == inventory_before and storage.get("items") == storage_items_before
+		and storage.get("units") == storage_units_before
+		and CitizenNeedsManager.last_needs_results == needs_before
+		and CitizenManager.get_citizen(primary_id) == primary_citizen
+		and primary_citizen.satisfaction == satisfaction_before,
+		"The resident, daily result, City Storage, and Inventory remain intact after the home round trip.")
+	if not is_instance_valid(visuals) or not is_instance_valid(panel):
+		return
+	for _frame: int in range(30):
+		if visuals.actors.has(primary_id):
+			break
+		await get_tree().process_frame
+	primary_actor = visuals.actors.get(primary_id) as Node2D
+	_expect(is_instance_valid(primary_actor) and primary_actor.is_visible_in_tree(),
+		"The hired resident actor is restored in the city after returning from home.")
+	if not is_instance_valid(primary_actor):
+		return
+	_position_actor_on_screen(primary_actor, Vector2(90, 80))
+	await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"The restored resident can be inspected again with a real viewport click after the home round trip.")
+	var returned_panel_close: Control = panel.get_node("Root/Frame/Margin/Contents/NameRow/CloseButton") as Control
+	await _mouse_click(returned_panel_close.get_global_rect().get_center())
+	_expect(not panel.visible, "The inspection card closes after the home return check.")
+	var returned_city_ui: RaidUI = get_tree().get_first_node_in_group("city_notification_ui") as RaidUI
+	if is_instance_valid(returned_city_ui):
+		returned_city_ui.call("close_details")
+		returned_city_ui.call("_close_notifications")
+	_expect(not panel.visible and (not is_instance_valid(returned_city_ui)
+		or (not returned_city_ui.details_panel.visible and not returned_city_ui.notifications_popup.visible)),
+		"The returned map leaves no citizen, dashboard, or notification surface open.")
+
+
 func _capture(filename: String) -> void:
 	if capture_directory.is_empty() or DisplayServer.get_name() == "headless":
 		return
@@ -424,6 +685,10 @@ func _capture(filename: String) -> void:
 
 
 func _finish() -> void:
+	var city_ui: RaidUI = get_tree().get_first_node_in_group("city_notification_ui") as RaidUI
+	if is_instance_valid(city_ui):
+		city_ui.call("close_details")
+		city_ui.call("_close_notifications")
 	if is_instance_valid(inventory_ui) and inventory_ui.visible:
 		inventory_ui.close_inventory()
 	get_tree().paused = false

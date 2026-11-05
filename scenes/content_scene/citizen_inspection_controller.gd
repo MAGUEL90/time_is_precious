@@ -47,7 +47,21 @@ func _can_inspect() -> bool:
 		return false
 	if bool(runtime.get("checkpoint_handoff")) or not is_instance_valid(runtime.get("player")):
 		return false
+	if _city_surface_is_open():
+		return false
 	return runtime.has_method("_can_open_worker_hub") and bool(runtime._can_open_worker_hub())
+
+func _city_surface_is_open() -> bool:
+	# City Hub and notifications do not pause the tree, but their lower canvas
+	# layer must remain accessible and must not permit world-click inspection.
+	for node: Node in get_tree().get_nodes_in_group("city_notification_ui"):
+		var city_ui: RaidUI = node as RaidUI
+		if not is_instance_valid(city_ui) or not city_ui.visible:
+			continue
+		for surface: Control in [city_ui.details_panel, city_ui.inspection_panel, city_ui.notifications_popup]:
+			if is_instance_valid(surface) and surface.is_visible_in_tree():
+				return true
+	return false
 
 func _person_at(world_point: Vector2) -> String:
 	var chosen: String = ""
