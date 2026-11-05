@@ -70,11 +70,28 @@ func _test_palms() -> void:
 	for pickup: Node2D in palm._pickups.values():
 		pickup_positions.append(pickup.global_position)
 	sway.set_process(false)
+	sway.phase = 0.0
+	sway.elapsed = 0.0
+	sway._update_offset()
 	var offsets: Dictionary = {}
-	for _step: int in range(60):
-		sway._process(0.1)
+	var last_sign: int = 0
+	var right_excursions: int = 0
+	var left_excursions: int = 0
+	var rest_stayed_still: bool = true
+	for step: int in range(200):
+		sway._process(0.05)
 		offsets[sway.last_offset] = true
+		var sign: int = int(sway.last_offset)
+		if sign == 1 and last_sign != 1:
+			right_excursions += 1
+		elif sign == -1 and last_sign != -1:
+			left_excursions += 1
+		last_sign = sign
+		if step >= 100 and step < 199 and sign != 0:
+			rest_stayed_still = false
 	_check(offsets.size() >= 3, "Palm canopy moves through multiple whole-pixel positions.")
+	_check(right_excursions == 1 and left_excursions == 1, "A complete ten-second cycle has one right and one left excursion.")
+	_check(rest_stayed_still, "The canopy rests at its original position during the five-second pause.")
 	_check(palm.global_position == source_position and state.available == available, "Sway does not alter the source or its availability.")
 	var index: int = 0
 	for pickup: Node2D in palm._pickups.values():
@@ -112,7 +129,11 @@ func _test_palms() -> void:
 		city.get_node("BottomHUD").hide()
 		city.get_node("TimeDebugOverlay").visible = false
 		city.get_node("YSortWorld/InitialWorksites/JobBoard").hide()
-	await _capture_frames("palm", palm.global_position + Vector2(32, 10), 50)
+	if camera != null and not OS.get_environment("TIP_ANIMATION_CAPTURE_DIR").is_empty():
+		sway.phase = 0.0
+		sway.elapsed = 0.0
+		sway._update_offset()
+	await _capture_frames("palm", palm.global_position + Vector2(32, 10), 100)
 
 func _dust_count() -> int:
 	var count: int = 0
