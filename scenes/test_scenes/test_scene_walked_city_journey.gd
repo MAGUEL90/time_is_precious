@@ -33,6 +33,7 @@ func sleep_home() -> void:
 	# test-driver counters so a real Continue can resume a long regression.
 	var progress: Dictionary = {"save_sha256": FileAccess.get_file_as_string(checkpoint_path).sha256_text(),
 		"saw_empty_board": saw_empty_board, "saw_house_work_without_applicants": saw_house_work_without_applicants,
+		"saw_house_work_without_workers": saw_house_work_without_workers, "house_materials_paid": house_materials_paid,
 		"bought_clothes": bought_clothes, "deposited_clothes": deposited_clothes, "paid_wood": paid_wood,
 		"house_sessions": house_sessions, "minimum_satisfaction": minimum_satisfaction,
 		"harvested": harvested, "eaten": eaten, "walked": walked, "harvest_interactions": harvest_interactions,
@@ -52,6 +53,8 @@ func _restore_driver_progress() -> void:
 		return
 	saw_empty_board = bool(value.saw_empty_board)
 	saw_house_work_without_applicants = bool(value.saw_house_work_without_applicants)
+	saw_house_work_without_workers = bool(value.get("saw_house_work_without_workers", saw_house_work_without_applicants))
+	house_materials_paid = bool(value.get("house_materials_paid", false))
 	bought_clothes = int(value.bought_clothes)
 	deposited_clothes = int(value.deposited_clothes)
 	paid_wood = int(value.paid_wood)
@@ -532,6 +535,10 @@ func _run() -> void:
 		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, minf(second.satisfaction, third.satisfaction)))
 		var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
 		if not saw_empty_board and WorkerDatabase.is_job_board_open() and CitizenManager.get_all_applicants().is_empty():
+			_expect(first.satisfaction < 0.5 and second.satisfaction < 0.5 and third.satisfaction < 0.5,
+				"An observed empty board has all three starter residents below the 50% applicant threshold.")
+			if stopped:
+				return
 			await _check_board(0)
 			saw_empty_board = true
 		if house.phase == "built" and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5:
@@ -558,11 +565,12 @@ func _run() -> void:
 	var first: CitizenData = CitizenManager.get_citizen(FIRST)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND)
 	var third: CitizenData = CitizenManager.get_citizen(THIRD)
-	_expect(saw_empty_board and saw_house_work_without_applicants and bought_clothes >= 3 and deposited_clothes >= 3
+	print("WALKED_CITY_COVERAGE ", JSON.stringify({"saw_empty_board": saw_empty_board, "saw_house_work_without_applicants": saw_house_work_without_applicants, "saw_house_work_without_workers": saw_house_work_without_workers, "house_materials_paid": house_materials_paid, "house_built": content.get_node("YSortWorld/CitizenHousePlot").construction.phase == "built", "all_three_recovered": first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled()}))
+	_expect(saw_house_work_without_workers and house_materials_paid and bought_clothes >= 3 and deposited_clothes >= 3
 		and content.get_node("YSortWorld/CitizenHousePlot").construction.phase == "built"
 		and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled()
 		and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5,
-		"Walking and earned supplies recover all three residents after the empty-board state.")
+		"Walking and earned supplies build the house with player materials and recover all three residents.")
 	if stopped:
 		return
 	print("WALKED_CITY_RECOVERED ", JSON.stringify({"day": TimeComponentManager.current_day, "walked": walked, "satisfaction": [first.satisfaction, second.satisfaction], "house_sessions": house_sessions, "clothes": bought_clothes, "income": paid_wood}))

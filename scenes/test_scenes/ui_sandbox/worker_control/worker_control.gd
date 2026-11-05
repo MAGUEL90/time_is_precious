@@ -1130,7 +1130,7 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 	bar.value = clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0
 	bar.tint_progress = Color(0.7, 1.0, 0.6)
 	bar.visible = needs.has("satisfaction")
-	label.text = ("Satisfaction: %d%%  %s" % [roundi(bar.value), _format_daily_delta(needs.get("satisfaction_delta", 0.0)) if evaluated else ""]).strip_edges() if needs.has("satisfaction") else "Satisfaction: -"
+	label.text = _format_satisfaction_text(needs) if needs.has("satisfaction") else "Satisfaction: -"
 	if reset_scroll and is_instance_valid(details_scroll):
 		details_scroll.scroll_vertical = 0
 
@@ -1151,7 +1151,7 @@ func _format_details_text(row: Dictionary) -> String:
 	var needs: Dictionary = needs_value
 	if not bool(needs.get("evaluated", false)):
 		lines.append("Daily needs: Not evaluated yet")
-		lines.append(_format_current_metric("Satisfaction", needs, "satisfaction"))
+		lines.append(_format_satisfaction_text(needs))
 		return "\n".join(lines)
 
 	var day: int = int(needs.get("day", -1))
@@ -1172,17 +1172,20 @@ func _format_details_text(row: Dictionary) -> String:
 	for missing_name: Variant in missing:
 		missing_names.append(str(missing_name))
 	if not missing_names.is_empty():
-		lines.append("Reason: Missing %s." % ", ".join(missing_names))
+		lines.append("Last check: Missing %s." % ", ".join(missing_names))
 	else:
-		lines.append("Reason: All needs met.")
-	lines.append("Satisfaction: %d%% (%s)" % [roundi(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("satisfaction_delta", 0.0))])
+		lines.append("Last check: All needs met.")
+	lines.append(_format_satisfaction_text(needs))
 	return "\n".join(lines)
 
 
-func _format_current_metric(label: String, summary: Dictionary, key: String) -> String:
-	if not summary.has(key):
-		return "%s: Not evaluated yet" % label
-	return "%s: %d%% (current)" % [label, roundi(clampf(float(summary.get(key, 0.0)), 0.0, 1.0) * 100.0)]
+func _format_satisfaction_text(needs: Dictionary) -> String:
+	if not needs.has("satisfaction"):
+		return "Satisfaction: Unknown"
+	var current_text: String = "%d%% current" % roundi(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0)
+	if not bool(needs.get("evaluated", false)):
+		return "Satisfaction: %s (check unknown)" % current_text
+	return "Satisfaction: %s (check %s)" % [current_text, _format_daily_delta(needs.get("satisfaction_delta", 0.0))]
 
 
 func _format_daily_delta(value: Variant) -> String:

@@ -120,14 +120,13 @@ func _write_journey() -> void:
 	var old_paid_until: int = first.payroll_paid_until_day
 	var wallet_after_hire: int = int(Inventory.items.get("shekel", 0))
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
-	# Clothing and shelter have no normal supply path in this build. Seed them
-	# explicitly, leaving food as the only missing basic need on both days.
-	var residents: int = CitizenManager.get_all_residents().size()
-	Inventory.add_item("simple_clothes", residents)
-	var initial_clothes: Dictionary = storage.deposit_items_from_inventory({"simple_clothes": residents})
-	_check(bool(initial_clothes.get("ok", false)) and CityStockManager.add_shelter_capacity(residents),
-		"The fixture supplies clothing and shelter for all residents before food runs out.")
-	_check(storage.get_food_supply_points() == 0, "The first two daily settlements start without city food.")
+	# The target model reduces a 10% citizen toward zero only when all three
+	# needs are missing. This test starts the city without supplies or shelter;
+	# recovery supplies them explicitly after Continue. It does not claim that
+	# shortage of food alone always causes resignation under the new model.
+	_check(storage.get_food_supply_points() == 0 and storage.get_clothing_item_count() == 0
+		and CityStockManager.shelter_capacity == 0,
+		"The first two daily settlements start without food, clothing, or shelter.")
 	if not await _start_plot_task(FIRST):
 		return
 	var arrived: bool = _drive_arrival(FIRST)
@@ -160,7 +159,7 @@ func _write_journey() -> void:
 		"At 23:59 the first shortage has not yet changed Satisfaction, employment, contract or progress.")
 	_check(TimeComponentManager.advance_minutes(1), "The real clock reaches the first midnight.")
 	_check(is_equal_approx(citizen.satisfaction, 0.05) and not citizen.food_fulfilled
-		and citizen.clothing_fulfilled and citizen.shelter_fulfilled and construction._remaining_work_units() == at_close
+		and not citizen.clothing_fulfilled and not citizen.shelter_fulfilled and construction._remaining_work_units() == at_close
 		and WorkerDatabase.has_worker_data(FIRST), "Day one shortage lowers 10% to 5% without off-shift progress.")
 	_check(TimeComponentManager.advance_minutes(7 * 60), "The clock reaches the next 07:00 shift.")
 	arrived = _drive_arrival(FIRST)
@@ -178,7 +177,7 @@ func _write_journey() -> void:
 	_check(TimeComponentManager.advance_minutes(1), "The clock reaches the second midnight.")
 	var archived: WorkerData = WorkerDatabase.dismissed_workers.get(FIRST)
 	_check(is_zero_approx(citizen.satisfaction) and not citizen.food_fulfilled
-		and citizen.clothing_fulfilled and citizen.shelter_fulfilled and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+		and not citizen.clothing_fulfilled and not citizen.shelter_fulfilled and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
 		and not WorkerDatabase.has_worker_data(FIRST) and archived != null, "Day two shortage lowers 5% to zero and resigns the builder.")
 	_check(archived != null and archived.profession_xp == TEST_XP and archived.payroll_paid_until_day == -1
 		and old_paid_until > TimeComponentManager.current_day and int(Inventory.items.get("shekel", 0)) == wallet_after_hire,
@@ -220,8 +219,8 @@ func _continue_journey(source_bytes: PackedByteArray) -> void:
 	_check(TimeComponentManager.advance_minutes(30)
 		and construction._remaining_work_units() == before_replacement_work - 30
 		and _same_counts(Inventory.items, evidence.inventory), "The replacement advances the same paid project without another material charge.")
-	# Food returns and clothes are replenished before the first set expires;
-	# the explicitly supplied shelter remains in place for the whole journey.
+	# Explicit recovery fixture: provide food, clothes and shelter after the
+	# all-needs-shortage resignation, then replenish clothing before expiry.
 	var residents: int = CitizenManager.get_all_residents().size()
 	var food: int = residents * 11
 	var clothes: int = residents
@@ -229,7 +228,8 @@ func _continue_journey(source_bytes: PackedByteArray) -> void:
 	Inventory.add_item("simple_clothes", clothes)
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
 	var deposit: Dictionary = storage.deposit_items_from_inventory({"barley_bread": food, "simple_clothes": clothes})
-	_check(bool(deposit.get("ok", false)) and CityStockManager.has_shelter_capacity(residents),
+	var shelter_added: bool = CityStockManager.add_shelter_capacity(residents)
+	_check(bool(deposit.get("ok", false)) and shelter_added and CityStockManager.has_shelter_capacity(residents),
 		"The explicit fixture supplies food, replacement clothing, and shelter for all residents.")
 	for day: int in range(1, 11):
 		if not _advance_recovery_day(day):

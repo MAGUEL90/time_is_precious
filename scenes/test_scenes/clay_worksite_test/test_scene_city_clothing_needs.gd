@@ -190,6 +190,16 @@ func _test_summary_is_read_only_without_provider() -> void:
 
 func _test_clothing_lifecycle_and_satisfaction() -> void:
 	_clear_people()
+	# The revised condition scale is 0/33/66/99% for zero through three
+	# fulfilled needs; actual satisfaction moves at most five points per day.
+	_expect(is_zero_approx(CitizenNeedsManager.satisfaction_condition_value(false, false, false)),
+		"No fulfilled needs must produce a 0% condition target.")
+	_expect(is_equal_approx(CitizenNeedsManager.satisfaction_condition_value(true, false, false), 0.33),
+		"One fulfilled need must produce a 33% condition target.")
+	_expect(is_equal_approx(CitizenNeedsManager.satisfaction_condition_value(true, true, false), 0.66),
+		"Two fulfilled needs must produce a 66% condition target.")
+	_expect(is_equal_approx(CitizenNeedsManager.satisfaction_condition_value(true, true, true), 0.99),
+		"Three fulfilled needs must produce a 99% condition target.")
 	var resident: CitizenData = _make_resident("clothing_lifecycle_resident")
 	var linked_worker: WorkerData = _make_worker(resident.citizen_id)
 	CitizenManager.add_citizen(resident)
@@ -251,10 +261,13 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	_set_new_day(base_day + 7)
 	var satisfaction_before_expiry: float = resident.satisfaction
+	_expect(is_equal_approx(satisfaction_before_expiry, 0.85),
+		"Seven fully supplied days move satisfaction from 50% to 85%, still above the 66% two-need target.")
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.clothing_fulfilled, "Expired clothing must fail when no replacement is available.")
 	_expect(provider.get_clothing_item_count() == 0, "Clothing expiry must not create phantom stock or negative stock.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry - 0.05), "Clothing shortage must reduce satisfaction by five percentage points.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry - 0.05),
+		"At 85% above the 66% two-need target, clothing expiry moves satisfaction down exactly five points.")
 	var expired_summary: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
 	_expect(int(expired_summary.get("replacement_need", 0)) >= 1, "An expired garment must create replacement need.")
 	_expect(not bool(expired_summary.get("can_cover_all", true)), "No physical stock must not claim full clothing coverage.")
@@ -276,7 +289,8 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	var satisfaction_before_food_failure: float = resident.satisfaction
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.food_fulfilled and resident.clothing_fulfilled and resident.shelter_fulfilled, "Food failure must be evaluated independently while clothing remains valid.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_food_failure - 0.05), "Food shortage must reduce satisfaction by five percentage points.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_food_failure - 0.05),
+		"A food shortage lowers satisfaction by five points because the actual value remains above the 66% target.")
 
 	_set_items({READY_BREAD: 1})
 	CityStockManager.shelter_capacity = 0
@@ -284,7 +298,8 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	var satisfaction_before_shelter_failure: float = resident.satisfaction
 	CitizenNeedsManager.process_daily_needs()
 	_expect(resident.food_fulfilled and resident.clothing_fulfilled and not resident.shelter_fulfilled, "Shelter failure must be evaluated independently while clothing remains valid.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_shelter_failure - 0.05), "Shelter shortage must reduce satisfaction by five percentage points.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_shelter_failure - 0.05),
+		"A shelter shortage lowers satisfaction by five points because the actual value remains above the 66% target.")
 
 	CityStockManager.shelter_capacity = 1
 	_set_items({READY_BREAD: 1})
@@ -298,12 +313,17 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	_set_items({})
 	_set_new_day(base_day + 12)
+	# Zero is a stable lower bound only when all needs are unmet (target 0%).
+	CityStockManager.shelter_capacity = 0
+	_set_if_property(CitizenNeedsManager, "clothing_allocations", {})
 	resident.satisfaction = 0.0
 	CitizenNeedsManager.process_daily_needs()
-	_expect(is_zero_approx(resident.satisfaction), "Negative satisfaction deltas must clamp at zero.")
+	_expect(not resident.food_fulfilled and not resident.clothing_fulfilled and not resident.shelter_fulfilled,
+		"The lower-bound fixture must leave all three needs unmet.")
+	_expect(is_zero_approx(resident.satisfaction), "Zero satisfaction must remain at zero when all three needs are unmet.")
 	capped = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
 	_expect(is_zero_approx(float(capped.satisfaction_delta)),
-		"A result already at the lower limit must report the actual zero penalty.")
+		"At the zero condition target, the lower-bound result must report no actual satisfaction change.")
 
 
 func _test_ten_day_satisfaction_boundaries() -> void:
@@ -311,29 +331,63 @@ func _test_ten_day_satisfaction_boundaries() -> void:
 	var resident: CitizenData = _make_resident("ten_day_needs_boundary")
 	resident.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	CitizenManager.add_citizen(resident)
-	CityStockManager.shelter_capacity = 1
-	_set_items({SIMPLE_CLOTHES: 1})
+	var zero_worker: WorkerData = _make_worker("ten_day_zero_worker")
+	zero_worker.satisfaction = 0.5
+	zero_worker.current_work_status = WorkerData.WorkStatus.IDLE
+	WorkerDatabase.workers_by_id[zero_worker.worker_id] = zero_worker
+	# With the 33% per-need model, an unmet need alone no longer guarantees a
+	# decrease. Make all three needs unavailable so this fixture targets 0%.
+	CityStockManager.shelter_capacity = 0
+	_set_items({})
 	var base_day: int = TimeComponentManager.current_day + 100
 	_set_new_fixture_day(base_day)
 	for offset: int in range(10):
 		_set_new_day(base_day + offset)
 		CitizenNeedsManager.process_daily_needs()
 		var once: float = resident.satisfaction
+		var worker_once: float = zero_worker.satisfaction
 		CitizenNeedsManager.process_daily_needs()
-		_expect(resident.satisfaction == once, "Repeated daily evaluation does not duplicate a shortage.")
+		_expect(resident.satisfaction == once and zero_worker.satisfaction == worker_once,
+			"Repeated daily evaluation does not duplicate a zero-target result.")
+		_expect(not resident.food_fulfilled and not resident.clothing_fulfilled and not resident.shelter_fulfilled,
+			"Every day in the zero-target fixture must leave all three needs unmet.")
 		if offset < 9:
-			_expect(resident.satisfaction > 0.0, "Satisfaction remains above zero before ten shortage days.")
-	_expect(resident.satisfaction == 0.0, "Ten shortage days take 50% exactly to zero.")
-	_set_items({SIMPLE_CLOTHES: 2, READY_BREAD: 10})
+			_expect(resident.satisfaction > 0.0 and zero_worker.satisfaction > 0.0,
+				"The resident and legacy worker remain above zero before ten days at the 0% condition target.")
+	_expect(is_zero_approx(resident.satisfaction) and is_zero_approx(zero_worker.satisfaction),
+		"Ten days moving down by five points toward a 0% condition target take 50% exactly to zero.")
+	var resigned_citizen: CitizenData = CitizenManager.get_citizen(zero_worker.worker_id)
+	_expect(
+		WorkerDatabase.get_worker_data(zero_worker.worker_id) == null
+			and WorkerDatabase.dismissed_workers.has(zero_worker.worker_id)
+			and resigned_citizen != null
+			and resigned_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
+		"An idle legacy worker reaching zero must resign into the resident roster."
+	)
+	_expect(CitizenManager.get_all_applicants().is_empty(), "Residents at zero must remain below the existing applicant threshold.")
+	# Restore all three needs for recovery: two residents need two clothing issues
+	# each (day 1 and the seven-day renewal), plus one food point per day.
+	CityStockManager.shelter_capacity = 2
+	_set_items({SIMPLE_CLOTHES: 4, READY_BREAD: 20})
 	for offset: int in range(1, 11):
 		_set_new_day(base_day + 9 + offset)
 		CitizenNeedsManager.process_daily_needs()
 		if offset < 10:
-			_expect(resident.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
-				"A recovering resident below 50% has not applied yet.")
-	_expect(resident.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
-		and resident.employment_status == CitizenData.EmploymentStatus.APPLICANT,
-		"Ten fully supplied days recover 0% to the existing 50% applicant threshold.")
+			_expect(
+				resident.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+					and resigned_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
+				"Residents recovering below 50% have not applied yet."
+			)
+		_expect(is_equal_approx(resident.satisfaction, float(offset) * 0.05)
+			and is_equal_approx(resigned_citizen.satisfaction, float(offset) * 0.05),
+			"Each fully supplied recovery day moves both residents five points toward the 99% condition target.")
+	_expect(
+		resident.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
+			and resident.employment_status == CitizenData.EmploymentStatus.APPLICANT
+			and resigned_citizen.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
+			and resigned_citizen.employment_status == CitizenData.EmploymentStatus.APPLICANT,
+		"Ten fully supplied days recover both residents from 0% to the existing 50% applicant threshold."
+	)
 
 
 func _test_shortage_and_legacy_counter_is_ignored() -> void:
@@ -482,7 +536,8 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 		_expect(resident.clothing_fulfilled, "The first seven residents must receive physical clothing.")
 		_expect(is_equal_approx(resident.satisfaction, initial_satisfaction[index] + 0.05), "A covered resident must receive the positive satisfaction delta.")
 	_expect(not residents[7].clothing_fulfilled, "The eighth resident must remain uncovered while physical clothing is short.")
-	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] - 0.05), "The uncovered resident must receive the shortage satisfaction delta.")
+	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] + 0.05),
+		"With food and shelter fulfilled, the uncovered resident still moves up five points toward the 66% two-need condition target.")
 	_expect(CitizenNeedsManager.get("last_needs_results").size() == 8, "Linked workers must not create duplicate daily-needs results.")
 	_expect(WorkerDatabase.workers_by_id.size() == 4, "The fixture must retain exactly its four linked worker records.")
 
@@ -537,7 +592,8 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	for index: int in range(7):
 		var resident_id: String = residents[index].citizen_id
 		_expect(int(_allocation_for(resident_id).get("issued_day", -1)) == int(original_issue_days[resident_id]), "Previously covered residents must retain their original clothing issue dates.")
-	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7]), "The previously uncovered resident must recover the shortage satisfaction loss on the next day.")
+	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] + 0.10),
+		"The previously uncovered resident moves five points toward 66%, then five more toward 99% after clothing recovers.")
 	var eighth_worker: WorkerData = WorkerDatabase.get_worker_data(residents[7].citizen_id)
 	var eighth_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(eighth_worker)
 	_assert_worker_summary(eighth_summary, base_day + 1, true, true, true, 7)

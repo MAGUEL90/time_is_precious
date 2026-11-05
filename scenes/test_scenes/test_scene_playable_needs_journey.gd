@@ -16,6 +16,8 @@ var paid_wood: int = 0
 var house_sessions: int = 0
 var saw_empty_board: bool = false
 var saw_house_work_without_applicants: bool = false
+var saw_house_work_without_workers: bool = false
+var house_materials_paid: bool = false
 var minimum_satisfaction: float = 1.0
 var skip_merchant_visits: int = 0
 var skipped_visit_days: Array[int] = []
@@ -348,7 +350,8 @@ func _house_session() -> void:
 	var clearing_before: int = construction.clearing_remaining
 	var work_before: int = construction._remaining_work_units()
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
-	var unstaffed: bool = CitizenManager.get_all_applicants().is_empty() and WorkerDatabase.get_all_workers().is_empty()
+	var without_workers: bool = WorkerDatabase.get_all_workers().is_empty()
+	var without_applicants: bool = CitizenManager.get_all_applicants().is_empty()
 	await walk(house.get_node("InteractableComponent").global_position + Vector2(0, 4))
 	await interact(house)
 	_expect(is_instance_valid(house.menu), "The actual house menu opens.")
@@ -366,11 +369,20 @@ func _house_session() -> void:
 	while is_instance_valid(house.menu) and Time.get_ticks_msec() < deadline and not stopped:
 		await get_tree().process_frame
 	_expect(not is_instance_valid(house.menu) and not house._manual_house_work, "The actual manual work session finishes and releases its menu.")
-	if unstaffed and (construction.phase != phase_before or construction.clearing_remaining < clearing_before or construction._remaining_work_units() < work_before):
-		saw_house_work_without_applicants = true
+	var made_progress: bool = construction.phase != phase_before or construction.clearing_remaining < clearing_before or construction._remaining_work_units() < work_before
+	if made_progress and without_workers:
+		saw_house_work_without_workers = true
+		if without_applicants:
+			saw_house_work_without_applicants = true
+	if without_workers and without_applicants:
+		_expect(made_progress, "Manual house work during an actual no-applicant state advances construction.")
 	if phase_before == "empty":
+		var paid_all_materials: bool = true
 		for id: String in construction.get_requirements():
-			_expect(int(inventory_before.get(id, 0)) - int(Inventory.items.get(id, 0)) == int(construction.get_requirements()[id]), "House construction consumes its materials from the player's Inventory: " + id)
+			var paid: bool = int(inventory_before.get(id, 0)) - int(Inventory.items.get(id, 0)) == int(construction.get_requirements()[id])
+			_expect(paid, "House construction consumes its materials from the player's Inventory: " + id)
+			paid_all_materials = paid_all_materials and paid
+		house_materials_paid = house_materials_paid or paid_all_materials
 	house_sessions += 1
 
 
@@ -392,6 +404,8 @@ func _run() -> void:
 	var merchant_seed: int = -1
 	var food_seed: int = -1
 	var expect_zero: bool = false
+	# Opt in only for a deliberate shortage fixture; ordinary journeys can recover before losing eligibility.
+	var require_empty_board_recovery: bool = false
 	var maximum_recovery_day: int = -1
 	var maximum_harvest: int = -1
 	for arg: String in OS.get_cmdline_user_args():
@@ -403,6 +417,8 @@ func _run() -> void:
 			food_seed = int(arg.trim_prefix("--food-seed="))
 		elif arg == "--expect-zero":
 			expect_zero = true
+		elif arg == "--require-empty-board-recovery":
+			require_empty_board_recovery = true
 		elif arg == "--audit-material-sources":
 			audit_material_sources = true
 		elif arg in ["--expect-worksite-city", "--allow-legacy-player-worksite"]:
@@ -469,7 +485,11 @@ func _run() -> void:
 		var third: CitizenData = CitizenManager.get_citizen(THIRD)
 		minimum_satisfaction = minf(minimum_satisfaction, minf(first.satisfaction, minf(second.satisfaction, third.satisfaction)))
 		var house: Node = content.get_node("YSortWorld/CitizenHousePlot").construction
-		if not saw_empty_board and WorkerDatabase.is_job_board_open() and CitizenManager.get_all_applicants().is_empty() and first.satisfaction < 0.5 and second.satisfaction < 0.5:
+		if not saw_empty_board and WorkerDatabase.is_job_board_open() and CitizenManager.get_all_applicants().is_empty():
+			_expect(first.satisfaction < 0.5 and second.satisfaction < 0.5 and third.satisfaction < 0.5,
+				"An observed empty board has all three starter residents below the 50% applicant threshold.")
+			if stopped:
+				return
 			await _check_board(0)
 			saw_empty_board = true
 		if house.phase == "built" and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5 and first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled():
@@ -501,9 +521,13 @@ func _run() -> void:
 	var first: CitizenData = CitizenManager.get_citizen(FIRST)
 	var second: CitizenData = CitizenManager.get_citizen(SECOND)
 	var third: CitizenData = CitizenManager.get_citizen(THIRD)
-	_expect(saw_empty_board and saw_house_work_without_applicants and house.phase == "built" and CityStockManager.shelter_capacity == 3, "Manual construction makes progress with no applicants or workers, then grants shelter.")
+	print("NEEDS_JOURNEY_COVERAGE ", JSON.stringify({"saw_empty_board": saw_empty_board, "saw_house_work_without_applicants": saw_house_work_without_applicants, "saw_house_work_without_workers": saw_house_work_without_workers, "house_materials_paid": house_materials_paid, "house_built": house.phase == "built", "all_three_recovered": first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled()}))
+	_expect(saw_house_work_without_workers and house_materials_paid and house.phase == "built" and CityStockManager.shelter_capacity == 3, "Player materials fund manual house progress without hired workers, then grant shelter.")
 	_expect(bought_clothes >= 3 and deposited_clothes >= 3 and paid_wood >= 4, "Wood income actually buys and deposits clothing for all three residents.")
 	_expect(first.are_basic_needs_fulfilled() and second.are_basic_needs_fulfilled() and third.are_basic_needs_fulfilled() and first.satisfaction >= 0.5 and second.satisfaction >= 0.5 and third.satisfaction >= 0.5 and CitizenManager.get_all_applicants().size() >= 3, "Food, clothing and shelter recover all three residents and their Job Board eligibility.")
+	if require_empty_board_recovery:
+		_expect(saw_empty_board and saw_house_work_without_applicants,
+			"The explicit shortage fixture observes an empty Job Board and manual house progress while applicants are ineligible.")
 	if expect_zero:
 		_expect(is_zero_approx(minimum_satisfaction), "The selected long-delay fixture actually reaches zero satisfaction before recovering.")
 	if maximum_recovery_day >= 0:

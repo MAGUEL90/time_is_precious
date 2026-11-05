@@ -230,9 +230,12 @@ func _test_daily_idle_resignation_and_recovery() -> void:
 	WorkerDatabase.workers_by_id.erase("other")
 	storage.units.erase("other")
 	citizen.satisfaction = 0.05
-	CityStockManager.shelter_capacity = 1
+	# With condition-based Satisfaction, reach zero through an actual 0% target:
+	# no food, no current garment allocation, and no shelter for this day.
+	CityStockManager.shelter_capacity = 0
 	storage.items.clear()
 	storage.food_portions.clear()
+	CitizenNeedsManager.clothing_allocations.clear()
 	CitizenNeedsManager.last_processed_day = 49
 	CitizenNeedsManager.last_food_processed_day = 49
 	CitizenNeedsManager.last_clothing_processed_day = 49
@@ -240,7 +243,9 @@ func _test_daily_idle_resignation_and_recovery() -> void:
 	CitizenNeedsManager._processing_food = false
 	CitizenNeedsManager._processing_clothing = false
 	CitizenNeedsManager.process_daily_needs()
-	_expect(citizen.satisfaction == 0.0 and not WorkerDatabase.has_worker_data("daily")
+	_expect(citizen.satisfaction == 0.0 and not citizen.food_fulfilled
+		and not citizen.clothing_fulfilled and not citizen.shelter_fulfilled
+		and not WorkerDatabase.has_worker_data("daily")
 		and CitizenManager.get_citizen("daily") == citizen
 		and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
 		"The daily shortage resigns an idle worker exactly when Satisfaction reaches zero.")
@@ -252,6 +257,7 @@ func _test_daily_idle_resignation_and_recovery() -> void:
 	_expect(citizen.satisfaction == 0.0 and WorkerDatabase.dismissed_workers.get("daily") == worker,
 		"Repeating the same daily callback does not repeat or undo the resignation.")
 	storage.items = {"barley_bread": 10, "simple_clothes": 2}
+	CityStockManager.shelter_capacity = 1
 	for day: int in range(51, 61):
 		TimeComponentManager.current_day = day
 		CitizenNeedsManager.process_daily_needs()

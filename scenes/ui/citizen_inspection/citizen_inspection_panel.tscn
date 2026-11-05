@@ -1,0 +1,309 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/citizen_inspection/citizen_inspection_panel.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_frame"]
+[ext_resource type="Texture2D" path="res://assets/items/butcher’s_cut.png" id="4_food"]
+[ext_resource type="Texture2D" path="res://assets/items/trimmed_robe.png" id="5_clothing"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/house_icon.png" id="6_shelter"]
+[ext_resource type="PackedScene" uid="uid://tpjiw5abudfv" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="7_close"]
+
+[sub_resource type="AtlasTexture" id="PanelTexture"]
+atlas = ExtResource("3_frame")
+region = Rect2(1, 1, 168, 134)
+
+[node name="CitizenInspectionPanel" type="CanvasLayer"]
+visible = false
+layer = 8
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Frame" type="NinePatchRect" parent="Root"]
+anchors_preset = 0
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -238.0
+offset_top = -80.0
+offset_right = -8.0
+offset_bottom = 80.0
+mouse_filter = 0
+texture = SubResource("PanelTexture")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="Margin" type="MarginContainer" parent="Root/Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Contents" type="VBoxContainer" parent="Root/Frame/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="NameRow" type="HBoxContainer" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="NameLabel" type="Label" parent="Root/Frame/Margin/Contents/NameRow"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 9
+text = "Citizen"
+autowrap_mode = 3
+clip_text = true
+text_overrun_behavior = 4
+max_lines_visible = 2
+vertical_alignment = 1
+
+[node name="CloseButton" parent="Root/Frame/Margin/Contents/NameRow" instance=ExtResource("7_close")]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="DailyCheckLabel" type="Label" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "LAST DAILY CHECK · DAY 1"
+vertical_alignment = 1
+
+[node name="DailyNeedsRow" type="HBoxContainer" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FoodStatus" type="VBoxContainer" parent="Root/Frame/Margin/Contents/DailyNeedsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/DailyNeedsRow/FoodStatus"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("4_food")
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/DailyNeedsRow/FoodStatus"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Food: Met"
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="ClothingStatus" type="VBoxContainer" parent="Root/Frame/Margin/Contents/DailyNeedsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/DailyNeedsRow/ClothingStatus"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("5_clothing")
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/DailyNeedsRow/ClothingStatus"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Clothing: Met"
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="ShelterStatus" type="VBoxContainer" parent="Root/Frame/Margin/Contents/DailyNeedsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/DailyNeedsRow/ShelterStatus"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("6_shelter")
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/DailyNeedsRow/ShelterStatus"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Shelter: Met"
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="ClothingDaysLabel" type="Label" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "Clothing days left: Unknown"
+vertical_alignment = 1
+
+[node name="SatisfactionLabel" type="Label" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 7
+text = "Actual satisfaction: 50%"
+vertical_alignment = 1
+
+[node name="ConditionLabel" type="Label" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 7
+text = "Condition: Unknown"
+vertical_alignment = 1
+
+[node name="CityStockLabel" type="Label" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "CITY SUPPLY NOW"
+vertical_alignment = 1
+
+[node name="CityStockRow" type="HBoxContainer" parent="Root/Frame/Margin/Contents"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FoodStock" type="VBoxContainer" parent="Root/Frame/Margin/Contents/CityStockRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/CityStockRow/FoodStock"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("4_food")
+
+[node name="CategoryLabel" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/FoodStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Food"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/FoodStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0 pts"
+autowrap_mode = 3
+max_lines_visible = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ClothingStock" type="VBoxContainer" parent="Root/Frame/Margin/Contents/CityStockRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/CityStockRow/ClothingStock"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("5_clothing")
+
+[node name="CategoryLabel" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/ClothingStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Clothing"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/ClothingStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0 units"
+autowrap_mode = 3
+max_lines_visible = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ShelterStock" type="VBoxContainer" parent="Root/Frame/Margin/Contents/CityStockRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="Icon" type="TextureRect" parent="Root/Frame/Margin/Contents/CityStockRow/ShelterStock"]
+custom_minimum_size = Vector2(9, 9)
+layout_mode = 2
+size_flags_horizontal = 4
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+texture = ExtResource("6_shelter")
+
+[node name="CategoryLabel" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/ShelterStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 5
+text = "Shelter"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Root/Frame/Margin/Contents/CityStockRow/ShelterStock"]
+layout_mode = 2
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "0 capacity"
+autowrap_mode = 3
+max_lines_visible = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RefreshTimer" type="Timer" parent="."]
+wait_time = 0.2
+one_shot = false
+autostart = false

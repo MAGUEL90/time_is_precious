@@ -112,6 +112,10 @@ func _ready() -> void:
 	var resident_spawn: Node2D = get_node_or_null("ResidentSpawn") as Node2D
 	if resident_spawn != null:
 		$WorkerVisuals.enable_city_residents(resident_spawn)
+		var inspection := preload("res://scenes/content_scene/citizen_inspection_controller.gd").new()
+		inspection.name = "CitizenInspectionController"
+		inspection.configure(self, $WorkerVisuals)
+		add_child(inspection)
 	worker_control.can_open = _can_open_worker_hub
 	# Resource-only map sections can reuse this adapter without a city warehouse.
 	var city_storage_area: Node = get_node_or_null("CityStorageArea")

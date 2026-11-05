@@ -124,6 +124,18 @@ func _run() -> void:
 		board.job_board_ui.close()
 	await get_tree().process_frame
 
+	# Keep the original no-applicant recovery coverage as its own deterministic
+	# case. The new condition model does not require a shortage in every journey.
+	var construction: Node = city.get_node("YSortWorld/CitizenHousePlot").construction
+	var inventory_before_clearing: Dictionary = Inventory.items.duplicate(true)
+	var no_workers: Array[String] = []
+	var clearing: Dictionary = construction.start_clearing(no_workers, true)
+	_expect(CitizenManager.get_all_applicants().is_empty() and WorkerDatabase.get_all_workers().is_empty()
+		and bool(clearing.get("success", false)), "The player can start clearing a house with an empty Job Board and no workers.")
+	_expect(TimeComponentManager.advance_minutes(construction.CLEARING_MINUTES) and construction.phase == "empty"
+		and Inventory.items == inventory_before_clearing and CitizenManager.get_all_applicants().is_empty(),
+		"The player completes unstaffed house clearing through the normal clock without grants or material charges.")
+
 	# Restore eligibility and fund a hire only as a fixture for visual lifecycle.
 	first.satisfaction = 0.5
 	var price: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, 3)
@@ -143,9 +155,7 @@ func _run() -> void:
 	_expect(WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors[FIRST_ID] == first_actor and visuals.actors.size() == 3, "Hiring retains exactly the existing resident visual.")
 	ui.close()
 	await get_tree().process_frame
-	var construction: Node = city.get_node("YSortWorld/CitizenHousePlot").construction
-	construction.phase = "empty" # Test-only cleaned plot; the real assignment path follows.
-	construction.changed.emit()
+	_expect(construction.phase == "empty", "The earlier player-cleared plot is ready for the worker assignment.")
 	Inventory.add_bulk_item({"wood_log": 4, "clay_lump": 8, "reed_bundle": 6})
 	var ids: Array[String] = [FIRST_ID]
 	var start: Dictionary = construction.start_build(ids)

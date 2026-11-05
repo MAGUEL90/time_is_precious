@@ -7,6 +7,10 @@ const FOOD_SUPPLY_PER_WORKER_PER_DAY: int = 1
 const CLOTHING_LIFETIME_DAYS: int = 7
 # Stabilize daily percentage-point arithmetic without rounding player data to whole percent.
 const SATISFACTION_PRECISION: float = 0.000000001
+# Provisional playtest values: each fulfilled need contributes equally to the
+# condition value. Actual satisfaction moves at most five points per day.
+const SATISFACTION_PER_FULFILLED_NEED: float = 0.33
+const SATISFACTION_DAILY_STEP: float = 0.05
 
 var last_food_fulfilled_count: int = 0
 var last_food_unfulfilled_count: int = 0
@@ -271,7 +275,55 @@ func get_worker_needs_summary(worker: WorkerData) -> Dictionary:
 	var result: Dictionary = last_needs_results[person_id]
 	if int(result.get("day", -1)) != TimeComponentManager.current_day:
 		return empty
-	return result.duplicate(true)
+	var current: Dictionary = result.duplicate(true)
+	# The ledger's value records the daily settlement, whereas a raid can change
+	# the linked person's actual satisfaction later that same day.
+	current["satisfaction"] = worker.get_resolved_satisfaction()
+	return current
+
+## A read-only individual view. Fulfillment is the actual daily settlement;
+## shared reserves are reported separately and never treated as consumption.
+func get_person_needs_summary(person_id: String) -> Dictionary:
+	var id: String = person_id.strip_edges()
+	if id.is_empty():
+		return {}
+	var citizen: CitizenData = CitizenManager.get_citizen(id)
+	if citizen != null and citizen.population_status != CitizenData.PopulationStatus.RESIDENT:
+		citizen = null
+	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+	if citizen == null and worker == null:
+		return {}
+	var current_satisfaction: float = citizen.satisfaction if citizen != null else worker.get_resolved_satisfaction()
+	var display_name: String = citizen.display_name if citizen != null else worker.get_resolved_display_name()
+	var result: Dictionary = _empty_needs_summary()
+	var saved: Variant = last_needs_results.get(id)
+	if saved is Dictionary and bool(saved.get("evaluated", false)) and int(saved.get("day", -1)) == TimeComponentManager.current_day:
+		result = saved.duplicate(true)
+	result["name"] = display_name
+	result["satisfaction"] = current_satisfaction
+	var target: float = -1.0
+	if bool(result.evaluated):
+		target = satisfaction_condition_value(bool(result.food), bool(result.clothing), bool(result.shelter))
+	result["condition_target"] = target
+	result["trend"] = _satisfaction_trend(current_satisfaction, target)
+	var provider: Node = _get_city_food_storage()
+	result["food_stock"] = maxi(0, int(provider.get_food_supply_points())) if is_instance_valid(provider) and provider.has_method("get_food_supply_points") else 0
+	result["clothing_stock"] = maxi(0, int(provider.get_clothing_item_count())) if is_instance_valid(provider) and provider.has_method("get_clothing_item_count") else 0
+	result["shelter_capacity"] = maxi(0, CityStockManager.shelter_capacity)
+	return result
+
+func satisfaction_condition_value(food: bool, clothing: bool, shelter: bool) -> float:
+	var fulfilled_count: int = int(food) + int(clothing) + int(shelter)
+	return snappedf(float(fulfilled_count) * SATISFACTION_PER_FULFILLED_NEED, SATISFACTION_PRECISION)
+
+func _satisfaction_trend(current: float, target: float) -> String:
+	if target < 0.0:
+		return "unknown"
+	if current < target - SATISFACTION_PRECISION:
+		return "up"
+	if current > target + SATISFACTION_PRECISION:
+		return "down"
+	return "stable"
 
 func _empty_needs_summary() -> Dictionary:
 	return {
@@ -313,11 +365,8 @@ func _apply_daily_effect_and_record(person: Variant, person_id: String, day: int
 	if person_id.is_empty():
 		return
 	var satisfaction_before: float = float(person.satisfaction)
-	var fulfilled: bool = person.are_basic_needs_fulfilled()
-	if fulfilled:
-		person.satisfaction = clampf(snappedf(person.satisfaction + 0.05, SATISFACTION_PRECISION), 0.0, 0.99)
-	else:
-		person.satisfaction = clampf(snappedf(person.satisfaction - 0.05, SATISFACTION_PRECISION), 0.0, 0.99)
+	var target: float = satisfaction_condition_value(bool(person.food_fulfilled), bool(person.clothing_fulfilled), bool(person.shelter_fulfilled))
+	person.satisfaction = clampf(snappedf(move_toward(satisfaction_before, target, SATISFACTION_DAILY_STEP), SATISFACTION_PRECISION), 0.0, 0.99)
 	var allocation: Dictionary = _get_valid_clothing_allocation(person_id, day)
 	var missing: Array[String] = []
 	if not bool(person.food_fulfilled):

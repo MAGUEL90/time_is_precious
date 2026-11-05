@@ -1157,7 +1157,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 		satisfaction += citizen.satisfaction
 	if not residents.is_empty():
 		satisfaction /= residents.size()
-	satisfaction_value.text = "Satisfaction  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Satisfaction  --"
+	satisfaction_value.text = "Resident avg.  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Resident avg.  --"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
 	wall_value.text = "%d/%d  Lv.%d" % [hp, max_hp, level]
