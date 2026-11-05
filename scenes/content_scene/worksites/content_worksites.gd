@@ -164,6 +164,10 @@ func resource_offset_valid(offset: Vector2, site_id: StringName) -> bool:
 	return false
 
 func restore_resource_offsets(saved_sites: Dictionary) -> void:
+	# Retry throttling belongs to the discarded live timeline. Keeping a later
+	# attempt after Continue would postpone an otherwise due deposit until that
+	# old future minute, even when a checked replacement point is available.
+	_last_relocation_attempt.clear()
 	for site_id: String in saved_sites:
 		var key := StringName(site_id)
 		var marker: Node2D = $WorksiteMarkers.get_node_or_null(NodePath(site_id))

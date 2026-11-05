@@ -94,7 +94,11 @@ func _run() -> void:
 	var due_at: int = session.respawn_due_at
 	check(due_at - started_at >= 2880 and due_at - started_at <= 4320, "The committed depletion chooses a delay of 2–3 game days.")
 	check(store.save_checkpoint(), "A waiting deposit can be saved: " + store.last_error)
+	# Fixture models a later failed relocation before loading this older save.
+	# The retry timestamp is transient and must not delay the restored timeline.
+	work._last_relocation_attempt[CLAY] = due_at + 7 * 1440
 	check(store.load_checkpoint() and session.respawn_due_at == due_at, "Continue preserves the exact waiting deadline.")
+	check(not work._last_relocation_attempt.has(CLAY), "Continue discards retry attempts from the later timeline.")
 	check(TimeComponentManager.advance_minutes(due_at - work.daily.now() - 1), "Advance to the minute before the saved deadline.")
 	await get_tree().process_frame
 	check(marker.position == original_position and session.stock == 0, "No replacement appears before its deadline.")
