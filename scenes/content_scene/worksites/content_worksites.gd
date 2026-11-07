@@ -229,8 +229,12 @@ func _set_site_depleted_presentation(site_id: StringName, depleted: bool) -> voi
 	if marker == null:
 		return
 	var icon: CanvasItem = marker.get_node_or_null("ResourceIcon") as CanvasItem
+	var is_wood: bool = sites.has(site_id) and sites[site_id].item_id == "wood_log"
 	if icon != null:
-		icon.visible = not depleted
+		# The original icon remains available for contact/navigation calculations.
+		icon.visible = not depleted and not is_wood
+	if is_wood:
+		RESOURCE_PRESENTATION.set_wood_depleted(marker, depleted)
 	var footprint: CanvasItem = marker.get_node_or_null("Footprint") as CanvasItem
 	if footprint != null:
 		footprint.visible = not depleted and bool(_resource_art_visibility.get(site_id, false))
@@ -273,11 +277,23 @@ func _relocate_depleted_sites() -> void:
 		var session = sites[site_id]
 		if session.stock > 0 or session.working or session.respawn_due_at < 0 or daily.now() < session.respawn_due_at:
 			continue
+		var marker: Node2D = $WorksiteMarkers.get_node(NodePath(str(site_id)))
+		if session.item_id == "wood_log":
+			# Preserve the current marker, including valid offsets in older saves.
+			# A depleted base has no collider, so wait for occupants to leave it.
+			if not _wood_regrowth_clear(marker):
+				continue
+			session.stock = session.deposit_capacity
+			session.respawn_started_at = -1
+			session.respawn_due_at = -1
+			_set_site_depleted_presentation(site_id, false)
+			# The presentation change schedules a navigation refresh after the
+			# collider is enabled. Existing worker targets remain valid here.
+			continue
 		var now: int = daily.now()
 		if now - int(_last_relocation_attempt.get(site_id, -1000000)) < 60:
 			continue
 		_last_relocation_attempt[site_id] = now
-		var marker: Node2D = $WorksiteMarkers.get_node(NodePath(str(site_id)))
 		var current_offset: Vector2 = resource_site_offset(site_id)
 		for point: Vector2 in TEMP_RELOCATION_POINTS:
 			var offset: Vector2 = point - Vector2(_site_origins[site_id])
@@ -300,6 +316,44 @@ func _relocate_depleted_sites() -> void:
 				ids.assign(daily.jobs[site_id].ids)
 				_begin_site_assignments(site_id, ids)
 			break
+
+func _wood_regrowth_clear(marker: Node2D) -> bool:
+	var base: CollisionPolygon2D = marker.get_node_or_null("ResourceBase/CollisionPolygon2D") as CollisionPolygon2D
+	if base == null or base.polygon.size() < 3 or not is_instance_valid(player) or not player.is_inside_tree():
+		return false
+	var polygon := PackedVector2Array()
+	for point: Vector2 in base.polygon:
+		polygon.append(base.to_global(point))
+	var player_shape: CollisionShape2D = player.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if player_shape == null or player_shape.shape == null:
+		return false
+	var player_polygons: Array[PackedVector2Array] = worksite_navigation.polygons_for_shape(player_shape.shape, player_shape.global_transform)
+	if player_polygons.is_empty():
+		return false
+	for player_polygon: PackedVector2Array in player_polygons:
+		if not Geometry2D.intersect_polygons(polygon, player_polygon).is_empty():
+			return false
+	var visuals: Node = get_node_or_null("WorkerVisuals")
+	if visuals != null:
+		for actor: Node2D in visuals.actors.values():
+			if is_instance_valid(actor) and actor.visible and _point_near_resource_base(actor.global_position + Vector2(0, 16), polygon):
+				return false
+	# An assigned worker can have a saved physical pose before its actor exists.
+	for job: Dictionary in daily.jobs.values():
+		for id: String in job.ids:
+			var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+			if worker != null and worker.physical_approach.get("position") is Vector2 \
+				and _point_near_resource_base(worker.physical_approach.position, polygon):
+				return false
+	return true
+
+func _point_near_resource_base(point: Vector2, polygon: PackedVector2Array) -> bool:
+	if Geometry2D.is_point_in_polygon(point, polygon):
+		return true
+	for index: int in range(polygon.size()):
+		if point.distance_to(Geometry2D.get_closest_point_to_segment(point, polygon[index], polygon[(index + 1) % polygon.size()])) <= worksite_navigation.CLEARANCE:
+			return true
+	return false
 
 func _resource_candidate_clear(map: Node, marker: Node2D, candidate: Vector2) -> bool:
 	var base: TileMapLayer = map.get_node_or_null("AuthoredMap/Ground/Base") as TileMapLayer

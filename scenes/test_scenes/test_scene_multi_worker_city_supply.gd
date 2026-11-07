@@ -25,8 +25,8 @@ func _write_scenario() -> void:
 	_check(int(city_storage.items.get("wood_log", 0)) - city_before == first + second and stock_before - site.stock == first + second, "Both outputs move from natural stock into City Storage exactly once")
 	_check(int(job.units) == 0 and runtime._daily_output_count(SITE) == 0 and int(Inventory.items.get("wood_log", 0)) == bag_before, "No output remains in the job, on the ground or in the player's bag")
 	# Arrange one remaining unit and nearly completed work for both employees.
-	# The first completion owns that single unit; both retain their assignment
-	# and must walk to the replacement deposit before continuing.
+	# The first completion owns that single unit; both keep their assignment
+	# and their existing site entries while the same deposit regrows.
 	var old_position: Vector2 = runtime.get_node("WorksiteMarkers/WoodSite").position
 	site.stock = 1
 	for id: String in IDS.slice(0, 2):
@@ -38,12 +38,19 @@ func _write_scenario() -> void:
 	_check(due - site.respawn_started_at >= 2880 and due - site.respawn_started_at <= 4320, "The shared deposit waits 2–3 game days")
 	await get_tree().process_frame
 	_check(site.stock == 0 and runtime.get_node("WorksiteMarkers/WoodSite").position == old_position, "The deposit stays empty before the deadline")
-	_check(TimeComponentManager.advance_minutes(due - runtime.daily.now()), "Advance to the saved deadline")
+	_check(TimeComponentManager.advance_minutes(due - runtime.daily.now() - 1), "Advance to the minute before the saved deadline")
+	await get_tree().process_frame
+	_check(site.stock == 0 and runtime.get_node("WorksiteMarkers/WoodSite").position == old_position, "The deposit remains empty one minute before the deadline")
+	var first_target: Vector2 = _worker(IDS[0]).physical_approach.target
+	var second_target: Vector2 = _worker(IDS[1]).physical_approach.target
+	_check(TimeComponentManager.advance_minutes(1), "Advance to the saved deadline")
 	for i: int in range(4):
 		await get_tree().process_frame
-	_check(site.stock == 24 and runtime.get_node("WorksiteMarkers/WoodSite").position != old_position, "An exhausted Wood Site appears at a temporary location after its deadline")
-	_check(job.ids == IDS.slice(0, 2) and not _worker(IDS[0]).physical_approach.arrived and not _worker(IDS[1]).physical_approach.arrived
-		and _worker(IDS[0]).physical_approach.target != _worker(IDS[1]).physical_approach.target, "Both assigned workers must walk to distinct entries at the replacement site")
+	_check(site.stock == 24 and runtime.get_node("WorksiteMarkers/WoodSite").position == old_position
+		and site.respawn_started_at == -1 and site.respawn_due_at == -1, "The Wood Site regrows in place and clears its completed timer")
+	_check(job.ids == IDS.slice(0, 2) and _worker(IDS[0]).physical_approach.target == first_target
+		and _worker(IDS[1]).physical_approach.target == second_target and first_target != second_target,
+		"Both assigned workers retain their distinct existing entries")
 	if failures:
 		return
 	var minute_of_day: int = runtime.daily.now() % 1440
@@ -51,6 +58,8 @@ func _write_scenario() -> void:
 		_check(TimeComponentManager.advance_minutes(runtime.daily.SHIFT_START - minute_of_day), "Reach the next shift before walking")
 	elif minute_of_day >= runtime.daily.SHIFT_END:
 		_check(TimeComponentManager.advance_minutes(1440 - minute_of_day + runtime.daily.SHIFT_START), "Reach the following shift before walking")
+	# With visual processing disabled, explicitly begin any new-day approaches.
+	visuals._process(0.0)
 	_walk_until_arrived(IDS.slice(0, 2))
 	first = int(job.stats[IDS[0]].output)
 	second = int(job.stats[IDS[1]].output)

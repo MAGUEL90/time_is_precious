@@ -1,6 +1,6 @@
 [gd_resource type="TileSet" load_steps=3 format=3 uid="uid://bqjt5tuwqj8fs"]
 
-[ext_resource type="Texture2D" uid="uid://bihu8uyaoaylt" path="res://assets/temporer/tile_set/tile_set_base_new_02_11_2026_new.png" id="1_uqbq8"]
+[ext_resource type="Texture2D" uid="uid://4sw6ey27ya4" path="res://assets/temporer/tile_set/tile_set_base_new_07_11_2026.png" id="1_uqbq8"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_opkun"]
 texture = ExtResource("1_uqbq8")
@@ -360,6 +360,63 @@ texture = ExtResource("1_uqbq8")
 11:24/0 = 0
 12:24/0 = 0
 13:24/0 = 0
+6:8/0 = 0
+6:9/0 = 0
+7:9/0 = 0
+8:10/0 = 0
+9:10/0 = 0
+10:10/0 = 0
+7:8/0 = 0
+8:8/0 = 0
+9:8/0 = 0
+10:8/0 = 0
+11:8/0 = 0
+11:9/0 = 0
+11:10/0 = 0
+10:9/0 = 0
+9:9/0 = 0
+8:9/0 = 0
+7:10/0 = 0
+7:11/0 = 0
+6:11/0 = 0
+6:10/0 = 0
+8:11/0 = 0
+9:11/0 = 0
+10:11/0 = 0
+11:11/0 = 0
+13:9/0 = 0
+12:10/0 = 0
+13:11/0 = 0
+14:10/0 = 0
+12:8/0 = 0
+13:8/0 = 0
+14:8/0 = 0
+14:9/0 = 0
+12:9/0 = 0
+13:10/0 = 0
+15:8/0 = 0
+16:8/0 = 0
+16:9/0 = 0
+17:9/0 = 0
+17:8/0 = 0
+18:12/0 = 0
+18:13/0 = 0
+18:14/0 = 0
+18:15/0 = 0
+19:15/0 = 0
+19:16/0 = 0
+19:14/0 = 0
+19:13/0 = 0
+19:12/0 = 0
+20:12/0 = 0
+20:13/0 = 0
+20:14/0 = 0
+20:15/0 = 0
+20:16/0 = 0
+18:16/0 = 0
+21:12/0 = 0
+21:13/0 = 0
+21:14/0 = 0
 
 [resource]
 sources/0 = SubResource("TileSetAtlasSource_opkun")

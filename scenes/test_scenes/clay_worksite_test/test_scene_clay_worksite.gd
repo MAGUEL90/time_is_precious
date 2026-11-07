@@ -326,16 +326,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _working or not player.can_move or player.is_collapsing or player.is_sleeping or SceneTransition.is_transitioning or inventory_ui.visible or get_tree().paused:
 		return
-	# Let existing pickups own E when a ground stack is focused.
-	if _pickup_focused or (is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem):
+	# Existing interactables retain ownership of E, just as for the highlight.
+	if _pickup_focused or is_instance_valid(player.current_interactable):
 		return
-	var nearest: Marker2D = null
-	var nearest_distance: float = INSPECTION_DISTANCE
-	for site: Marker2D in $WorksiteMarkers.get_children():
-		var distance: float = player.global_position.distance_to(site.global_position)
-		if distance <= nearest_distance:
-			nearest = site
-			nearest_distance = distance
+	var nearest: Marker2D = _nearest_interaction_site()
 	if nearest == null:
 		return
 	_open_site_panel(nearest)
@@ -511,27 +505,38 @@ func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Ca
 func _process(_delta: float) -> void:
 	_pickup_focused = is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem
 	var nearest: Marker2D = null
-	var distance: float = INSPECTION_DISTANCE
 	if player.can_move and not _working and not inspector.visible and not inventory_ui.visible and not player.is_collapsing and not SceneTransition.is_transitioning and not is_instance_valid(player.current_interactable):
-		for site: Marker2D in $WorksiteMarkers.get_children():
-			var candidate: float = player.global_position.distance_to(site.global_position)
-			if candidate <= distance:
-				nearest = site
-				distance = candidate
+		nearest = _nearest_interaction_site()
 	if nearest != _highlighted_site:
 		_highlighted_site = nearest
 		_site_highlight.select(nearest)
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").visible = site == nearest
-		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+		if site.name not in [&"ClaySiteA", &"ReedSite"] and site.get("item_id") != "wood_log":
 			site.get_node("Label").visible = site != nearest
+
+## One eligibility and nearest-site rule owns both the E action and prompt.
+## Grove overlap expands only Wood; every other site retains its old radius.
+func _nearest_interaction_site() -> Marker2D:
+	if not is_instance_valid(player) or is_instance_valid(player.current_interactable):
+		return null
+	var nearest: Marker2D = null
+	var nearest_distance: float = INF
+	for site: Marker2D in $WorksiteMarkers.get_children():
+		var distance: float = player.global_position.distance_to(site.global_position)
+		var area: Area2D = site.get_node_or_null("WoodInteractionArea") as Area2D
+		var eligible: bool = area.overlaps_body(player) if area != null else distance <= INSPECTION_DISTANCE
+		if eligible and distance <= nearest_distance:
+			nearest = site
+			nearest_distance = distance
+	return nearest
 
 func _hide_prompts() -> void:
 	_site_highlight.clear()
 	_highlighted_site = null
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").hide()
-		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+		if site.name not in [&"ClaySiteA", &"ReedSite"] and site.get("item_id") != "wood_log":
 			site.get_node("Label").show()
 
 func _draw() -> void:

@@ -71,7 +71,8 @@ func _snapshot_global_state() -> void:
 		"last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count",
 		"last_processed_day", "last_food_processed_day", "last_clothing_processed_day",
 		"_processing_daily_needs", "_processing_food", "_processing_clothing",
-		"clothing_allocations", "last_needs_results"
+		"clothing_allocations", "last_needs_results", "food_coverage_until",
+		"satisfaction_last_minute"
 	]:
 		if _has_property(CitizenNeedsManager, property_name):
 			var value: Variant = CitizenNeedsManager.get(property_name)
@@ -205,8 +206,8 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	CitizenManager.add_citizen(resident)
 	WorkerDatabase.workers_by_id[linked_worker.worker_id] = linked_worker
 	var unevaluated_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
-	_expect(not bool(unevaluated_summary.evaluated) and is_equal_approx(float(unevaluated_summary.satisfaction), resident.satisfaction),
-		"An unevaluated worker summary must show the linked resident's current satisfaction.")
+	_expect(bool(unevaluated_summary.evaluated) and is_equal_approx(float(unevaluated_summary.satisfaction), resident.satisfaction),
+		"A read-only worker summary must show the linked resident's current satisfaction before the first daily ledger.")
 	_assert_summary_without_reliability(unevaluated_summary)
 	_assert_summary_without_reliability(CitizenNeedsManager.get_worker_needs_summary(null))
 
@@ -229,7 +230,7 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	CitizenNeedsManager.process_daily_needs()
 
 	_expect(resident.food_fulfilled and resident.clothing_fulfilled and resident.shelter_fulfilled, "A stocked day must fulfill all three resident needs.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before + 0.05), "A fully covered day must increase satisfaction by 0.05.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before), "A daily needs evaluation at the same clock minute must not instantly change satisfaction.")
 	_expect(needs_signal_count[0] == 1, "Duplicate and reentrant daily-needs calls must emit one completed-evaluation signal.")
 	_expect(int(provider.get_clothing_item_count()) == stock_after_first_evaluation, "Duplicate daily-needs calls must not consume another clothing unit.")
 	_expect(provider.get("items").get(SIMPLE_CLOTHES, 0) == 0, "The first clothing need must consume one physical garment.")
@@ -252,28 +253,30 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 
 	var clothing_item_id: String = str(_allocation_for(resident.citizen_id).get("item_id", ""))
 	for offset: int in range(1, 7):
-		_set_new_day(base_day + offset)
+		_advance_to_day(base_day + offset)
 		var before_stock: int = int(provider.get_clothing_item_count())
 		CitizenNeedsManager.process_daily_needs()
 		_expect(resident.clothing_fulfilled, "Issued clothing must stay valid on day %d." % (base_day + offset))
 		_expect(int(provider.get_clothing_item_count()) == before_stock, "Valid clothing must not consume a new item on day %d." % (base_day + offset))
 		_expect(str(_allocation_for(resident.citizen_id).get("item_id", "")) == clothing_item_id, "Valid clothing must retain its original physical item.")
+		if offset == 1:
+			_expect(is_equal_approx(resident.satisfaction, satisfaction_before + 0.05), "One real covered day must move satisfaction upward by five points.")
 
-	_set_new_day(base_day + 7)
+	_advance_to_day(base_day + 7)
 	var satisfaction_before_expiry: float = resident.satisfaction
 	_expect(is_equal_approx(satisfaction_before_expiry, 0.85),
-		"Seven fully supplied days move satisfaction from 50% to 85%, still above the 66% two-need target.")
+		"Seven elapsed fully supplied days move satisfaction from 50% to 85%, still above the 66% two-need target.")
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.clothing_fulfilled, "Expired clothing must fail when no replacement is available.")
 	_expect(provider.get_clothing_item_count() == 0, "Clothing expiry must not create phantom stock or negative stock.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry - 0.05),
-		"At 85% above the 66% two-need target, clothing expiry moves satisfaction down exactly five points.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry),
+		"A clothing-expiry evaluation itself must not apply an instant satisfaction penalty.")
 	var expired_summary: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
 	_expect(int(expired_summary.get("replacement_need", 0)) >= 1, "An expired garment must create replacement need.")
 	_expect(not bool(expired_summary.get("can_cover_all", true)), "No physical stock must not claim full clothing coverage.")
 	var expired_worker_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
 	_assert_worker_summary(expired_worker_summary, base_day + 7, true, false, true, -1)
-	_expect(is_equal_approx(float(expired_worker_summary.satisfaction_delta), -0.05), "Worker Details must receive the five-point shortage result.")
+	_expect(is_zero_approx(float(expired_worker_summary.satisfaction_delta)), "Worker Details must report no instant satisfaction delta for a needs evaluation.")
 
 	_set_items({SIMPLE_CLOTHES: 1, READY_BREAD: 1})
 	_set_new_day(base_day + 8)
@@ -281,16 +284,16 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	CitizenNeedsManager.process_daily_needs()
 	_expect(resident.clothing_fulfilled, "A physical clothing deposit must recover coverage on the next day.")
 	_expect(provider.get_clothing_item_count() == 0, "Recovery must consume exactly the deposited physical garment.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_recovery + 0.05), "Recovered clothing with food and shelter must restore the positive satisfaction delta.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_expiry), "One fully supplied day must recover one day's satisfaction loss away from the limits.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_recovery), "A recovered clothing allocation must not instantly change satisfaction.")
+	_expect(is_equal_approx(satisfaction_before_recovery, satisfaction_before_expiry), "Restocking and evaluating needs without elapsed time must preserve satisfaction.")
 
 	_set_items({})
 	_set_new_day(base_day + 9)
 	var satisfaction_before_food_failure: float = resident.satisfaction
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.food_fulfilled and resident.clothing_fulfilled and resident.shelter_fulfilled, "Food failure must be evaluated independently while clothing remains valid.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_food_failure - 0.05),
-		"A food shortage lowers satisfaction by five points because the actual value remains above the 66% target.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_food_failure),
+		"A food-shortage evaluation without elapsed time must not change satisfaction.")
 
 	_set_items({READY_BREAD: 1})
 	CityStockManager.shelter_capacity = 0
@@ -298,8 +301,8 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	var satisfaction_before_shelter_failure: float = resident.satisfaction
 	CitizenNeedsManager.process_daily_needs()
 	_expect(resident.food_fulfilled and resident.clothing_fulfilled and not resident.shelter_fulfilled, "Shelter failure must be evaluated independently while clothing remains valid.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_shelter_failure - 0.05),
-		"A shelter shortage lowers satisfaction by five points because the actual value remains above the 66% target.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_before_shelter_failure),
+		"A shelter-shortage evaluation without elapsed time must not change satisfaction.")
 
 	CityStockManager.shelter_capacity = 1
 	_set_items({READY_BREAD: 1})
@@ -316,10 +319,12 @@ func _test_clothing_lifecycle_and_satisfaction() -> void:
 	# Zero is a stable lower bound only when all needs are unmet (target 0%).
 	CityStockManager.shelter_capacity = 0
 	_set_if_property(CitizenNeedsManager, "clothing_allocations", {})
-	resident.satisfaction = 0.0
 	CitizenNeedsManager.process_daily_needs()
 	_expect(not resident.food_fulfilled and not resident.clothing_fulfilled and not resident.shelter_fulfilled,
 		"The lower-bound fixture must leave all three needs unmet.")
+	# Keep this linked fixture present long enough to inspect its saved daily row;
+	# the real zero-departure path is covered by the elapsed-time boundary test.
+	resident.satisfaction = 0.0
 	_expect(is_zero_approx(resident.satisfaction), "Zero satisfaction must remain at zero when all three needs are unmet.")
 	capped = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
 	_expect(is_zero_approx(float(capped.satisfaction_delta)),
@@ -336,57 +341,72 @@ func _test_ten_day_satisfaction_boundaries() -> void:
 	zero_worker.current_work_status = WorkerData.WorkStatus.IDLE
 	WorkerDatabase.workers_by_id[zero_worker.worker_id] = zero_worker
 	# With the 33% per-need model, an unmet need alone no longer guarantees a
-	# decrease. Make all three needs unavailable so this fixture targets 0%.
+	# decrease. Make all three needs unavailable and move the actual game clock.
 	CityStockManager.shelter_capacity = 0
 	_set_items({})
 	var base_day: int = TimeComponentManager.current_day + 100
 	_set_new_fixture_day(base_day)
-	for offset: int in range(10):
-		_set_new_day(base_day + offset)
-		CitizenNeedsManager.process_daily_needs()
+	CitizenNeedsManager.process_daily_needs()
+	for offset: int in range(1, 10):
+		_advance_to_day(base_day + offset)
 		var once: float = resident.satisfaction
 		var worker_once: float = zero_worker.satisfaction
 		CitizenNeedsManager.process_daily_needs()
-		_expect(resident.satisfaction == once and zero_worker.satisfaction == worker_once,
-			"Repeated daily evaluation does not duplicate a zero-target result.")
+		CitizenNeedsManager.process_daily_needs()
+		_expect(is_equal_approx(resident.satisfaction, once) and is_equal_approx(zero_worker.satisfaction, worker_once),
+			"Repeated same-minute daily evaluation does not duplicate an elapsed-time result.")
 		_expect(not resident.food_fulfilled and not resident.clothing_fulfilled and not resident.shelter_fulfilled,
-			"Every day in the zero-target fixture must leave all three needs unmet.")
-		if offset < 9:
-			_expect(resident.satisfaction > 0.0 and zero_worker.satisfaction > 0.0,
-				"The resident and legacy worker remain above zero before ten days at the 0% condition target.")
+			"Every elapsed day in the zero-target fixture must leave all three needs unmet.")
+		_expect(is_equal_approx(resident.satisfaction, 0.5 - float(offset) * 0.05)
+			and is_equal_approx(zero_worker.satisfaction, 0.5 - float(offset) * 0.05),
+			"Each real 24-hour interval moves the resident and legacy worker five points toward the 0% target.")
+	_advance_to_day(base_day + 10)
 	_expect(is_zero_approx(resident.satisfaction) and is_zero_approx(zero_worker.satisfaction),
-		"Ten days moving down by five points toward a 0% condition target take 50% exactly to zero.")
+		"Ten real days moving down by five points toward a 0% condition target take 50% exactly to zero.")
 	var resigned_citizen: CitizenData = CitizenManager.get_citizen(zero_worker.worker_id)
 	_expect(
 		WorkerDatabase.get_worker_data(zero_worker.worker_id) == null
 			and WorkerDatabase.dismissed_workers.has(zero_worker.worker_id)
 			and resigned_citizen != null
-			and resigned_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
-		"An idle legacy worker reaching zero must resign into the resident roster."
+			and resigned_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+			and resigned_citizen.population_status == CitizenData.PopulationStatus.LEFT_CITY
+			and resident.population_status == CitizenData.PopulationStatus.LEFT_CITY,
+		"The idle legacy worker and civilian both leave after reaching zero."
 	)
 	_expect(CitizenManager.get_all_applicants().is_empty(), "Residents at zero must remain below the existing applicant threshold.")
-	# Restore all three needs for recovery: two residents need two clothing issues
-	# each (day 1 and the seven-day renewal), plus one food point per day.
+	# A citizen who reaches exact zero leaves by design. Use a separate nonzero
+	# cohort to retain the existing applicant-threshold recovery assertion.
+	_clear_people()
+	var recovering_resident: CitizenData = _make_resident("ten_day_recovery_resident")
+	recovering_resident.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	recovering_resident.satisfaction = 0.01
+	var recovering_legacy: CitizenData = _make_resident("ten_day_recovery_legacy")
+	recovering_legacy.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
+	recovering_legacy.satisfaction = 0.01
+	CitizenManager.add_citizen(recovering_resident)
+	CitizenManager.add_citizen(recovering_legacy)
+	var recovery_day: int = base_day + 10
+	_set_new_fixture_day(recovery_day)
 	CityStockManager.shelter_capacity = 2
-	_set_items({SIMPLE_CLOTHES: 4, READY_BREAD: 20})
+	_set_items({SIMPLE_CLOTHES: 4, READY_BREAD: 22})
+	CitizenNeedsManager.process_daily_needs()
 	for offset: int in range(1, 11):
-		_set_new_day(base_day + 9 + offset)
+		_advance_to_day(recovery_day + offset)
 		CitizenNeedsManager.process_daily_needs()
+		CitizenNeedsManager.process_daily_needs()
+		_expect(is_equal_approx(recovering_resident.satisfaction, 0.01 + float(offset) * 0.05)
+			and is_equal_approx(recovering_legacy.satisfaction, 0.01 + float(offset) * 0.05),
+			"Elapsed supplied time moves both recovery residents five points per day toward 99%.")
 		if offset < 10:
-			_expect(
-				resident.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
-					and resigned_citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
-				"Residents recovering below 50% have not applied yet."
-			)
-		_expect(is_equal_approx(resident.satisfaction, float(offset) * 0.05)
-			and is_equal_approx(resigned_citizen.satisfaction, float(offset) * 0.05),
-			"Each fully supplied recovery day moves both residents five points toward the 99% condition target.")
+			_expect(recovering_resident.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+				and recovering_legacy.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
+				"Residents below 50% have not applied yet.")
 	_expect(
-		resident.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
-			and resident.employment_status == CitizenData.EmploymentStatus.APPLICANT
-			and resigned_citizen.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
-			and resigned_citizen.employment_status == CitizenData.EmploymentStatus.APPLICANT,
-		"Ten fully supplied days recover both residents from 0% to the existing 50% applicant threshold."
+		recovering_resident.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
+			and recovering_resident.employment_status == CitizenData.EmploymentStatus.APPLICANT
+			and recovering_legacy.satisfaction >= CitizenData.MIN_APPLICANT_SATISFACTION
+			and recovering_legacy.employment_status == CitizenData.EmploymentStatus.APPLICANT,
+		"Ten fully supplied elapsed days recover both residents from 1% to the existing applicant threshold."
 	)
 
 
@@ -491,9 +511,9 @@ func _test_linked_worker_and_legacy_worker_are_unique_recipients() -> void:
 	var linked_result: Dictionary = CitizenNeedsManager.get_worker_needs_summary(linked_worker)
 	var legacy_result: Dictionary = CitizenNeedsManager.get_worker_needs_summary(legacy_worker)
 	_expect(linked_result.missing.size() == 3 and legacy_result.missing.size() == 3, "Empty city stock and no shelter must leave all three needs missing for both recipients.")
-	_expect(is_equal_approx(linked_worker.get_resolved_satisfaction(), resident_before_shortage - 0.05), "A linked worker with three missing needs receives one five-point daily penalty, even after a repeated callback.")
-	_expect(is_equal_approx(legacy_worker.satisfaction, legacy_before_shortage - 0.05), "An unlinked worker with three missing needs receives the same single five-point daily penalty.")
-	_expect(is_equal_approx(float(linked_result.satisfaction_delta), -0.05) and is_equal_approx(float(legacy_result.satisfaction_delta), -0.05), "Both worker summaries must expose the single five-point shortage result.")
+	_expect(is_equal_approx(linked_worker.get_resolved_satisfaction(), resident_before_shortage), "A linked worker's repeated same-minute shortage evaluation must not change the linked resident's satisfaction.")
+	_expect(is_equal_approx(legacy_worker.satisfaction, legacy_before_shortage), "An unlinked worker's repeated same-minute shortage evaluation must not change satisfaction.")
+	_expect(is_zero_approx(float(linked_result.satisfaction_delta)) and is_zero_approx(float(legacy_result.satisfaction_delta)), "Both worker summaries must report no instant satisfaction delta for a same-minute evaluation.")
 
 
 func _test_clothing_supply_summary_shortage_and_restock() -> void:
@@ -534,10 +554,10 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	for index: int in range(7):
 		var resident: CitizenData = residents[index]
 		_expect(resident.clothing_fulfilled, "The first seven residents must receive physical clothing.")
-		_expect(is_equal_approx(resident.satisfaction, initial_satisfaction[index] + 0.05), "A covered resident must receive the positive satisfaction delta.")
+		_expect(is_equal_approx(resident.satisfaction, initial_satisfaction[index]), "A covered resident's instantaneous needs evaluation must not award satisfaction.")
 	_expect(not residents[7].clothing_fulfilled, "The eighth resident must remain uncovered while physical clothing is short.")
-	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] + 0.05),
-		"With food and shelter fulfilled, the uncovered resident still moves up five points toward the 66% two-need condition target.")
+	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7]),
+		"With food and shelter fulfilled, the uncovered resident does not move until elapsed time passes.")
 	_expect(CitizenNeedsManager.get("last_needs_results").size() == 8, "Linked workers must not create duplicate daily-needs results.")
 	_expect(WorkerDatabase.workers_by_id.size() == 4, "The fixture must retain exactly its four linked worker records.")
 
@@ -581,7 +601,7 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 		_expect(residents[index].clothing_fulfilled == (index < 7), "Summary reads must preserve actual current-day clothing coverage.")
 		_expect(is_equal_approx(residents[index].satisfaction, before_summary_satisfaction[index]), "Summary reads must not change satisfaction.")
 
-	_set_new_day(base_day + 1)
+	_advance_to_day(base_day + 1)
 	CitizenNeedsManager.process_daily_needs()
 	var next_summary: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(provider)
 	_expect(CitizenNeedsManager.last_clothing_fulfilled_count == 8 and CitizenNeedsManager.last_clothing_unfulfilled_count == 0, "The next daily evaluation must cover all eight clothing recipients.")
@@ -592,12 +612,12 @@ func _test_clothing_supply_summary_shortage_and_restock() -> void:
 	for index: int in range(7):
 		var resident_id: String = residents[index].citizen_id
 		_expect(int(_allocation_for(resident_id).get("issued_day", -1)) == int(original_issue_days[resident_id]), "Previously covered residents must retain their original clothing issue dates.")
-	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] + 0.10),
-		"The previously uncovered resident moves five points toward 66%, then five more toward 99% after clothing recovers.")
+	_expect(is_equal_approx(residents[7].satisfaction, initial_satisfaction[7] + 0.05),
+		"One elapsed day moves the previously uncovered resident upward toward the 66% two-need target.")
 	var eighth_worker: WorkerData = WorkerDatabase.get_worker_data(residents[7].citizen_id)
 	var eighth_summary: Dictionary = CitizenNeedsManager.get_worker_needs_summary(eighth_worker)
 	_assert_worker_summary(eighth_summary, base_day + 1, true, true, true, 7)
-	_expect(is_equal_approx(float(eighth_summary.get("satisfaction_delta", 0.0)), 0.05), "The recovered eighth resident must receive a positive satisfaction delta.")
+	_expect(is_zero_approx(float(eighth_summary.get("satisfaction_delta", 0.0))), "The recovered eighth resident's daily needs record must not claim an instant satisfaction delta.")
 	_expect(WorkerDatabase.workers_by_id.size() == 4, "Daily-needs processing must not create duplicate workers.")
 	_expect(provider.get("items").get(SIMPLE_CLOTHES, 0) == 0, "Daily-needs processing must not leave extra clothing garments.")
 
@@ -654,15 +674,44 @@ func _set_items(next_items: Dictionary) -> void:
 
 
 func _set_new_fixture_day(day: int) -> void:
-	_clear_need_tracking(day)
 	TimeComponentManager.current_day = day
+	TimeComponentManager.current_hour = 0
+	TimeComponentManager.current_minute = 0
+	_clear_need_tracking(day)
+	_set_if_property(CitizenNeedsManager, "food_coverage_until", {})
+	_rebase_satisfaction_cursors()
 
 
 func _set_new_day(day: int) -> void:
 	TimeComponentManager.current_day = day
+	TimeComponentManager.current_hour = 0
+	TimeComponentManager.current_minute = 0
 	_set_if_property(CitizenNeedsManager, "_processing_daily_needs", false)
 	_set_if_property(CitizenNeedsManager, "_processing_food", false)
 	_set_if_property(CitizenNeedsManager, "_processing_clothing", false)
+	# These manual clock moves arrange independent allocation fixtures. Rebase
+	# the cursor so a later callback does not treat the jump as lived time.
+	_rebase_satisfaction_cursors()
+
+
+func _advance_to_day(day: int) -> void:
+	var target_minute: int = day * 1440
+	var current_minute: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var elapsed: int = target_minute - current_minute
+	if elapsed <= 0:
+		return
+	_expect(TimeComponentManager.advance_minutes(elapsed), "The isolated test clock must advance through real game minutes.")
+
+
+func _rebase_satisfaction_cursors() -> void:
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var cursors: Dictionary = {}
+	for recipient: Dictionary in CitizenNeedsManager._get_food_recipients():
+		var person: Variant = recipient.get("person")
+		var person_id: String = str(CitizenNeedsManager._get_person_id(person))
+		if not person_id.is_empty():
+			cursors[person_id] = now
+	_set_if_property(CitizenNeedsManager, "satisfaction_last_minute", cursors)
 
 
 func _clear_need_tracking(day: int) -> void:
@@ -674,6 +723,8 @@ func _clear_need_tracking(day: int) -> void:
 	_set_if_property(CitizenNeedsManager, "_processing_clothing", false)
 	_set_if_property(CitizenNeedsManager, "clothing_allocations", {})
 	_set_if_property(CitizenNeedsManager, "last_needs_results", {})
+	_set_if_property(CitizenNeedsManager, "food_coverage_until", {})
+	_set_if_property(CitizenNeedsManager, "satisfaction_last_minute", {})
 
 
 func _clear_people() -> void:

@@ -229,7 +229,7 @@ func _get_empty_state_message() -> String:
 		)
 		if can_apply_later and person.satisfaction < CitizenData.MIN_APPLICANT_SATISFACTION:
 			var threshold: int = roundi(CitizenData.MIN_APPLICANT_SATISFACTION * 100.0)
-			return "No applicants available.\nProvide Food, Clothing and Shelter.\nSatisfaction recovers daily; apply at %d%%." % threshold
+			return "No applicants available.\nProvide Food, Clothing and Shelter.\nSatisfaction recovers gradually; apply at %d%%." % threshold
 	return "No applicants available."
 
 func _restore_scroll(value: int) -> void:

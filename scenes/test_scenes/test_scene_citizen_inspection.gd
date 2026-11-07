@@ -91,6 +91,12 @@ func _snapshot() -> void:
 
 
 func _run() -> void:
+	if DisplayServer.get_name() == "headless":
+		get_window().size = Vector2i(1200, 675)
+		await _frames(3)
+	_expect(get_window().size == Vector2i(1200, 675)
+		and get_viewport().get_visible_rect().size == Vector2(400, 225),
+		"Citizen inspection is tested in the 1200x675 window at 400x225 logical size.")
 	_snapshot()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -172,6 +178,10 @@ func _mouse_click(viewport_position: Vector2) -> void:
 	await get_tree().process_frame
 
 
+func _synthetic_hover_at(viewport_position: Vector2, gui_blocked: bool = false, mouse_in_window: bool = true) -> void:
+	controller.call("_update_hover_at", viewport_position, mouse_in_window, gui_blocked)
+
+
 func _press_key(keycode: Key) -> void:
 	var press := InputEventKey.new()
 	press.keycode = keycode
@@ -209,14 +219,30 @@ func _name_label() -> Label:
 
 
 func _daily_label(path: String) -> Label:
-	return panel.get_node("Root/Frame/Margin/Contents/" + path) as Label
+	return panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/" + path) as Label
 
+
+
+func _need_matches(need: String, value: Variant) -> bool:
+	var card: Control = panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/DailyNeedsRow/" + need + "Status") as Control
+	var label: Label = card.get_node("Status/Label") as Label
+	var icon: TextureRect = card.get_node("Status/MetIcon") as TextureRect
+	var met: bool = value != null and bool(value)
+	var text: String = "Unknown" if value == null else ("Met" if met else "Missing")
+	var texture: AtlasTexture = icon.texture as AtlasTexture
+	return card.get_node("Label").text == need and icon.visible == met and label.visible == not met \
+		and label.text == text and card.accessibility_name == need + ": " + text \
+		and card.tooltip_text == need + ": " + text and card.get_node("Icon").tooltip_text == need + ": " + text \
+		and card.get_node("Status").tooltip_text == need + ": " + text and icon.accessibility_name == need + ": " + text \
+		and texture != null and texture.region == Rect2(84, 68, 8, 8) \
+		and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
 
 func _test_added_residents_and_mouse_selection() -> void:
 	await _add_test_citizens()
 	_expect(not CitizenNeedsManager.last_needs_results.has(primary_id), "The newly added citizen has no daily needs ledger yet.")
 	if not is_instance_valid(primary_actor) or not is_instance_valid(removal_actor):
 		return
+	await _test_hover_feedback()
 
 	var starting_satisfaction: float = primary_citizen.satisfaction
 	var starting_inventory: Dictionary = Inventory.items.duplicate(true)
@@ -231,13 +257,16 @@ func _test_added_residents_and_mouse_selection() -> void:
 	await _click_actor(primary_actor)
 	_expect(panel.visible and str(panel.get("selected_id")) == primary_id, "A real viewport mouse click opens the panel for the hit unemployed resident ID.")
 	_expect(_name_label().text == primary_citizen.display_name, "The panel shows the selected resident's real name.")
-	_expect(_daily_label("DailyCheckLabel").text.contains("NOT EVALUATED"), "An unevaluated citizen is labeled as not evaluated.")
-	_expect(_daily_label("DailyNeedsRow/FoodStatus/Label").text == "Food: Unknown"
-		and _daily_label("DailyNeedsRow/ClothingStatus/Label").text == "Clothing: Unknown"
-		and _daily_label("DailyNeedsRow/ShelterStatus/Label").text == "Shelter: Unknown",
-		"Food, Clothing, and Shelter stay Unknown before the first daily evaluation.")
-	_expect(_daily_label("ConditionLabel").text == "Condition (daily): Unknown", "Condition stays Unknown before a real or fixture daily ledger exists.")
-	_expect(_daily_label("ClothingDaysLabel").text == "Clothing days left: Unknown", "Clothing lifespan remains Unknown before a daily ledger exists.")
+	_expect(panel.find_child("DailyCheckLabel", true, false) == null,
+		"The compact card omits the Last Daily Check banner.")
+	_expect(_need_matches("Food", primary_citizen.food_fulfilled)
+		and _need_matches("Clothing", primary_citizen.clothing_fulfilled)
+		and _need_matches("Shelter", primary_citizen.shelter_fulfilled),
+		"The card shows the resident's current service flags before a daily snapshot exists.")
+	_expect(panel.find_child("ConditionLabel", true, false) == null
+		and panel.find_child("ClothingDaysLabel", true, false) == null
+		and panel.find_child("DailyChangeLabel", true, false) == null,
+		"Condition and lower daily detail rows are omitted from the compact Needs card.")
 	_expect(get_tree().paused == starting_tree_pause and TimeComponentManager.is_paused == starting_clock_pause
 		and starting_minute == TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute,
 		"Opening the inspection panel does not pause or advance the city clock.")
@@ -250,6 +279,7 @@ func _test_added_residents_and_mouse_selection() -> void:
 		and CityStockManager.food_supply == int(saved_state.food_supply)
 		and CityStockManager.clothing_supply == int(saved_state.clothing_supply),
 		"Opening the panel does not settle needs or change any city supply stock.")
+	await _test_panel_pixel_layout()
 	await _capture("citizen-unevaluated")
 
 	# Place a different real actor underneath the visible frame. If the frame
@@ -277,6 +307,153 @@ func _test_added_residents_and_mouse_selection() -> void:
 		"The remaining resident can still be inspected after another resident leaves.")
 
 
+func _test_hover_feedback() -> void:
+	var indicator: Node2D = controller.get("hover_indicator") as Node2D
+	_expect(is_instance_valid(indicator) and indicator.get_parent() == controller,
+		"The controller owns one non-interactive hover indicator.")
+	if not is_instance_valid(indicator):
+		return
+	var indicator_id: int = indicator.get_instance_id()
+	# The production poll reads the real pointer; inject positions instead so
+	# the fixture works headlessly and never moves the user's mouse.
+	var controller_was_processing: bool = controller.is_processing()
+	controller.set_process(false)
+	var was_processing: bool = visuals.is_processing()
+	visuals.set_process(false)
+	var other_visibility: Dictionary = {}
+	for actor: Node2D in visuals.actors.values():
+		if is_instance_valid(actor) and actor != primary_actor and actor != removal_actor:
+			other_visibility[actor] = actor.visible
+			actor.hide()
+	_position_actor_on_screen(primary_actor, Vector2(90, 80))
+	_position_actor_on_screen(removal_actor, Vector2(130, 80))
+	_synthetic_hover_at(Vector2(90, 80))
+	_expect(indicator.visible and str(controller.get("hovered_person_id")) == primary_id
+		and indicator.global_position.is_equal_approx(primary_actor.global_position),
+		"Hovering a visible resident shows the marker at that actor without a click.")
+	await _capture("citizen-hover")
+	await _click_actor(primary_actor)
+	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
+		"Clicking the highlighted resident still opens its inspection card.")
+	_synthetic_hover_at(Vector2(130, 80))
+	_expect(indicator.visible and indicator.get_instance_id() == indicator_id
+		and str(controller.get("hovered_person_id")) == removal_id
+		and str(panel.get("selected_id")) == primary_id,
+		"Hover moves the same marker to another resident without changing the selection.")
+	removal_actor.hide()
+	_synthetic_hover_at(Vector2(130, 80))
+	_expect(not indicator.visible and str(controller.get("hovered_person_id")).is_empty(),
+		"A resident hidden under a stationary pointer has no marker.")
+	removal_actor.show()
+	_synthetic_hover_at(Vector2(130, 80))
+	_expect(indicator.visible and str(controller.get("hovered_person_id")) == removal_id,
+		"The marker returns when that resident becomes visible again.")
+	_position_actor_on_screen(removal_actor, Vector2(135, 80))
+	_synthetic_hover_at(Vector2(130, 80))
+	_expect(indicator.visible and indicator.global_position.is_equal_approx(removal_actor.global_position),
+		"The marker follows the resident while the stationary pointer remains inside its hit area.")
+	_position_actor_on_screen(removal_actor, Vector2(145, 80))
+	_synthetic_hover_at(Vector2(130, 80))
+	_expect(not indicator.visible and str(panel.get("selected_id")) == primary_id,
+		"A moving resident leaves no stale marker and does not change selection.")
+	var frame: Control = panel.get_node("Root/Frame") as Control
+	var frame_center: Vector2 = frame.get_global_rect().get_center()
+	_position_actor_on_screen(removal_actor, frame_center)
+	_synthetic_hover_at(frame_center)
+	_expect(indicator.visible and str(controller.get("hovered_person_id")) == removal_id,
+		"The underlying resident is a valid hit before applying the GUI block.")
+	_synthetic_hover_at(frame_center, true)
+	_expect(not indicator.visible and str(panel.get("selected_id")) == primary_id,
+		"A GUI-blocked pointer hides hover over a resident without changing selection.")
+	_position_actor_on_screen(removal_actor, Vector2(130, 80))
+	_synthetic_hover_at(Vector2(90, 80))
+	_expect(indicator.visible, "Hover is restored over the first resident before opening Inventory.")
+	inventory_ui.open_inventory()
+	await _frames(2)
+	_synthetic_hover_at(Vector2(90, 80))
+	_expect(get_tree().paused and not indicator.visible and not panel.visible,
+		"Opening the paused Inventory modal clears the marker and closes the card.")
+	inventory_ui.close_inventory()
+	_synthetic_hover_at(Vector2(90, 80))
+	_expect(not get_tree().paused and indicator.visible and str(controller.get("hovered_person_id")) == primary_id,
+		"Hover works again after Inventory closes and restores its prior pause state.")
+	_synthetic_hover_at(Vector2(90, 80), false, false)
+	_expect(not indicator.visible, "Leaving the window clears the hover marker.")
+	_synthetic_hover_at(Vector2(-1, -1))
+	_expect(not indicator.visible, "A pointer outside the viewport has no hover marker.")
+	_synthetic_hover_at(Vector2(50, 110))
+	_expect(not indicator.visible and str(controller.get("hovered_person_id")).is_empty(),
+		"Moving the pointer into empty world space hides the marker.")
+	for actor: Node2D in other_visibility:
+		if is_instance_valid(actor):
+			actor.visible = bool(other_visibility[actor])
+	visuals.set_process(was_processing)
+	controller.set_process(controller_was_processing)
+
+
+func _test_panel_pixel_layout() -> void:
+	var frame: Control = panel.get_node("Root/Frame") as Control
+	var body_scroll: ScrollContainer = panel.get_node("Root/Frame/Margin/Contents/BodyScroll") as ScrollContainer
+	var refresh_timer: Timer = panel.get_node("RefreshTimer") as Timer
+	refresh_timer.stop()
+	var name_label: Label = _name_label()
+	_expect(name_label.tooltip_text == primary_citizen.display_name,
+		"The complete citizen name remains available in the tooltip.")
+	name_label.text = "A longer resident display name"
+	var food: Label = _daily_label("DailyNeedsRow/FoodStatus/Label")
+	var clothing: Label = _daily_label("DailyNeedsRow/ClothingStatus/Label")
+	var shelter: Label = _daily_label("DailyNeedsRow/ShelterStatus/Label")
+	food.text = "Food"
+	clothing.text = "Clothing"
+	shelter.text = "Shelter"
+	_daily_label("SatisfactionLabel").text = "Actual satisfaction: 100%"
+	await _frames(4)
+	_expect(get_viewport().get_visible_rect().encloses(frame.get_global_rect()),
+		"The compact card remains inside the logical gameplay viewport.")
+	_expect(body_scroll.size.y > 0.0 and frame.get_global_rect().encloses(body_scroll.get_global_rect()),
+		"The scrollable body has a usable viewport inside the card.")
+	_expect(panel.find_child("CityStockLabel", true, false) == null
+		and panel.find_child("CityStockRow", true, false) == null,
+		"The individual card does not include the removed City Supply section.")
+	_expect(name_label.get_theme_font_size("font_size") == 6
+		and name_label.get_line_count() <= name_label.get_visible_line_count()
+		and frame.get_global_rect().encloses(name_label.get_global_rect()),
+		"A longer citizen name fits at 6 pixels (font=%s, lines=%s, visible=%s, line_height=%s, spacing=%s, label=%s, frame=%s)." % [
+			name_label.get_theme_font_size("font_size"), name_label.get_line_count(), name_label.get_visible_line_count(),
+			name_label.get_line_height(), name_label.get_theme_constant("line_spacing"), name_label.get_global_rect(), frame.get_global_rect(),
+		])
+	for path: String in [
+		"DailyNeedsRow/FoodStatus", "DailyNeedsRow/ClothingStatus", "DailyNeedsRow/ShelterStatus",
+	]:
+		var icon: TextureRect = panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/" + path + "/Icon") as TextureRect
+		var label: Label = _daily_label(path + "/Label")
+		var column: Control = icon.get_parent() as Control
+		body_scroll.ensure_control_visible(column)
+		await _frames(2)
+		_expect(icon.size == Vector2(16, 16) and icon.texture.get_size() == Vector2(16, 16)
+			and column.get_global_rect().encloses(icon.get_global_rect())
+			and body_scroll.get_global_rect().encloses(column.get_global_rect()),
+			"The %s icon stays at its 16-pixel native size within the card." % path)
+		_expect(label.get_theme_font_size("font_size") == 6
+			and label.get_line_count() <= label.get_visible_line_count()
+			and column.get_global_rect().encloses(label.get_global_rect()),
+			"The %s value fits within the card at the 6-pixel font size." % path)
+	var satisfaction_label: Label = _daily_label("SatisfactionLabel")
+	var satisfaction_width: float = satisfaction_label.get_theme_font("font").get_string_size(
+		satisfaction_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, satisfaction_label.get_theme_font_size("font_size")).x
+	_expect(satisfaction_label.get_theme_font_size("font_size") == 6
+		and satisfaction_width <= satisfaction_label.size.x
+		and body_scroll.get_global_rect().encloses(satisfaction_label.get_global_rect())
+		and panel.find_child("ConditionLabel", true, false) == null
+		and panel.find_child("ClothingDaysLabel", true, false) == null
+		and panel.find_child("DailyChangeLabel", true, false) == null,
+		"Satisfaction fits at 6 pixels, with condition and lower daily details omitted.")
+	body_scroll.scroll_vertical = 0
+	panel.call("_refresh_view")
+	refresh_timer.start(0.2)
+	await _frames(2)
+
+
 func _test_needs_and_storage() -> void:
 	if not panel.visible or not is_instance_valid(primary_citizen):
 		return
@@ -284,6 +461,8 @@ func _test_needs_and_storage() -> void:
 	var initial_food: int = int(initial_storage.call("get_food_supply_points"))
 	var initial_clothing: int = int(initial_storage.call("get_clothing_item_count"))
 	var initial_shelter: int = CityStockManager.shelter_capacity
+	var food_coverage_before: Dictionary = CitizenNeedsManager.food_coverage_until.duplicate(true)
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
 	Inventory.items.clear()
 	Inventory.items.assign({FOOD_ITEM_ID: 1, CLOTHING_ITEM_ID: 1, "shekel": 100})
 	Inventory.items_changed.emit()
@@ -295,46 +474,55 @@ func _test_needs_and_storage() -> void:
 	await _wait_for_panel_refresh()
 	var current_food: int = int(storage.call("get_food_supply_points"))
 	var current_clothing: int = int(storage.call("get_clothing_item_count"))
-	_expect(_daily_label("CityStockRow/FoodStock/Label").text == "%d pts" % current_food
-		and current_food >= initial_food + 1,
-		"The panel reports the increased real City Storage food stock without a needs settlement.")
-	_expect(_daily_label("CityStockRow/ClothingStock/Label").text == "%d units" % current_clothing
-		and current_clothing >= initial_clothing + 1,
-		"The panel reports the increased real City Storage clothing stock without a needs settlement.")
-	_expect(_daily_label("CityStockRow/ShelterStock/Label").text == "%d capacity" % CityStockManager.shelter_capacity
+	var summary: Dictionary = CitizenNeedsManager.get_person_needs_summary(primary_id)
+	var new_food_entitlements: int = 0
+	for id_value: Variant in CitizenNeedsManager.food_coverage_until:
+		if int(food_coverage_before.get(id_value, -1)) <= now and int(CitizenNeedsManager.food_coverage_until[id_value]) > now:
+			new_food_entitlements += 1
+	_expect(int(summary.get("food_stock", -1)) == current_food
+		and current_food - initial_food + new_food_entitlements == 1,
+		"The deposited date remains in shared stock or is consumed into live food entitlements.")
+	_expect(int(summary.get("clothing_stock", -1)) == current_clothing and current_clothing >= initial_clothing + 1,
+		"Real City Storage clothing stock increases without a needs settlement.")
+	_expect(int(summary.get("shelter_capacity", -1)) == CityStockManager.shelter_capacity
 		and (initial_shelter >= CityStockManager.MAX_SHELTER_CAPACITY or CityStockManager.shelter_capacity == initial_shelter + 1),
-		"The panel reports current shelter capacity as stock without settling Shelter fulfillment.")
-	_expect(_daily_label("DailyNeedsRow/FoodStatus/Label").text == "Food: Unknown"
-		and _daily_label("DailyNeedsRow/ClothingStatus/Label").text == "Clothing: Unknown"
-		and _daily_label("DailyNeedsRow/ShelterStatus/Label").text == "Shelter: Unknown"
-		and _daily_label("ConditionLabel").text == "Condition (daily): Unknown",
-		"Adding food, clothing, and shelter stock does not invent fulfilled needs or condition results.")
+		"Current shelter capacity changes without settling Shelter fulfillment.")
+	_expect(panel.find_child("CityStockLabel", true, false) == null
+		and panel.find_child("CityStockRow", true, false) == null,
+		"Restocking does not restore City Supply to the individual card.")
+	_expect(_need_matches("Food", primary_citizen.food_fulfilled)
+		and _need_matches("Clothing", primary_citizen.clothing_fulfilled)
+		and _need_matches("Shelter", primary_citizen.shelter_fulfilled)
+		and panel.find_child("ConditionLabel", true, false) == null,
+		"Restocking refreshes actual Food, Clothing, and Shelter status while condition stays omitted.")
 
 	primary_citizen.satisfaction = 0.24
+	var live_food: bool = primary_citizen.food_fulfilled
+	var live_clothing: bool = primary_citizen.clothing_fulfilled
+	var live_shelter: bool = primary_citizen.shelter_fulfilled
 	CitizenNeedsManager.last_needs_results[primary_id] = {
 		"evaluated": true,
 		"day": TimeComponentManager.current_day,
-		"food": true,
-		"clothing": false,
-		"shelter": true,
+		"food": not live_food,
+		"clothing": not live_clothing,
+		"shelter": not live_shelter,
 		"clothing_days_left": 0,
 		"satisfaction": 0.24,
 		"satisfaction_delta": 0.05,
 		"missing": ["clothing"],
 	}
 	await _wait_for_panel_refresh()
-	_expect(_daily_label("DailyCheckLabel").text == "LAST DAILY CHECK · DAY %d" % TimeComponentManager.current_day,
-		"The UI shows the day from its explicit fixture settlement ledger.")
-	_expect(_daily_label("DailyNeedsRow/FoodStatus/Label").text == "Food: Met"
-		and _daily_label("DailyNeedsRow/ClothingStatus/Label").text == "Clothing: Missing"
-		and _daily_label("DailyNeedsRow/ShelterStatus/Label").text == "Shelter: Met",
-		"The UI reports actual Food, Clothing, and Shelter outcomes from the fixture ledger.")
-	_expect(_daily_label("ClothingDaysLabel").text == "Clothing days left: 0",
-		"Clothing duration is presented separately from the fulfillment outcome.")
+	_expect(panel.find_child("DailyCheckLabel", true, false) == null,
+		"The card continues to omit the daily-check banner after a real ledger update.")
+	_expect(_need_matches("Food", live_food)
+		and _need_matches("Clothing", live_clothing)
+		and _need_matches("Shelter", live_shelter),
+		"The UI reports live service flags even when the stored daily result disagrees.")
 	_expect(_daily_label("SatisfactionLabel").text == "Actual satisfaction: 24%"
-		and _daily_label("ConditionLabel").text.contains("Condition (daily): 66%")
-		and _daily_label("ConditionLabel").text.contains("Up"),
-		"The UI distinguishes current satisfaction from the 66% ledger-derived target and its upward direction.")
+		and panel.find_child("ClothingDaysLabel", true, false) == null
+		and panel.find_child("DailyChangeLabel", true, false) == null
+		and panel.find_child("ConditionLabel", true, false) == null,
+		"Current satisfaction stays visible while lower daily details remain omitted.")
 	await _capture("citizen-evaluated-ledger")
 	# Simulate an outside change such as a raid without rewriting the daily
 	# ledger: the open card must update the actual value and keep its target.
@@ -342,9 +530,9 @@ func _test_needs_and_storage() -> void:
 	primary_citizen.satisfaction = 0.19
 	await _wait_for_panel_refresh()
 	_expect(_daily_label("SatisfactionLabel").text == "Actual satisfaction: 19%"
-		and _daily_label("ConditionLabel").text.contains("Condition (daily): 66%")
+		and panel.find_child("ConditionLabel", true, false) == null
 		and CitizenNeedsManager.last_needs_results[primary_id] == ledger_before,
-		"An open card reflects a live Satisfaction change without altering the last daily result.")
+		"An open card reflects live Satisfaction without altering the last daily result or showing condition.")
 
 
 func _test_hire_reuses_and_tracks_actor() -> void:
@@ -458,12 +646,21 @@ func _test_city_management_precedence() -> void:
 		"The resident panel is open before testing the City Management shortcut.")
 	var prior_tree_pause: bool = get_tree().paused
 	var prior_clock_pause: bool = TimeComponentManager.is_paused
+	var indicator: Node2D = controller.get("hover_indicator") as Node2D
+	var controller_was_processing: bool = controller.is_processing()
+	controller.set_process(false)
+	_synthetic_hover_at(get_viewport().get_canvas_transform() * primary_actor.global_position)
+	_expect(is_instance_valid(indicator) and indicator.visible,
+		"The resident is highlighted before the City Management shortcut.")
+	controller.set_process(controller_was_processing)
 	await _press_key(KEY_C)
 	await _frames(2)
 	_expect(city_ui.details_panel.visible,
 		"Pressing C through real viewport input opens City Management over the main map.")
 	_expect(not panel.visible and str(panel.get("selected_id")).is_empty(),
 		"Opening City Management closes the higher-layer citizen card.")
+	_expect(is_instance_valid(indicator) and not indicator.visible,
+		"Opening City Management with C also clears the resident hover marker.")
 	_expect(get_tree().paused == prior_tree_pause and TimeComponentManager.is_paused == prior_clock_pause,
 		"Opening City Management and dismissing the citizen card preserve the existing pause state.")
 
@@ -572,6 +769,7 @@ func _test_home_transition() -> void:
 	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
 		"The citizen card is open before entering home through HomeDoor.")
 	var city_panel: CanvasLayer = panel
+	var city_indicator: Node2D = controller.get("hover_indicator") as Node2D
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
 	var storage: Node = WorkStateRuntime.get_node("CityToolStorage")
 	var storage_items_before: Dictionary = storage.get("items").duplicate(true)
@@ -602,6 +800,8 @@ func _test_home_transition() -> void:
 		"HomeDoor parks the same live city runtime in CitySave without serializing a checkpoint.")
 	_expect(not city_panel.visible and str(city_panel.get("selected_id")).is_empty(),
 		"The citizen inspection card closes as the city runtime is handed to the home scene.")
+	_expect(is_instance_valid(city_indicator) and not city_indicator.visible,
+		"The retained city controller hides its hover marker during the home handoff.")
 	_expect(not get_tree().paused and not TimeComponentManager.is_paused
 		and TimeComponentManager.current_day == int(clock_before.day)
 		and TimeComponentManager.current_hour == int(clock_before.hour)
@@ -695,8 +895,10 @@ func _finish() -> void:
 	TimeComponentManager.is_paused = false
 	if is_instance_valid(panel):
 		panel.call("close")
+	var indicator: Node2D = controller.get("hover_indicator") as Node2D if is_instance_valid(controller) else null
 	if is_instance_valid(content):
 		content.free()
+	_expect(not is_instance_valid(indicator), "Freeing the city controller also frees its hover marker.")
 	content = null
 	if original_transport_existed:
 		if is_instance_valid(original_transport):

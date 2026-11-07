@@ -9,7 +9,7 @@ const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sour
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
 const STARTERS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
-const VERSION: int = 16
+const VERSION: int = 17
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -23,7 +23,7 @@ const GROUPS: Dictionary = {
 	"stock": ["food_supply", "clothing_supply", "treasury_shekel", "shelter_capacity"],
 	"citizens": ["citizens_by_id"],
 	"workers": ["workers_by_id", "dismissed_workers"],
-	"needs": ["last_food_fulfilled_count", "last_food_unfulfilled_count", "last_clothing_fulfilled_count", "last_clothing_unfulfilled_count", "last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count", "last_processed_day", "last_food_processed_day", "last_clothing_processed_day", "clothing_allocations", "last_needs_results"],
+	"needs": ["last_food_fulfilled_count", "last_food_unfulfilled_count", "last_clothing_fulfilled_count", "last_clothing_unfulfilled_count", "last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count", "last_processed_day", "last_food_processed_day", "last_clothing_processed_day", "clothing_allocations", "last_needs_results", "food_coverage_until", "satisfaction_last_minute"],
 	"immigration": ["pending_immigrants", "immigration_pressure"],
 	"generator": ["counter_id"],
 	"dialogue": ["intro_seen"],
@@ -154,7 +154,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != 16 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -193,7 +193,9 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		if not raw.get("raid") is Dictionary or raw.raid.has("notification_seen_keys"):
 			return fail("Invalid legacy notification state.")
 		raw.raid["notification_seen_keys"] = {}
-	if version < VERSION:
+	# These fields were added by v16; keep that migration boundary stable when
+	# newer schemas are introduced.
+	if version < 16:
 		if not raw.get("raid") is Dictionary or raw.raid.has("_work_paid_source") or raw.raid.has("_refund_pending"):
 			return fail("Invalid legacy wall payment source.")
 		var legacy_raid_fields: Array = GROUPS.raid.duplicate()
@@ -219,6 +221,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail("Invalid legacy player condition.")
 		legacy_player.erase("focus")
 	if version < 10 and not _migrate_legacy_needs(raw):
+		return false
+	if version < VERSION and not _migrate_timing_ledgers(raw):
 		return false
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
@@ -471,6 +475,73 @@ func _valid_settled_time_cursors(raw: Dictionary) -> bool:
 	return true
 
 
+## Older checkpoints have only calendar-day food and satisfaction cursors. Seed
+## per-person timing at the saved clock so migration never charges elapsed time
+## from before the new ledger existed. A saved same-day ration remains covered
+## only through the next midnight, matching the old daily entitlement.
+func _migrate_timing_ledgers(raw: Dictionary) -> bool:
+	var needs: Variant = raw.get("needs")
+	var clock: Variant = raw.get("clock")
+	var citizens_state: Variant = raw.get("citizens")
+	var workers_state: Variant = raw.get("workers")
+	if not needs is Dictionary or needs.has("food_coverage_until") or needs.has("satisfaction_last_minute"):
+		return fail("Invalid legacy needs timing ledger.")
+	if not clock is Dictionary or not clock.get("current_day") is int or not clock.get("current_hour") is int or not clock.get("current_minute") is int:
+		return fail("Invalid legacy clock.")
+	var day: int = int(clock.current_day)
+	var hour: int = int(clock.current_hour)
+	var minute: int = int(clock.current_minute)
+	if day < 0 or hour < 0 or hour > 23 or minute < 0 or minute > 59:
+		return fail("Invalid legacy clock.")
+	var now: int = _checkpoint_minute(clock)
+	if now < 0:
+		return fail("Invalid legacy clock.")
+	if not citizens_state is Dictionary or not citizens_state.get("citizens_by_id") is Dictionary or not workers_state is Dictionary:
+		return fail("Invalid legacy people state.")
+	var people: Dictionary = citizens_state.citizens_by_id
+	var active_workers: Variant = workers_state.get("workers_by_id")
+	var dismissed_workers: Variant = workers_state.get("dismissed_workers")
+	if not active_workers is Dictionary or not dismissed_workers is Dictionary:
+		return fail("Invalid legacy worker state.")
+	if not needs.get("last_food_processed_day") is int:
+		return fail("Invalid legacy food cursor.")
+
+	var satisfaction_cursors: Dictionary = {}
+	for id_value: Variant in people:
+		var person: Variant = people[id_value]
+		if not id_value is String or id_value.is_empty() or id_value != id_value.strip_edges() or not person is CitizenData or person.citizen_id != id_value:
+			return fail("Invalid legacy citizen timing identity.")
+		if person.population_status == CitizenData.PopulationStatus.RESIDENT:
+			satisfaction_cursors[id_value] = now
+	for id_value: Variant in active_workers:
+		var worker: Variant = active_workers[id_value]
+		if not id_value is String or id_value.is_empty() or id_value != id_value.strip_edges() or not worker is WorkerData or worker.worker_id != id_value:
+			return fail("Invalid legacy worker timing identity.")
+		# A linked worker shares the citizen's cursor. Resolve against the staged
+		# checkpoint rather than whichever citizen roster is currently live.
+		if not people.has(id_value):
+			satisfaction_cursors[id_value] = now
+
+	var food_coverage: Dictionary = {}
+	if int(needs.last_food_processed_day) == day:
+		var next_midnight: int = now - (hour * 60 + minute) + 1440
+		if next_midnight <= now:
+			return fail("Invalid legacy food coverage expiry.")
+		for id_value: Variant in people:
+			var person: CitizenData = people[id_value]
+			if person.population_status == CitizenData.PopulationStatus.RESIDENT and person.food_fulfilled:
+				food_coverage[id_value] = next_midnight
+		for id_value: Variant in active_workers:
+			var worker: WorkerData = active_workers[id_value]
+			# Linked residents are represented by their CitizenData food result.
+			if not people.has(id_value) and worker.food_fulfilled:
+				food_coverage[id_value] = next_midnight
+
+	needs["food_coverage_until"] = food_coverage
+	needs["satisfaction_last_minute"] = satisfaction_cursors
+	return true
+
+
 func _migrate_legacy_needs(raw: Dictionary) -> bool:
 	# Validate the retired fields before discarding them from the staged copy.
 	# Decoding already enforces finite floats; do not impose new bounds on old
@@ -518,9 +589,11 @@ func _without_transient_worker_assignments(raw: Dictionary) -> void:
 
 func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	# No yields, gameplay commands, or signals until every owner is restored.
+	CitizenNeedsManager.begin_checkpoint_restore()
 	var nodes: Dictionary = owners(map)
 	for key: String in GROUPS:
 		assign_fields(nodes[key], prepared[key])
+	CitizenNeedsManager.checkpoint_fields_restored()
 	nodes.transport.rebind_after_restore()
 	_sources.restore(prepared.pickup_sources)
 	_restore_rng(nodes.raid._rng, prepared.rng.raid)
@@ -1004,6 +1077,8 @@ func _strings(value: Variant) -> bool:
 	return true
 
 func _validate_records(raw: Dictionary) -> bool:
+	if not _validate_timing_ledgers(raw, _checkpoint_minute(raw.clock)):
+		return false
 	if not raw.city.last_daily.is_empty():
 		if not _record(raw.city.last_daily, {"day": TYPE_INT, "food": TYPE_INT, "clothing": TYPE_INT, "satisfaction": TYPE_INT, "wall": TYPE_INT, "total": TYPE_INT, "applied": TYPE_INT}):
 			return fail("Invalid daily city ledger.")
@@ -1057,6 +1132,35 @@ func _validate_records(raw: Dictionary) -> bool:
 		for id: String in lot.fee_ids:
 			if not fees.has(id):
 				return fail("Output lot fee missing.")
+	return true
+
+
+func _validate_timing_ledgers(raw: Dictionary, now: int) -> bool:
+	var needs: Dictionary = raw.needs
+	var people: Dictionary = raw.citizens.citizens_by_id
+	var active_workers: Dictionary = raw.workers.workers_by_id
+	var dismissed_workers: Dictionary = raw.workers.dismissed_workers
+	var pending_ids: Dictionary = {}
+	for immigrant: CitizenData in raw.immigration.pending_immigrants:
+		pending_ids[immigrant.citizen_id] = true
+	for field_name: String in ["food_coverage_until", "satisfaction_last_minute"]:
+		var ledger: Variant = needs.get(field_name)
+		if not ledger is Dictionary or ledger.size() > VALUES.MAX_COLLECTION_SIZE:
+			return fail("Invalid %s ledger." % field_name)
+		for id: Variant in ledger:
+			var absolute_minute: Variant = ledger[id]
+			if not id is String or id.is_empty() or id != id.strip_edges() or id.length() > 128 or not absolute_minute is int or int(absolute_minute) < 0:
+				return fail("Invalid %s entry." % field_name)
+			var known_id: bool = people.has(id) or active_workers.has(id) or dismissed_workers.has(id) or pending_ids.has(id)
+			if not known_id:
+				return fail("%s references an unknown person." % field_name)
+			if field_name == "food_coverage_until":
+				# Historical entries for a person who later left or was dismissed are
+				# safe to retain; recipient selection uses the restored resident roster.
+				if int(absolute_minute) > now and int(absolute_minute) - now > 1440:
+					return fail("Food coverage expiry is too far in the future.")
+			elif int(absolute_minute) > now:
+				return fail("Satisfaction cursor is ahead of the saved clock.")
 	return true
 
 func _capture_city_drops(map: Node) -> Array:

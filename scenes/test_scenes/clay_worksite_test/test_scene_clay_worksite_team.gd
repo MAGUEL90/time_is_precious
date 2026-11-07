@@ -21,6 +21,9 @@ func _run() -> void:
 	await get_tree().process_frame
 	fixture.player.debug_disable_player_needs = true
 	panel = fixture.inspector
+	var inspector_margin: MarginContainer = panel.window.get_node("Margin")
+	_expect(inspector_margin.get_theme_constant("margin_top") == 20,
+		"Worksite title has fixed padding inside the window frame.")
 	var schedule = fixture.daily
 	var site = fixture.sites[&"ClaySiteA"]
 	fixture.player.position = Vector2(-90, 0)
@@ -32,14 +35,56 @@ func _run() -> void:
 	_expect(panel.find_child("OutputLabel", true, false) == null and panel.find_child("AddWorkerButton", true, false) == null, "Output and old Add Worker hidden.")
 	panel.daily_button.pressed.emit()
 	_expect(panel.assignment_ui.visible and not panel.assignment_ui.selected_worker_ids.has("player"), "Daily opens empty NPC-only assignment.")
+	var assignment_ui = panel.assignment_ui
+	assignment_ui.back_button.pressed.emit()
+	await _assert_worksite_title_padding("Back from empty worker setup")
+	_expect(not assignment_ui.visible and panel.window.visible, "Back returns to the worksite menu.")
+	panel.daily_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(inspector_margin.get_theme_constant("margin_top") == 20,
+		"Reopening Worker keeps the same fixed title padding.")
+	_expect(assignment_ui.visible, "Daily can be reopened after returning from Worker.")
+	assignment_ui.back_button.pressed.emit()
+	await _assert_worksite_title_padding("Repeated Worker back")
+	panel.daily_button.pressed.emit()
+	await get_tree().process_frame
 	panel.assignment_ui._open_worker_selection(0)
 	_expect(panel.assignment_ui.worker_list.get_node_or_null("Participant_player") == null, "Player absent from Daily cards.")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(panel.assignment_ui.worker_list.columns >= 4, "Cards fill row before wrapping.")
+	var ui = panel.assignment_ui
+	var original_hour: int = TimeComponentManager.current_hour
+	var original_minute: int = TimeComponentManager.current_minute
+	for clock: Vector2i in [Vector2i(14, 59), Vector2i(15, 0), Vector2i(15, 1)]:
+		TimeComponentManager.current_hour = clock.x
+		TimeComponentManager.current_minute = clock.y
+		_toggle(ids[0])
+		_expect(schedule.selected[&"ClaySiteA"].has(ids[0]), "Selecting a free worker still succeeds at %02d:%02d." % [clock.x, clock.y])
+		var after_close: bool = clock.x * 60 + clock.y >= schedule.SHIFT_END
+		var next_start: int = (TimeComponentManager.current_day + 1) * 1440 + schedule.SHIFT_START
+		_expect(schedule._assignment_start_minute() == (next_start if after_close else schedule.now()),
+			"Selection feedback follows the existing 15:00 schedule boundary.")
+		if after_close:
+			_expect(ui.feedback_label.text == "If confirmed, starts tomorrow at 07:00."
+				and ui.feedback_label.get_theme_font_size("font_size") == 6
+				and ui.feedback_label.get_line_count() <= ui.feedback_label.get_visible_line_count(),
+				"At or after 15:00, the in-panel notice explains tomorrow's scheduled shift.")
+			var feedback_rect: Rect2 = ui.feedback_label.get_global_rect()
+			var window_rect: Rect2 = ui.get_node("Root/Center/TextureWindow").get_global_rect()
+			_expect(window_rect.encloses(feedback_rect)
+				and ui.find_child("AssignmentFeedback", true, false) == null,
+				"Scheduling feedback stays inside the assignment panel without a floating duplicate.")
+			await _capture("worker-assignment-feedback-%02d%02d.png" % [clock.x, clock.y])
+			ui._show_after_shift_feedback()
+		else:
+			_expect(ui.feedback_label.text == ids[0], "14:59 keeps the normal assignment summary.")
+		_toggle(ids[0])
+		_expect(not ui.feedback_label.text.begins_with("If confirmed"), "Removing the draft clears its next-day notice.")
+	TimeComponentManager.current_hour = original_hour
+	TimeComponentManager.current_minute = original_minute
 	_toggle(ids[0])
 	_toggle(ids[1])
-	var ui = panel.assignment_ui
 	_expect(ui.slot_grid.get_child(0).tooltip_text.is_empty(), "Assigned worker cards have no hover tooltip.")
 	ui.back_button.pressed.emit()
 	_expect(ui.discard_overlay.visible and ui.visible, "Back with workers asks before discarding.")
@@ -49,6 +94,7 @@ func _run() -> void:
 	ui.back_button.pressed.emit()
 	ui.discard_button.pressed.emit()
 	_expect(schedule.selected[&"ClaySiteA"].is_empty() and panel.work_mode.is_empty(), "Yes clears draft and returns to initial menu.")
+	await _assert_worksite_title_padding("Return after discarding workers")
 	panel.daily_button.pressed.emit()
 	_toggle(ids[0])
 	_toggle(ids[1])
@@ -146,6 +192,24 @@ func _run() -> void:
 	panel.assignment_ui._open_worker_selection(0)
 	var sorted_roster: Array = panel.assignment_ui._get_workers_in_requirement_order()
 	_expect(sorted_roster[-1].is_reserved(), "Reserved workers sort behind available workers.")
+	var reserved_card: Button = ui.worker_list.get_node("Participant_" + ids[1])
+	_expect(not reserved_card.disabled, "A reserved worker's card can explain why selection is unavailable.")
+	reserved_card.pressed.emit()
+	_expect(ui.selection_title_label.text == schedule.unavailable(ids[1])
+		and ui.selection_title_label.has_theme_color_override("font_color")
+		and not ui.selected_worker_ids.has(ids[1]), "A rejected worker shows the in-panel reason without assigning them.")
+	_expect(ui.find_child("AssignmentFeedback", true, false) == null,
+		"A rejected worker does not create a duplicate floating notice.")
+	var original_roster_provider: Callable = ui.roster_provider
+	ui.roster_provider = Callable(self, "_reserved_worker_as_available")
+	ui._on_worker_selected(ids[1])
+	_expect(ui.selection_title_label.text == "Worker could not be assigned."
+		and ui.selection_title_label.has_theme_color_override("font_color")
+		and not ui.selected_worker_ids.has(ids[1])
+		and not schedule.selected[&"ClaySiteA"].has(ids[1]),
+		"A stale availability result reports a visible failure and leaves assignment state unchanged.")
+	ui.roster_provider = original_roster_provider
+	ui.sync_team()
 	_expect(not schedule.toggle(&"ClaySiteA", ids[1]), "Assignment cannot remove a confirmed worker.")
 	await _capture("worksite-assignment-sorted.png")
 	panel.assignment_ui._show_overview()
@@ -170,11 +234,13 @@ func _run() -> void:
 	TimeComponentManager.advance_minutes(24 * 60)
 	site.stock = 1000
 	var multiplier: float = WorkerDatabase.get_worker_data(ids[0]).get_satisfaction_work_multiplier()
+	# An unfinished item from the previous shift remains part of this worker's output.
+	var carried_progress: float = float(schedule.jobs[&"ClaySiteA"].progress[ids[0]])
 	var hourly: Dictionary = site.execute(180, fixture.player, fixture, fixture._drop_output)
-	var worker_first_three_hours: int = floori(180.0 * multiplier / site.minutes_per_unit + 0.000000001)
+	var worker_first_three_hours: int = floori((carried_progress + 180.0 * multiplier) / site.minutes_per_unit + 0.000000001)
 	_expect(hourly.units == 18 and schedule.minutes_by_worker[ids[0]] == 180 and site.stock == 1000 - 18 - worker_first_three_hours, "One Player and one Daily worker share capacity, stock, and elapsed time.")
 	TimeComponentManager.advance_minutes(5 * 60)
-	var worker_full_shift: int = floori(480.0 * multiplier / site.minutes_per_unit + 0.000000001)
+	var worker_full_shift: int = floori((carried_progress + 480.0 * multiplier) / site.minutes_per_unit + 0.000000001)
 	_expect(schedule.minutes_by_worker[ids[0]] == 480 and site.stock == 1000 - 18 - worker_full_shift, "Full worker shift is eight hours, with separate Player output accounted once.")
 	# Moving an exhausted worker does not reset their daily ledger or extend the shift.
 	schedule.withdraw(&"ClaySiteA", ids[0])
@@ -262,6 +328,37 @@ func _toggle(id: String) -> void:
 	else:
 		ui._open_worker_selection(ui._get_first_empty_slot_index())
 		ui.worker_list.get_node("Participant_" + id).pressed.emit()
+
+func _assert_worksite_title_padding(context: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var margin: MarginContainer = panel.window.get_node("Margin")
+	var window_rect: Rect2 = panel.window.get_global_rect()
+	var title_rect: Rect2 = panel.title.get_global_rect()
+	var margin_rect: Rect2 = margin.get_global_rect()
+	var main_rect: Rect2 = panel.get_node("Center/TextureWindow/Margin/MainVBox").get_global_rect()
+	var window_minimum: Vector2 = panel.window.custom_minimum_size
+	var content_minimum: Vector2 = margin.get_combined_minimum_size()
+	var title_font: Font = panel.title.get_theme_font("font")
+	var title_font_size: int = panel.title.get_theme_font_size("font_size")
+	var title_text_width: float = title_font.get_string_size(panel.title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size).x
+	_expect(panel.window.visible
+		and margin.get_theme_constant("margin_top") == 20
+		and title_rect.position.y >= window_rect.position.y + 20.0
+		and title_text_width <= title_rect.size.x,
+		"%s keeps the worksite title clear of the frame with non-accumulating top padding (visible=%s, padding=%d, title=%s, header=%s, main=%s, margin=%s, content_min=%s, window_min=%s, window=%s)." % [
+			context, panel.window.visible, margin.get_theme_constant("margin_top"), title_rect,
+			panel.title.get_parent().get_global_rect(), main_rect, margin_rect, content_minimum,
+			window_minimum, window_rect])
+
+func _reserved_worker_as_available() -> Array[Dictionary]:
+	return [{
+		"id": ids[1],
+		"name": ids[1],
+		"selected": false,
+		"reason": "",
+		"slots_available": 1
+	}]
 
 func _expect(condition: bool, message: String) -> void:
 	if not condition:

@@ -171,8 +171,8 @@ func _run() -> void:
 	player.fatigue = 0.0
 	var overlay: Node = content.get_node("TimeDebugOverlay")
 	overlay._refresh_controls()
-	_expect(overlay.can_advance() and not overlay.step_buttons[2].disabled, "The actual Debug +1d control is available")
-	overlay.step_buttons[2].pressed.emit()
+	_expect(overlay.can_advance() and not overlay.step_buttons[1].disabled, "The actual Debug +1d control is available")
+	overlay.step_buttons[1].pressed.emit()
 	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
 	_expect(_now() == before + 1442, "The Debug control advances exactly one full day")
 	for worker: WorkerData in blocked:
@@ -214,11 +214,11 @@ func _run() -> void:
 	await get_tree().process_frame
 	player.fatigue = 0.0
 	overlay._refresh_controls()
-	_expect(overlay.can_advance() and not overlay.step_buttons[2].disabled, "The second Debug +1d is available")
+	_expect(overlay.can_advance() and not overlay.step_buttons[1].disabled, "The second Debug +1d is available")
 	var sealed_work: int = state._remaining_work_units()
 	var sealed_clock: int = _now()
 	start_usec = Time.get_ticks_usec()
-	overlay.step_buttons[2].pressed.emit()
+	overlay.step_buttons[1].pressed.emit()
 	var sealed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
 	_expect(_now() == sealed_clock + 1440 and state._remaining_work_units() == sealed_work,
 		"An enclosed target advances a day without granting work")

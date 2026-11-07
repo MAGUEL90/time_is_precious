@@ -91,7 +91,7 @@ func _run() -> void:
 	before = _now()
 	debug._process(1.0)
 	TimeComponentManager.advance_one_minute()
-	_expect(_now() - before == 60 and TimeComponentManager.seconds_per_minute == 1.0, "x60 advances real minute signals without changing the base clock or physics.")
+	_expect(_now() - before == 25 and TimeComponentManager.seconds_per_minute == 1.0, "x25 advances real minute signals without changing the base clock or physics.")
 	get_tree().paused = true
 	before = _now()
 	debug._process(1.0)
@@ -114,8 +114,8 @@ func _run() -> void:
 		await get_tree().process_frame
 	debug._refresh_controls()
 	var clearing_start: int = _now()
-	_expect(not debug.step_buttons[1].disabled, "The real +3h control is enabled after assignment.")
-	debug.step_buttons[1].pressed.emit()
+	_expect(not debug.step_buttons[0].disabled, "The real +3h control is enabled after assignment.")
+	debug.step_buttons[0].pressed.emit()
 	var arrival: int = int(worker.physical_approach.get("arrival_minute", -1))
 	var shift_start: int = (clearing_start / 1440) * 1440 + 7 * 60
 	var shift_end: int = (clearing_start / 1440) * 1440 + 15 * 60
@@ -165,8 +165,8 @@ func _run() -> void:
 		"Debug kit satisfies the real construction material check.")
 	before = _now()
 	debug._refresh_controls()
-	_expect(not debug.step_buttons[2].disabled, "The real +1d control is enabled after closing the menu.")
-	debug.step_buttons[2].pressed.emit()
+	_expect(not debug.step_buttons[1].disabled, "The real +1d control is enabled after closing the menu.")
+	debug.step_buttons[1].pressed.emit()
 	_expect(_now() - before == 1440, "+1d advances a whole day with normal calendar events.")
 	debug.speed_buttons[0].pressed.emit()
 	before = _now()

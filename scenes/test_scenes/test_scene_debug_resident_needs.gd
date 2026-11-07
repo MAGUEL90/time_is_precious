@@ -164,8 +164,8 @@ func _run() -> void:
 	_expect(TimeComponentManager.current_day == 1 and storage.get_food_supply_points() == 21 and storage.get_clothing_item_count() == 3 and CityStockManager.shelter_capacity == 3 and CitizenManager.get_citizen(FIRST_ID).satisfaction == 0.45, "Loading the supplied save retains actual stock and shelter without settling needs early.")
 	debug.set_player_guard(true) # Optional existing Debug control; resident needs remain active.
 	debug._refresh_controls()
-	_expect(not debug.step_buttons[2].disabled, "The actual Debug +1d control is available.")
-	debug.step_buttons[2].pressed.emit()
+	_expect(not debug.step_buttons[1].disabled, "The actual Debug +1d control is available.")
+	debug.step_buttons[1].pressed.emit()
 	_expect(TimeComponentManager.current_day == 2 and TimeComponentManager.current_hour == 8, "The actual +1d control crosses the next midnight.")
 	first = CitizenManager.get_citizen(FIRST_ID)
 	second = CitizenManager.get_citizen(SECOND_ID)

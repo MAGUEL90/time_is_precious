@@ -75,6 +75,8 @@ var result_note: Label
 var report_toggle: Button
 var _loot_display_key: String = ""
 var hub_tabs: HBoxContainer
+var city_storage_button: Button
+var city_storage_view: CanvasLayer
 var treasury_summary: Label
 var supply_view: VBoxContainer
 var supply_food: Label
@@ -223,6 +225,8 @@ func open_details() -> void:
 	details_panel.visible = true
 
 func close_details() -> void:
+	if is_instance_valid(city_storage_view):
+		city_storage_view.call("close")
 	details_panel.visible = false
 	inspection_panel.visible = false
 	_clear_inspected_raiders(false)
@@ -852,6 +856,7 @@ func _create_hub_tabs() -> void:
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
 	hub_tabs = HBoxContainer.new()
 	hub_tabs.name = "HubTabs"
+	hub_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
 	hub_tabs.add_theme_constant_override("separation", 6)
 	contents.add_child(hub_tabs)
 	contents.move_child(hub_tabs, 1)
@@ -865,6 +870,15 @@ func _create_hub_tabs() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
 		hub_tabs.add_child(button)
+	city_storage_button = Button.new()
+	city_storage_button.name = "CityStorageButton"
+	city_storage_button.text = "City Storage"
+	city_storage_button.theme_type_variation = &"HudShortcutButton"
+	city_storage_button.add_theme_font_size_override("font_size", 6)
+	city_storage_button.custom_minimum_size = Vector2(70, 12)
+	city_storage_button.focus_mode = Control.FOCUS_NONE
+	city_storage_button.pressed.connect(_open_city_storage)
+	hub_tabs.add_child(city_storage_button)
 	treasury_summary = _small_label(contents, "")
 	treasury_summary.name = "TreasurySummary"
 	contents.move_child(treasury_summary, 2)
@@ -977,6 +991,32 @@ func _select_hub_tab(supply: bool) -> void:
 	show_last_raid = false
 	_render_details()
 
+func _open_city_storage() -> void:
+	if not details_panel.visible or is_instance_valid(city_storage_view) or not _can_use_city_ui():
+		return
+	var provider: Node = WorkStateRuntime.get_node_or_null("CityToolStorage")
+	if not is_instance_valid(provider):
+		return
+	details_panel.hide()
+	city_storage_view = preload("res://scenes/storage_destination/city_storage_access_ui.tscn").instantiate()
+	add_child(city_storage_view)
+	city_storage_view.connect("closed", Callable(self, "_on_city_storage_closed").bind(city_storage_view))
+	city_storage_view.call("open", provider, Callable(self, "_can_browse_city_storage"), "city", true)
+
+func _can_browse_city_storage() -> bool:
+	if not is_inside_tree() or not _city_management_available or SceneTransition.is_transitioning:
+		return false
+	var player: Player = get_tree().get_first_node_in_group("player") as Player
+	return is_instance_valid(player) and player.is_inside_tree() and not player.is_sleeping and not player.is_collapsing
+
+func _on_city_storage_closed(source: CanvasLayer) -> void:
+	if city_storage_view != source:
+		return
+	city_storage_view = null
+	if _can_browse_city_storage() and is_instance_valid(raid_state):
+		_render_details()
+		details_panel.show()
+
 func _on_supply_changed() -> void:
 	if details_panel.visible:
 		_render_details()
@@ -994,6 +1034,7 @@ func _render_hub() -> void:
 		_supply_selected = false
 	hub_tabs.get_child(0).set_pressed_no_signal(not _supply_selected)
 	hub_tabs.get_child(1).set_pressed_no_signal(_supply_selected)
+	city_storage_button.disabled = not is_instance_valid(WorkStateRuntime.get_node_or_null("CityToolStorage"))
 	treasury_summary.text = "City cash: %d Shekel" % CityStockManager.treasury_shekel
 	supply_view.visible = _supply_selected
 	if not _supply_selected:

@@ -2,6 +2,13 @@ extends CanvasLayer
 
 signal closed
 
+const PANEL_SIZE := Vector2(156, 208)
+const CURRENCY_ICONS: Array[Texture2D] = [
+	preload("res://resources/ui_icons/small_copper.tres"),
+	preload("res://resources/ui_icons/small_shekel.tres"),
+	preload("res://resources/ui_icons/small_gold.tres"),
+]
+
 @onready var view: Control = $Root/Center/CityStorage
 @onready var grid: GridContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll/Grid
 @onready var categories: InventoryCategorySelector = $Root/Center/CityStorage/Margin/Content/Header/Categories
@@ -10,11 +17,13 @@ signal closed
 @onready var food_summary: Label = $Root/CitySupplyPanel/Margin/Content/FoodSummary
 @onready var clothing_summary: Label = $Root/CitySupplyPanel/Margin/Content/ClothingSummary
 
-var stock_summary: RichTextLabel
+var stock_summary: HBoxContainer
+var _currency_amounts: Array[Label] = []
 
 var storage: Node
 var storage_id: String = "city"
 var access_check: Callable
+var read_only: bool = false
 var deposit_button: Button
 var haul_button: Button
 var transfer_ui: ItemTransferUI
@@ -29,24 +38,24 @@ var _needs_manager: Node
 
 func _ready() -> void:
 	visible = false
+	# Keep one portrait frame for every category, including empty stock.
+	view.custom_minimum_size = PANEL_SIZE
+	context.custom_minimum_size.y = 0
+	var bag_grid: Control = view.get_node("Margin/Content/BagGrid")
+	bag_grid.custom_minimum_size = Vector2.ZERO
+	bag_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	context.hide()
 	$Root/CitySupplyPanel.hide()
-	stock_summary = RichTextLabel.new()
-	stock_summary.name = "StockSummary"
-	stock_summary.bbcode_enabled = true
-	stock_summary.fit_content = true
-	stock_summary.scroll_active = false
-	stock_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stock_summary.add_theme_font_override("normal_font", context.get_theme_font("font"))
-	stock_summary.add_theme_font_size_override("normal_font_size", 6)
-	context.get_parent().add_child(stock_summary)
-	context.get_parent().move_child(stock_summary, context.get_index() + 1)
+	_build_currency_summary()
 	view.get_node("Margin/Content/Footer/Back").pressed.connect(close)
 	view.get_node("Close").pressed.connect(close)
 	var footer: Node = view.get_node("Margin/Content/Footer")
 	deposit_button = _make_button("Deposit", footer)
 	deposit_button.pressed.connect(_open_transfer.bind("deposit"))
 	categories.category_changed.connect(func(_category): _refresh_view())
+	# Four native-size cards fit beside the scrollbar without shrinking artwork.
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 2)
 	grid.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_connect_refresh_signals()
 	_add_supply_icon(food_summary, preload("res://assets/items/butcher’s_cut.png"))
@@ -86,8 +95,9 @@ func _add_supply_icon(summary: Label, texture: Texture2D) -> void:
 	summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	summary.mouse_filter = Control.MOUSE_FILTER_STOP
 
-func open(provider: Node, gate: Callable, next_storage_id: String = "city") -> void:
+func open(provider: Node, gate: Callable, next_storage_id: String = "city", browse_only: bool = false) -> void:
 	storage_id = "annex" if next_storage_id == "annex" else "city"
+	read_only = browse_only
 	storage = _resolve_storage_provider(provider)
 	access_check = gate
 	if not _has_access():
@@ -127,14 +137,14 @@ func _set_location_presentation() -> void:
 	var title: Label = view.get_node("Margin/Content/TitleRow/Title")
 	$Root/CitySupplyPanel.hide()
 	if storage_id == "annex":
-		title.text = "City-Owned Annex"
+		title.text = "City-Owned\nAnnex"
 		context.text = "Citizens use Central Storage.\nPlayer deposits go to Central."
 		context.show()
 		deposit_button.disabled = true
 	else:
 		title.text = "City Storage"
-		context.text = "Central City Storage"
-		context.show()
+		context.text = ""
+		context.hide()
 		deposit_button.disabled = false
 
 func _ensure_haul_button() -> void:
@@ -147,7 +157,7 @@ func _ensure_haul_button() -> void:
 	haul_button.pressed.connect(_open_haul)
 
 func _open_haul() -> void:
-	if not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui):
+	if read_only or not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui):
 		return
 	if not _has_access():
 		close()
@@ -177,6 +187,11 @@ func _process(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if read_only and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_C \
+		and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed and not event.shift_pressed:
+		close()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 		if is_instance_valid(haul_ui):
@@ -272,37 +287,70 @@ func _refresh_view() -> void:
 	var items: Dictionary = _get_available_items(storage_id)
 	var item_ids: Array = items.keys()
 	item_ids.sort()
-	var quantity: int = 0
-	var equipped: int = 0
-	for unit: Dictionary in _get_storage_units().values():
-		if not str(unit.get("worker_id", "")).is_empty():
-			equipped += 1
 	for item_id: String in item_ids:
-		quantity += int(items[item_id])
 		var item: ItemData = ItemDatabase.get_item_data(item_id)
 		if item == null or (categories.get_selected_category() != -1 and item.category != categories.get_selected_category()):
 			continue
 		var slot: ItemSlot = preload("res://scenes/ui/item_slot/item_slot.tscn").instantiate()
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
+		# Large counts must not spill into neighboring cards; keep the exact
+		# value available to accessibility clients without adding hover tooltips.
+		slot.asset_qty.clip_text = true
+		slot.asset_qty.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		slot.accessibility_name = "%s: %d" % [item.display_name, int(items[item_id])]
+		slot.asset_qty.accessibility_name = str(int(items[item_id]))
 		slot.interaction_locked = true
-	if storage_id == "annex":
-		stock_summary.text = "[center]Available: %d | Equipped: %d[/center]" % [quantity, equipped]
-	else:
-		stock_summary.text = "[center]City cash: %d\nAvailable: %d | Equipped: %d[/center]" % [CityStockManager.treasury_shekel, quantity, equipped]
+	stock_summary.visible = storage_id == "city"
+	_currency_amounts[1].text = str(CityStockManager.treasury_shekel)
+	_currency_amounts[1].accessibility_name = "Shekel: %d" % CityStockManager.treasury_shekel
 	feedback.text = _feedback_text
 	if feedback.text.is_empty() and grid.get_child_count() == 0:
 		if items.is_empty() and int(food_supply_summary.get("portion_points", 0)) > 0:
 			feedback.text = "Prepared food remains."
 		else:
 			feedback.text = "No available items." if items.is_empty() else "No items in this category."
-	for index: int in range(maxi(15 - grid.get_child_count(), 0)):
-		var slot: ItemSlot = preload("res://scenes/ui/item_slot/item_slot.tscn").instantiate()
-		grid.add_child(slot)
-		slot.set_empty()
-	deposit_button.disabled = storage_id != "city" or not storage.has_method("get_depositable_items") or storage.call("get_depositable_items").is_empty()
+	feedback.visible = not feedback.text.is_empty()
+	# The fixed grid viewport remains present for empty and short categories.
+	# ScrollContainer clips overflow; changing stock never changes the frame.
+	deposit_button.disabled = read_only or storage_id != "city" or not storage.has_method("get_depositable_items") or storage.call("get_depositable_items").is_empty()
 	if is_instance_valid(haul_button):
-		haul_button.disabled = not _has_access()
+		haul_button.disabled = read_only or not _has_access()
+
+func _build_currency_summary() -> void:
+	stock_summary = HBoxContainer.new()
+	stock_summary.name = "StockSummary"
+	stock_summary.add_theme_constant_override("separation", 4)
+	stock_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	context.get_parent().add_child(stock_summary)
+	context.get_parent().move_child(stock_summary, view.get_node("Margin/Content/Footer").get_index())
+	for index: int in range(CURRENCY_ICONS.size()):
+		var row := HBoxContainer.new()
+		row.name = ["Copper", "Shekel", "Gold"][index]
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 2)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stock_summary.add_child(row)
+		var icon := TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = CURRENCY_ICONS[index]
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+		var amount := Label.new()
+		amount.name = "Amount"
+		amount.text = "--"
+		amount.accessibility_name = "%s: unavailable" % row.name
+		amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		amount.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		amount.clip_text = true
+		amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		amount.add_theme_font_size_override("font_size", 6)
+		amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(amount)
+		_currency_amounts.append(amount)
 
 func _get_available_items(location_id: String) -> Dictionary:
 	if is_instance_valid(storage) and storage.has_method("get_available_items"):
@@ -368,7 +416,7 @@ func _refresh_clothing_summary() -> void:
 		clothing_summary.text += "\nReady tomorrow"
 
 func _open_transfer(mode: String) -> void:
-	if not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui) or storage_id != "city" or mode != "deposit":
+	if read_only or not visible or not view.visible or is_instance_valid(transfer_ui) or is_instance_valid(haul_ui) or storage_id != "city" or mode != "deposit":
 		return
 	if not _has_access():
 		close()
@@ -406,7 +454,7 @@ func _clear_transfer(source: ItemTransferUI) -> void:
 func _confirm_transfer(items: Dictionary, source: ItemTransferUI) -> void:
 	if _owns_pause:
 		get_tree().paused = true
-	if not visible or not is_instance_valid(transfer_ui) or transfer_ui != source:
+	if read_only or not visible or not is_instance_valid(transfer_ui) or transfer_ui != source:
 		return
 	if not _has_access():
 		close()
@@ -435,7 +483,7 @@ func _make_button(text: String, parent: Node) -> Button:
 	var button := Button.new()
 	button.name = text + "Button"
 	button.text = text
-	button.custom_minimum_size = Vector2(44, 16)
+	button.custom_minimum_size = Vector2(36, 16)
 	button.theme_type_variation = &"HudShortcutButton"
 	button.add_theme_font_size_override("font_size", 6)
 	parent.add_child(button)

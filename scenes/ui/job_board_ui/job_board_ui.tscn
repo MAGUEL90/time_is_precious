@@ -7,7 +7,7 @@
 [ext_resource type="FontFile" path="res://assets/font/pixel_rpg.ttf" id="5_font"]
 [ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="6_close"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/separator_icon_2.png" id="7_focus"]
-[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="8_coin"]
+[ext_resource type="Texture2D" path="res://resources/ui_icons/small_shekel.tres" id="8_coin"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/city_wallet_icon.png" id="9_wallet"]
 
 [sub_resource type="AtlasTexture" id="Window"]

@@ -2,9 +2,9 @@ extends "res://scenes/test_scenes/test_scene_house_save_migration.gd"
 
 ## Disk-bound regression for the authored building views. Run with an isolated
 ## XDG_DATA_HOME: the unique test_root paths are never the player's save slot.
-const SITE_ART: String = "res://assets/objects/house_construction_site.png"
-const HOUSE_ART: String = "res://assets/objects/house_level_0.png"
-const WORKSHOP_ART: String = "res://assets/objects/clay_workshop_0.png"
+const SITE_ART: String = "res://assets/objects/buildings/house_construction_site.png"
+const HOUSE_ART: String = "res://assets/objects/buildings/house_level_0.png"
+const WORKSHOP_ART: String = "res://assets/objects/buildings/clay_workshop_0.png"
 const OPEN_ART: String = "res://assets/ui/building/plot_level_0.png"
 const SEGMENTS: Array[String] = ["Plot", "LeftWall", "LeftWallTop", "RightWall", "RightWallTop", "Table", "TableLegs"]
 

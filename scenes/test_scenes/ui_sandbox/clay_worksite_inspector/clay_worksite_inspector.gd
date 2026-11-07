@@ -55,7 +55,6 @@ func _ready() -> void:
 	reserve_label.name = "ReserveLabel"
 	reserve_label.theme_type_variation = &"HudLabelShortcut"
 	reserve_label.add_theme_font_size_override("font_size", 6)
-	reserve_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var main_box: VBoxContainer = $Center/TextureWindow/Margin/MainVBox
 	main_box.add_child(reserve_label)
 	main_box.move_child(reserve_label, 1)
@@ -206,6 +205,15 @@ func _show_roster(open: bool) -> void:
 			if not has_workers:
 				work_mode = ""
 		_refresh_preview()
+		# The assignment layer can leave the centered window's inner MarginContainer
+		# at its taller selection-page size. Reflow the window and its content after
+		# returning so the title keeps its authored top inset on repeated opens.
+		var content_margin: MarginContainer = $Center/TextureWindow/Margin
+		content_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content_margin.update_minimum_size()
+		window.update_minimum_size()
+		$Center.queue_sort()
+		content_margin.queue_sort()
 		if visible:
 			daily_button.grab_focus()
 
@@ -259,17 +267,17 @@ func _request_work() -> void:
 func _refresh_preview() -> void:
 	if not visible:
 		return
+	var reserve_text: String = ""
 	if _preview_provider.is_valid():
 		var reserve: Dictionary = _preview_provider.call(get_duration_minutes())
-		reserve_label.visible = bool(reserve.get("finite_resource", false))
-		reserve_label.text = "Remaining: %d / %d" % [int(reserve.get("stock", 0)), int(reserve.get("deposit_capacity", 0))]
 		var remaining: int = int(reserve.get("respawn_minutes", -1))
-		if int(reserve.get("stock", 0)) == 0 and remaining > 0:
-			reserve_label.text += "  |  Respawn: %dd %02dh" % [remaining / 1440, (remaining % 1440) / 60]
-		elif int(reserve.get("stock", 0)) == 0 and remaining == 0:
-			reserve_label.text += "  |  Awaiting safe location"
-	else:
-		reserve_label.hide()
+		if bool(reserve.get("finite_resource", false)) and int(reserve.get("stock", 0)) == 0:
+			if remaining > 0:
+				reserve_text = "Respawn: %dd %02dh" % [remaining / 1440, (remaining % 1440) / 60]
+			elif remaining == 0:
+				reserve_text = "Awaiting safe location"
+	reserve_label.text = reserve_text
+	reserve_label.visible = not reserve_text.is_empty()
 	if _progress_open:
 		_refresh_progress_rows()
 		return

@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" path="res://assets/items/wood_log.png" id="icon_Wood"]
 
-[ext_resource type="Texture2D" uid="uid://cfs1fve22di0s" path="res://assets/reed_bundle.png" id="icon_Reed"]
+[ext_resource type="Texture2D" uid="uid://cfs1fve22di0s" path="res://assets/items/reed_bundle.png" id="icon_Reed"]
 
 [ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
 

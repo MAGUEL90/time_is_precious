@@ -90,7 +90,12 @@ func _run() -> void:
 		panel.title.text = "Clay Worksite With A Very Long Location Name"
 		await _capture("long-title.png")
 		_expect(panel.title.get_global_rect().end.x <= panel.close_button.global_position.x, "Title leaves Close clear.")
-	_expect(panel.window.size.x == 240 and panel.window.size.y <= 155, "Use the smaller workshop panel bounds.")
+	_expect(panel.window.size.x >= 176 and panel.window.size.x <= 208 and panel.window.size.y <= 155,
+		"Use compact worksite panel bounds while allowing content to fit.")
+	_expect(absf(panel.window.global_position.x + panel.window.size.x * 0.5 - panel.get_viewport_rect().size.x * 0.5) <= 0.5
+		and absf(panel.window.global_position.y + panel.window.size.y * 0.5 - panel.get_viewport_rect().size.y * 0.5) <= 0.5
+		and panel.title.horizontal_alignment == HORIZONTAL_ALIGNMENT_LEFT,
+		"Center the panel and left-align its heading.")
 	_expect(panel.start_button.get_global_rect().end.y <= panel.window.get_global_rect().end.y - 10, "Footer fits window.")
 	await _press("ui_cancel")
 	_expect(not panel.visible and player.can_move and not get_tree().paused, "Closing restores gameplay.")

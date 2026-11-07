@@ -236,6 +236,10 @@ func _write_baseline_checkpoint() -> void:
 		and CitizenNeedsManager.last_shelter_capacity_fulfilled_count == 1
 		and CitizenNeedsManager.last_shelter_capacity_unfulfilled_count == 1,
 		"The day's ledger records three unique people and the exact physical supply limits.")
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	_expect(progression.last_awarded_day == TimeComponentManager.current_day
+		and int(progression.last_daily.get("satisfaction", -1)) == 5,
+		"The resident average earns the existing +5 city bonus in the checkpoint's settled day.")
 	_expect(city_storage.get_food_supply_points() == 0 and city_storage.get_clothing_item_count() == 0,
 		"The real settlement consumes exactly two food points and one garment.")
 	_expect(WorkerDatabase.get_worker_data(LINKED_ID) == linked_worker
@@ -287,6 +291,10 @@ func _read_before_midnight_and_save_city() -> void:
 	_expect(TimeComponentManager.current_day == day_before + 1
 		and CitizenNeedsManager.last_processed_day == TimeComponentManager.current_day,
 		"Crossing midnight runs exactly one new daily settlement.")
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	_expect(progression.last_awarded_day == TimeComponentManager.current_day
+		and int(progression.last_daily.get("satisfaction", -1)) == 5,
+		"The next settlement after Continue still earns the +5 resident-average bonus.")
 	_assert_daily_step_and_no_overshoot(satisfaction_before_midnight)
 	_assert_saved_roster_and_summaries("first post-midnight settlement", false)
 	var stock_after_midnight: Dictionary = city_storage.items.duplicate(true)
@@ -357,6 +365,11 @@ func _read_after_midnight_and_save_home() -> void:
 	_expect(TimeComponentManager.current_day == day_before + 1
 		and CitizenNeedsManager.last_processed_day == TimeComponentManager.current_day,
 		"One offscreen home day triggers exactly one midnight needs settlement.")
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	_expect(CitizenNeedsManager.get_average_satisfaction() < 0.70
+		and progression.last_awarded_day == TimeComponentManager.current_day
+		and int(progression.last_daily.get("satisfaction", -1)) == 0,
+		"After raid losses and another shortage, the offscreen resident average falls below 70% and earns no mood bonus.")
 	_assert_daily_step_and_no_overshoot(satisfaction_at_day_start)
 	_assert_saved_roster_and_summaries("offscreen day settlement", false)
 	var stock_after_day: Dictionary = city_storage.items.duplicate(true)
@@ -395,6 +408,10 @@ func _verify_home_checkpoint() -> void:
 
 func _test_raid_changes_live_satisfaction_only() -> void:
 	var before_ledger: Dictionary = CitizenNeedsManager.last_needs_results.duplicate(true)
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	var city_progress_before: int = progression.progress
+	var city_day_before: int = progression.last_awarded_day
+	var city_daily_before: Dictionary = progression.last_daily.duplicate(true)
 	var before_summaries: Dictionary = {}
 	for id: String in [LINKED_ID, RESIDENT_ID, LEGACY_WORKER_ID]:
 		before_summaries[id] = _person_summary(id)
@@ -418,6 +435,12 @@ func _test_raid_changes_live_satisfaction_only() -> void:
 		"A deterministic breached raid applies its satisfaction penalty without removing residents.")
 	_expect(CitizenNeedsManager.last_needs_results == before_ledger,
 		"The raid does not rewrite today's saved physical-needs ledger.")
+	# This independent raid probe changes resident Satisfaction but is not the
+	# active city's wall, so it cannot apply that wall's separate breach penalty.
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(progression.progress == city_progress_before and progression.last_awarded_day == city_day_before
+		and progression.last_daily == city_daily_before,
+		"A raid probe and repeated needs refresh preserve the restored city settlement and do not award it again.")
 	for id: String in [LINKED_ID, RESIDENT_ID, LEGACY_WORKER_ID]:
 		var before: Dictionary = before_summaries[id]
 		var after: Dictionary = _person_summary(id)
@@ -555,6 +578,14 @@ func _assert_full_snapshot_unchanged(label: String) -> void:
 		label + ": every serialized owner, ID, contract, stock, RNG and needs field matches the source snapshot exactly.")
 	_expect(FileAccess.get_file_as_bytes(SAVE_PATH) == initial_bytes,
 		label + ": the checkpoint's bytes are unchanged.")
+	var progression: Node = WorkStateRuntime.get_node("CityProgression")
+	var progress_before: int = progression.progress
+	var day_before: int = progression.last_awarded_day
+	var daily_before: Dictionary = progression.last_daily.duplicate(true)
+	CitizenNeedsManager.needs_changed.emit()
+	_expect(progression.progress == progress_before and progression.last_awarded_day == day_before
+		and progression.last_daily == daily_before,
+		label + ": a same-day needs refresh cannot award city progress again after Continue.")
 
 
 func _parse_document(bytes: PackedByteArray) -> Dictionary:

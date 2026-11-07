@@ -86,7 +86,11 @@ func _run() -> void:
 			and CityStockManager.treasury_shekel == treasury_before + 1
 			and not storage.items.has("shekel"),
 			"Confirmed City Storage deposit transfers one Shekel to treasury without a physical coin stack")
-		_expect(storage_menu.stock_summary.get_line_count() == 2, "Storage cash and stock summaries fit two explicit lines")
+		_expect(storage_menu.stock_summary.get_child_count() == 3
+			and storage_menu._currency_amounts[0].text == "--"
+			and storage_menu._currency_amounts[1].text == str(treasury_before + 1)
+			and storage_menu._currency_amounts[2].text == "--",
+			"Storage shows the updated Shekel balance and unavailable denominations on one line")
 		await _capture("city-storage")
 		var storage_close: BaseButton = storage_menu.view.get_node("Close") as BaseButton
 		await press(storage_close)

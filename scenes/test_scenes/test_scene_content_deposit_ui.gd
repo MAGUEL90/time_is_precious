@@ -41,6 +41,14 @@ func _run() -> void:
 	panel = CITY_UI.instantiate()
 	add_child(panel)
 	panel.open(storage, func() -> bool: return access_allowed)
+	var physical_c := InputEventKey.new()
+	physical_c.keycode = KEY_C
+	physical_c.physical_keycode = KEY_C
+	physical_c.pressed = true
+	get_viewport().push_input(physical_c)
+	await get_tree().process_frame
+	_expect(is_instance_valid(panel) and panel.visible and get_tree().paused,
+		"C does not close physical City Storage.")
 	panel._open_transfer("deposit")
 	var transfer: ItemTransferUI = panel.transfer_ui
 	_expect(Inventory.items.get("shekel", 0) == 3 and CityStockManager.treasury_shekel == 100 and storage.items.is_empty(), "Opening deposit changes no balances.")
@@ -53,7 +61,7 @@ func _run() -> void:
 	_expect(is_instance_valid(transfer) and panel.transfer_ui == transfer and transfer.visible and get_tree().paused, "First deposit retains the same paused dialog.")
 	_expect(Inventory.items.get("shekel", 0) == 2 and Inventory.items.get("stone", 0) == 1, "First selection leaves the remaining inventory available.")
 	_expect(CityStockManager.treasury_shekel == 101 and storage.items.get("stone", 0) == 1 and not storage.items.has("shekel"), "Physical deposit routes shekels into treasury and resources into city stock.")
-	_expect(panel.stock_summary.text.contains("City cash: 101"), "Native city cash summary refreshes after deposit.")
+	_expect(panel._currency_amounts[0].text == "--" and panel._currency_amounts[1].text == "101" and panel._currency_amounts[2].text == "--", "Treasury shows the actual Shekel balance and unavailable denominations after deposit.")
 	_expect(transfer.selected_items.is_empty() and transfer.confirm_button.disabled, "Success clears selection and prevents a duplicate commit.")
 	transfer.confirm_button.pressed.emit()
 	_expect(deposit_notifications == 1, "An unselected repeated confirm cannot deposit again.")
@@ -91,6 +99,25 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(Inventory.items.get("shekel", 0) == 1 and CityStockManager.treasury_shekel == 103 and deposit_notifications == 2, "Losing access blocks deposit before any balance changes.")
 	_expect(not is_instance_valid(panel) and not get_tree().paused, "Access loss closes the dialog and releases its pause.")
+	# Hub browsing must not bypass the physical Deposit or Send requirement.
+	access_allowed = true
+	var transport := Node.new()
+	add_child(transport)
+	transport.add_to_group("city_storage_transport")
+	panel = CITY_UI.instantiate()
+	add_child(panel)
+	panel.open(storage, func() -> bool: return access_allowed, "city", true)
+	_expect(panel.deposit_button.disabled and panel.haul_button.disabled and not panel.context.visible,
+		"Remote storage keeps Deposit and Send disabled without a message below the title.")
+	panel._open_transfer("deposit")
+	panel._open_haul()
+	_expect(not is_instance_valid(panel.transfer_ui) and not is_instance_valid(panel.haul_ui)
+		and Inventory.items.get("shekel", 0) == 1 and CityStockManager.treasury_shekel == 103,
+		"Direct calls cannot use remote storage to transfer stock.")
+	panel.close()
+	transport.free()
+	await get_tree().process_frame
+	_expect(not get_tree().paused, "Leaving remote storage releases its pause.")
 	storage.free()
 	print("ContentDepositUITest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)

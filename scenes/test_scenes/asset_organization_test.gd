@@ -6,9 +6,9 @@ const ASSETS: Array[Dictionary] = [
 	{"path": "res://assets/ui/ui_icon/checklist_icon.png", "uid": "uid://dvf6iiypuilwu", "sha256": "4e5b4df71a5297f4c6c116a1a7fd4c63767b3bc4d29142a9df7a95c27c217644", "size": Vector2i(16, 16)},
 	{"path": "res://assets/objects/worksites/clay_site.png", "uid": "uid://b650c5xjes0rl", "sha256": "a6d86339ac876b40669dcfd890ce0586a620314e66fa64fda075830a9c522abf", "size": Vector2i(32, 32)},
 	{"path": "res://assets/ui/ui_icon/hauler_icon.png", "uid": "uid://70r5ceud5uop", "sha256": "32657f8c396c0fdc9abb9978b4c5a2d64440e2bdff163892004bd37efef0c35c", "size": Vector2i(32, 32)},
-	{"path": "res://assets/objects/house_level_0.png", "uid": "uid://fthba18nxxwn", "sha256": "296a012f5ae691b96ce82c880adae4515446834375fae077fa19c9e4ae916a31", "size": Vector2i(48, 64)},
-	{"path": "res://assets/objects/house_construction_site.png", "uid": "uid://8muqwvsycp66", "sha256": "6cf4a1fb554663faf8d3018907fb99f37a28dc4c7cbdf08db40fd08f2cfc925b", "size": Vector2i(64, 64)},
-	{"path": "res://assets/objects/clay_workshop_0.png", "uid": "uid://nuopirs7g4li", "sha256": "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1", "size": Vector2i(48, 64)},
+	{"path": "res://assets/objects/buildings/house_level_0.png", "uid": "uid://fthba18nxxwn", "sha256": "296a012f5ae691b96ce82c880adae4515446834375fae077fa19c9e4ae916a31", "size": Vector2i(48, 64)},
+	{"path": "res://assets/objects/buildings/house_construction_site.png", "uid": "uid://8muqwvsycp66", "sha256": "6cf4a1fb554663faf8d3018907fb99f37a28dc4c7cbdf08db40fd08f2cfc925b", "size": Vector2i(64, 64)},
+	{"path": "res://assets/objects/buildings/clay_workshop_0.png", "uid": "uid://nuopirs7g4li", "sha256": "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1", "size": Vector2i(48, 64)},
 	{"path": "res://assets/objects/job_board.png", "uid": "uid://b760kxx2baat3", "sha256": "443632fa545c9d7ea46aecfe4d3b201195212af9a5b80153b30e2d7c03e9c43e", "size": Vector2i(34, 24)},
 	{"path": "res://assets/ui/ui_icon/laborer_icon.png", "uid": "uid://dup44odh1wp4x", "sha256": "80f924435adf3a8c31638b7d97d4215559b8d8a5f454d6fa9bc303d3131938de", "size": Vector2i(32, 32)},
 	{"path": "res://assets/ui/ui_icon/no_output_icon.png", "uid": "uid://diuh2vy7hxxf0", "sha256": "80c5193d2eb412dadc9133414721219e1cc4444b32bf9391fe1f992eaf40b4ab", "size": Vector2i(16, 16)},
@@ -28,7 +28,7 @@ const ASSETS: Array[Dictionary] = [
 	{"path": "res://assets/ui/building/wall_stone_0.png", "uid": "uid://doa2eqsykrlv0", "sha256": "99bc2614fb5b6e6b5512a25fd8c3a86b9c830ad64532698b9edd0cbe54839da8", "size": Vector2i(112, 48)},
 	{"path": "res://assets/objects/worksites/water_site.png", "uid": "uid://bn7d4dx4dhbjo", "sha256": "088e921a22d1af70a18fa76ecaaf0f24b196e7809f7ab3b5abdcaa2eb3f64718", "size": Vector2i(32, 32)},
 	{"path": "res://assets/objects/worksites/wood_site.png", "uid": "uid://51yjjv2etox8", "sha256": "aeaee396ee1df6789bba5e50748ccfebb5bc5f8fcb7dc500575c09f18726b6ba", "size": Vector2i(32, 32)},
-	{"path": "res://assets/objects/workshop_1.png", "uid": "uid://bhs8s48uwgvx8", "sha256": "be1a9b13091da67b75db80ec951004279930708b0957b50d238fe91a50c2772c", "size": Vector2i(48, 64)},
+	{"path": "res://assets/objects/buildings/workshop_1.png", "uid": "uid://bhs8s48uwgvx8", "sha256": "be1a9b13091da67b75db80ec951004279930708b0957b50d238fe91a50c2772c", "size": Vector2i(48, 64)},
 ]
 
 var failures := 0

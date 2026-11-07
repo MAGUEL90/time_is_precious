@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="5_pww13"]
 [ext_resource type="PackedScene" uid="uid://e3wgu2sh4adx" path="res://scenes/ui/inventory_page_selector/inventory_page_selector.tscn" id="6_8o40v"]
 
-[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="7_shekel"]
+[ext_resource type="Texture2D" path="res://resources/ui_icons/small_shekel.tres" id="7_shekel"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_w86wv"]
 atlas = ExtResource("3_5kg0u")

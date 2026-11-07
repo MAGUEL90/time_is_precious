@@ -11,6 +11,9 @@ signal unequip_requested(worker_id: String, unit_id: String)
 signal remove_requested(worker_id: String)
 signal goto_requested(worker_id: String)
 signal close_requested
+signal details_requested(worker_id: String)
+signal shared_details_close_requested
+signal shared_action_closed(worker_id: String)
 
 var rows_provider: Callable = Callable()
 var tools_provider: Callable = Callable()
@@ -115,6 +118,9 @@ var _fire_block_detector: Control
 var _fire_feedback_footer: Control
 var _fire_block_feedback: Label
 var _fire_block_reason: String = ""
+var _shared_details_active: bool = false
+var _shared_action_active: bool = false
+var _shared_contract_returns_details: bool = false
 
 
 func _ready() -> void:
@@ -197,6 +203,18 @@ func _on_wallet_items_changed() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# The content scene owns its shared details card. Keep the hub's pause,
+	# but route close shortcuts to that card before handling hub popups.
+	if _shared_details_active:
+		if event.is_action_pressed("open_worker_hub"):
+			close()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("ui_cancel") or _is_plain_city_shortcut(event):
+			shared_details_close_requested.emit()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
+			get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("open_worker_hub"):
 		if visible:
 			close()
@@ -230,10 +248,13 @@ func _input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var active_popup: Control = details_window if details_window.visible else contract_window if contract_window.visible else manage_window
 			if not active_popup.get_global_rect().has_point(event.position):
+				var returning_to_shared: bool = _shared_action_active
 				if contract_window.visible:
 					_close_contract()
 				else:
 					_close_manage()
+				if returning_to_shared:
+					get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 			if contract_window.visible:
@@ -280,12 +301,57 @@ func close() -> void:
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
 	_renew_feedback_text = ""
+	_shared_details_active = false
+	_shared_action_active = false
+	_shared_contract_returns_details = false
 	_manage_worker_id = ""
 	_close_manage()
 	_close_tools_picker()
 	_restore_pause()
 	visible = false
 	close_requested.emit()
+
+
+func _is_plain_city_shortcut(event: InputEvent) -> bool:
+	return event is InputEventKey and event.pressed and not event.echo \
+		and event.keycode == KEY_C and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed
+
+
+func set_shared_details_active(active: bool) -> void:
+	_shared_details_active = active and visible
+
+
+func restore_shared_details_focus(worker_id: String) -> void:
+	if not visible:
+		return
+	var target: Control
+	if _active_tab == "tools":
+		# Tools portrait and info buttons deliberately opt out of focus.
+		target = tools_tab_button
+	else:
+		target = _find_manage_button(worker_id)
+	if is_instance_valid(target) and target.is_visible_in_tree():
+		target.call_deferred("grab_focus")
+
+
+func open_shared_worker_action(worker_id: String, action: String) -> bool:
+	if action not in ["actions", "contract"] or WorkerDatabase.get_worker_data(worker_id) == null:
+		return false
+	if _find_worker(_get_worker_rows(), worker_id).is_empty():
+		return false
+	if not visible:
+		open()
+	if not visible:
+		return false
+	_show_manage(worker_id)
+	if not manage_window.visible:
+		return false
+	_shared_action_active = true
+	_shared_contract_returns_details = action == "contract"
+	if _shared_contract_returns_details:
+		_show_manage_contract()
+		return contract_window.visible
+	return true
 
 
 func refresh() -> void:
@@ -410,12 +476,20 @@ func _make_status_row(row: Dictionary) -> Control:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row_control.add_child(spacer)
-	var manage_button := _make_button("Manage", 42, 15)
+	var manage_button := _make_button("Details", 42, 15)
 	manage_button.name = "ManageButton"
 	manage_button.set_meta("worker_id", str(row.get("id", "")))
-	manage_button.pressed.connect(_show_manage.bind(str(row.get("id", "")), manage_button))
+	manage_button.pressed.connect(_request_row_details.bind(str(row.get("id", "")), manage_button))
 	row_control.add_child(manage_button)
 	return row_control
+
+
+func _request_row_details(worker_id: String, source_button: Button) -> void:
+	if details_requested.has_connections():
+		details_requested.emit(worker_id)
+	else:
+		# Fixtures without a content-scene controller retain their existing menu.
+		_show_manage(worker_id, source_button)
 
 
 func _make_separator() -> TextureRect:
@@ -1068,6 +1142,14 @@ func _show_manage_details() -> void:
 
 
 func _show_details(worker_id: String, return_tab: String = "") -> void:
+	if details_requested.has_connections():
+		if _shared_action_active:
+			_close_manage()
+			return
+		if return_tab == "tools":
+			_close_tools_picker()
+		details_requested.emit(worker_id)
+		return
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
@@ -1208,6 +1290,9 @@ func _close_details() -> void:
 
 
 func _close_manage() -> void:
+	var returning_id: String = _manage_worker_id if _shared_action_active else ""
+	_shared_action_active = false
+	_shared_contract_returns_details = false
 	_stop_renew_success_animation()
 	_hide_fire_block_feedback()
 	details_window.hide()
@@ -1215,10 +1300,15 @@ func _close_manage() -> void:
 	manage_window.hide()
 	_sync_fire_block_detector()
 	_manage_source_button = null
+	if not returning_id.is_empty():
+		shared_action_closed.emit(returning_id)
 
 
 func _close_contract() -> void:
 	if not contract_window.visible:
+		return
+	if _shared_action_active and _shared_contract_returns_details:
+		_close_manage()
 		return
 	_stop_renew_success_animation()
 	contract_window.hide()

@@ -72,6 +72,7 @@ func sync_city_residents() -> void:
 	var slot: int = 0
 	for citizen: CitizenData in residents:
 		if actors.has(citizen.citizen_id):
+			actors[citizen.citizen_id].set_satisfaction_source(citizen)
 			actors[citizen.citizen_id].set_meta("visual_has_worker", WorkerDatabase.has_worker_data(citizen.citizen_id))
 			continue
 		while occupied_slots.has(slot):
@@ -363,6 +364,7 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	actor.hair_style = profile.hair_style
 	actor.accessory = profile.accessory
 	add_child(actor)
+	actor.set_satisfaction_source(citizen if citizen != null else worker)
 	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if worker != null and not worker.physical_approach.is_empty() else spawn_position
 	var foot := Node2D.new()
 	foot.name = "FootSort"
@@ -375,8 +377,6 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	footsteps.name = "Footsteps"
 	actor.add_child(footsteps)
 	actor.y_sort_enabled = true
-	if not is_instance_valid(resident_spawn):
-		_apply_work_identity(actor)
 	actor.hide()
 	actors[id] = actor
 	return actor
@@ -466,18 +466,6 @@ func _phase_duration(cycle: Dictionary, actor: Node2D) -> float:
 	if cycle.phase == 4:
 		return maxf(cycle.origin.distance_to(cycle.target) / 10.0, 0.1)
 	return maxf(cycle.idle, 0.1)
-
-func _apply_work_identity(actor: Node2D) -> void:
-	# Missing work overlays stay consistently absent; linked citizen data is intact.
-	if not _has_work_identity(actor, actor.hair_sprite, actor.hair_style):
-		actor.hair_style = "default"
-		actor._hide_layer(actor.hair_sprite)
-	if not _has_work_identity(actor, actor.clothes_sprite, actor.clothes_id):
-		actor.clothes_id = "default"
-		actor._hide_layer(actor.clothes_sprite)
-
-func _has_work_identity(actor: Node2D, layer: AnimatedSprite2D, identity: String) -> bool:
-	return actor._has_playable_animation(layer, "%s_work_left" % identity) and actor._has_playable_animation(layer, "%s_work_right" % identity)
 
 func _reed_working(id: String) -> bool:
 	var fixture: Node = get_parent()

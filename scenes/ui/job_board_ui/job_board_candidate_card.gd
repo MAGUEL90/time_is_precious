@@ -5,6 +5,10 @@ signal selection_toggled(checked: bool)
 const HAULER_ICON: Texture2D = preload("res://assets/ui/ui_icon/hauler_icon.png")
 const LABORER_ICON: Texture2D = preload("res://assets/ui/ui_icon/laborer_icon.png")
 const WORKER_ICON: Texture2D = preload("res://assets/ui/ui_icon/worker_portrait_icon.png")
+const MOOD_BANDS = preload("res://scenes/worker_visual/base_worker_visual.gd")
+const MOOD_ANGRY: Texture2D = preload("res://assets/ui/ui_icon/satisfaction_anger_small_icon.png")
+const MOOD_NORMAL: Texture2D = preload("res://assets/ui/ui_icon/satisfaction_normal_small_icon.png")
+const MOOD_HAPPY: Texture2D = preload("res://assets/ui/ui_icon/satisfaction_happy_small_icon.png")
 const MAX_NAME_DISPLAY_LENGTH: int = 20
 
 @onready var details: Control = $Details
@@ -53,7 +57,14 @@ func show_applicant(citizen: CitizenData, package_price: int, contract_days: int
 		portrait.position = ((frame.size - portrait.size) * 0.5).round()
 	satisfaction_bar.value = citizen.satisfaction * 100.0
 	satisfaction_label.text = "%d%%" % roundi(citizen.satisfaction * 100.0)
-	# The baseline has no mood-to-icon thresholds; keep the existing neutral art.
+	# Applicants are normally eligible at 50% or higher. Keep the same
+	# presentation thresholds as world faces; there is no separate sad UI icon.
+	if citizen.satisfaction < MOOD_BANDS.MOOD_ANGRY_BELOW - MOOD_BANDS.MOOD_COMPARISON_EPSILON:
+		mood_icon.texture = MOOD_ANGRY
+	elif citizen.satisfaction >= MOOD_BANDS.MOOD_HAPPY_AT - MOOD_BANDS.MOOD_COMPARISON_EPSILON:
+		mood_icon.texture = MOOD_HAPPY
+	else:
+		mood_icon.texture = MOOD_NORMAL
 	mood_icon.accessibility_name = "Satisfaction: %d%%" % roundi(citizen.satisfaction * 100.0)
 	wage_label.text = str(package_price) if package_price > 0 else "Unavailable"
 	wage_label.accessibility_name = "Contract hire cost: %d Shekel for %d days" % [package_price, contract_days] if package_price > 0 else "Contract price unavailable"

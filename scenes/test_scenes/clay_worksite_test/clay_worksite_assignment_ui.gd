@@ -6,6 +6,7 @@ signal participant_toggled(id: String)
 signal returned
 signal close_requested
 signal discard_requested
+const DAILY_SCHEDULE = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_daily.gd")
 var roster_provider: Callable
 var discard_overlay: Control
 var discard_panel: NinePatchRect
@@ -121,17 +122,18 @@ func _refresh_worker_list() -> void:
 		var card: Button = worker_list.get_child(index)
 		card.name = "Participant_" + worker.worker_id
 		for entry: Dictionary in entries:
-			if entry.id == worker.worker_id and not str(entry.reason).is_empty():
-				card.disabled = true
-				if str(entry.reason).begins_with("Requires a cart"):
-					card.modulate = Color(1.0, 0.4, 0.4)
-					card.disabled = false
-					card.set_meta("missing_tool", true)
+			if entry.id == worker.worker_id and not str(entry.reason).is_empty() and not selected_worker_ids.has(worker.worker_id):
+				# Keep unavailable cards clickable solely to explain the existing guard.
+				card.modulate = Color(1.0, 0.4, 0.4)
+				card.disabled = false
+				var select_worker: Callable = Callable(self, "_on_worker_selected").bind(worker.worker_id)
+				if not card.pressed.is_connected(select_worker):
+					card.pressed.connect(select_worker)
 	_clear_tooltips(worker_list)
 
 func _on_worker_selected(id: String) -> void:
 	for entry: Dictionary in roster_provider.call():
-		if entry.id == id and str(entry.reason).begins_with("Requires a cart"):
+		if entry.id == id and not str(entry.reason).is_empty():
 			selection_title_label.text = str(entry.reason)
 			selection_title_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 			return
@@ -148,7 +150,12 @@ func _on_worker_selected(id: String) -> void:
 		return
 	participant_toggled.emit(id)
 	sync_team()
+	if not selected_worker_ids.has(id):
+		selection_title_label.text = "Worker could not be assigned."
+		selection_title_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+		return
 	_show_overview()
+	_show_after_shift_feedback()
 
 func _confirm_hauler(id: String, destination_path: NodePath, daily_target: int) -> void:
 	var reason: String = "Hauler setup is unavailable."
@@ -161,6 +168,7 @@ func _confirm_hauler(id: String, destination_path: NodePath, daily_target: int) 
 	$Root/Center.show()
 	sync_team()
 	_show_overview()
+	_show_after_shift_feedback()
 	next_button.grab_focus()
 
 func _cancel_hauler() -> void:
@@ -202,6 +210,13 @@ func _on_back_pressed() -> void:
 func _on_cancel_pressed() -> void:
 	hide()
 	close_requested.emit()
+
+func _show_after_shift_feedback() -> void:
+	var minute: int = TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	if minute < DAILY_SCHEDULE.SHIFT_END:
+		return
+	feedback_label.text = "If confirmed, starts tomorrow at %02d:%02d." % [
+		floori(DAILY_SCHEDULE.SHIFT_START / 60.0), DAILY_SCHEDULE.SHIFT_START % 60]
 
 func _input(event: InputEvent) -> void:
 	if not visible:

@@ -47,7 +47,7 @@ func _run() -> void:
 		check(deposit.finite_resource and deposit.stock == expected_caps[deposit.item_id], "Each deposit starts with its provisional testing reserve (legacy straw stays compatible).")
 	work._open_site_panel(marker)
 	await get_tree().process_frame
-	check(work.inspector.reserve_label.visible and work.inspector.reserve_label.text == "Remaining: 36 / 36", "The real inspector shows the finite reserve.")
+	check(not work.inspector.reserve_label.visible and session.finite_resource and session.stock == 36, "The inspector hides Remaining while the actual finite reserve stays intact.")
 	await _capture("site-reserve.png")
 	work._close_inspector()
 	var storage_ui: CanvasLayer = preload("res://scenes/storage_destination/city_storage_access_ui.tscn").instantiate()
@@ -249,7 +249,8 @@ func _run() -> void:
 	for site_id: StringName in other_ids:
 		var other_marker: Node2D = work.get_node("WorksiteMarkers/" + str(site_id))
 		var deposit = work.sites[site_id]
-		check(other_marker.position != old_positions[site_id] and deposit.stock == expected_caps[deposit.item_id], "%s relocates onto a temporary checked deposit." % site_id)
+		var restored_at_expected_position: bool = other_marker.position == old_positions[site_id] if site_id == &"WoodSite" else other_marker.position != old_positions[site_id]
+		check(restored_at_expected_position and deposit.stock == expected_caps[deposit.item_id], "%s restores stock at its expected site." % site_id)
 		check(_clear_of_authored_plots(other_marker), "%s does not cover an authored property plot." % site_id)
 	_finish()
 

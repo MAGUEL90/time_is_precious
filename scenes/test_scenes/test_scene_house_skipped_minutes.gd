@@ -103,8 +103,8 @@ func _run() -> void:
 			"The real assignment records the builder's initial arrival")
 		var overlay: Node = content.get_node("TimeDebugOverlay")
 		overlay._refresh_controls()
-		_expect(overlay.can_advance() and not overlay.step_buttons[2].disabled, "The actual +1d button is enabled")
-		overlay.step_buttons[2].pressed.emit()
+		_expect(overlay.can_advance() and not overlay.step_buttons[1].disabled, "The actual +1d button is enabled")
+		overlay.step_buttons[1].pressed.emit()
 		var next_arrival: int = int(first.physical_approach.get("arrival_minute", -1))
 		var work_before_close: int = 15 * 60 - (10 * 60 + 59)
 		var work_next_shift: int = _now() - next_arrival

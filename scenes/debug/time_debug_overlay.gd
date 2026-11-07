@@ -2,7 +2,7 @@ extends CanvasLayer
 
 ## Development-only controls, separate from the gameplay HUD and menus.
 const DATE_PALM_STATE: Script = preload("res://scenes/pickup_item/date_palm_state.gd")
-const SPEEDS: Array[int] = [1, 10, 60]
+const SPEEDS: Array[int] = [1, 10, 25]
 const THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 const PANEL_ATLAS: Texture2D = preload("res://assets/ui/ui_base/base_24.06.2026.png")
 const CONSTRUCTION_STATE: Script = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
@@ -131,7 +131,7 @@ func give_shekel() -> bool:
 		"Bag full. Free space for Shekel."
 	)
 
-## Top up only the missing testing supplies; needs still settle at midnight.
+## Top up only the missing testing supplies; actual needs update over game time.
 func give_resident_needs() -> bool:
 	if not OS.is_debug_build() or _supplying_resident_needs or not can_supply_materials() or not TimeComponentManager.can_advance_time():
 		return false
@@ -173,7 +173,7 @@ func give_resident_needs() -> bool:
 	if not supplied:
 		_set_resident_needs_status("Supply failed. City Storage remains unchanged.")
 		return false
-	_set_resident_needs_status("Supplied %d. Needs update at midnight. Sleep saves debug supplies." % consumers)
+	_set_resident_needs_status("Supplied %d. Needs update over time. Sleep saves debug supplies." % consumers)
 	return true
 
 func _set_resident_needs_status(message: String) -> void:
@@ -521,7 +521,7 @@ func _create_controls() -> void:
 		speed_buttons.append(button)
 	var steps := HBoxContainer.new()
 	column.add_child(steps)
-	for entry in [["+30m", 30], ["+3h", 180], ["+1d", 1440]]:
+	for entry in [["+3h", 180], ["+1d", 1440], ["+3d", 4320]]:
 		var button := _button(entry[0])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(step_minutes.bind(entry[1]))

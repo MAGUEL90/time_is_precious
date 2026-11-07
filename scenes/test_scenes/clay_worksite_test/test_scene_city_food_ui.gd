@@ -26,6 +26,11 @@ func _ready() -> void:
 
 func _run() -> void:
 	_snapshot()
+	if DisplayServer.get_name() == "headless":
+		# Match the project's development window for meaningful viewport bounds.
+		get_window().size = Vector2i(1200, 675)
+		await get_tree().process_frame
+		_expect(get_viewport().get_visible_rect().size == Vector2(400, 225), "Headless storage checks use the intended 400x225 viewport.")
 	Inventory.items = {"barley_bread": 4, "roasted_drumstick": 1, "barley_grain_sack": 1}
 	WorkerDatabase.workers_by_id.clear()
 	CitizenManager.citizens_by_id.clear()
@@ -62,10 +67,19 @@ func _run() -> void:
 	_expect(_whole_item_count("barley_grain_sack") == 0 and _whole_item_count("barley_bread") == 4
 		and Inventory.items == {"barley_grain_sack": 1},
 		"The actual deposit UI keeps raw ingredients personal and displays deposited ready food.")
-	_expect(not menu.get_node("Root/CitySupplyPanel").visible and menu.grid.get_child_count() >= 15,
-		"Physical City Storage keeps its fifteen-slot grid and the retired supply panel hidden.")
-	_expect(menu.feedback.get_visible_line_count() == menu.feedback.get_line_count(),
-		"Physical storage feedback remains fully visible.")
+	_expect(not menu.get_node("Root/CitySupplyPanel").visible and menu.grid.get_child_count() == 2,
+		"Physical City Storage shows the two deposited item cards and keeps the retired supply panel hidden.")
+	var bag_grid: Control = menu.view.get_node("Margin/Content/BagGrid")
+	var footer: Control = menu.view.get_node("Margin/Content/Footer")
+	_expect(menu.view.size == Vector2(156, 208) and menu.stock_summary.get_global_rect().position.y >= bag_grid.get_global_rect().end.y
+		and menu.stock_summary.get_global_rect().end.y <= footer.get_global_rect().position.y,
+		"The fixed portrait panel places the treasury below the cards and directly above its actions.")
+	_expect(menu.feedback.visible and menu.feedback.text == "Deposited."
+		and menu.feedback.get_visible_line_count() == menu.feedback.get_line_count()
+		and menu.view.get_global_rect().encloses(menu.feedback.get_global_rect())
+		and get_viewport().get_visible_rect().encloses(menu.view.get_global_rect()),
+		"Physical storage feedback and its panel remain fully visible.")
+	await _capture("city-storage-feedback.png")
 	for slot: ItemSlot in menu.grid.get_children():
 		if slot._item_id.is_empty():
 			continue

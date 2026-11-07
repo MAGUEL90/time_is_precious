@@ -436,6 +436,10 @@ func resign_idle_worker(worker_id: String) -> bool:
 		return false
 	if (not worker.resignation_pending and worker.get_resolved_satisfaction() != 0.0) or worker.current_work_status != WorkerData.WorkStatus.IDLE:
 		return false
+	# Pending resignation is latched at zero, so later needs recovery cannot turn
+	# a departing worker back into a resident. A direct zero-boundary resignation
+	# uses the same final departure path.
+	var should_leave_city: bool = worker.resignation_pending or worker.get_resolved_satisfaction() == 0.0
 	if worker.is_reserved() or not worker.current_job_id.is_empty() or not worker.physical_approach.is_empty():
 		return false
 	var citizen: CitizenData = worker.get_linked_citizen()
@@ -517,7 +521,11 @@ func resign_idle_worker(worker_id: String) -> bool:
 	worker.resignation_pending = false
 	dismissed_workers[worker_id] = worker
 	workers_by_id.erase(worker_id)
-	if added_citizen:
+	# leave_city rejects active workers, so only invoke it after the complete
+	# roster/equipment commit. The guards remain raised while its signal observers
+	# see the departed citizen and any legacy identity promotion.
+	var departed: bool = should_leave_city and CitizenManager.leave_city(worker_id)
+	if added_citizen and not departed:
 		CitizenManager.citizen_added.emit(citizen)
 	for storage: Node in released_storages:
 		storage.emit_signal("changed")

@@ -317,8 +317,11 @@ func _test_main_map_expedition() -> void:
 	_set_clock_minute(arrival_at - 2)
 	var time_debug: Node = content.get_node("TimeDebugOverlay")
 	time_debug.set_process(false)
-	time_debug.set_speed(60)
-	time_debug.step_minutes(180)
+	time_debug.set_speed(25)
+	time_debug._refresh_controls()
+	_expect(time_debug.step_buttons[2].text == "+3d" and not time_debug.step_buttons[2].disabled,
+		"The three-day control is available before a scheduled raid.")
+	time_debug.step_buttons[2].pressed.emit()
 	_expect(_clock_minute() == arrival_at and time_debug.get_effective_speed() == 1,
 		"A debug jump stops at raid arrival instead of skipping through combat.")
 	_expect(state.phase == "attacking" and ui.attack_warning.visible
@@ -341,7 +344,7 @@ func _test_main_map_expedition() -> void:
 		and state._attack_at == -1 and state._party.is_empty(),
 		"After the attack, three recovery days are scheduled before a future party departs; its arrival is still unknown.")
 
-	_expect(time_debug.get_effective_speed() == 60, "Scheduled raid completion restores the selected speed.")
+	_expect(time_debug.get_effective_speed() == 25, "Scheduled raid completion restores the selected speed.")
 	state.wall_hp = 50
 	get_tree().paused = true
 	_expect(not time_debug.dispatch_raid_journey(), "Paused debug cannot dispatch a party.")
@@ -366,14 +369,14 @@ func _test_main_map_expedition() -> void:
 	_expect(state.phase == "looting" and time_debug.get_effective_speed() == 1,
 		"Breach keeps the debug clock at x1 during looting.")
 	var loot_minute: int = _clock_minute()
-	time_debug.step_minutes(180)
+	time_debug.step_buttons[2].pressed.emit()
 	_expect(_clock_minute() == loot_minute and not state.reset_debug_wall(),
 		"Looting blocks time skips and wall reset.")
 	state.advance_attack(4.0)
-	_expect(state.get_last_report().outcome == "breached" and time_debug.get_effective_speed() == 60,
+	_expect(state.get_last_report().outcome == "breached" and time_debug.get_effective_speed() == 25,
 		"A breached raid also restores the previous speed.")
 	time_debug._process(1.0)
-	_expect(_clock_minute() == second_arrival + 59,
+	_expect(_clock_minute() == second_arrival + 24,
 		"Resumed acceleration adds only the new frame's minutes, without leftover pre-raid time.")
 	time_debug.set_speed(1)
 	Inventory.items.assign(inventory_before)

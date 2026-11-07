@@ -87,7 +87,7 @@ func _setup_shekel_display() -> void:
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(8, 8)
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	icon.texture = preload("res://assets/ui/ui_icon/small_shekel_8x8.png")
+	icon.texture = preload("res://resources/ui_icons/small_shekel.tres")
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE

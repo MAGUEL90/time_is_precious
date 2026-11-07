@@ -166,6 +166,7 @@ func _run() -> void:
 	_expect(worker != null and not worker.physical_approach.is_empty(), "The assigned resident uses the normal physical approach.")
 
 	store.disk.path = SAVE_PATH.get_base_dir().path_join("assigned.json")
+	CitizenManager.get_citizen(FIRST_ID).satisfaction = 0.8
 	_expect(store.save_checkpoint(), "The real city saves its existing schema: " + store.last_error)
 	_expect(CitizenManager.leave_city(SECOND_ID) and not visuals.actors.has(SECOND_ID), "An unsaved departure updates the world.")
 	_expect(population_label.text == "2", "The HUD immediately reflects the unsaved departure.")
@@ -173,6 +174,12 @@ func _run() -> void:
 	for frame: int in range(4):
 		await get_tree().process_frame
 	_expect(CitizenManager.get_all_residents().size() == 3 and population_label.text == "3" and visuals.actors.size() == 3 and visuals.actors.has(FIRST_ID) and visuals.actors.has(SECOND_ID), "Load updates the HUD and rebuilds exactly one visual per restored resident.")
+	var restored_person: CitizenData = CitizenManager.get_citizen(FIRST_ID)
+	var restored_actor = visuals.actors.get(FIRST_ID)
+	_expect(restored_person != null and restored_actor != null and restored_actor._satisfaction_source == restored_person and is_equal_approx(restored_person.satisfaction, 0.8), "Loaded worker visual binds the restored satisfaction source.")
+	if restored_actor != null and restored_person != null:
+		visuals._play(restored_actor, "idle", "right")
+		_expect(str(restored_actor.head_sprite.animation).begins_with("happy_"), "Loaded 80% resident displays happy idle expression.")
 	worker = WorkerDatabase.get_worker_data(FIRST_ID)
 	_expect(worker != null and worker.is_reserved() and not worker.physical_approach.is_empty(), "Load retains the assigned worker and commute.")
 	_expect(store.load_checkpoint(), "The same checkpoint can be loaded again: " + store.last_error)
@@ -185,5 +192,11 @@ func _run() -> void:
 	for frame: int in range(4):
 		await get_tree().process_frame
 	_expect(not WorkerDatabase.has_worker_data(FIRST_ID) and visuals.actors.size() == 3 and visuals.actors.has(FIRST_ID) and visuals.actors[FIRST_ID].is_visible_in_tree(), "Loading an idle resident after an assigned worker leaves no stale hidden work visual.")
+	var idle_person: CitizenData = CitizenManager.get_citizen(FIRST_ID)
+	var idle_actor = visuals.actors.get(FIRST_ID)
+	_expect(idle_person != null and idle_actor != null and idle_actor._satisfaction_source == idle_person and is_equal_approx(idle_person.satisfaction, 0.5), "Earlier idle resident binds restored 50% value.")
+	if idle_actor != null and idle_person != null:
+		visuals._play(idle_actor, "idle", "right")
+		_expect(str(idle_actor.head_sprite.animation).begins_with("base_"), "Restored 50% resident displays neutral idle expression.")
 	print("CityResidentTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
 	get_tree().quit(0 if failures == 0 else 1)

@@ -2,8 +2,8 @@
 
 [ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_plot"]
 [ext_resource type="Script" path="res://scenes/citizen_house_plot/citizen_house_plot.gd" id="2_house"]
-[ext_resource type="Texture2D" path="res://assets/objects/house_construction_site.png" id="3_site"]
-[ext_resource type="Texture2D" path="res://assets/objects/house_level_0.png" id="4_house"]
+[ext_resource type="Texture2D" path="res://assets/objects/buildings/house_construction_site.png" id="3_site"]
+[ext_resource type="Texture2D" path="res://assets/objects/buildings/house_level_0.png" id="4_house"]
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_house"]

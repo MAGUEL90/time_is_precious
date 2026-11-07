@@ -25,6 +25,11 @@ Avoid creating large detailed assets too early because they slow down production
 - Workstation objects: 16x16 to 32x32.
 - House/building stages: start small, expand only when needed.
 
+## UI Readability
+- Use the existing `res://assets/font/pixel_rpg.ttf` at 6, 12, or 18 logical pixels, as appropriate.
+- Display pixel art at its native size or an integer scale, using nearest-neighbor filtering.
+- Verify text and artwork fit and remain readable at the 400x225 logical viewport and 1200x675 presentation size.
+
 ## Core Style Rules
 - Use limited palettes.
 - Keep silhouettes readable.

@@ -184,19 +184,23 @@ func _finish_site(site_id: String, force_debug: bool) -> bool:
 	var marker: Node2D = work.get_node("WorksiteMarkers/" + site_id)
 	var current_offset: Vector2 = work.resource_site_offset(id)
 	var target_offset := Vector2.INF
-	# These are explicit, temporary test points. No random or permanent map
-	# placement policy is selected by this debug-only scene.
-	for point: Vector2 in work.TEMP_RELOCATION_POINTS:
-		var offset: Vector2 = point - Vector2(work._site_origins[id])
-		if offset == current_offset:
-			continue
-		var candidate: Vector2 = marker.get_parent().to_global(Vector2(work._site_origins[id]) + offset)
-		if work._resource_candidate_clear(city, marker, candidate):
-			target_offset = offset
-			break
+	var is_wood: bool = work.sites[id].item_id == "wood_log"
+	if is_wood:
+		if work._wood_regrowth_clear(marker):
+			target_offset = current_offset
+	else:
+		# Other resources retain the explicit temporary placement policy.
+		for point: Vector2 in work.TEMP_RELOCATION_POINTS:
+			var offset: Vector2 = point - Vector2(work._site_origins[id])
+			if offset == current_offset:
+				continue
+			var candidate: Vector2 = marker.get_parent().to_global(Vector2(work._site_origins[id]) + offset)
+			if work._resource_candidate_clear(city, marker, candidate):
+				target_offset = offset
+				break
 	if not target_offset.is_finite():
 		if force_debug:
-			_show("No explicit test point is safe; move the player or worker and retry.")
+			_show("The site is not safe; move the player or worker and retry.")
 		return false
 	# Pass the saved due minute to the prototype, rather than advancing the real
 	# clock. This deliberately bypasses waiting only inside this debug scene.
@@ -208,13 +212,16 @@ func _finish_site(site_id: String, force_debug: bool) -> bool:
 	work.sites[id].stock = plan.get_stock()
 	_sync_session_timer(site_id)
 	work._set_site_depleted_presentation(id, false)
-	work.worker_journeys.clear()
-	work._refresh_navigation()
-	if work.daily.jobs.has(id):
-		var ids: Array[String] = []
-		ids.assign(work.daily.jobs[id].ids)
-		work._begin_site_assignments(id, ids)
-	_show("Timer completed. Assigned workers walk to the temporary test point.")
+	if is_wood:
+		_show("Timer completed. Wood regrew at the same site.")
+	else:
+		work.worker_journeys.clear()
+		work._refresh_navigation()
+		if work.daily.jobs.has(id):
+			var ids: Array[String] = []
+			ids.assign(work.daily.jobs[id].ids)
+			work._begin_site_assignments(id, ids)
+		_show("Timer completed. Assigned workers walk to the temporary test point.")
 	return true
 
 func _sync_session_timer(site_id: String) -> void:

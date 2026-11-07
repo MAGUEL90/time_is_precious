@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://scenes/workshop_plot/workshop_plot.tscn" id="1_native"]
 [ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper_plot.gd" id="2_keeper"]
-[ext_resource type="Texture2D" path="res://assets/objects/clay_workshop_0.png" id="3_building"]
+[ext_resource type="Texture2D" path="res://assets/objects/buildings/clay_workshop_0.png" id="3_building"]
 [ext_resource type="Texture2D" path="res://assets/objects/vase_type_1.png" id="4_vase"]
 [ext_resource type="Texture2D" path="res://assets/objects/barrel.png" id="5_barrel"]
 [ext_resource type="Script" path="res://scenes/workshop_plot/keeper/workshop_keeper.gd" id="6_actor"]

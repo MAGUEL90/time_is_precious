@@ -160,6 +160,16 @@ func _new_write() -> void:
 		return
 	_verify_board(ui)
 	_expect(second.profession == WorkerData.Profession.HAULER and ui.applicants.size() == 3 and _contains(ui, LABORER_ID) and _contains(ui, LEGACY_HAULER_ID) and _contains(ui, SECOND_ID), "The board offers both preserved Laborers and the separate Hauler.")
+	second.satisfaction = 1.0
+	ui._poll_applicants()
+	var live_index: int = _index(ui, SECOND_ID)
+	_expect(ui.cards[live_index].satisfaction_label.text == "100%"
+		and ui.cards[live_index].mood_icon.texture == preload("res://assets/ui/ui_icon/satisfaction_happy_small_icon.png"),
+		"A real applicant changing to 100% updates the card to the happy icon.")
+	second.satisfaction = 0.55
+	ui._poll_applicants()
+	_expect(ui.cards[live_index].mood_icon.texture == preload("res://assets/ui/ui_icon/satisfaction_normal_small_icon.png"),
+		"The same live applicant returns to the neutral icon in the middle band.")
 	await _capture_review("job-board-hauler.png")
 	var second_index: int = _index(ui, SECOND_ID)
 	ui.applicant_list.select(second_index)
@@ -173,9 +183,21 @@ func _new_write() -> void:
 	ui._cancel_confirmation(false)
 	ui._poll_applicants()
 	_expect(not _contains(ui, SECOND_ID), "Polling removes the now-ineligible Hauler without an index mismatch.")
+	await _capture_review("job-board-disappeared.png")
 	second.satisfaction = 0.55
 	ui._poll_applicants()
 	_expect(_contains(ui, SECOND_ID), "Polling restores the recovered Hauler.")
+	var coin := ui.cards[_index(ui, SECOND_ID)].get_node("Details/ShekelIcon") as TextureRect
+	var coin_atlas := coin.texture as AtlasTexture
+	_expect(coin_atlas != null and coin_atlas.region == Rect2(4, 4, 8, 8)
+		and coin_atlas.atlas == preload("res://assets/ui/ui_icon/currency/small_shekel_8x8.png")
+		and coin.size == Vector2(8, 8), "A recreated card shows the complete authored Shekel at native size.")
+	second.satisfaction = 1.0
+	ui._poll_applicants()
+	_expect(ui.cards[_index(ui, SECOND_ID)].mood_icon.texture == preload("res://assets/ui/ui_icon/satisfaction_happy_small_icon.png"),
+		"The recreated card still refreshes the actual applicant's mood.")
+	await _frames(3)
+	await _capture_review("job-board-reappeared.png")
 	_verify_board(ui)
 	_hire_via_board(ui, LABORER_ID)
 	ui.close_button.pressed.emit()

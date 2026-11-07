@@ -113,9 +113,12 @@ func _run() -> void:
 			var original: Vector2 = lab.work.resource_site_offset(StringName(site_id))
 			_check(lab._deplete_selected(), site_id + " can be selected and emptied.")
 			await _frames()
-			_check(lab._finish_selected(), site_id + " can use a checked temporary test point.")
+			_check(lab._finish_selected(), site_id + " can finish at a safe site.")
 			await _frames()
-			_check(lab.work.resource_site_offset(StringName(site_id)) != original and int(lab.work.sites[StringName(site_id)].stock) == lab.TEST_CAPACITY, site_id + " respawns once with fixture stock.")
+			var current: Vector2 = lab.work.resource_site_offset(StringName(site_id))
+			_check((current == original if site_id == "WoodSite" else current != original)
+				and int(lab.work.sites[StringName(site_id)].stock) == lab.TEST_CAPACITY,
+				site_id + " restores fixture stock at the expected location.")
 	elif phase == "arrive":
 		var expected: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(EXPECTED_PATH))
 		_check(lab._continue_debug(), "A fresh process restores the worker en route to the test point.")

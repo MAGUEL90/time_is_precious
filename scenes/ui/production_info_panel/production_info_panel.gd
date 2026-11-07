@@ -5,7 +5,7 @@ const PANEL_WIDTH: float = 184.0
 const PANEL_MIN_HEIGHT: float = 64.0
 const PANEL_VERTICAL_PADDING: float = 10.0
 const SMALL_SHEKEL_ICON: Texture2D = preload(
-	"res://assets/ui/ui_icon/small_shekel_8x8.png"
+	"res://resources/ui_icons/small_shekel.tres"
 )
 
 @onready var fee_row: HBoxContainer = ($MarginContainer/DetailVBox/FeeRow)

@@ -15,6 +15,7 @@ func _ready() -> void:
 	_save_feedback = Label.new()
 	_save_feedback.name = "SaveFeedback"
 	_save_feedback.theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+	_save_feedback.theme_type_variation = &"HudLabelShortcut"
 	_save_feedback.add_theme_font_size_override("font_size", 6)
 	_save_feedback.add_theme_color_override("font_shadow_color", Color(0.20, 0.14, 0.10))
 	_save_feedback.add_theme_constant_override("shadow_offset_x", 1)

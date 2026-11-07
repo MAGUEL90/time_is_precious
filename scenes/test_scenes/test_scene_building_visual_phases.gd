@@ -3,9 +3,9 @@ extends Node
 ## Presentation-only fixture. Real work, rewards and save/Continue are covered
 ## by the existing construction, house and production integration tests.
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
-const HOUSE_SITE_PATH: String = "res://assets/objects/house_construction_site.png"
-const HOUSE_FINAL_PATH: String = "res://assets/objects/house_level_0.png"
-const CLAY_FINAL_PATH: String = "res://assets/objects/clay_workshop_0.png"
+const HOUSE_SITE_PATH: String = "res://assets/objects/buildings/house_construction_site.png"
+const HOUSE_FINAL_PATH: String = "res://assets/objects/buildings/house_level_0.png"
+const CLAY_FINAL_PATH: String = "res://assets/objects/buildings/clay_workshop_0.png"
 const HOUSE_SITE_HASH: String = "6cf4a1fb554663faf8d3018907fb99f37a28dc4c7cbdf08db40fd08f2cfc925b"
 const HOUSE_FINAL_HASH: String = "296a012f5ae691b96ce82c880adae4515446834375fae077fa19c9e4ae916a31"
 const CLAY_FINAL_HASH: String = "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1"

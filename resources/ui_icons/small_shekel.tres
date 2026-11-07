@@ -1,0 +1,7 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/ui/ui_icon/currency/small_shekel_8x8.png" id="1_icon"]
+
+[resource]
+atlas = ExtResource("1_icon")
+region = Rect2(4, 4, 8, 8)

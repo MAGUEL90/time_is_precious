@@ -128,7 +128,7 @@ func _drive_arrival(worker_id: String = ARRIVAL_WORKER) -> void:
 		var base: Sprite2D = building.get_node("Base")
 		var vase: Sprite2D = building.get_node("Vase")
 		var barrel: Sprite2D = building.get_node("Barrel")
-		_assert_art(base, "res://assets/objects/clay_workshop_0.png", Vector2i(48, 64), "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1")
+		_assert_art(base, "res://assets/objects/buildings/clay_workshop_0.png", Vector2i(48, 64), "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1")
 		_assert_art(vase, "res://assets/objects/vase_type_1.png", Vector2i(16, 16), "e815ef10ae5f197d24d5ccbe64f49a11425404c580065f272cc193c987116a63")
 		_assert_art(barrel, "res://assets/objects/barrel.png", Vector2i(16, 16), "58cd76e7d54d573787df34962d27a691fd66e787cd79dd5eacc2bbf6e926b36e")
 		_expect(arrival_plot.construction.worker_entry_position == arrival_plot.global_position + Vector2(0, 24), "Built production preserves the exact schema8 feet target.")

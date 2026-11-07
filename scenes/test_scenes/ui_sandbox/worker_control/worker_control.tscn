@@ -14,7 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://bnamumk83thiw" path="res://assets/ui/ui_icon/house_icon.png" id="detail_2"]
 [ext_resource type="Texture2D" uid="uid://c56jvl74vfa7w" path="res://assets/ui/ui_icon/empty_bar.png" id="detail_3"]
 [ext_resource type="Texture2D" uid="uid://lrcgixg42jmq" path="res://assets/ui/ui_icon/filled_bar.png" id="detail_4"]
-[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="detail_coin"]
+[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/currency/small_shekel_8x8.png" id="detail_coin"]
 [ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="contract_arrow"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_window"]
