@@ -12,6 +12,7 @@ const OPEN_BOARD: Texture2D = preload("res://assets/objects/object_board_0.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
 const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
 const WORKER_DUST_SCRIPT: Script = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
+const MAX_MANUAL_CLEARING_MINUTES: int = 180
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
@@ -182,6 +183,9 @@ func _worker_is_at_plot_task(worker: WorkerData, task_key: String) -> bool:
 var player: Player
 var menu: CanvasLayer
 var construction: Node
+var _menu_session_player: Player
+var _menu_session_scene: Node
+var _menu_session_menu: CanvasLayer
 var _previous_paused: bool = false
 var _manual_clearing: bool = false
 signal clearing_finished
@@ -242,7 +246,7 @@ func has_player_access() -> bool:
 	return not shape.disabled and not player_shape.disabled and interaction_area.overlaps_body(player) and shape.shape.collide(shape.global_transform, player_shape.shape, player_shape.global_transform)
 
 func on_player_interact(interacting_player: Player) -> void:
-	if interacting_player != player or is_instance_valid(menu) or not has_player_access():
+	if _manual_clearing or interacting_player != player or is_instance_valid(menu) or not has_player_access():
 		return
 	if not player.can_move or player.current_interactable != self or get_tree().paused:
 		return
@@ -250,8 +254,11 @@ func on_player_interact(interacting_player: Player) -> void:
 	player.set_movement_locked(&"workshop_plot", true)
 	interactable_label_component.hide()
 	menu = PLOT_MENU.instantiate()
+	_menu_session_player = player
+	_menu_session_scene = get_tree().current_scene
+	_menu_session_menu = menu
 	add_child(menu)
-	menu.closed.connect(_on_menu_closed)
+	menu.closed.connect(_on_menu_closed.bind(menu))
 	menu.build_requested.connect(_on_build_requested)
 	menu.clearing_requested.connect(_on_clearing_requested)
 	menu.replacement_requested.connect(_on_replacement_requested)
@@ -424,15 +431,39 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	if use_player and (player.has_critical_condition() or TimeComponentManager.is_paused):
 		menu.show_error("Recover before working, and resume time.")
 		return
-	var result: Dictionary = construction.start_clearing(ids, use_player)
+	var session_menu: CanvasLayer = menu
+	var session_player: Player = player
+	var session_scene: Node = get_tree().current_scene
+	var session_construction: Node = construction
+	var session_tree: SceneTree = get_tree()
+	if use_player:
+		_manual_clearing = true
+		if not _manual_clearing_context_is_valid(session_menu, session_player, session_scene, session_construction):
+			_manual_clearing = false
+			return
+	var result: Dictionary = session_construction.start_clearing(ids, use_player)
 	if not result.success:
-		menu.show_error(result.message)
+		if use_player:
+			_manual_clearing = false
+		if is_instance_valid(session_menu) and menu == session_menu:
+			session_menu.show_error(result.message)
 		return
 	if not use_player:
 		close_menu()
 		return
-	_manual_clearing = true
-	menu.hide()
+	if not is_instance_valid(self):
+		return
+	var session_phase: String = "clearing"
+	if not _manual_clearing_guard(session_menu, session_player, session_scene, session_construction, session_phase):
+		if is_instance_valid(session_construction) and session_construction.phase == "clearing" and session_construction.clearing_by_player:
+			session_construction.interrupt_player_clearing()
+		_manual_clearing = false
+		_finish_manual_session(session_menu, session_player, session_scene)
+		await session_tree.process_frame
+		if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+			clearing_finished.emit()
+		return
+	session_menu.hide()
 	var cover := CanvasLayer.new()
 	cover.layer = 90
 	var shade := ColorRect.new()
@@ -441,19 +472,69 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	cover.add_child(shade)
 	add_child(cover)
 	await get_tree().create_timer(0.15, true).timeout
-	# Match manual worksites: existing minute signals charge needs exactly once.
-	# The plot keeps its own restriction if a minute starts a collapse.
-	while construction.phase == "clearing" and is_inside_tree() and not is_queued_for_deletion():
-		if not has_player_access() or player.has_critical_condition():
-			break
-		if not TimeComponentManager.advance_minutes(1):
-			break
-	construction.interrupt_player_clearing()
-	await get_tree().create_timer(0.5, true).timeout
-	cover.queue_free()
+	if not is_instance_valid(self):
+		return
+	var guard: Callable = Callable(self, "_manual_clearing_guard").bind(session_menu, session_player, session_scene, session_construction, session_phase)
+	await TimeComponentManager.advance_minutes_staged(MAX_MANUAL_CLEARING_MINUTES, self, guard)
+	if not is_instance_valid(self):
+		return
+	if is_instance_valid(session_construction) and session_construction.phase == "clearing" and session_construction.clearing_by_player:
+		session_construction.interrupt_player_clearing()
+	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(session_scene) and get_tree().current_scene == session_scene:
+		await get_tree().create_timer(0.5, true).timeout
+		if not is_instance_valid(self):
+			return
+	if is_instance_valid(cover):
+		cover.queue_free()
 	_manual_clearing = false
-	close_menu()
+	_finish_manual_session(session_menu, session_player, session_scene)
 	clearing_finished.emit()
+
+func _manual_clearing_guard(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node, session_phase: String) -> bool:
+	if not _manual_clearing_context_is_valid(session_menu, session_player, session_scene, session_construction):
+		return false
+	if session_phase != "clearing" or session_construction.phase != "clearing" or not session_construction.clearing_by_player:
+		return false
+	return true
+
+func _manual_clearing_context_is_valid(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node) -> bool:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_menu) or menu != session_menu or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_player) or player != session_player or not session_player.is_inside_tree() or session_player.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_scene) or session_scene.is_queued_for_deletion() or get_tree().current_scene != session_scene or not session_scene.is_ancestor_of(self) or not session_scene.is_ancestor_of(session_player):
+		return false
+	if not is_instance_valid(session_construction) or construction != session_construction:
+		return false
+	if not _manual_clearing or session_player.current_interactable != self or not has_player_access() or session_player.has_critical_condition():
+		return false
+	return get_tree().paused and not TimeComponentManager.is_paused
+
+func _finish_manual_session(session_menu: CanvasLayer, session_player: Player, session_scene: Node) -> void:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return
+	if menu != session_menu and _menu_session_menu != session_menu:
+		return
+	if not is_instance_valid(session_scene) or session_scene.is_queued_for_deletion() or not session_scene.is_ancestor_of(self):
+		return
+	if not is_instance_valid(session_player) or player != session_player or not session_player.is_inside_tree() or session_player.is_queued_for_deletion() or (session_player.current_interactable != self and session_player.current_interactable != null):
+		return
+	if is_instance_valid(session_menu) and menu == session_menu and session_menu.is_inside_tree() and not session_menu.is_queued_for_deletion():
+		close_menu()
+		return
+	if menu == session_menu:
+		menu = null
+	if get_tree().current_scene == session_scene:
+		get_tree().paused = _previous_paused
+	session_player.set_movement_locked(&"workshop_plot", false)
+	if get_tree().current_scene == session_scene and has_player_access() and session_player.current_interactable == self:
+		interactable_label_component.show()
+	if _menu_session_menu == session_menu:
+		_menu_session_menu = null
+		_menu_session_player = null
+		_menu_session_scene = null
 
 
 
@@ -461,13 +542,30 @@ func close_menu() -> void:
 	if is_instance_valid(menu):
 		menu.close_menu()
 
-func _on_menu_closed() -> void:
-	menu = null
-	get_tree().paused = _previous_paused
-	if is_instance_valid(player):
-		player.set_movement_locked(&"workshop_plot", false)
-		if has_player_access() and player.current_interactable == self:
+func _on_menu_closed(closed_menu: CanvasLayer) -> void:
+	if menu == closed_menu:
+		menu = null
+	var session_owner_matches: bool = (
+		closed_menu == _menu_session_menu
+		and is_instance_valid(_menu_session_scene)
+		and not _menu_session_scene.is_queued_for_deletion()
+		and _menu_session_scene.is_ancestor_of(self)
+		and is_instance_valid(_menu_session_player)
+		and _menu_session_player == player
+		and _menu_session_player.is_inside_tree()
+		and not _menu_session_player.is_queued_for_deletion()
+		and (_menu_session_player.current_interactable == self or _menu_session_player.current_interactable == null)
+	)
+	if session_owner_matches:
+		if get_tree().current_scene == _menu_session_scene:
+			get_tree().paused = _previous_paused
+		_menu_session_player.set_movement_locked(&"workshop_plot", false)
+		if get_tree().current_scene == _menu_session_scene and has_player_access() and _menu_session_player.current_interactable == self:
 			interactable_label_component.show()
+	if closed_menu == _menu_session_menu:
+		_menu_session_menu = null
+		_menu_session_player = null
+		_menu_session_scene = null
 
 func _exit_tree() -> void:
 	if _manual_clearing and is_instance_valid(construction):

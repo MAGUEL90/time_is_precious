@@ -99,7 +99,7 @@ position = Vector2(-199, -482)
 plot_id = "workshop_2"
 
 [node name="CitizenHousePlot" parent="YSortWorld" instance=ExtResource("17_citizen_house")]
-position = Vector2(-310, -380)
+authored_marker_path = NodePath("../../AuthoredMap/YSortWorld/ToBeClean1")
 
 [node name="InitialWorksites" parent="YSortWorld" instance=ExtResource("18_initial")]
 position = Vector2(-336, -425)

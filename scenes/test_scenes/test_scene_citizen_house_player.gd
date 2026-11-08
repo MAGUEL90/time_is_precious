@@ -58,8 +58,13 @@ func _test_player_and_worker_routes() -> void:
 	var initial_inventory: Dictionary = Inventory.items.duplicate(true)
 	var marker: Node2D = content.get_node("AuthoredMap/YSortWorld/ToBeClean1")
 	var footprint: TileMapLayer = content.get_node("AuthoredMap/Ground/Setelah Cleaning")
-	_expect(marker.visible and not house.get_node("ToBeClean").visible and footprint.get_used_cells().size() == 4,
-		"The authored rubble is visible only once, while its footprint is hidden before cleaning.")
+	var authored_footprint_cells: int = _authored_footprint_cell_count(footprint, marker.global_position)
+	var has_authored_footprint: bool = authored_footprint_cells == 9
+	_expect(authored_footprint_cells == 0 or has_authored_footprint,
+		"The authored map uses either an empty fallback or a complete 3x3 house footprint.")
+	_expect(marker.visible and not house.get_node("ToBeClean").visible
+		and not house.get_node("SiteHouse").visible,
+		"Before cleaning, only the authored rubble marker is shown for the house site.")
 	_expect(not construction.get_clearing_preview([FIRST_ID] as Array[String], true).can_start,
 		"Player and worker cannot both be selected for the same manual cleaning.")
 	if not await _open_house_menu("house-player-rubble"):
@@ -120,6 +125,18 @@ func _test_player_and_worker_routes() -> void:
 		and not construction.is_player_work_active() and not is_instance_valid(house.menu)
 		and not get_tree().paused and player.can_move and Inventory.items == initial_inventory,
 		"A close callback during cleaning startup safely cancels without advancing time or stranding the modal.")
+	if not await _open_house_menu("house-player-menu-queued-during-start"):
+		return
+	menu = house.get("menu") as WorkshopPlotUI
+	menu.player_button.button_pressed = true
+	var queued_menu_start: int = _now()
+	construction.changed.connect(_queue_free_menu_while_cleaning_starts, CONNECT_ONE_SHOT)
+	menu.build_button.pressed.emit()
+	await house.clearing_finished
+	_expect(_now() == queued_menu_start and construction.phase == "uncleared"
+		and not construction.is_player_work_active() and not is_instance_valid(house.menu)
+		and not get_tree().paused and player.can_move and Inventory.items == initial_inventory,
+		"A menu queued for deletion by a startup callback cancels cleaning without advancing time or stranding the modal.")
 	if not await _open_house_menu("house-player-after-start-cancel"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
@@ -131,8 +148,10 @@ func _test_player_and_worker_routes() -> void:
 	await house.clearing_finished
 	_expect(_now() - start == CLEARING_WORK and construction.phase == "empty",
 		"Player cleans for exactly 180 minutes at night without a worker shift.")
-	_expect(not marker.visible and not house.get_node("ToBeClean").visible and footprint.get_used_cells().size() == 13,
-		"Actual player cleaning removes the marker and reveals the nine authored footprint tiles.")
+	_expect(not marker.visible and not house.get_node("ToBeClean").visible
+		and house.get_node("SiteHouse").visible == (not has_authored_footprint)
+		and _authored_footprint_cell_count(footprint, marker.global_position) == authored_footprint_cells,
+		"After cleaning, the house shows its complete authored footprint or the local SiteHouse fallback.")
 	await _capture("house-player-cleaning-complete")
 	_expect(_needs_drained_once(start_hunger, start_fatigue, CLEARING_WORK)
 		and Inventory.items == initial_inventory and not player_worker.is_reserved(),
@@ -166,8 +185,9 @@ func _test_player_and_worker_routes() -> void:
 	_expect(_now() - start == 180 and construction.phase == "building" and remaining == HOUSE_WORK - 180
 		and construction.worker_ids.is_empty() and not construction.is_player_work_active(),
 		"One player build session performs exactly three hours of work across midnight and then pauses.")
-	_expect(not marker.visible and footprint.get_used_cells().size() == 13,
-		"The cleaned footprint stays visible while the paid house is being built.")
+	_expect(not marker.visible and house.get_node("SiteHouse").visible == (not has_authored_footprint)
+		and _authored_footprint_cell_count(footprint, marker.global_position) == authored_footprint_cells,
+		"While the paid house is built, it uses a complete authored footprint or local site art.")
 	_expect(_needs_drained_once(start_hunger, start_fatigue, 180) and paid_once
 		and CityStockManager.shelter_capacity == shelter_before,
 		"The session charges normal time-based needs and each material once, without premature shelter.")
@@ -257,9 +277,24 @@ func _test_player_and_worker_routes() -> void:
 	player.debug_disable_player_needs = false
 
 
+func _authored_footprint_cell_count(footprint: TileMapLayer, marker_global_position: Vector2) -> int:
+	var center: Vector2i = footprint.local_to_map(footprint.to_local(marker_global_position))
+	var count: int = 0
+	for y: int in range(center.y - 1, center.y + 2):
+		for x: int in range(center.x - 1, center.x + 2):
+			if footprint.get_cell_source_id(Vector2i(x, y)) >= 0:
+				count += 1
+	return count
+
+
 func _close_while_cleaning_starts() -> void:
 	if construction.phase == "clearing" and construction.is_player_work_active():
 		house.close_menu()
+
+
+func _queue_free_menu_while_cleaning_starts() -> void:
+	if construction.phase == "clearing" and construction.is_player_work_active() and is_instance_valid(house.menu):
+		house.menu.queue_free()
 
 
 func _test_critical_interruption() -> void:

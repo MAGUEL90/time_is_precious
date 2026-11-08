@@ -5,7 +5,6 @@ signal closed
 const CandidateCard = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.tscn")
 const INITIAL_APPLICANTS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
-const SCROLL_PANEL: Texture2D = preload("res://assets/ui/ui_panel/brown_panel_16x16.png")
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
 const CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 const MAX_CONFIRM_NAME_LENGTH: int = 22
@@ -64,7 +63,7 @@ func _ready() -> void:
 	close_button.texture_focused = close_button.texture_hover
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
 	refresh_timer.timeout.connect(_poll_applicants)
-	_style_scrollbar()
+	candidate_scroll.get_v_scroll_bar().custom_minimum_size.x = 8.0
 	_set_button_text_white(cancel_hire_button)
 	_set_button_text_white(confirm_hire_button)
 	confirmation_layer.visible = false
@@ -491,32 +490,3 @@ func _get_profession_name(profession: WorkerData.Profession) -> String:
 		WorkerData.Profession.FARMER: return "Farmer"
 		WorkerData.Profession.SCAVENGER: return "Scavenger"
 		_: return "Unassigned"
-func _scroll_style(region: Rect2) -> StyleBoxTexture:
-	var atlas := AtlasTexture.new()
-	atlas.atlas = SCROLL_PANEL
-	atlas.region = region
-	var style := StyleBoxTexture.new()
-	style.texture = atlas
-	style.texture_margin_left = 1
-	style.texture_margin_top = 1
-	style.texture_margin_right = 1
-	style.texture_margin_bottom = 1
-	style.content_margin_left = 0
-	style.content_margin_top = 0
-	style.content_margin_right = 0
-	style.content_margin_bottom = 0
-	return style
-
-func _style_scrollbar() -> void:
-	var bar: VScrollBar = candidate_scroll.get_v_scroll_bar()
-	bar.custom_minimum_size.x = 8
-	for state: String in ["scroll", "scroll_focus"]:
-		bar.add_theme_stylebox_override(state, _scroll_style(Rect2(35, 1, 16, 16)))
-	bar.add_theme_stylebox_override("grabber", _scroll_style(Rect2(1, 1, 16, 16)))
-	for state: String in ["grabber_highlight", "grabber_pressed"]:
-		bar.add_theme_stylebox_override(state, _scroll_style(Rect2(18, 1, 16, 16)))
-	var blank := AtlasTexture.new()
-	blank.atlas = SCROLL_PANEL
-	blank.region = Rect2(0, 0, 1, 1)
-	for icon_name: String in ["increment", "increment_highlight", "increment_pressed", "decrement", "decrement_highlight", "decrement_pressed"]:
-		bar.add_theme_icon_override(icon_name, blank)

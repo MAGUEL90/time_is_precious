@@ -14,6 +14,7 @@ signal consume_item_success(
 const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 const ITEM_ACTION_CONFIRM_PANEL_SCENE: PackedScene = preload("res://scenes/ui/item_action_confirm_panel/item_action_confirm_panel.tscn")
 const PICKUP_ITEM_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const CATEGORY_ALL: int = -1
 const ITEMS_PER_PAGE: int = 15
 const OPTION_PANEL_GAP: float = 4.0
@@ -337,7 +338,7 @@ func _refresh_worker_list() -> void:
 		label.text = "%s - %s: %s★\nStatus: %s\nSAT %d%%\nDaily F: %s C: %s S: %s\n" % [
 			worker_data.get_resolved_display_name(), _get_worker_profession_name(worker_data.profession), worker_data.profession_star,
 			_get_worker_work_status_text(worker_data),
-			roundi(worker_data.get_resolved_satisfaction() * 100.0),
+			SATISFACTION_DISPLAY.to_percent(worker_data.get_resolved_satisfaction()),
 			_get_need_text(bool(needs.get("food", false))) if evaluated else "?",
 			_get_need_text(bool(needs.get("clothing", false))) if evaluated else "?",
 			_get_need_text(bool(needs.get("shelter", false))) if evaluated else "?"

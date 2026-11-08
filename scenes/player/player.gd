@@ -80,6 +80,7 @@ var selected_workshop_job: JobData = null
 var claim_menu_claimable_index: int = 0
 var is_sleeping: bool = false
 var last_sleep_day: int = -1
+var last_staged_sleep_result: Dictionary = {}
 var is_collapsing: bool = false
 var last_collapse_day: int = -1
 
@@ -915,6 +916,61 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 
 	sleep_completed.emit(duration_minutes, recovery_quality)
 	return true
+
+func sleep_staged() -> bool:
+	return await sleep_for_minutes_staged(sleep_duration_minutes)
+
+func sleep_for_minutes_staged(duration_minutes: int) -> bool:
+	last_staged_sleep_result = {"completed": false, "advanced_minutes": 0, "reason": "not_started"}
+	if not can_sleep() or duration_minutes <= 0 or not time_component_manager.can_advance_time():
+		last_staged_sleep_result.reason = "cannot_sleep"
+		return false
+
+	var player_weak: WeakRef = weakref(self)
+	var captured_scene: Node = get_tree().current_scene
+	if captured_scene == null:
+		last_staged_sleep_result.reason = "missing_scene"
+		return false
+	var recovery_quality: float = get_sleep_recovery_quality()
+	is_sleeping = true
+	set_movement_locked(&"sleep", true)
+	var result: Dictionary = await time_component_manager.advance_minutes_staged(
+		duration_minutes,
+		self,
+		Callable(self, "_can_continue_staged_sleep")
+	)
+	var live_player: Player = player_weak.get_ref() as Player
+	if not is_instance_valid(live_player) or live_player != self:
+		return false
+	var actual_minutes: int = maxi(0, int(result.get("advanced_minutes", 0)))
+	last_staged_sleep_result = result.duplicate(true)
+	last_staged_sleep_result["advanced_minutes"] = actual_minutes
+	var completed: bool = bool(result.get("completed", false))
+	if not _is_staged_sleep_context_current(live_player, captured_scene):
+		if live_player.is_inside_tree() and not live_player.is_queued_for_deletion():
+			is_sleeping = false
+			set_movement_locked(&"sleep", false)
+		return false
+	if actual_minutes > 0:
+		last_sleep_day = TimeComponentManager.current_day
+		var duration_ratio: float = clampf(float(actual_minutes) / float(maxi(1, sleep_duration_minutes)), 0.0, 1.0)
+		var fatigue_recovery: float = sleep_fatigue_recovery * recovery_quality * duration_ratio
+		fatigue = clampf(fatigue - fatigue_recovery, min_fatigue, max_fatigue)
+	is_sleeping = false
+	set_movement_locked(&"sleep", false)
+	if actual_minutes > 0:
+		condition_changed.emit()
+		live_player = player_weak.get_ref() as Player
+		if not is_instance_valid(live_player) or live_player != self or not _is_staged_sleep_context_current(live_player, captured_scene):
+			return completed
+		sleep_completed.emit(actual_minutes, recovery_quality)
+	return completed
+
+func _is_staged_sleep_context_current(live_player: Player, captured_scene: Node) -> bool:
+	return is_instance_valid(live_player) and live_player == self and live_player.is_inside_tree() and not live_player.is_queued_for_deletion() and is_instance_valid(captured_scene) and not captured_scene.is_queued_for_deletion() and get_tree().current_scene == captured_scene and captured_scene.is_ancestor_of(self)
+
+func _can_continue_staged_sleep() -> bool:
+	return is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion() and is_sleeping
 
 func can_sleep() -> bool:
 	if is_sleeping:

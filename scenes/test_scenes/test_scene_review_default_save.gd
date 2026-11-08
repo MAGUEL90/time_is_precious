@@ -88,9 +88,11 @@ func _run() -> void:
 		return
 	var city: Node = get_tree().current_scene
 	var store: Node = WorkStateRuntime.get_node("CitySave")
-	var house: Node = city.get_node("YSortWorld/CitizenHousePlot").construction
+	var house_view: Node2D = city.get_node("YSortWorld/CitizenHousePlot")
+	var house: Node = house_view.get("construction") as Node
 	var marker: Node2D = city.get_node("AuthoredMap/YSortWorld/ToBeClean1")
 	var footprint: TileMapLayer = city.get_node("AuthoredMap/Ground/Setelah Cleaning")
+	var authored_cell_count: int = _authored_footprint_cell_count(footprint, marker.global_position)
 	TimeComponentManager.set_process(false)
 	_expect(city.scene_file_path == CITY and store.disk.path == SAVE, "The authored map and separate checkpoint are active.")
 	if phase == "write":
@@ -98,12 +100,19 @@ func _run() -> void:
 		_expect(bool(house.start_clearing([] as Array[String], true).get("success", false)), "Player begins clearing.")
 		_expect(TimeComponentManager.advance_minutes(30), "Thirty clearing minutes advance.")
 		house.interrupt_player_work()
-		_expect(house.clearing_remaining == 150 and marker.visible and footprint.get_used_cells().size() == 13, "The partial job keeps the authored rubble and plot border visible.")
+		_expect(house.phase == "uncleared" and house.clearing_remaining == 150
+			and marker.visible and not house_view.get_node("ToBeClean").visible
+			and not house_view.get_node("SiteHouse").visible
+			and (authored_cell_count == 0 or authored_cell_count == 9),
+			"Interrupted work preserves the remaining time and valid house presentation.")
 		_expect(store.save_checkpoint() and FileAccess.file_exists(SAVE), "The authored-map checkpoint saves: " + store.last_error)
 	elif phase == "read":
-		_expect(FileAccess.get_file_as_bytes(SAVE) == bytes_before and house.clearing_remaining == 150
-			and marker.visible and footprint.get_used_cells().size() == 13,
-			"Continue restores the partial house without rewriting the save.")
+		_expect(FileAccess.get_file_as_bytes(SAVE) == bytes_before and house.phase == "uncleared"
+			and house.clearing_remaining == 150 and marker.visible
+			and not house_view.get_node("ToBeClean").visible
+			and not house_view.get_node("SiteHouse").visible
+			and (authored_cell_count == 0 or authored_cell_count == 9),
+			"Continue restores interrupted work without rewriting the save.")
 		var player: Player = city.get_node("YSortWorld/Player")
 		city.get_node("YSortWorld/HomeDoor")._on_body_entered(player)
 		if not await _wait_scene(HOME):
@@ -136,6 +145,16 @@ func _run() -> void:
 			"A confirmed New Game begins with a fresh authored-map house.")
 	_expect(_legacy_unchanged(), "The old checkpoint, backup and recovery files remain byte-for-byte intact.")
 	_finish(phase)
+
+func _authored_footprint_cell_count(footprint: TileMapLayer, marker_global_position: Vector2) -> int:
+	var center: Vector2i = footprint.local_to_map(footprint.to_local(marker_global_position))
+	var count: int = 0
+	for y: int in range(center.y - 1, center.y + 2):
+		for x: int in range(center.x - 1, center.x + 2):
+			if footprint.get_cell_source_id(Vector2i(x, y)) >= 0:
+				count += 1
+	return count
+
 
 func _legacy_expected(index: int) -> PackedByteArray:
 	var result: PackedByteArray = legacy_bytes.duplicate()

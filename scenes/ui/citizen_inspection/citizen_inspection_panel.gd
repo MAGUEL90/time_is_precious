@@ -6,6 +6,7 @@ signal renew_requested(person_id: String)
 signal actions_requested(person_id: String)
 
 const UNKNOWN_TEXT: String = "Unknown"
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const COLOR_NEED_MISSING: Color = Color(1.0, 0.77, 0.64)
 const COLOR_NEED_UNKNOWN: Color = Color(1.0, 0.94, 0.82)
 
@@ -30,6 +31,7 @@ func _ready() -> void:
 	# must continue to process without taking ownership of that pause.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body_scroll.get_v_scroll_bar().custom_minimum_size.x = 8.0
 	_close_button.focus_mode = Control.FOCUS_ALL
 	_close_button.pressed.connect(close)
 	_refresh_timer.timeout.connect(_refresh_view)
@@ -96,9 +98,8 @@ func _refresh_needs(summary: Dictionary) -> void:
 func _refresh_satisfaction(summary: Dictionary) -> void:
 	var value: Variant = summary.get("satisfaction", null)
 	if (value is float or value is int) and is_finite(float(value)) and float(value) >= 0.0 and float(value) <= 1.0:
-		var percent: int = roundi(float(value) * 100.0)
-		var percent_text: String = "<1%" if float(value) > 0.0 and percent == 0 else "%d%%" % percent
-		_satisfaction_label.text = "Actual satisfaction: %s" % percent_text
+		var percent: int = SATISFACTION_DISPLAY.to_percent(float(value))
+		_satisfaction_label.text = "Actual satisfaction: %d%%" % percent
 		_satisfaction_bar.value = float(value) * 100.0
 	else:
 		_satisfaction_label.text = "Actual satisfaction: %s" % UNKNOWN_TEXT

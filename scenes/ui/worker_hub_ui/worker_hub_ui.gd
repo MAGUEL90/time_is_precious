@@ -1,6 +1,7 @@
 class_name WorkerHubUI extends CanvasLayer 
 
 const MUDBRICK_JOB: JobData = preload("res://resources/job_data/mudbrick_make.tres")
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const MAX_ACTIVE_TEAM_SLOTS: int = 3
 
 @onready var close_button: Button = $Root/Center/Window/HeaderOverlay/CloseButton
@@ -76,7 +77,7 @@ func _refresh_worker_lists() -> void:
 			worker_data.get_resolved_display_name(),
 			_get_worker_profession_name(worker_data.profession),
 			_get_worker_status_text(worker_data),
-			roundi(worker_data.get_resolved_satisfaction() * 100.0)
+			SATISFACTION_DISPLAY.to_percent(worker_data.get_resolved_satisfaction())
 		]
 		button_list.pressed.connect(_on_worker_selected.bind(worker_data))
 

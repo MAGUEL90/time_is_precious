@@ -7,6 +7,7 @@ const QUICK_SLOT_ACTION: Array[String] = [
 	"quick_slot_4",
 	"quick_slot_5"
 ]
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 
 @onready var label_day: Label = $Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer/LabelDay
 @onready var label_time: Label = $Root/MarginContainer/TopLayer/TopLeftPanel/MarginContainer/VBoxContainer/LabelTime
@@ -164,7 +165,7 @@ func _refresh_player_status() -> void:
 		_get_clothing_coverage_text(clothing_summary),
 		_get_last_clothing_result_text(clothing_summary),
 		_get_shelter_capacity_status(),
-		"SAT: %d%%" % roundi(CitizenNeedsManager.get_average_satisfaction() * 100.0),
+		"SAT: %d%%" % SATISFACTION_DISPLAY.to_percent(CitizenNeedsManager.get_average_satisfaction()),
 	]
 	label_alert_body.text = "\n".join(status_lines)
 

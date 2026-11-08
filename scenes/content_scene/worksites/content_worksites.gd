@@ -9,6 +9,7 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var enable_time_shortcuts: bool = true
 @export var retain_resource_stock: bool = false
 @export var finite_resource_sites: bool = false
+@export var authored_resource_paths: Dictionary = {}
 # Explicitly temporary values authorized for testing; final balance is pending.
 const TEST_RESOURCE_CAPACITY: Dictionary = {
 	"clay_lump": 36, "wood_log": 24, "reed_bundle": 40, "water_jar": 48,
@@ -35,9 +36,12 @@ var _last_relocation_attempt: Dictionary = {}
 var _resource_art_visibility: Dictionary = {}
 var _resource_label_visibility: Dictionary = {}
 var _depleted_presentation: Dictionary = {}
+var authored_resource_binding: Dictionary = {}
+var _runtime_base_initialized: bool = false
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+const AUTHORED_RESOURCE_LAYOUT = preload("res://scenes/content_scene/worksites/authored_resource_layout.gd")
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const LEGACY_PICKUP = preload("res://scenes/content_scene/worksites/legacy_stockpile_pickup.gd")
 const WORKSHOP_BACKEND: PackedScene = preload("res://scenes/workshop/workshop.tscn")
@@ -55,6 +59,15 @@ var navigation_plot_templates: Dictionary = {}
 const RESOURCE_STOCK_META: StringName = &"main_map_resource_stock"
 
 const PLAYTEST_HAULER_ID: String = "content_hauler_belum"
+
+func _enter_tree() -> void:
+	# A CitySave handoff has no authored map at this path. On cancellation, only
+	# the original city instance can re-hide the placeholders it owns.
+	if authored_resource_binding.is_empty():
+		return
+	var authored_world: Node = get_node_or_null("../../AuthoredMap/YSortWorld")
+	if authored_world != null:
+		AUTHORED_RESOURCE_LAYOUT.hide_for_world(authored_resource_binding, authored_world)
 
 func _create_city_tool_storage() -> Node:
 	# Inventory survives map changes. Its deposited goods must have the same lifetime.
@@ -76,11 +89,19 @@ func _ready() -> void:
 		else:
 			push_error("Worksites: set player_path and inventory_ui_path to the map's Player and InventoryUI.")
 		return
+	if not authored_resource_paths.is_empty():
+		authored_resource_binding = AUTHORED_RESOURCE_LAYOUT.bind(self, authored_resource_paths)
+		if not bool(authored_resource_binding.get("ok", false)):
+			push_error("Worksites: authored resource binding failed: " + str(authored_resource_binding.get("error", "unknown error")))
+			authored_resource_binding.clear()
+			_disable_runtime_after_binding_failure()
+			return
 	daily.physical_arrival = _physical_site_arrival
 	daily.assignment_started = _begin_site_assignments
 	daily.assignment_released = _release_site_approach
 	daily.allow_haulers = false
 	super._ready()
+	_runtime_base_initialized = true
 	for site: Node2D in $WorksiteMarkers.get_children():
 		_site_origins[site.name] = site.position
 		if finite_resource_sites:
@@ -91,7 +112,7 @@ func _ready() -> void:
 			session.deposit_capacity = int(TEST_RESOURCE_CAPACITY.get(session.item_id, session.stock))
 			session.stock = session.deposit_capacity
 			session.stock_settled.connect(_on_hourly_stock_settled.bind(site.name))
-		RESOURCE_PRESENTATION.configure(site)
+		RESOURCE_PRESENTATION.configure(site, finite_resource_sites)
 		var footprint: CanvasItem = site.get_node_or_null("Footprint") as CanvasItem
 		_resource_art_visibility[site.name] = footprint.visible if footprint != null else false
 		var label: CanvasItem = site.get_node_or_null("Label") as CanvasItem
@@ -149,6 +170,39 @@ func _ready() -> void:
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
 
+func _disable_runtime_after_binding_failure() -> void:
+	# The shared base _ready has not run, so do not tear down partially initialized
+	# sessions. Disable the whole subtree and its physics/interactable surfaces.
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+	set_process(false)
+	set_physics_process(false)
+	set_process_input(false)
+	set_process_unhandled_input(false)
+	for node: Node in find_children("*", "Node", true, false):
+		node.process_mode = Node.PROCESS_MODE_DISABLED
+		if node is CanvasItem:
+			(node as CanvasItem).hide()
+		elif node is CanvasLayer:
+			(node as CanvasLayer).hide()
+		if node is Area2D:
+			var area := node as Area2D
+			area.monitoring = false
+			area.monitorable = false
+			area.collision_layer = 0
+			area.collision_mask = 0
+		elif node is CollisionObject2D:
+			var body := node as CollisionObject2D
+			body.collision_layer = 0
+			body.collision_mask = 0
+		if node is CollisionShape2D:
+			(node as CollisionShape2D).disabled = true
+		elif node is CollisionPolygon2D:
+			(node as CollisionPolygon2D).disabled = true
+		elif node is CPUParticles2D:
+			(node as CPUParticles2D).emitting = false
+			(node as CPUParticles2D).hide()
+
 ## Save an offset relative to the authored marker, not a node path or world
 ## coordinate. Only this bounded list is accepted when loading a checkpoint.
 func resource_site_offset(site_id: StringName) -> Vector2:
@@ -200,6 +254,7 @@ func _on_daily_stock_settled() -> void:
 func _sync_site_timer(site_id: StringName) -> void:
 	var session = sites[site_id]
 	if session.stock <= 0:
+		_set_site_depleted_presentation(site_id, true)
 		# Hourly work can still return its uncommitted units on cancellation.
 		# Do not start a deadline until that transaction has settled.
 		if session.working:
@@ -212,7 +267,7 @@ func _sync_site_timer(site_id: StringName) -> void:
 		# case it was not actually depleted and must not keep a stale deadline.
 		session.respawn_started_at = -1
 		session.respawn_due_at = -1
-	_set_site_depleted_presentation(site_id, session.stock <= 0 and not session.working)
+	_set_site_depleted_presentation(site_id, session.stock <= 0)
 
 func sync_resource_presentation() -> void:
 	if not finite_resource_sites:
@@ -222,7 +277,8 @@ func sync_resource_presentation() -> void:
 		_set_site_depleted_presentation(site_id, int(sites[site_id].stock) <= 0)
 
 func _set_site_depleted_presentation(site_id: StringName, depleted: bool) -> void:
-	if _depleted_presentation.has(site_id) and bool(_depleted_presentation[site_id]) == depleted:
+	var had_previous_presentation: bool = _depleted_presentation.has(site_id)
+	if had_previous_presentation and bool(_depleted_presentation[site_id]) == depleted:
 		return
 	_depleted_presentation[site_id] = depleted
 	var marker: Node2D = $WorksiteMarkers.get_node_or_null(NodePath(str(site_id)))
@@ -230,11 +286,18 @@ func _set_site_depleted_presentation(site_id: StringName, depleted: bool) -> voi
 		return
 	var icon: CanvasItem = marker.get_node_or_null("ResourceIcon") as CanvasItem
 	var is_wood: bool = sites.has(site_id) and sites[site_id].item_id == "wood_log"
+	var is_reed: bool = sites.has(site_id) and sites[site_id].item_id == "reed_bundle"
 	if icon != null:
 		# The original icon remains available for contact/navigation calculations.
 		icon.visible = not depleted and not is_wood
 	if is_wood:
 		RESOURCE_PRESENTATION.set_wood_depleted(marker, depleted)
+	if is_reed:
+		RESOURCE_PRESENTATION.set_reed_depleted(marker, depleted)
+	var ready_particles: CPUParticles2D = marker.get_node_or_null("ReadyParticles") as CPUParticles2D
+	if ready_particles != null:
+		ready_particles.emitting = not depleted
+		ready_particles.visible = not depleted
 	var footprint: CanvasItem = marker.get_node_or_null("Footprint") as CanvasItem
 	if footprint != null:
 		footprint.visible = not depleted and bool(_resource_art_visibility.get(site_id, false))
@@ -242,7 +305,10 @@ func _set_site_depleted_presentation(site_id: StringName, depleted: bool) -> voi
 	if label != null:
 		label.visible = not depleted and bool(_resource_label_visibility.get(site_id, false))
 	var collider: CollisionPolygon2D = marker.get_node_or_null("ResourceBase/CollisionPolygon2D") as CollisionPolygon2D
-	if collider != null:
+	# A prior state transition may still be queued for this frame. Always queue
+	# each genuine transition so the final deferred value matches presentation.
+	# On first sync, avoid a needless nav wait if the collider is already correct.
+	if collider != null and (collider.disabled != depleted or had_previous_presentation):
 		collider.set_deferred("disabled", depleted)
 		navigation_refresh_pending = true
 		_queue_navigation_after_colliders.call_deferred()
@@ -265,65 +331,29 @@ func _relocate_depleted_sites() -> void:
 	var map: Node = navigation_map.get_ref() if navigation_map != null else null
 	if not is_instance_valid(map) or not map.is_ancestor_of(self):
 		return
-	# Regression fixtures can wrap the city in a test node. Terrain belongs to
-	# the nearest city ancestor rather than necessarily the outer navigation root.
-	var terrain_map: Node = self
-	while terrain_map != null and not terrain_map.has_node("AuthoredMap/Ground/Base"):
-		terrain_map = terrain_map.get_parent()
-	if terrain_map == null:
-		return
 	for key: Variant in sites:
 		var site_id := StringName(key)
 		var session = sites[site_id]
 		if session.stock > 0 or session.working or session.respawn_due_at < 0 or daily.now() < session.respawn_due_at:
 			continue
 		var marker: Node2D = $WorksiteMarkers.get_node(NodePath(str(site_id)))
-		if session.item_id == "wood_log":
-			# Preserve the current marker, including valid offsets in older saves.
-			# A depleted base has no collider, so wait for occupants to leave it.
-			if not _wood_regrowth_clear(marker):
-				continue
-			session.stock = session.deposit_capacity
-			session.respawn_started_at = -1
-			session.respawn_due_at = -1
-			_set_site_depleted_presentation(site_id, false)
-			# The presentation change schedules a navigation refresh after the
-			# collider is enabled. Existing worker targets remain valid here.
+		# A refill stays at its authored or previously saved marker. Even a
+		# colliderless site must wait until the player and workers clear its art.
+		if not _site_regrowth_clear(marker):
 			continue
-		var now: int = daily.now()
-		if now - int(_last_relocation_attempt.get(site_id, -1000000)) < 60:
-			continue
-		_last_relocation_attempt[site_id] = now
-		var current_offset: Vector2 = resource_site_offset(site_id)
-		for point: Vector2 in TEMP_RELOCATION_POINTS:
-			var offset: Vector2 = point - Vector2(_site_origins[site_id])
-			if offset == current_offset:
-				continue
-			var candidate: Vector2 = marker.get_parent().to_global(Vector2(_site_origins[site_id]) + offset)
-			if not _resource_candidate_clear(terrain_map, marker, candidate):
-				continue
-			# The old deposit vanishes and the replacement receives its own stock.
-			# Workers keep their assignment but must physically reach the new site.
-			marker.position = Vector2(_site_origins[site_id]) + offset
-			session.stock = session.deposit_capacity
-			session.respawn_started_at = -1
-			session.respawn_due_at = -1
-			_set_site_depleted_presentation(site_id, false)
-			worker_journeys.clear()
-			_refresh_navigation()
-			if daily.jobs.has(site_id):
-				var ids: Array[String] = []
-				ids.assign(daily.jobs[site_id].ids)
-				_begin_site_assignments(site_id, ids)
-			break
+		session.stock = session.deposit_capacity
+		session.respawn_started_at = -1
+		session.respawn_due_at = -1
+		_set_site_depleted_presentation(site_id, false)
+		# Existing worker targets remain valid because the site does not move.
 
-func _wood_regrowth_clear(marker: Node2D) -> bool:
+func _site_regrowth_clear(marker: Node2D) -> bool:
 	var base: CollisionPolygon2D = marker.get_node_or_null("ResourceBase/CollisionPolygon2D") as CollisionPolygon2D
-	if base == null or base.polygon.size() < 3 or not is_instance_valid(player) or not player.is_inside_tree():
+	if not is_instance_valid(player) or not player.is_inside_tree():
 		return false
-	var polygon := PackedVector2Array()
-	for point: Vector2 in base.polygon:
-		polygon.append(base.to_global(point))
+	var polygon: PackedVector2Array = _resource_occupancy_polygon(marker, base)
+	if polygon.size() < 3:
+		return false
 	var player_shape: CollisionShape2D = player.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if player_shape == null or player_shape.shape == null:
 		return false
@@ -346,6 +376,34 @@ func _wood_regrowth_clear(marker: Node2D) -> bool:
 				and _point_near_resource_base(worker.physical_approach.position, polygon):
 				return false
 	return true
+
+func _resource_occupancy_polygon(marker: Node2D, base: CollisionPolygon2D) -> PackedVector2Array:
+	if base != null and base.polygon.size() >= 3:
+		var polygon := PackedVector2Array()
+		for point: Vector2 in base.polygon:
+			polygon.append(base.to_global(point))
+		return polygon
+	# A missing ResourceBase should not make a site wait forever. Use the
+	# transformed visual bounds when art exists, then a conservative marker box.
+	var bounds := Rect2()
+	var found_visual: bool = false
+	for child: Node in marker.find_children("*", "Sprite2D", true, false):
+		var sprite: Sprite2D = child as Sprite2D
+		if sprite.texture == null:
+			continue
+		var rect: Rect2 = sprite.get_rect()
+		for corner: Vector2 in [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]:
+			var point: Vector2 = sprite.to_global(corner)
+			if not found_visual:
+				bounds = Rect2(point, Vector2.ZERO)
+				found_visual = true
+			else:
+				bounds = bounds.expand(point)
+	if not found_visual:
+		bounds = Rect2(marker.global_position - Vector2(16, 16), Vector2(32, 32))
+	if bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		return PackedVector2Array()
+	return PackedVector2Array([bounds.position, Vector2(bounds.end.x, bounds.position.y), bounds.end, Vector2(bounds.position.x, bounds.end.y)])
 
 func _point_near_resource_base(point: Vector2, polygon: PackedVector2Array) -> bool:
 	if Geometry2D.is_point_in_polygon(point, polygon):
@@ -813,6 +871,10 @@ func _exit_tree() -> void:
 	# not cancel jobs or discard in-flight cargo; normal teardown still cleans up.
 	if checkpoint_handoff:
 		return
+	if not _runtime_base_initialized:
+		AUTHORED_RESOURCE_LAYOUT.restore(authored_resource_binding)
+		return
+	AUTHORED_RESOURCE_LAYOUT.restore(authored_resource_binding)
 	if retain_resource_stock and is_instance_valid(WorkStateRuntime):
 		for session in sites.values():
 			session.cancel()

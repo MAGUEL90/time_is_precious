@@ -4,6 +4,7 @@ signal build_requested
 signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const WORK_PROGRESS: PackedScene = preload("res://scenes/raid/defense_work_progress.tscn")
 const CITY_HUB_SIZE: Vector2 = Vector2(300, 196)
 const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
@@ -1198,7 +1199,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 		satisfaction += citizen.satisfaction
 	if not residents.is_empty():
 		satisfaction /= residents.size()
-	satisfaction_value.text = "Resident avg.  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Resident avg.  --"
+	satisfaction_value.text = "Resident avg.  %d%%" % SATISFACTION_DISPLAY.to_percent(satisfaction) if not residents.is_empty() else "Resident avg.  --"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
 	wall_value.text = "%d/%d  Lv.%d" % [hp, max_hp, level]

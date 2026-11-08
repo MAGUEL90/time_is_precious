@@ -3,8 +3,20 @@ extends "res://scenes/workshop_plot/workshop_plot.gd"
 ## This view shares the workshop construction state, but has no workshop backend.
 ## The rubble itself is the interaction target; there is no keeper NPC.
 const HOUSE_FOOTPRINTS: Array[Rect2] = [Rect2(-19, -4, 38, 20)]
+@export var authored_marker_path: NodePath = NodePath()
 var _manual_house_work: bool = false
+var _uses_authored_site_marker: bool = false
 var _uses_authored_site_footprint: bool = false
+
+
+func _enter_tree() -> void:
+	if not authored_marker_path.is_empty():
+		var authored_marker: Node2D = get_node_or_null(authored_marker_path) as Node2D
+		if authored_marker == null or not authored_marker.is_inside_tree():
+			push_error("Citizen house plot authored marker path must resolve to an in-tree Node2D.")
+		else:
+			global_position = authored_marker.global_position
+	super._enter_tree()
 
 
 func is_citizen_house_plot() -> bool:
@@ -29,6 +41,12 @@ func _sync_build_progress() -> void:
 
 func get_built_footprints() -> Array[Rect2]:
 	return HOUSE_FOOTPRINTS
+
+
+func use_authored_site_marker(enabled: bool) -> void:
+	_uses_authored_site_marker = enabled
+	if is_inside_tree() and is_node_ready() and is_instance_valid(construction):
+		_sync_construction()
 
 
 func use_authored_site_footprint(enabled: bool) -> void:
@@ -70,6 +88,14 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 	# Keep the same modal lock and fade as the existing manual clearing flow.
 	# The guard is set before calling the state because its signals can re-enter.
 	var was_clearing: bool = starting_clearing or (resuming and construction.phase == "clearing")
+	var session_menu: CanvasLayer = menu
+	var session_player: Player = player
+	var session_scene: Node = get_tree().current_scene
+	var session_construction: Node = construction
+	var session_tree: SceneTree = get_tree()
+	if not is_instance_valid(session_menu) or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion() or not is_instance_valid(session_player) or not session_player.is_inside_tree() or session_player.is_queued_for_deletion() or not is_instance_valid(session_construction) or session_player.current_interactable != self or not get_tree().paused or session_scene == null or get_tree().current_scene != session_scene or not session_scene.is_ancestor_of(self) or not session_scene.is_ancestor_of(session_player):
+		return
+	var clearing_minutes: int = session_construction.CLEARING_MINUTES
 	_manual_house_work = true
 	_manual_clearing = true
 	var result: Dictionary
@@ -85,10 +111,30 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 		if is_instance_valid(menu):
 			menu.show_error(str(result.get("message", "Could not start construction.")))
 		return
-	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(menu):
-		construction.interrupt_player_work()
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(session_menu) or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion() or not is_instance_valid(session_construction):
+		if is_instance_valid(session_construction):
+			session_construction.interrupt_player_work()
 		_manual_house_work = false
 		_manual_clearing = false
+		if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+			_finish_manual_session(session_menu, session_player, session_scene)
+			if was_clearing:
+				await session_tree.process_frame
+				if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+					clearing_finished.emit()
+		return
+	var session_phase: String = session_construction.phase
+	var owns_player_work: bool = session_construction.clearing_by_player if session_phase == "clearing" else session_construction.player_building
+	if session_phase not in ["clearing", "building"] or not owns_player_work or not session_construction.is_player_work_active():
+		if session_construction.is_player_work_active():
+			session_construction.interrupt_player_work()
+		_manual_house_work = false
+		_manual_clearing = false
+		_finish_manual_session(session_menu, session_player, session_scene)
+		if was_clearing:
+			await session_tree.process_frame
+			if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+				clearing_finished.emit()
 		return
 	menu.hide()
 	var cover := CanvasLayer.new()
@@ -98,31 +144,47 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	cover.add_child(shade)
 	add_child(cover)
-	var tree: SceneTree = get_tree()
-	await tree.create_timer(0.15, true).timeout
-	# Work through existing minute signals, which charge the player's needs.
-	# Limit each session to the same three hours as a plot-clearing session.
-	var minutes: int = 0
-	while is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(construction) and construction.is_player_work_active() and minutes < construction.CLEARING_MINUTES:
-		if not is_instance_valid(player) or not has_player_access() or player.has_critical_condition():
-			break
-		if construction.phase == "building" and bool(construction.get_preview([] as Array[String]).get("shelter_blocked", false)):
-			break
-		if not TimeComponentManager.advance_minutes(1):
-			break
-		minutes += 1
-	if is_instance_valid(construction):
-		construction.interrupt_player_work()
-	if is_inside_tree() and not is_queued_for_deletion():
-		await tree.create_timer(0.5, true).timeout
+	await session_tree.create_timer(0.15, true).timeout
+	if not is_instance_valid(self):
+		return
+	var guard: Callable = Callable(self, "_manual_house_work_guard").bind(session_menu, session_player, session_scene, session_construction, session_phase)
+	await TimeComponentManager.advance_minutes_staged(clearing_minutes, self, guard)
+	if not is_instance_valid(self):
+		return
+	if is_instance_valid(session_construction) and session_construction.is_player_work_active():
+		session_construction.interrupt_player_work()
+	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(session_scene) and get_tree().current_scene == session_scene:
+		await session_tree.create_timer(0.5, true).timeout
+		if not is_instance_valid(self):
+			return
 	if is_instance_valid(cover):
 		cover.queue_free()
 	_manual_house_work = false
 	_manual_clearing = false
-	close_menu()
+	_finish_manual_session(session_menu, session_player, session_scene)
 	if was_clearing:
 		clearing_finished.emit()
 
+func _manual_house_work_guard(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node, session_phase: String) -> bool:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_menu) or menu != session_menu or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_player) or player != session_player or not session_player.is_inside_tree() or session_player.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_scene) or session_scene.is_queued_for_deletion() or get_tree().current_scene != session_scene or not session_scene.is_ancestor_of(self) or not session_scene.is_ancestor_of(session_player):
+		return false
+	if not is_instance_valid(session_construction) or construction != session_construction or session_construction.phase != session_phase or not session_construction.is_player_work_active():
+		return false
+	if session_phase == "clearing" and not session_construction.clearing_by_player:
+		return false
+	if session_phase == "building" and not session_construction.player_building:
+		return false
+	if not _manual_house_work or not _manual_clearing or session_player.current_interactable != self or not has_player_access() or session_player.has_critical_condition():
+		return false
+	if session_phase == "building" and bool(session_construction.get_preview([] as Array[String]).get("shelter_blocked", false)):
+		return false
+	return get_tree().paused and not TimeComponentManager.is_paused
 
 func close_menu() -> void:
 	if is_instance_valid(construction) and construction.is_player_work_active():
@@ -137,7 +199,7 @@ func _sync_construction() -> void:
 	var built: bool = construction.phase == "built"
 	for path: String in ["Plot", "LeftWall", "LeftWallTop", "RightWall", "RightWallTop", "Table", "TableLegs", "TableResources", "Board"]:
 		get_node(path).hide()
-	$ToBeClean.visible = not _uses_authored_site_footprint and construction.phase in ["uncleared", "clearing"]
+	$ToBeClean.visible = not _uses_authored_site_marker and construction.phase in ["uncleared", "clearing"]
 	$SiteHouse.visible = not _uses_authored_site_footprint and construction.phase in ["empty", "building"]
 	$FinishedHouse.visible = built
 	$HouseBody/CollisionShape2D.set_deferred("disabled", not built)

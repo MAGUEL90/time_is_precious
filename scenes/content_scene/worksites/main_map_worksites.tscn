@@ -13,7 +13,7 @@
 [ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
 [ext_resource type="Texture2D" path="res://assets/items/water_jar.png" id="icon_Water"]
 [ext_resource type="Texture2D" path="res://assets/objects/worksites/clay_site.png" id="site_Clay"]
-[ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site_content.png" id="site_Reed"]
+[ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site.png" id="site_Reed"]
 
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="12_city_storage"]
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_annex.tscn" id="13_city_annex"]
@@ -22,6 +22,16 @@
 y_sort_enabled = true
 script = ExtResource("1_runtime")
 finite_resource_sites = true
+authored_resource_paths = {
+"WoodSite": NodePath("../../AuthoredMap/YSortWorld/Poplar"),
+"WoodSiteB": NodePath("../../AuthoredMap/YSortWorld/Poplar2"),
+"WoodSiteC": NodePath("../../AuthoredMap/YSortWorld/Poplar3"),
+"WoodSiteD": NodePath("../../AuthoredMap/YSortWorld/Poplar4"),
+"WoodSiteE": NodePath("../../AuthoredMap/YSortWorld/Poplar5"),
+"ClaySiteA": NodePath("../../AuthoredMap/YSortWorld/ClaySite"),
+"ClaySiteB": NodePath("../../AuthoredMap/YSortWorld/ClaySite2"),
+"ReedSite": NodePath("../../AuthoredMap/YSortWorld/ReedSite"),
+}
 player_path = NodePath("../Player")
 inventory_ui_path = NodePath("../../InventoryUI")
 
@@ -149,28 +159,6 @@ texture_filter = 1
 position = Vector2(17, -7)
 texture = ExtResource("site_Clay")
 
-[node name="ReedSiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-70, 127)
-script = ExtResource("6_resource_site")
-item_id = "reed_bundle"
-minutes_per_unit = 7.5
-
-[node name="Footprint" parent="WorksiteMarkers/ReedSiteB" index="0"]
-visible = false
-scale = Vector2(0.6, 0.6)
-
-[node name="Label" parent="WorksiteMarkers/ReedSiteB" index="1"]
-offset_left = -24.0
-offset_top = -24.0
-offset_right = 24.0
-offset_bottom = -16.0
-text = "Reed Site"
-
-[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ReedSiteB"]
-texture_filter = 1
-position = Vector2(0, -5)
-texture = ExtResource("site_Reed")
-
 [node name="WoodSiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
 position = Vector2(65, 127)
 script = ExtResource("6_resource_site")
@@ -209,6 +197,48 @@ offset_bottom = -16.0
 text = "Wood Site"
 
 [node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteC"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteD" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(0, 100)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteD" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteD" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteD"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteE" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(40, 100)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteE" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteE" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteE"]
 texture_filter = 1
 position = Vector2(20, 0)
 texture = ExtResource("icon_Wood")
@@ -294,7 +324,8 @@ position = Vector2(-40, 67)
 [editable path="WorksiteMarkers/WaterSite"]
 
 [editable path="WorksiteMarkers/ClaySiteB"]
-[editable path="WorksiteMarkers/ReedSiteB"]
 [editable path="WorksiteMarkers/WoodSiteB"]
 [editable path="WorksiteMarkers/WoodSiteC"]
+[editable path="WorksiteMarkers/WoodSiteD"]
+[editable path="WorksiteMarkers/WoodSiteE"]
 [editable path="CityStorageArea"]

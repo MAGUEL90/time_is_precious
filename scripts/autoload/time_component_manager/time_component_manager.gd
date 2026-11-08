@@ -50,6 +50,10 @@ var _last_shift: String = "" # menyimpan shift terakhir supaya signal shift tida
 var _target_environment_color: Color = Color(1.0, 1.0, 1.0)
 var _advancing_time: bool = false
 var _cycling_day: bool = false
+var _staged_time_active: bool = false
+
+const STAGED_WAIT_FRAMES_PER_MINUTE: int = 600
+const STAGED_YIELD_MINUTES: int = 8
 
 # Lifecycle
 
@@ -95,11 +99,17 @@ func emit_time_signal() -> void:
 ## Refusing reentrant requests keeps each minute's signals and worksite settlement
 ## together; callers that need synchronous completion can check the result.
 func is_dispatching_time() -> bool:
-	return _advancing_time or _cycling_day
+	return _advancing_time or _cycling_day or _staged_time_active
+
+func is_staged_advance_active() -> bool:
+	return _staged_time_active
 
 func can_advance_time() -> bool:
-	if is_dispatching_time():
-		return false
+	return not is_dispatching_time() and not _staged_time_active and is_external_world_idle()
+
+## Transaction owners remain authoritative while a staged advance is waiting.
+## This deliberately excludes the clock's own staged lock and dispatch flags.
+func is_external_world_idle() -> bool:
 	# Bulk inventory payments publish synchronously. The clock must not enter a
 	# new minute until the owning construction transaction has also committed.
 	if Inventory._bulk_transaction_in_progress or (WorkshopFacilityManager.has_method("is_transaction_busy") and WorkshopFacilityManager.is_transaction_busy()):
@@ -110,7 +120,7 @@ func can_advance_time() -> bool:
 	if workers != null and bool(workers.call("is_world_time_transition_busy")):
 		return false
 	var needs: Node = get_node_or_null("/root/CitizenNeedsManager")
-	if needs != null and (bool(needs.get("_processing_daily_needs")) or bool(needs.get("_processing_food")) or bool(needs.get("_processing_clothing")) or bool(needs.get("_daily_needs_retry_pending"))):
+	if needs != null and (bool(needs.get("_processing_daily_needs")) or bool(needs.get("_processing_food")) or bool(needs.get("_processing_clothing")) or bool(needs.get("_daily_needs_retry_pending")) or bool(needs.get("_satisfaction_retry_pending"))):
 		return false
 	var checkpoint: Node = get_node_or_null("/root/WorkStateRuntime/CitySave")
 	return checkpoint == null or not bool(checkpoint.get("_busy"))
@@ -153,6 +163,139 @@ func advance_minutes(total_minutes: int) -> bool:
 	_advancing_time = false
 	_timer = 0.0
 	return true
+
+## Prepares all registered world participants before committing each minute.
+## While waiting, participants may advance route searches but must not move or
+## settle work. The owner and current scene are checked after every await and
+## immediately before every clock commit.
+func advance_minutes_staged(total_minutes: int, owner: Node, continuation_guard: Callable = Callable()) -> Dictionary:
+	if total_minutes <= 0 or not is_instance_valid(owner) or not owner.is_inside_tree():
+		return {"completed": false, "advanced_minutes": 0, "reason": "invalid_owner"}
+	if _staged_time_active or is_dispatching_time():
+		return {"completed": false, "advanced_minutes": 0, "reason": "time_busy"}
+	var has_guard: bool = not continuation_guard.is_null()
+	if has_guard and not continuation_guard.is_valid():
+		return {"completed": false, "advanced_minutes": 0, "reason": "invalid_guard"}
+	if has_guard and continuation_guard.get_object() != owner:
+		return {"completed": false, "advanced_minutes": 0, "reason": "invalid_guard_owner"}
+
+	var owner_weak: WeakRef = weakref(owner)
+	var owner_instance_id: int = owner.get_instance_id()
+	var captured_scene: Node = get_tree().current_scene
+	if captured_scene == null:
+		return {"completed": false, "advanced_minutes": 0, "reason": "missing_scene"}
+	var scene_weak: WeakRef = weakref(captured_scene)
+	var scene_instance_id: int = captured_scene.get_instance_id()
+	_staged_time_active = true
+	var advanced_minutes: int = 0
+	var reason: String = "completed"
+	var aborted: bool = false
+
+	for _minute_index: int in range(total_minutes):
+		var next_minute: int = current_day * 1440 + current_hour * 60 + current_minute + 1
+		var waited_frames: int = 0
+		while true:
+			var context_failure: String = _staged_context_failure(owner_weak, owner_instance_id, scene_weak, scene_instance_id, continuation_guard, has_guard)
+			if not context_failure.is_empty():
+				reason = context_failure
+				aborted = true
+				break
+
+			if not is_external_world_idle():
+				if waited_frames >= STAGED_WAIT_FRAMES_PER_MINUTE:
+					reason = "transaction_wait_limit"
+					aborted = true
+					break
+				waited_frames += 1
+				await get_tree().process_frame
+				continue
+
+			var route_pending: bool = false
+			for participant: Node in get_tree().get_nodes_in_group("staged_time_participants"):
+				if not is_instance_valid(participant) or not participant.has_method("prepare_simulated_minute"):
+					continue
+				if not bool(participant.call("prepare_simulated_minute", next_minute)):
+					route_pending = true
+
+			# Participant callbacks can run arbitrary game code. Recheck all
+			# cancellation and transaction conditions just before consuming time.
+			if not is_external_world_idle():
+				if waited_frames >= STAGED_WAIT_FRAMES_PER_MINUTE:
+					reason = "transaction_wait_limit"
+					aborted = true
+					break
+				waited_frames += 1
+				await get_tree().process_frame
+				continue
+			if route_pending:
+				if waited_frames >= STAGED_WAIT_FRAMES_PER_MINUTE:
+					reason = "route_wait_limit"
+					aborted = true
+					break
+				waited_frames += 1
+				await get_tree().process_frame
+				continue
+
+			context_failure = _staged_context_failure(owner_weak, owner_instance_id, scene_weak, scene_instance_id, continuation_guard, has_guard)
+			if not context_failure.is_empty():
+				reason = context_failure
+				aborted = true
+				break
+			if not is_external_world_idle():
+				if waited_frames >= STAGED_WAIT_FRAMES_PER_MINUTE:
+					reason = "transaction_wait_limit"
+					aborted = true
+					break
+				waited_frames += 1
+				await get_tree().process_frame
+				continue
+
+			_advancing_time = true
+			_advance_one_minute(true)
+			day_cycle()
+			_advancing_time = false
+			advanced_minutes += 1
+			break
+
+		if aborted:
+			break
+		if advanced_minutes > 0 and advanced_minutes % STAGED_YIELD_MINUTES == 0 and advanced_minutes < total_minutes:
+			await get_tree().process_frame
+			var context_failure: String = _staged_context_failure(owner_weak, owner_instance_id, scene_weak, scene_instance_id, continuation_guard, has_guard)
+			if not context_failure.is_empty():
+				reason = context_failure
+				aborted = true
+				break
+
+	_staged_time_active = false
+	_advancing_time = false
+	if advanced_minutes > 0:
+		_timer = 0.0
+	var completed: bool = advanced_minutes == total_minutes and not aborted
+	if completed:
+		reason = "completed"
+	return {"completed": completed, "advanced_minutes": advanced_minutes, "reason": reason}
+
+func _staged_context_failure(owner_weak: WeakRef, owner_instance_id: int, scene_weak: WeakRef, scene_instance_id: int, guard: Callable, has_guard: bool) -> String:
+	var live_owner: Node = owner_weak.get_ref() as Node
+	if not is_instance_valid(live_owner) or live_owner.get_instance_id() != owner_instance_id or not live_owner.is_inside_tree() or live_owner.is_queued_for_deletion():
+		return "owner_invalid"
+	var captured_scene: Node = scene_weak.get_ref() as Node
+	if not is_instance_valid(captured_scene) or captured_scene.get_instance_id() != scene_instance_id or captured_scene.is_queued_for_deletion() or get_tree().current_scene != captured_scene:
+		return "scene_changed"
+	if has_guard:
+		if not guard.is_valid() or guard.get_object() != live_owner:
+			return "guard_invalidated"
+		var allowed_to_continue: bool = bool(guard.call())
+		live_owner = owner_weak.get_ref() as Node
+		if not is_instance_valid(live_owner) or live_owner.get_instance_id() != owner_instance_id or not live_owner.is_inside_tree() or live_owner.is_queued_for_deletion():
+			return "owner_invalid"
+		captured_scene = scene_weak.get_ref() as Node
+		if not is_instance_valid(captured_scene) or captured_scene.get_instance_id() != scene_instance_id or captured_scene.is_queued_for_deletion() or get_tree().current_scene != captured_scene:
+			return "scene_changed"
+		if not allowed_to_continue:
+			return "guard_invalidated"
+	return ""
 
 func on_new_day() -> void:
 	roll_daily_weather()

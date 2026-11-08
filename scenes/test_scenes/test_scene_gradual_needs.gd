@@ -161,7 +161,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	panel.open_for("leaver")
 	var satisfaction_label: Label = panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/SatisfactionLabel")
-	_expect(satisfaction_label.text == "Actual satisfaction: <1%", "A positive value below one percent is not displayed as actual zero.")
+	_expect(satisfaction_label.text == "Actual satisfaction: 1%", "A positive value below one percent displays as 1% without changing its underlying value.")
 	TimeComponentManager.is_paused = true
 	TimeComponentManager._process(100.0)
 	TimeComponentManager.emit_time_signal()

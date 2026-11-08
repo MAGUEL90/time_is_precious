@@ -51,28 +51,38 @@ func _on_interact_range_exited() -> void:
 func on_player_interact(player: Player) -> void:
 	if SceneTransition.is_transitioning:
 		return
+	if not is_instance_valid(player) or not player.is_inside_tree():
+		return
 
 	if not player.can_sleep():
 		_show_save_feedback("Already rested today")
 		return
 
-	var previous_can_move: bool = player.can_move
-	player.can_move = false
+	var captured_scene: Node = get_tree().current_scene
+	if captured_scene == null or not captured_scene.is_ancestor_of(player):
+		return
+	await SceneTransition.run_with_fade(Callable(player, "sleep_staged"))
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return
+	if not is_instance_valid(player) or not player.is_inside_tree() or player.is_queued_for_deletion():
+		return
+	if not is_instance_valid(captured_scene) or captured_scene.is_queued_for_deletion() or get_tree().current_scene != captured_scene or not captured_scene.is_ancestor_of(player):
+		return
 
-	var sleep_succeeded: bool = await SceneTransition.run_with_fade(Callable(player, "sleep"))
+	var sleep_result: Dictionary = player.last_staged_sleep_result
+	var advanced_minutes: int = maxi(0, int(sleep_result.get("advanced_minutes", 0)))
+	var completed: bool = bool(sleep_result.get("completed", false))
+	if advanced_minutes <= 0:
+		interactable_label_component.set_text("Sleep interrupted; no time elapsed")
+		return
 
-	player.can_move = previous_can_move
-
-	if sleep_succeeded:
-		var checkpoint: Node = WorkStateRuntime.get_node_or_null("CitySave")
-		if checkpoint != null:
-			var saved: bool = checkpoint.save_after_sleep(player)
-			interactable_label_component.hide()
-			_show_save_feedback("Game saved" if saved else "Save failed")
-		else:
-			interactable_label_component.hide()
+	var checkpoint: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	var saved: bool = checkpoint != null and checkpoint.save_after_sleep(player)
+	interactable_label_component.hide()
+	if completed:
+		_show_save_feedback("Game saved" if saved else ("Sleep complete" if checkpoint == null else "Save failed"))
 	else:
-		interactable_label_component.set_text("Cannot sleep right now")
+		_show_save_feedback("Sleep interrupted, saved" if saved else "Sleep interrupted, not saved")
 
 func _show_save_feedback(message: String) -> void:
 	if _feedback_tween != null and _feedback_tween.is_valid():

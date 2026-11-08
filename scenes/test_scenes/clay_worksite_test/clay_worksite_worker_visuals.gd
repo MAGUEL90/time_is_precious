@@ -19,6 +19,7 @@ var resident_spawn: Node2D
 @export var idle_max_seconds: float = 1.8
 
 func _enter_tree() -> void:
+	add_to_group("staged_time_participants")
 	# The city runtime is reparented on the way home; _ready() is not repeated.
 	if not TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
 		TimeComponentManager.simulated_minute_started.connect(_on_simulated_minute_started)
@@ -90,26 +91,38 @@ func sync_city_residents() -> void:
 			_play(actor, "idle", "right")
 
 func _on_simulated_minute_started(arrival_minute: int) -> void:
-	var runtime: Node = get_parent()
-	if not runtime.has_method("can_simulate_plot_travel") or not runtime.can_simulate_plot_travel():
+	if not _owns_active_plot_travel() or not get_parent().can_simulate_plot_travel():
 		return
+	plot_presence.update(self, maxf(TimeComponentManager.seconds_per_minute, 0.0), arrival_minute)
+
+func prepare_simulated_minute(arrival_minute: int) -> bool:
+	if not _owns_active_plot_travel():
+		return true
+	var runtime: Node = get_parent()
+	if not runtime.can_simulate_plot_travel():
+		return false
+	plot_presence.update(self, 0.0, arrival_minute, true, true)
+	return not plot_presence.pending_preflight
+
+func _owns_active_plot_travel() -> bool:
+	var runtime: Node = get_parent()
+	if not runtime.has_method("can_simulate_plot_travel"):
+		return false
 	# During a home handoff only the retained city runtime owns physical worker
 	# records. In the city, use only the runtime belonging to the active scene.
 	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
 	if store != null and is_instance_valid(store.parked_worksite):
-		if runtime != store.parked_worksite:
-			return
-	else:
-		var scene: Node = get_tree().current_scene
-		if scene == null or scene.get_node_or_null("YSortWorld/WorkerRuntime") != runtime:
-			return
-	plot_presence.update(self, maxf(TimeComponentManager.seconds_per_minute, 0.0), arrival_minute)
+		return runtime == store.parked_worksite
+	var scene: Node = get_tree().current_scene
+	return scene != null and scene.get_node_or_null("YSortWorld/WorkerRuntime") == runtime
 
 func _process(delta: float) -> void:
 	_retire_unhired_actors()
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		if reed_splash != null:
 			reed_splash.emitting = false
+		return
+	if TimeComponentManager.is_staged_advance_active():
 		return
 	# Restore only actors hidden by this presentation before native owners run.
 	for id: String in reed_inside:

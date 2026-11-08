@@ -23,6 +23,7 @@ var route_budget_usec: int = 0
 var route_budget_operations: int = 0
 var route_worker_budget: Dictionary = {}
 var route_active_count: int = 1
+var pending_preflight: bool = false
 
 static func is_shift_time(total_minutes: int) -> bool:
 	var minute_of_day: int = total_minutes % 1440
@@ -45,8 +46,7 @@ static func end_shift_for_worker(worker: WorkerData, kind: String, task: String,
 	worker.physical_approach.arrival_minute = DEPARTING
 	worker.current_work_status = WorkerData.WorkStatus.RESTING
 
-func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, geometry_current: bool = true) -> Array[String]:
-	var simulating: bool = simulated_arrival_minute >= 0
+func _collect_active_tasks(visuals: Node2D) -> Dictionary:
 	var active: Dictionary = {}
 	var live_plots: Dictionary = {}
 	for plot: Node in visuals.get_tree().get_nodes_in_group("workshop_plots"):
@@ -60,12 +60,31 @@ func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, g
 		for order: WorkOrder in WorkManager.active_orders.values():
 			if order.worker_kind == WorkOrder.Worker_Type.NPC and order.current_status == WorkOrder.Status.RUNNING and str(order.get_meta("visual_plot_id", "")) == construction.order_id:
 				active[order.worker_id] = {"owner": construction.order_id, "key": order.order_id, "entry": construction.worker_entry_position, "shift_scheduled": WorkManager.is_shaping_order(order)}
+	return {"active": active, "live_plots": live_plots}
+
+func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, geometry_current: bool = true, prepare_only: bool = false) -> Array[String]:
+	var simulating: bool = simulated_arrival_minute >= 0
+	var collected: Dictionary = _collect_active_tasks(visuals)
+	var active: Dictionary = collected.active
+	var live_plots: Dictionary = collected.live_plots
 	route_active_count = maxi(1, active.size())
+	if prepare_only:
+		pending_preflight = false
 	var retained: Array[String] = []
 	for id: String in active:
 		var task: Dictionary = active[id]
 		var worker: WorkerData = WorkerDatabase.get_worker_data(id)
 		if worker == null:
+			continue
+		if prepare_only:
+			if not geometry_current or worker.physical_approach.is_empty() or not worker.matches_physical_approach("plot", task.key, task.owner):
+				continue
+			var route_request: Dictionary = _next_route_request(visuals, worker, task, simulated_arrival_minute)
+			if route_request.is_empty() or not needs_route_preparation(visuals, worker, route_request):
+				continue
+			_advance_toward(visuals, id, worker, str(route_request.key), route_request.target, 0.0)
+			if states.has(id) and states[id].get("key") == route_request.key and states[id].get("status") == "pending":
+				pending_preflight = true
 			continue
 		var actor: Node2D = visuals.ensure_actor(id, task.entry + Vector2(0, 8))
 		if actor == null:
@@ -142,6 +161,8 @@ func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, g
 				live_plots[task.owner].mark_worker_arrived(id, task.key)
 				if not simulating:
 					live_plots[task.owner].show_worker_dust()
+	if prepare_only:
+		return retained
 	for id: String in tracked.keys():
 		if not active.has(id):
 			if visuals.actors.has(id):
@@ -151,6 +172,35 @@ func update(visuals: Node2D, delta: float, simulated_arrival_minute: int = -1, g
 			tracked.erase(id)
 	initial_sync = false
 	return retained
+
+func _next_route_request(visuals: Node2D, worker: WorkerData, task: Dictionary, _arrival_minute: int) -> Dictionary:
+	var approach: Dictionary = worker.physical_approach
+	# The simulated-minute signal fires before the clock increments. Match the
+	# normal update's current-time shift decision exactly at 07:00/15:00 edges.
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var on_shift: bool = not bool(task.shift_scheduled) or is_shift_time(now)
+	var departure_pending: bool = int(approach.get("arrival_minute", -1)) == DEPARTING
+	if worker.is_payroll_blocked() and not bool(task.shift_scheduled) and not departure_pending:
+		return {}
+	var should_depart: bool = departure_pending or (bool(task.shift_scheduled) and (not on_shift or worker.is_payroll_blocked()))
+	if should_depart:
+		return {"key": str(task.key) + ":departure", "target": _departure_position(visuals, task)}
+	if approach.get("arrived", false):
+		return {}
+	return {"key": str(task.key), "target": approach.target}
+
+func needs_route_preparation(visuals: Node2D, worker: WorkerData, route_request: Dictionary) -> bool:
+	if route_request.is_empty():
+		return false
+	var navigation: RefCounted = visuals.get_parent().get("worksite_navigation")
+	var nav_id: int = navigation.get_instance_id() if navigation != null else 0
+	var revision: int = int(navigation.revision) if navigation != null and navigation.has_method("begin_bounded_route") else 0
+	if not states.has(worker.worker_id):
+		return true
+	var state: Dictionary = states[worker.worker_id]
+	if state.get("key") != route_request.key or state.get("target") != route_request.target or state.get("nav_id") != nav_id or state.get("revision") != revision or state.get("origin") != worker.physical_approach.position:
+		return true
+	return state.get("status") == "pending"
 
 func _departure_position(visuals: Node2D, task: Dictionary) -> Vector2:
 	var departure: Node2D = visuals.get_parent().get_node_or_null("WorkerDeparture/NearSpawn") as Node2D

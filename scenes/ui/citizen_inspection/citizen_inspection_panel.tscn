@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/citizen_inspection/citizen_inspection_panel.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/empty_bar.png" id="11_bar_empty"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/filled_bar.png" id="12_bar_full"]
 [ext_resource type="Texture2D" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="13_icons"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_panel/panel_name.png" id="14_name_panel"]
 
 [sub_resource type="AtlasTexture" id="PanelTexture"]
 atlas = ExtResource("3_frame")
@@ -18,6 +19,17 @@ region = Rect2(1, 1, 168, 134)
 [sub_resource type="AtlasTexture" id="CheckTexture"]
 atlas = ExtResource("13_icons")
 region = Rect2(84, 68, 8, 8)
+
+[sub_resource type="StyleBoxTexture" id="NameLabelStyleBox"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+texture = ExtResource("14_name_panel")
+texture_margin_left = 8.0
+texture_margin_top = 3.0
+texture_margin_right = 8.0
+texture_margin_bottom = 3.0
 
 [node name="CitizenInspectionPanel" type="CanvasLayer"]
 visible = false
@@ -80,12 +92,13 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="NameLabel" type="Label" parent="Root/Frame/Margin/Contents/NameRow"]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(54, 11)
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_horizontal = 6
+size_flags_vertical = 4
 theme_type_variation = &"HudLabelMain"
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 6
+theme_override_styles/normal = SubResource("NameLabelStyleBox")
 mouse_filter = 1
 text = "Citizen"
 autowrap_mode = 0
@@ -331,6 +344,7 @@ layout_mode = 2
 mouse_filter = 2
 texture_filter = 1
 value = 0.0
+step = 0.0
 nine_patch_stretch = true
 stretch_margin_left = 3
 stretch_margin_top = 3

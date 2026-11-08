@@ -110,6 +110,7 @@ func _run() -> void:
 		_expect(runtime.can_simulate_plot_travel(), "A completed house refreshes the retained geometry while the player remains home")
 		_expect(not runtime.worksite_navigation.segment_clear(origin_b, target_b), "The parked navigation includes the completed house collider")
 		for minute: int in range(20):
+			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
 			_expect(TimeComponentManager.advance_minutes(1), "The parked worker can advance after the collider update")
@@ -131,6 +132,7 @@ func _run() -> void:
 		for frame: int in range(3):
 			await get_tree().process_frame
 		for minute: int in range(20):
+			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
 			_expect(TimeComponentManager.advance_minutes(1), "The parked worker advances outbound after shift")
@@ -170,6 +172,7 @@ func _run() -> void:
 		_expect(runtime.can_simulate_plot_travel(), "The city refreshes navigation after the collider is applied")
 		_expect(not runtime.worksite_navigation.segment_clear(origin_b, target_b), "The finished house blocks the former straight route")
 		for minute: int in range(20):
+			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
 			_expect(TimeComponentManager.advance_minutes(1), "The refreshed route advances")

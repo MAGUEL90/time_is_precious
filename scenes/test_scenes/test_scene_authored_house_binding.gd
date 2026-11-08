@@ -3,11 +3,7 @@ extends Node
 ## The map stays an authored source; this fixture changes only its instance.
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
 const AUTHORED: PackedScene = preload("res://scenes/map_authoring/new_map_authoring.tscn")
-const BINDING: Script = preload("res://scenes/map_authoring/house_site_binding.gd")
 const AUTHOR_PATH: String = "res://scenes/map_authoring/new_map_authoring.tscn"
-const PLOT: Array[Vector2i] = [Vector2i(-5, -12), Vector2i(-4, -12), Vector2i(-3, -12),
-	Vector2i(-5, -11), Vector2i(-4, -11), Vector2i(-3, -11),
-	Vector2i(-5, -10), Vector2i(-4, -10), Vector2i(-3, -10)]
 
 var failures: int = 0
 
@@ -37,39 +33,58 @@ func _run() -> void:
 	var state: Node = house.get("construction")
 	var fresh := AUTHORED.instantiate()
 	var original := _snapshot(fresh.get_node("Ground/Setelah Cleaning"))
+	var footprint_cells := _cells_around_marker(layer, marker.global_position)
+	var original_footprint := _snapshot_cells(layer, footprint_cells)
+	var authored_cell_count: int = 0
+	for cell: Vector2i in footprint_cells:
+		if int(original_footprint[cell][0]) >= 0:
+			authored_cell_count += 1
+	var has_authored_footprint: bool = authored_cell_count == 9
 	var before_shelter := CityStockManager.shelter_capacity
 	var before_inventory := Inventory.items.duplicate(true)
-	_expect(original.size() == 13, "The source map has the original 13 authored tiles.")
-	for cell in PLOT:
-		_expect(original.has(cell), "The authored 3×3 footprint contains " + str(cell))
+	_expect(footprint_cells.size() == 9, "The authored-site test derives all nine cells around the marker.")
+	_expect(authored_cell_count == 0 or has_authored_footprint,
+		"The real authored site has either no footprint cells or the complete 3x3, never a partial footprint.")
 	_expect(house.global_position == marker.global_position, "The review house matches the authored first marker.")
 	var binding := city.get_node("ReviewHouseBinding")
 	await get_tree().process_frame
 	var annex: Node2D = city.get_node("YSortWorld/WorkerRuntime/CityStorageAnnex")
 	var annex_label: Label = annex.get_node("AnnexLabel")
-	_expect(annex.position == Vector2(-40, 67) and annex_label.text == "ANNEX", "The readable Annex label changes no storage endpoint position.")
+	_expect(annex.position == Vector2(-40, 67) and annex_label.text == "ANNEX",
+		"The readable Annex label changes no storage endpoint position.")
 	for marker_name: String in ["ToBeClean1", "ToBeClean2", "ToBeClean3", "ToBeClean4"]:
 		var authored_marker: Sprite2D = authored.get_node("YSortWorld/" + marker_name)
 		var marker_bounds: Rect2 = authored_marker.global_transform * authored_marker.get_rect()
-		_expect(not annex_label.get_global_rect().intersects(marker_bounds), "The Annex label does not cover authored plot " + marker_name)
-	for phase in ["uncleared", "clearing", "empty", "building", "built", "empty", "uncleared"]:
+		_expect(not annex_label.get_global_rect().intersects(marker_bounds),
+			"The Annex label does not cover authored plot " + marker_name)
+	for phase: String in ["uncleared", "clearing", "empty", "building", "built", "empty", "uncleared"]:
 		state.set("phase", phase)
 		state.emit_signal("changed")
 		state.emit_signal("changed")
 		await get_tree().process_frame
 		var showing: bool = phase in ["uncleared", "clearing", "empty", "building"]
-		_expect(marker.visible == (phase in ["uncleared", "clearing"]), "The authored marker disappears when cleaning completes: " + phase)
-		_expect(not house.get_node("ToBeClean").visible, "The duplicate house rubble remains hidden: " + phase)
-		_expect(not house.get_node("SiteHouse").visible, "Legacy site art does not cover the authored footprint.")
-		_expect(house.get_node("FinishedHouse").visible == (phase == "built"), "Finished house matches phase " + phase)
-		for cell in PLOT:
-			_expect((_cell(layer, cell) == original[cell]) if showing else layer.get_cell_source_id(cell) == -1,
-				"The original footprint remains visible until the house is built: " + phase)
-		for cell in original:
-			if cell not in PLOT:
-				_expect(_cell(layer, cell) == original[cell], "The separately painted path remains unchanged.")
-		for marker_name in ["ToBeClean2", "ToBeClean3", "ToBeClean4"]:
-			_expect(authored.get_node("YSortWorld/" + marker_name).visible, "Other authored markers remain visible.")
+		_expect(marker.visible == (phase in ["uncleared", "clearing"]),
+			"The authored marker disappears when cleaning completes: " + phase)
+		_expect(not house.get_node("ToBeClean").visible,
+			"The authored marker replaces duplicate local rubble: " + phase)
+		_expect(house.get_node("SiteHouse").visible == (not has_authored_footprint and phase in ["empty", "building"]),
+			"The local house site is used only when the map has no complete footprint: " + phase)
+		_expect(house.get_node("FinishedHouse").visible == (phase == "built"),
+			"Finished house matches phase " + phase)
+		for cell: Vector2i in footprint_cells:
+			if has_authored_footprint:
+				_expect((_cell(layer, cell) == original_footprint[cell]) if showing
+					else layer.get_cell_source_id(cell) == -1,
+					"The complete authored footprint is shown until the house is built: " + phase)
+			else:
+				_expect(_cell(layer, cell) == original_footprint[cell],
+					"An empty authored footprint remains untouched: " + phase)
+		for cell: Vector2i in original:
+			if cell not in footprint_cells:
+				_expect(_cell(layer, cell) == original[cell], "The separately painted map remains unchanged.")
+		for marker_name: String in ["ToBeClean2", "ToBeClean3", "ToBeClean4"]:
+			_expect(authored.get_node("YSortWorld/" + marker_name).visible,
+				"Other authored markers remain visible.")
 		_expect(CityStockManager.shelter_capacity == before_shelter and Inventory.items == before_inventory,
 			"Presentation refresh does not grant shelter or consume items.")
 	state.set("phase", "empty")
@@ -77,7 +92,7 @@ func _run() -> void:
 	binding.queue_free()
 	await get_tree().process_frame
 	_expect(marker.visible and house.get_node("SiteHouse").visible and _snapshot(layer) == original,
-		"Removing the binding restores the marker, old view, and complete authored tiles.")
+		"Removing the binding restores the marker, local house view, and complete authored tile layer.")
 	_expect(_snapshot(fresh.get_node("Ground/Setelah Cleaning")) == original
 		and FileAccess.get_sha256(AUTHOR_PATH) == original_hash,
 		"The source map remains byte-for-byte unchanged.")
@@ -88,12 +103,28 @@ func _run() -> void:
 	get_tree().quit(0 if failures == 0 else 1)
 
 
+func _cells_around_marker(layer: TileMapLayer, marker_position: Vector2) -> Array[Vector2i]:
+	var center: Vector2i = layer.local_to_map(layer.to_local(marker_position))
+	var cells: Array[Vector2i] = []
+	for y: int in range(center.y - 1, center.y + 2):
+		for x: int in range(center.x - 1, center.x + 2):
+			cells.append(Vector2i(x, y))
+	return cells
+
+
 func _cell(layer: TileMapLayer, cell: Vector2i) -> Array:
 	return [layer.get_cell_source_id(cell), layer.get_cell_atlas_coords(cell), layer.get_cell_alternative_tile(cell)]
 
 
+func _snapshot_cells(layer: TileMapLayer, cells: Array[Vector2i]) -> Dictionary:
+	var result := {}
+	for cell: Vector2i in cells:
+		result[cell] = _cell(layer, cell)
+	return result
+
+
 func _snapshot(layer: TileMapLayer) -> Dictionary:
 	var result := {}
-	for cell in layer.get_used_cells():
+	for cell: Vector2i in layer.get_used_cells():
 		result[cell] = _cell(layer, cell)
 	return result
