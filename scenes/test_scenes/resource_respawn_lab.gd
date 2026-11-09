@@ -186,7 +186,7 @@ func _finish_site(site_id: String, force_debug: bool) -> bool:
 	var target_offset := Vector2.INF
 	var is_wood: bool = work.sites[id].item_id == "wood_log"
 	if is_wood:
-		if work._wood_regrowth_clear(marker):
+		if work._site_regrowth_clear(marker):
 			target_offset = current_offset
 	else:
 		# Other resources retain the explicit temporary placement policy.

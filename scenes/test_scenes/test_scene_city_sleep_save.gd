@@ -9,6 +9,10 @@ const LEGACY_STOCKPILES: Script = preload("res://scenes/content_scene/worksites/
 var mode: String = "roundtrip"
 
 func _run() -> void:
+	if not _isolated_profile_is_safe():
+		_expect(false, "Sleep fixture requires an isolated sibling citysave_suite_qa profile before any checkpoint operations.")
+		get_tree().quit(1)
+		return
 	_snapshot_globals()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -19,9 +23,20 @@ func _run() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--sleep-save-phase="):
 			mode = argument.trim_prefix("--sleep-save-phase=")
+	if mode not in ["roundtrip", "write", "read"]:
+		_expect(false, "Choose a roundtrip, write, or read sleep fixture phase.")
+		get_tree().quit(1)
+		return
 	if mode == "read":
+		_expect(FileAccess.file_exists(SLEEP_SAVE_PATH), "A fresh-process sleep reader requires its isolated writer checkpoint.")
+		if failures > 0:
+			_finish_sleep_test()
+			return
+		var files_before_read: Dictionary = _sleep_checkpoint_files()
 		await _load_home_checkpoint()
 		await _verify_return_to_city()
+		_expect(_sleep_checkpoint_files() == files_before_read,
+			"Fresh-process sleep Continue and return to city preserve the exact checkpoint and recovery siblings.")
 		_finish_sleep_test()
 		return
 	_clean_files()
@@ -81,9 +96,13 @@ func _run() -> void:
 	drop.quantity = 4
 	drop.position = Vector2(-210, -260)
 	content.get_node("YSortWorld").add_child(drop)
-	# One tree refills during sleep; five retain distinct pending timers/slots.
+	# These six legacy views are intentionally disabled in the authored scene.
+	# Seed their retained ledgers directly: one refills during sleep and five
+	# retain distinct pending timers/slots. This is not an interactive harvest.
 	for index: int in range(6):
 		var palm: Node = content.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))
+		_expect(not palm.world_view_enabled and palm._pickups.is_empty(),
+			"Sleep fixture preserves the hidden legacy palm view: " + str(palm.name))
 		palm.state._rng.seed = 2000 + index
 		palm.state.collect(index % 3)
 		palm.state.remaining_minutes = 10 if index == 0 else 1000 - index * 17
@@ -306,6 +325,7 @@ func _verify_return_to_city() -> void:
 		return
 	var before: Dictionary = store.snapshot._sites.capture(store.parked_worksite)
 	var palms_before: Dictionary = store.snapshot._sources.capture()
+	var inventory_before_return: Dictionary = Inventory.items.duplicate(true)
 	var person: Player = home.get_node("YSortWorld/Player")
 	home.get_node("YSortWorld/ExitDoor")._on_body_entered(person)
 	if not await _wait_scene("res://scenes/content_scene/content_scene.tscn"):
@@ -329,14 +349,16 @@ func _verify_return_to_city() -> void:
 		"Wood balances to %d across City Storage %d, Daily ground %d, legacy ground %d, site %d, and cargo %d."
 		% [expected_wood, city_wood, daily_ground_wood, legacy_ground_wood, site_wood, cargo_wood])
 	_expect(store.snapshot._sources.capture() == palms_before, "Home/city transition preserves every palm slot, timer and RNG.")
-	var view_count: int = 0
 	for index: int in range(6):
 		var palm: Node = content.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))
 		var slots: Array = palms_before[str(palm.state.name)].available
-		view_count += slots.count(true)
-		for slot: int in range(slots.size()):
-			_expect(palm._pickups.has(slot) == slots[slot], "City return recreates only the saved available slot for " + str(palm.name))
-	_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == view_count, "Home/city return creates no extra palm views or personal drops.")
+		_expect(palm.state.available == slots,
+			"City return retains the exact hidden palm slot ledger: " + str(palm.name))
+		_expect(not palm.world_view_enabled and palm._pickups.is_empty(),
+			"City return does not project pickup views for a disabled legacy palm: " + str(palm.name))
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty()
+		and Inventory.items == inventory_before_return,
+		"Home/city return creates no legacy palm views and grants no inventory items.")
 	var drops: Array = store.snapshot._capture_city_drops(content)
 	_expect(drops.size() == 1 and drops[0].item_id == "clay_lump" and drops[0].quantity == 4, "Dropped player items survive the trip home exactly once.")
 	ui.open_details()
@@ -402,8 +424,17 @@ func _clean_files() -> void:
 		if FileAccess.file_exists(SLEEP_SAVE_PATH + suffix):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(SLEEP_SAVE_PATH + suffix))
 
+func _sleep_checkpoint_files() -> Dictionary:
+	var result: Dictionary = {}
+	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
+		var path: String = SLEEP_SAVE_PATH + suffix
+		result[suffix] = FileAccess.get_file_as_bytes(path) if FileAccess.file_exists(path) else null
+	return result
+
 func _finish_sleep_test() -> void:
-	if mode != "write":
+	# Fresh-process readers keep the writer's synthetic files for byte checks
+	# and a second independent reader. Roundtrip owns its disposable cleanup.
+	if mode == "roundtrip":
 		_clean_files()
 	print("CitySleepSaveTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)

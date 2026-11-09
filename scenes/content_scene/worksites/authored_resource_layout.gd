@@ -4,28 +4,24 @@ extends RefCounted
 ## authored city map. Validation is completed for the full map before a node is
 ## moved or hidden, so a stale or malformed mapping cannot leave a partial map.
 
-const EXPECTED_LAYOUT: Dictionary = {
-	"WoodSite": {"item": "wood_log", "source": "Poplar", "source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
-	"WoodSiteB": {"item": "wood_log", "source": "Poplar2", "source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
-	"WoodSiteC": {"item": "wood_log", "source": "Poplar3", "source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
-	"WoodSiteD": {"item": "wood_log", "source": "Poplar4", "source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
-	"WoodSiteE": {"item": "wood_log", "source": "Poplar5", "source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
-	"ClaySiteA": {"item": "clay_lump", "source": "ClaySite", "source_texture": "res://assets/objects/worksites/clay_site.png", "icon_texture": "res://assets/objects/worksites/clay_site.png", "kind": "center"},
-	"ClaySiteB": {"item": "clay_lump", "source": "ClaySite2", "source_texture": "res://assets/objects/worksites/clay_site.png", "icon_texture": "res://assets/objects/worksites/clay_site.png", "kind": "center"},
-	"ReedSite": {"item": "reed_bundle", "source": "ReedSite", "source_texture": "res://assets/objects/worksites/reed_site.png", "icon_texture": "res://assets/objects/worksites/reed_site.png", "kind": "center"},
+# Resource art contracts, not a list of instances. Persistent site IDs remain
+# the runtime Marker2D names; authored sprite names/paths are editor references.
+# A new resource kind still needs an explicit art contract and gameplay review.
+const RESOURCE_PROFILES: Dictionary = {
+	"wood_log": {"source_texture": "res://assets/objects/nature/trees/poplar.png", "icon_texture": "res://assets/items/wood_log.png", "kind": "feet"},
+	"clay_lump": {"source_texture": "res://assets/objects/worksites/clay_site.png", "icon_texture": "res://assets/objects/worksites/clay_site.png", "kind": "center"},
+	"reed_bundle": {"source_texture": "res://assets/objects/worksites/reed_site.png", "icon_texture": "res://assets/objects/worksites/reed_site.png", "kind": "center"},
+}
+# Historical IDs already used in checkpoints cannot be repurposed as another
+# resource type merely by changing a marker's configuration.
+const PERSISTED_SITE_ITEMS: Dictionary = {
+	"WoodSite": "wood_log", "WoodSiteB": "wood_log", "WoodSiteC": "wood_log",
+	"WoodSiteD": "wood_log", "WoodSiteE": "wood_log",
+	"ClaySiteA": "clay_lump", "ClaySiteB": "clay_lump",
+	"ReedSite": "reed_bundle", "ReedSiteB": "reed_bundle",
+	"StrawSite": "straw_bundle", "WaterSite": "water_jar",
 }
 const WORKSITE_SESSION: Script = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_session.gd")
-
-const EXPECTED_RELATIVE_PATHS: Dictionary = {
-	"WoodSite": "../../AuthoredMap/YSortWorld/Poplar",
-	"WoodSiteB": "../../AuthoredMap/YSortWorld/Poplar2",
-	"WoodSiteC": "../../AuthoredMap/YSortWorld/Poplar3",
-	"WoodSiteD": "../../AuthoredMap/YSortWorld/Poplar4",
-	"WoodSiteE": "../../AuthoredMap/YSortWorld/Poplar5",
-	"ClaySiteA": "../../AuthoredMap/YSortWorld/ClaySite",
-	"ClaySiteB": "../../AuthoredMap/YSortWorld/ClaySite2",
-	"ReedSite": "../../AuthoredMap/YSortWorld/ReedSite",
-}
 
 
 ## Returns {"ok": true, "bindings": [...], "world_ref": WeakRef, "map_ref": WeakRef}
@@ -36,54 +32,56 @@ static func bind(worksites: Node2D, authored_resource_paths: Dictionary) -> Dict
 	var markers: Node = worksites.get_node_or_null("WorksiteMarkers") if is_instance_valid(worksites) else null
 	if markers == null:
 		return _failure("WorksiteMarkers is missing.")
-	if authored_resource_paths.size() != EXPECTED_LAYOUT.size():
-		return _failure("The authored resource map must bind exactly eight resource sites.")
+	var authored_world: Node2D = worksites.get_node_or_null("../../AuthoredMap/YSortWorld") as Node2D
+	if authored_world == null:
+		return _failure("The authored YSortWorld is missing.")
+	var map_root: Node = authored_world.get_parent().get_parent()
+	var catalog: Dictionary = {}
+	for marker: Node in markers.get_children():
+		var site_id: String = str(marker.name)
+		if not marker is Marker2D or not _valid_site_id(site_id) or catalog.has(site_id):
+			return _failure("The runtime resource site ID or marker is invalid: " + site_id)
+		var session = WORKSITE_SESSION.new()
+		if marker.has_method("configure_session"):
+			marker.configure_session(session)
+		if PERSISTED_SITE_ITEMS.has(site_id) and str(session.item_id) != str(PERSISTED_SITE_ITEMS[site_id]):
+			return _failure("The existing runtime site has the wrong resource type: " + site_id)
+		if RESOURCE_PROFILES.has(str(session.item_id)):
+			catalog[site_id] = RESOURCE_PROFILES[str(session.item_id)]
+	if authored_resource_paths.size() != catalog.size():
+		return _failure("The authored resource map must bind every configured wood, clay, and reed site exactly once.")
 
+	var mapped_sites: Dictionary = {}
 	var path_keys: Dictionary = {}
 	var node_ids: Dictionary = {}
 	var plan: Array[Dictionary] = []
-	var authored_world: Node2D
-	var map_root: Node
 	for raw_site_id: Variant in authored_resource_paths:
 		if typeof(raw_site_id) != TYPE_STRING and typeof(raw_site_id) != TYPE_STRING_NAME:
 			return _failure("A resource mapping key is not a site ID.")
 		var site_id: String = str(raw_site_id)
-		if not EXPECTED_LAYOUT.has(site_id) or not EXPECTED_RELATIVE_PATHS.has(site_id):
-			return _failure("Unexpected authored resource site: " + site_id)
+		if not catalog.has(site_id) or mapped_sites.has(site_id):
+			return _failure("Unexpected or duplicated authored resource site: " + site_id)
+		mapped_sites[site_id] = true
 		var raw_path: Variant = authored_resource_paths[raw_site_id]
 		if typeof(raw_path) not in [TYPE_NODE_PATH, TYPE_STRING]:
 			return _failure("The authored path is invalid for " + site_id)
 		var path_text: String = str(raw_path)
-		if path_text != str(EXPECTED_RELATIVE_PATHS[site_id]) or path_keys.has(path_text):
-			return _failure("The authored path is unsupported or duplicated for " + site_id)
+		var source_path := NodePath(path_text)
+		if source_path.is_empty() or source_path.is_absolute() or source_path.get_subname_count() != 0 or path_keys.has(path_text):
+			return _failure("The authored path is invalid or duplicated for " + site_id)
 		path_keys[path_text] = true
-		var authored: Node = worksites.get_node_or_null(NodePath(path_text))
+		var authored: Node = worksites.get_node_or_null(source_path)
 		if not authored is Sprite2D:
 			return _failure("The authored target is not a Sprite2D: " + site_id)
 		var source: Sprite2D = authored as Sprite2D
-		var spec: Dictionary = EXPECTED_LAYOUT[site_id]
-		if source.name != str(spec.source):
-			return _failure("The authored resource node is not the expected node: " + site_id)
+		var spec: Dictionary = catalog[site_id]
+		if not authored_world.is_ancestor_of(source) or not _shares_world_canvas(source, authored_world):
+			return _failure("The resource sprite must remain within the authored YSortWorld canvas: " + site_id)
 		if node_ids.has(source.get_instance_id()):
 			return _failure("An authored Sprite2D is mapped more than once.")
 		node_ids[source.get_instance_id()] = true
-		if authored_world == null:
-			authored_world = source.get_parent() as Node2D
-			if authored_world == null or authored_world.name != "YSortWorld":
-				return _failure("The resource sprites are not inside the authored YSortWorld.")
-			var authored_map: Node = authored_world.get_parent()
-			map_root = authored_map.get_parent() if authored_map != null else null
-		if source.get_parent() != authored_world:
-			return _failure("Authored resource sprites must share one YSortWorld.")
 
 		var site: Node2D = markers.get_node_or_null(NodePath(site_id)) as Node2D
-		if site == null:
-			return _failure("The runtime site is missing or has the wrong item: " + site_id)
-		var site_session = WORKSITE_SESSION.new()
-		if site.has_method("configure_session"):
-			site.configure_session(site_session)
-		if str(site_session.item_id) != str(spec.item):
-			return _failure("The runtime site is missing or has the wrong item: " + site_id)
 		var icon: Sprite2D = site.get_node_or_null("ResourceIcon") as Sprite2D
 		if icon == null:
 			return _failure("The runtime ResourceIcon is missing: " + site_id)
@@ -156,6 +154,22 @@ static func restore(binding: Dictionary) -> void:
 		var source: Sprite2D = record.source_ref.get_ref() as Sprite2D
 		if is_instance_valid(source):
 			source.visible = bool(record.original_visible)
+
+
+static func _valid_site_id(site_id: String) -> bool:
+	# Match the save adapter's ID alphabet. Never derive identity from tree order,
+	# coordinates, display names, or an authored sprite's hierarchy.
+	return not site_id.is_empty() and site_id.length() <= 128 \
+		and ("id_" + site_id.replace("-", "_")).is_valid_identifier()
+
+
+static func _shares_world_canvas(source: Sprite2D, authored_world: Node2D) -> bool:
+	var ancestor: Node = source.get_parent()
+	while ancestor != authored_world:
+		if ancestor == null or ancestor is CanvasLayer or ancestor is Viewport:
+			return false
+		ancestor = ancestor.get_parent()
+	return true
 
 
 static func _failure(message: String) -> Dictionary:

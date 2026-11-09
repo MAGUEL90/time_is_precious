@@ -142,8 +142,8 @@ func _new_citizen(id: String, display_name: String) -> CitizenData:
 
 
 func _add_test_citizens() -> void:
-	primary_citizen = _new_citizen(primary_id, "Inspection Resident")
-	removal_citizen = _new_citizen(removal_id, "Resident To Remove")
+	primary_citizen = _new_citizen(primary_id, "Naram")
+	removal_citizen = _new_citizen(removal_id, "Lugal")
 	CitizenManager.add_citizen(primary_citizen)
 	CitizenManager.add_citizen(removal_citizen)
 	await _frames(2)
@@ -232,8 +232,8 @@ func _need_matches(need: String, value: Variant) -> bool:
 	var texture: AtlasTexture = icon.texture as AtlasTexture
 	return card.get_node("Label").text == need and icon.visible == met and label.visible == not met \
 		and label.text == text and card.accessibility_name == need + ": " + text \
-		and card.tooltip_text == need + ": " + text and card.get_node("Icon").tooltip_text == need + ": " + text \
-		and card.get_node("Status").tooltip_text == need + ": " + text and icon.accessibility_name == need + ": " + text \
+		and card.tooltip_text.is_empty() and card.get_node("Icon").tooltip_text.is_empty() \
+		and card.get_node("Status").tooltip_text.is_empty() and icon.accessibility_name == need + ": " + text \
 		and texture != null and texture.region == Rect2(84, 68, 8, 8) \
 		and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
 
@@ -397,9 +397,9 @@ func _test_panel_pixel_layout() -> void:
 	var refresh_timer: Timer = panel.get_node("RefreshTimer") as Timer
 	refresh_timer.stop()
 	var name_label: Label = _name_label()
-	_expect(name_label.tooltip_text == primary_citizen.display_name,
-		"The complete citizen name remains available in the tooltip.")
-	name_label.text = "A longer resident display name"
+	_expect(name_label.tooltip_text.is_empty() and name_label.accessibility_name == primary_citizen.display_name,
+		"The complete citizen name remains available to accessibility without a tooltip.")
+	name_label.text = "Naram Lugal Ashur Nabu"
 	var food: Label = _daily_label("DailyNeedsRow/FoodStatus/Label")
 	var clothing: Label = _daily_label("DailyNeedsRow/ClothingStatus/Label")
 	var shelter: Label = _daily_label("DailyNeedsRow/ShelterStatus/Label")

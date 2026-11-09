@@ -107,6 +107,41 @@ func _run() -> void:
 		next_expected.store_string(JSON.stringify({"offset_x": new_offset.x, "offset_y": new_offset.y,
 			"target_x": worker.physical_approach.target.x, "target_y": worker.physical_approach.target.y}))
 		next_expected.close()
+	elif phase == "wood_guard":
+		lab._on_site_selected("WoodSite")
+		var marker: Node2D = lab.work.get_node("WorksiteMarkers/WoodSite") as Node2D
+		var old_position: Vector2 = marker.global_position
+		var player: Player = lab.city.get_node("YSortWorld/Player") as Player
+		var plan = lab.plans.WoodSite
+		_check(lab._deplete_selected(), "The Wood test deposit can be emptied.")
+		await _frames()
+		var due: int = plan.get_respawn_due_minute()
+		var clock_before: int = lab.work.daily.now()
+		var base: CollisionPolygon2D = marker.get_node("ResourceBase/CollisionPolygon2D") as CollisionPolygon2D
+		var centroid := Vector2.ZERO
+		for point: Vector2 in base.polygon:
+			centroid += base.to_global(point)
+		centroid /= float(base.polygon.size())
+		player.set_physics_process(false)
+		player.global_position = centroid + Vector2(0, 4)
+		await _frames()
+		_check(not lab.work._site_regrowth_clear(marker), "The occupied Wood base is not clear.")
+		_check(not lab._finish_selected(), "The lab refuses to finish while the player occupies the Wood base.")
+		_check(plan.is_respawn_pending() and plan.get_respawn_due_minute() == due
+			and int(lab.work.sites[&"WoodSite"].stock) == 0 and marker.global_position == old_position,
+			"Blocked Wood retains its timer, empty reserve and location.")
+		_check(marker.get_node("WoodGrove/Stump0").visible and not marker.get_node("ReadyParticles").emitting,
+			"Blocked Wood remains depleted in the lab.")
+		player.global_position = marker.global_position + Vector2(200, 200)
+		await _frames()
+		_check(lab.work._site_regrowth_clear(marker), "The Wood base is clear after the player leaves.")
+		_check(lab._finish_selected(), "The same pending Wood timer can finish when clear.")
+		await _frames()
+		_check(not plan.is_respawn_pending() and int(lab.work.sites[&"WoodSite"].stock) == lab.TEST_CAPACITY
+			and marker.global_position == old_position, "Clear Wood regrows in place with its lab reserve.")
+		_check(marker.get_node("WoodGrove/Tree0").visible and not marker.get_node("WoodGrove/Stump0").visible
+			and marker.get_node("ReadyParticles").emitting, "Clear Wood restores its ready art and particles.")
+		_check(lab.work.daily.now() == clock_before, "Finishing the debug timer does not advance the game clock.")
 	elif phase == "types":
 		for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "WaterSite"]:
 			lab._on_site_selected(site_id)

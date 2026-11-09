@@ -49,6 +49,16 @@ func _run() -> void:
 	_expect(central.allocate("initial_worksite_cart", worker_id), "Equip the city's existing cart.")
 	_expect(central.try_add_worksite_output(ITEM_ID, 6), "Seed six city-owned logs through the worksite receipt.")
 	_place_fixture_clock(courier.payroll_paid_until_day, 14, 55)
+	# This fixture isolates payroll expiry, not resignation. Its direct clock
+	# jump predates gradual needs; seed a positive linked-citizen value and its
+	# integration cursor so the overnight wait cannot trigger departure.
+	var linked_citizen: CitizenData = courier.get_linked_citizen()
+	_expect(linked_citizen != null and not courier.resignation_pending, "The courier has a present, non-resigning linked citizen.")
+	if stopped:
+		return
+	linked_citizen.satisfaction = 1.0
+	courier.satisfaction = 1.0
+	CitizenNeedsManager.satisfaction_last_minute[worker_id] = now()
 	var expiry: int = courier.get_paid_end_minute()
 	_expect(expiry == (TimeComponentManager.current_day + 1) * 1440 + 7 * 60 and not courier.is_payroll_blocked(), "The normal contract expires at the next 07:00 boundary.")
 	_expect(transport.start(worker_id, "city", ITEM_ID, 3), "A paid courier picks up a three-log shipment.")
@@ -72,7 +82,7 @@ func _run() -> void:
 		return
 	_block_ahead(original, resumed, target)
 	_expect(TimeComponentManager.advance_minutes(expiry - now() + 3), "Hold the load through the real contract expiry.")
-	_expect(courier.is_payroll_blocked() and not transport.route.is_empty() and int(transport.route.quantity) == 3 and _city_total() == 6, "Expiry keeps all cargo reserved and conserves the city stock.")
+	_expect(courier.is_payroll_blocked() and not courier.resignation_pending and not bool(transport.route.get("resigning", false)) and courier.get_resolved_satisfaction() > 0.0 and not transport.route.is_empty() and int(transport.route.quantity) == 3 and _city_total() == 6, "Expiry without resignation keeps all cargo reserved and conserves the city stock.")
 	var expired_position: Vector2 = Vector2(transport.get_visual(float(now())).position)
 	navigation.replace_polygons(original)
 	_expect(TimeComponentManager.advance_minutes(3), "Advance with a clear route but an expired contract.")

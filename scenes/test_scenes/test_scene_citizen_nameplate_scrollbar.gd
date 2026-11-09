@@ -10,6 +10,7 @@ const NAMEPLATE_TEXTURE: Texture2D = preload(
 	"res://assets/ui/ui_panel/panel_name.png"
 )
 const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
+const WORKER_CONTROL: Script = preload("res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd")
 const VERTICAL_SCROLLBAR_TEXTURE: Texture2D = preload(
 	"res://assets/ui/ui_icon/vertical_scrollbar.png"
 )
@@ -27,6 +28,7 @@ var _panel: CanvasLayer
 var _summary: Dictionary = {}
 var _closed_count: int = 0
 var _capture_directory: String = ""
+var _widest_default_name: String = ""
 
 
 func _ready() -> void:
@@ -43,11 +45,13 @@ func _ready() -> void:
 	await get_tree().process_frame
 
 	_test_satisfaction_helper_thresholds()
+	_test_worker_control_satisfaction_boundaries()
 	_panel.visible = true
 	await _test_nameplate_style()
 	await _test_shared_vertical_scrollbar_style()
 	await _test_open_close_and_long_name()
-	_test_satisfaction_display()
+	await _test_default_name_samples()
+	await _test_satisfaction_display()
 
 	if failures == 0:
 		print("CitizenNameplateScrollbarTest PASSED")
@@ -60,32 +64,25 @@ func _test_nameplate_style() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var name_label: Label = _panel.get_node(NAME_LABEL_PATH) as Label
-	var name_style: StyleBoxTexture = name_label.get_theme_stylebox("normal") as StyleBoxTexture
+	var name_plate: TextureRect = name_label.get_node("NamePlate") as TextureRect
 	_expect(name_label.get_theme_font_size("font_size") == 6,
 		"The citizen name uses the requested six-pixel font with its nameplate.")
-	_expect(name_label.size.is_equal_approx(Vector2(54.0, 11.0)),
-		"The nameplate remains at its supplied texture's native 54×11 size.")
-	_expect(is_instance_valid(name_style) and name_style.texture == NAMEPLATE_TEXTURE,
-		"The existing citizen name Label renders the supplied nameplate texture as its normal style.")
-	if is_instance_valid(name_style):
-		var name_font: Font = name_label.get_theme_font("font")
-		var font_height: float = name_font.get_height(name_label.get_theme_font_size("font_size"))
-		var available_text_width: float = name_label.size.x - name_style.content_margin_left - name_style.content_margin_right
-		var ada_width: float = name_font.get_string_size("Ada", HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x
-		var citizen_width: float = name_font.get_string_size("Citizen", HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x
-		_expect(name_style.texture_margin_left > 0.0 and name_style.texture_margin_right > 0.0
-			and name_style.texture_margin_top > 0.0 and name_style.texture_margin_bottom > 0.0
-			and name_style.content_margin_left == 6.0 and name_style.content_margin_right == 6.0
-			and name_style.content_margin_top == 2.0 and name_style.content_margin_bottom == 2.0,
-			"The nameplate preserves its pill-shaped edges with nine-patch margins.")
-		_expect(font_height <= 7.0 and ada_width <= available_text_width and citizen_width <= available_text_width,
-			"Six-pixel font metrics fit the short names inside the plate's 42 px text width and 7 px text height.")
-		print("Nameplate metrics: 54x11 panel, 42 px text width, font6 height=%.2f, Ada=%.2f, Citizen=%.2f px" % [
-			font_height,
-			ada_width,
-			citizen_width
-		])
-		_test_default_name_widths(name_font, available_text_width)
+	_expect(name_label.size.is_equal_approx(Vector2(42.0, 11.0))
+		and name_plate.size.is_equal_approx(Vector2(54.0, 11.0)),
+		"The label has 42 px of text room and the supplied nameplate stays at native 54x11 size.")
+	_expect(name_plate.texture == NAMEPLATE_TEXTURE and name_plate.show_behind_parent
+		and name_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER
+		and name_label.vertical_alignment == VERTICAL_ALIGNMENT_CENTER,
+		"The supplied plate is behind the center-aligned existing name Label.")
+	var name_font: Font = name_label.get_theme_font("font")
+	var font_height: float = name_font.get_height(name_label.get_theme_font_size("font_size"))
+	var available_text_width: float = name_label.size.x
+	var ada_width: float = name_font.get_string_size("Ada", HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x
+	var citizen_width: float = name_font.get_string_size("Citizen", HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x
+	_expect(font_height <= 7.0 and ada_width <= available_text_width and citizen_width <= available_text_width,
+		"Six-pixel font metrics fit short names inside the plate's 42 px text width.")
+	print("Nameplate metrics: 54x11 panel, 42 px text width, font6 height=%.2f, Ada=%.2f, Citizen=%.2f px" % [font_height, ada_width, citizen_width])
+	_test_default_name_widths(name_font, available_text_width)
 
 
 func _test_default_name_widths(name_font: Font, available_text_width: float) -> void:
@@ -108,11 +105,83 @@ func _test_default_name_widths(name_font: Font, available_text_width: float) -> 
 		if width > widest_name_width:
 			widest_name = name
 			widest_name_width = width
+	_widest_default_name = widest_name
 	print("Default citizen names at 6 px: widest '%s' measures %.2f/%.2f px" % [
 		widest_name,
 		widest_name_width,
 		available_text_width
 	])
+
+
+func _test_default_name_samples() -> void:
+	var names: Array[String] = [_widest_default_name]
+	names.append_array(INITIAL_WORKSITE_NAMES)
+	for index: int in range(names.size()):
+		_summary = {"name": names[index], "evaluated": true, "satisfaction": 0.24}
+		_panel.call("open_for", "default-name-sample")
+		await get_tree().process_frame
+		var name_label: Label = _panel.get_node(NAME_LABEL_PATH) as Label
+		_expect(name_label.text == names[index], "The actual nameplate shows its generated/starter name sample.")
+		await _capture_at_window_sizes("citizen-default-name-%d" % index, name_label)
+		await _assert_name_ink_center(name_label)
+		await _assert_nameplate_art_visible(name_label)
+	_panel.call("close")
+
+
+func _assert_name_ink_center(name_label: Label) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var image: Image = get_viewport().get_texture().get_image()
+	var rect: Rect2 = (name_label.get_node("NamePlate") as TextureRect).get_global_rect()
+	var min_x: int = image.get_width()
+	var max_x: int = -1
+	for y: int in range(maxi(0, floori(rect.position.y)), mini(image.get_height(), ceili(rect.end.y))):
+		for x: int in range(maxi(0, floori(rect.position.x)), mini(image.get_width(), ceili(rect.end.x))):
+			var pixel: Color = image.get_pixel(x, y)
+			if pixel.r >= 0.94 and pixel.g >= 0.94 and pixel.b >= 0.94 and pixel.a >= 0.9:
+				min_x = mini(min_x, x)
+				max_x = maxi(max_x, x)
+	_expect(max_x >= min_x, "Rendered default name has visible text pixels on the nameplate.")
+	if max_x >= min_x:
+		var ink_center: float = float(min_x + max_x + 1) / 2.0
+		_expect(absf(ink_center - rect.get_center().x) <= 0.5,
+			"Rendered name '%s' is optically centered within half a logical pixel." % name_label.text)
+
+
+func _assert_nameplate_art_visible(name_label: Label) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var image: Image = get_viewport().get_texture().get_image()
+	var plate: TextureRect = name_label.get_node("NamePlate") as TextureRect
+	var source: Image = NAMEPLATE_TEXTURE.get_image()
+	var plate_position: Vector2 = plate.get_global_rect().position
+	var origin: Vector2i = Vector2i(roundi(plate_position.x), roundi(plate_position.y))
+	for point: Vector2i in [Vector2i(0, 5), Vector2i(1, 5), Vector2i(52, 5), Vector2i(53, 5), Vector2i(4, 0), Vector2i(4, 10)]:
+		var actual: Color = image.get_pixelv(origin + point)
+		var expected: Color = source.get_pixelv(point)
+		_expect(actual.is_equal_approx(expected), "The supplied nameplate's outer pixels remain visible at native size.")
+
+
+func _assert_long_name_within_text_area(name_label: Label) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var image: Image = get_viewport().get_texture().get_image()
+	var label_rect: Rect2 = name_label.get_global_rect()
+	var plate_rect: Rect2 = (name_label.get_node("NamePlate") as TextureRect).get_global_rect()
+	var visible_ink: int = 0
+	var outside_ink: int = 0
+	for y: int in range(floori(plate_rect.position.y), ceili(plate_rect.end.y)):
+		for x: int in range(floori(plate_rect.position.x), ceili(plate_rect.end.x)):
+			var pixel: Color = image.get_pixel(x, y)
+			if pixel.r >= 0.94 and pixel.g >= 0.94 and pixel.b >= 0.94 and pixel.a >= 0.9:
+				visible_ink += 1
+				if not label_rect.has_point(Vector2(x, y)):
+					outside_ink += 1
+	_expect(visible_ink > 0 and outside_ink == 0,
+		"A long name is ellipsized within the 42 px text area without clipping the plate art.")
 
 
 func _test_shared_vertical_scrollbar_style() -> void:
@@ -223,16 +292,16 @@ func _test_shared_vertical_scrollbar_style() -> void:
 
 
 func _test_open_close_and_long_name() -> void:
-	_summary = {"name": "Ada", "evaluated": true, "satisfaction": 0.24}
+	_summary = {"name": "Nabu", "evaluated": true, "satisfaction": 0.24}
 	_panel.call("open_for", "resident-one")
 	await get_tree().process_frame
 	var name_label: Label = _panel.get_node(NAME_LABEL_PATH) as Label
 	_expect(_panel.visible and str(_panel.get("selected_id")) == "resident-one"
-		and name_label.text == "Ada",
+		and name_label.text == "Nabu",
 		"Opening the inspection panel selects the requested resident and updates the name.")
 	await _capture_at_window_sizes("citizen-name-short", name_label)
 
-	var long_name: String = "A Very Long Citizen Name That Must Stay Inside the Card"
+	var long_name: String = "Naram Lugal Ashur Nabu Enkiya Urani Dagan Tammuz Sinbel Iddin"
 	_summary["name"] = long_name
 	_panel.call("_refresh_view")
 	await get_tree().process_frame
@@ -244,13 +313,14 @@ func _test_open_close_and_long_name() -> void:
 		-1,
 		name_label.get_theme_font_size("font_size")
 	).x
-	_expect(name_label.text == long_name and name_label.clip_text and name_label.autowrap_mode == TextServer.AUTOWRAP_OFF
-		and name_label.text_overrun_behavior == 4 and long_name_width > name_label.size.x - 12.0
-		and name_label.size.is_equal_approx(Vector2(54.0, 11.0))
+	_expect(name_label.text == long_name and name_label.autowrap_mode == TextServer.AUTOWRAP_OFF
+		and name_label.text_overrun_behavior == 4 and long_name_width > name_label.size.x
+		and name_label.size.is_equal_approx(Vector2(42.0, 11.0))
 		and name_row.get_global_rect().encloses(name_label.get_global_rect())
 		and frame.get_global_rect().encloses(name_label.get_global_rect()),
 		"A long resident name remains clipped within its existing Label and card bounds.")
 	await _capture_at_window_sizes("citizen-name-long", name_label)
+	await _assert_long_name_within_text_area(name_label)
 
 	var refresh_timer: Timer = _panel.get_node("RefreshTimer") as Timer
 	var timer_connections: int = refresh_timer.get_signal_connection_list("timeout").size()
@@ -262,11 +332,11 @@ func _test_open_close_and_long_name() -> void:
 	_panel.call("close")
 	_expect(not _panel.visible and str(_panel.get("selected_id")).is_empty() and _closed_count == 1,
 		"Closing the citizen panel clears selection and emits one close signal.")
-	_summary["name"] = "Restored citizen"
+	_summary["name"] = "Ashur"
 	_panel.call("open_for", "resident-two")
 	await get_tree().process_frame
 	_expect(_panel.visible and str(_panel.get("selected_id")) == "resident-two"
-		and name_label.text == "Restored citizen" and not refresh_timer.is_stopped(),
+		and name_label.text == "Ashur" and not refresh_timer.is_stopped(),
 		"The panel reopens for another resident with fresh content and its timer running.")
 	_panel.call("close")
 	_expect(_closed_count == 2,
@@ -278,6 +348,15 @@ func _test_satisfaction_display() -> void:
 	var satisfaction_bar: TextureProgressBar = _panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/SatisfactionBar") as TextureProgressBar
 	_summary["satisfaction"] = 0.001
 	_panel.call("open_for", "resident-satisfaction")
+	await get_tree().process_frame
+	var body: Control = satisfaction_bar.get_parent() as Control
+	_expect(satisfaction_bar.texture_under == load("res://assets/ui/ui_icon/empty_bar.png")
+		and satisfaction_bar.texture_progress == load("res://assets/ui/ui_icon/filled_bar.png")
+		and satisfaction_bar.tint_progress.is_equal_approx(Color.WHITE),
+		"Satisfaction uses the existing empty and filled bar art without a color tint.")
+	_expect(satisfaction_bar.size.is_equal_approx(Vector2(46.0, 7.0))
+		and absf(satisfaction_bar.get_global_rect().get_center().x - body.get_global_rect().get_center().x) <= 0.5,
+		"Satisfaction displays the supplied 46x7 bar centered at native size.")
 	_expect(satisfaction_label.text == "Actual satisfaction: 1%"
 		and is_equal_approx(satisfaction_bar.value, 0.1),
 		"A positive sub-one-percent value displays as 1% while its exact bar value is preserved.")
@@ -285,11 +364,18 @@ func _test_satisfaction_display() -> void:
 	_panel.call("_refresh_view")
 	_expect(satisfaction_label.text == "Actual satisfaction: 0%" and satisfaction_bar.value == 0.0,
 		"Zero satisfaction remains 0% with an empty bar.")
+	await _capture_window("citizen-satisfaction-0")
 	_summary["satisfaction"] = 0.24
 	_panel.call("_refresh_view")
 	_expect(satisfaction_label.text == "Actual satisfaction: 24%"
 		and is_equal_approx(satisfaction_bar.value, 24.0),
 		"Ordinary satisfaction percentages and their bar values remain unchanged.")
+	await _capture_window("citizen-satisfaction-24")
+	_summary["satisfaction"] = 1.0
+	_panel.call("_refresh_view")
+	_expect(satisfaction_label.text == "Actual satisfaction: 100%" and satisfaction_bar.value == 100.0,
+		"Full satisfaction displays a filled bar and 100%.")
+	await _capture_window("citizen-satisfaction-100")
 	_panel.call("close")
 
 
@@ -303,6 +389,16 @@ func _test_satisfaction_helper_thresholds() -> void:
 		and SATISFACTION_DISPLAY.to_percent(0.24) == 24
 		and SATISFACTION_DISPLAY.to_percent(1.0) == 100,
 		"The shared formatter keeps existing rounding at normal values and the one-percent boundary.")
+
+
+func _test_worker_control_satisfaction_boundaries() -> void:
+	var control: Node = WORKER_CONTROL.new()
+	for sample: Array in [[0.0, 0], [0.000001, 1], [0.0049, 1], [0.0099, 1], [0.01, 1], [0.015, 2], [1.0, 100]]:
+		var needs: Dictionary = {"satisfaction": sample[0], "evaluated": true, "satisfaction_delta": -0.015}
+		var actual: String = control.call("_format_satisfaction_text", needs)
+		_expect(actual == "Satisfaction: %d%% current (check -2%%)" % int(sample[1]),
+			"Worker details show the correct current satisfaction without changing daily delta rounding.")
+	control.free()
 
 
 func _capture_at_window_sizes(prefix: String, name_label: Label) -> void:
@@ -323,6 +419,7 @@ func _assert_margin_bounds(name_label: Label) -> void:
 	var contents: Control = _panel.get_node("Root/Frame/Margin/Contents") as Control
 	var contents_rect: Rect2 = contents.get_global_rect()
 	var name_row: Control = name_label.get_parent() as Control
+	var name_plate: TextureRect = name_label.get_node("NamePlate") as TextureRect
 	var close_button: Control = _panel.get_node("Root/Frame/Margin/Contents/NameRow/CloseButton") as Control
 	var body_scroll: ScrollContainer = _panel.get_node(BODY_SCROLL_PATH) as ScrollContainer
 	var scrollbar: VScrollBar = body_scroll.get_v_scroll_bar()
@@ -342,9 +439,13 @@ func _assert_margin_bounds(name_label: Label) -> void:
 		"The frame keeps its measured 14 px side and 9 px vertical content margins.")
 	_expect(frame_rect.encloses(name_row.get_global_rect())
 		and name_row.get_global_rect().encloses(name_label.get_global_rect())
-		and name_label.size.is_equal_approx(Vector2(54.0, 11.0))
+		and name_label.size.is_equal_approx(Vector2(42.0, 11.0))
+		and name_plate.size.is_equal_approx(Vector2(54.0, 11.0))
+		and name_row.get_global_rect().encloses(name_plate.get_global_rect())
+		and name_plate.get_global_rect().encloses(name_label.get_global_rect())
+		and absf(name_plate.get_global_rect().get_center().x - frame_rect.get_center().x) <= 0.5
 		and name_row.get_global_rect().encloses(close_button.get_global_rect())
-		and not name_label.get_global_rect().intersects(close_button.get_global_rect())
+		and not name_plate.get_global_rect().intersects(close_button.get_global_rect())
 		and frame_rect.encloses(body_scroll.get_global_rect())
 		and contents_rect.encloses(body_scroll.get_global_rect())
 		and (not scrollbar.visible or body_scroll.get_global_rect().encloses(scrollbar.get_global_rect())),

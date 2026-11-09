@@ -5,6 +5,7 @@ extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 const WORKER_ID: String = "initial_city_storage_hauler"
 const ITEM_ID: String = "wood_log"
 const FIXTURE_DAY: int = 12
+const SATISFACTION_PER_MINUTE: float = 0.05 / 1440.0
 
 var transport: Node
 var central: Node
@@ -57,7 +58,7 @@ func _run() -> void:
 	CitizenNeedsManager.clothing_allocations.clear()
 	CitizenNeedsManager.last_needs_results.erase(WORKER_ID)
 
-	_place_fixture_clock(FIXTURE_DAY, 8, 0)
+	_place_fixture_clock(FIXTURE_DAY, 14, 54)
 	var applicant: CitizenData = CitizenManager.get_citizen(WORKER_ID)
 	var contract_price: int = WorkerDatabase.get_contract_price(applicant.profession, 3) if applicant != null else -1
 	var wallet_before: int = int(Inventory.items.get("shekel", 0))
@@ -87,15 +88,25 @@ func _run() -> void:
 		"The paid Hauler remains linked to the real resident citizen.")
 	if stopped:
 		return
-	citizen.satisfaction = 0.05
-	worker.satisfaction = 0.05
-	# Treat the fixture day as already evaluated, so only the explicit midnight
-	# transition below can produce the tested daily -0.05 settlement.
-	_place_fixture_clock(FIXTURE_DAY, 14, 54)
+	# The fixture day is already evaluated; its final unmet-need interval lands
+	# exactly on zero at midnight under the approved per-minute rate.
 	CitizenNeedsManager.last_processed_day = FIXTURE_DAY
 	CitizenNeedsManager.last_food_processed_day = FIXTURE_DAY
 	CitizenNeedsManager.last_clothing_processed_day = FIXTURE_DAY
+	CitizenNeedsManager.food_coverage_until.erase(WORKER_ID)
+	CitizenNeedsManager.clothing_allocations.erase(WORKER_ID)
 	CitizenNeedsManager.last_needs_results.erase(WORKER_ID)
+	citizen.food_fulfilled = false
+	citizen.clothing_fulfilled = false
+	citizen.shelter_fulfilled = false
+	worker.food_fulfilled = false
+	worker.clothing_fulfilled = false
+	worker.shelter_fulfilled = false
+	var minutes_until_midnight: int = 1440 - (now() % 1440)
+	var initial_satisfaction: float = float(minutes_until_midnight - 0.5) * SATISFACTION_PER_MINUTE
+	citizen.satisfaction = initial_satisfaction
+	worker.satisfaction = initial_satisfaction
+	CitizenNeedsManager.satisfaction_last_minute[WORKER_ID] = now()
 	_expect(transport.start(WORKER_ID, "city", ITEM_ID, 3),
 		"Start a real outbound three-log City Storage -> Annex shipment before shift end.")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 0
@@ -121,7 +132,6 @@ func _run() -> void:
 		return
 	var paid_until: int = worker.payroll_paid_until_day
 	var contract_days: int = worker.payroll_contract_days
-	var needs_before: int = needs_events
 	var conservation: Dictionary = {"ok": true, "observations": 0}
 	var observe_conservation := func() -> void:
 		conservation.observations = int(conservation.observations) + 1
@@ -136,8 +146,17 @@ func _run() -> void:
 	transport.resignation_ready.connect(_on_resignation_ready)
 
 	var minutes_to_midnight: int = 1440 - (now() % 1440)
-	_expect(TimeComponentManager.advance_minutes(minutes_to_midnight),
-		"Advance the obstructed loaded route through the explicit midnight boundary.")
+	_expect(TimeComponentManager.advance_minutes(minutes_to_midnight - 1),
+		"Advance the obstructed loaded route to 23:59 before the final midnight minute.")
+	await _frames(2)
+	_expect(now() == (FIXTURE_DAY + 1) * 1440 - 1 and citizen.satisfaction > 0.0
+		and WorkerDatabase.has_worker_data(WORKER_ID) and not worker.resignation_pending
+		and not bool(transport.route.get("resigning", false))
+		and int(transport.route.get("quantity", 0)) == 3 and annex_receipts == 0
+		and _city_total() == 3 and CitizenNeedsManager.last_processed_day == FIXTURE_DAY,
+		"At 23:59 the resident remains positive and active while all three loaded logs stay conserved.")
+	var needs_events_before_midnight: int = needs_events
+	_expect(TimeComponentManager.advance_minutes(1), "Advance the final minute into midnight needs settlement.")
 	await _frames(2)
 	_expect(now() == (FIXTURE_DAY + 1) * 1440,
 		"The clock crosses exactly from fixture day %d to day %d at 00:00." % [FIXTURE_DAY, FIXTURE_DAY + 1])
@@ -146,14 +165,14 @@ func _run() -> void:
 		and is_equal_approx(citizen.satisfaction, 0.0)
 		and bool(result.get("evaluated", false))
 		and int(result.get("day", -1)) == FIXTURE_DAY + 1
-		and is_equal_approx(float(result.get("satisfaction_delta", 99.0)), -0.05),
-		"Real midnight needs settlement lowers live Satisfaction from 0.05 to 0 and records daily -0.05.")
+		and is_equal_approx(float(result.get("satisfaction_delta", 99.0)), 0.0),
+		"The real midnight ledger records zero daily delta while the elapsed-minute interval reaches exact zero.")
 	_expect(not bool(result.get("food", true)) and not bool(result.get("clothing", true))
 		and not bool(result.get("shelter", true))
 		and result.get("missing", []).size() == 3,
 		"The resident has no food, clothing or shelter fulfillment for the tested day.")
-	_expect(needs_events == needs_before + 1,
-		"Exactly one daily needs event is emitted at the midnight settlement.")
+	_expect(needs_events == needs_events_before_midnight + 1,
+		"The midnight settlement emits exactly one daily needs event after the 23:59 snapshot.")
 	_expect(WorkerDatabase.has_worker_data(WORKER_ID) and worker.resignation_pending
 		and worker.is_reserved() and bool(transport.route.get("resigning", false))
 		and int(transport.route.get("quantity", 0)) == 3
@@ -170,7 +189,7 @@ func _run() -> void:
 	CitizenNeedsManager.process_daily_needs()
 	transport.tick(now())
 	transport.tick(now())
-	_expect(needs_events == needs_before + 1
+	_expect(needs_events == needs_events_before_midnight + 1
 		and CitizenNeedsManager.last_needs_results.get(WORKER_ID, {}) == settlement_snapshot
 		and is_equal_approx(citizen.satisfaction, 0.0)
 		and int(transport.route.get("quantity", 0)) == 3 and annex_receipts == 0
@@ -190,6 +209,7 @@ func _run() -> void:
 	_expect(resignation_ready_ids == [WORKER_ID]
 		and not WorkerDatabase.has_worker_data(WORKER_ID)
 		and WorkerDatabase.dismissed_workers.get(WORKER_ID) == worker
+		and citizen.population_status == CitizenData.PopulationStatus.LEFT_CITY
 		and citizen.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
 		and worker.payroll_contract_days == 0 and worker.payroll_start_day == -1
 		and not central.has_equipped(WORKER_ID, "cart"),

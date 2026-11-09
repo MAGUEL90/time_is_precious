@@ -4,6 +4,7 @@ extends Node
 const CITY = preload("res://scenes/content_scene/content_scene.tscn")
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
 const CLAY: StringName = &"ClaySiteA"
+const STRAW: StringName = &"StrawSite"
 const WORKER_ID: String = "initial_workshop_laborer"
 var failures: int = 0
 var city: Node2D
@@ -20,8 +21,7 @@ func check(value: bool, message: String) -> void:
 		push_error(message)
 
 func _run() -> void:
-	var data_root: String = OS.get_environment("XDG_DATA_HOME")
-	check(data_root.is_absolute_path() and ProjectSettings.globalize_path("user://").begins_with(data_root.trim_suffix("/") + "/"), "Use a disposable XDG_DATA_HOME.")
+	check(_isolated_profile_is_safe(), "Use distinct disposable XDG directories under the sibling citysave_suite_qa directory; no checkpoint operation is allowed otherwise.")
 	if failures:
 		get_tree().quit(1)
 		return
@@ -42,11 +42,29 @@ func _run() -> void:
 	var session = work.sites[CLAY]
 	var marker: Node2D = work.get_node("WorksiteMarkers/ClaySiteA")
 	var expected_caps: Dictionary = {"clay_lump": 36, "wood_log": 24, "reed_bundle": 40, "water_jar": 48, "straw_bundle": 72}
+	# The authored main map retires Straw from the world but keeps its save
+	# ledger. Do not let a runtime availability result define its own oracle.
+	check(work.disabled_world_sites == [STRAW] and work.sites.has(STRAW),
+		"The authored map disables only StrawSite and retains its compatibility ledger.")
 	for site_id: Variant in work.sites:
 		var deposit = work.sites[site_id]
 		check(deposit.finite_resource and deposit.stock == expected_caps[deposit.item_id], "Each deposit starts with its provisional testing reserve (legacy straw stays compatible).")
 		var ready_particles: CPUParticles2D = work.get_node("WorksiteMarkers/%s/ReadyParticles" % str(site_id)) as CPUParticles2D
-		check(ready_particles != null and ready_particles.visible and ready_particles.emitting, "%s starts ready with its particle cue." % str(site_id))
+		if StringName(site_id) != STRAW:
+			check(work.is_world_site_available(StringName(site_id)) and ready_particles != null
+				and ready_particles.visible and ready_particles.emitting,
+				"%s starts ready with its particle cue." % str(site_id))
+	_check_retained_straw_presentation("startup")
+	var straw_record: Dictionary = store.snapshot._sites.capture(work).sites[str(STRAW)].duplicate(true)
+	# A full reserve and a requested ready presentation must not re-enable a
+	# retired source or mutate its persisted stock/deadline/offset record.
+	work._set_site_depleted_presentation(STRAW, false)
+	work.sync_resource_presentation()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_retained_straw_presentation("ready refresh")
+	check(store.snapshot._sites.capture(work).sites[str(STRAW)] == straw_record,
+		"Refreshing retired Straw presentation preserves its complete saved site record.")
 	var reed_marker: Node2D = work.get_node("WorksiteMarkers/ReedSite")
 	var reed_icon: Sprite2D = reed_marker.get_node("ResourceIcon") as Sprite2D
 	var reed_cut: Sprite2D = reed_marker.get_node("CuttedReed") as Sprite2D
@@ -161,6 +179,7 @@ func _run() -> void:
 	if not waiting_loaded:
 		_finish()
 		return
+	_check_retained_straw_presentation("waiting checkpoint Continue")
 	check(not work._last_relocation_attempt.has(CLAY), "Continue discards retry attempts from the later timeline.")
 	check(TimeComponentManager.advance_minutes(due_at - work.daily.now() - 1), "Advance to the minute before the saved deadline.")
 	await get_tree().process_frame
@@ -216,6 +235,8 @@ func _run() -> void:
 	if not repeated_offset_loaded:
 		_finish()
 		return
+
+	_check_retained_straw_presentation("repeated checkpoint Continue")
 
 	# A v4 worksite snapshot predates the current authored-site catalog. This
 	# fixture intentionally lacks entries in the static legacy registry, so the
@@ -366,6 +387,75 @@ func _run() -> void:
 		var deposit = work.sites[site_id]
 		check(other_marker.position == old_positions[site_id] and deposit.stock == expected_caps[deposit.item_id], "%s refills its full reserve at the same fixed location." % site_id)
 		check(_authored_plot_relationship(other_marker) == initial_plot_relationships[site_id], "%s keeps its initial authored-placeholder relationship through refill." % site_id)
+	# A live worker sprite at the site's physical base must delay an overdue refill.
+	# Move the saved pose and player clear so only the visible actor exercises this guard.
+	visuals = work.get_node("WorkerVisuals")
+	var visuals_was_processing: bool = visuals.is_processing()
+	visuals.set_process(false)
+	worker = WorkerDatabase.get_worker_data(WORKER_ID)
+	var assigned_job: Dictionary = work.daily.jobs.get(CLAY, {})
+	var assigned_ids: Array = assigned_job.get("ids", [])
+	check(worker != null and assigned_ids.has(WORKER_ID), "The overlap fixture retains its assigned worker after checkpoint load.")
+	if worker == null or not assigned_ids.has(WORKER_ID):
+		_finish()
+		return
+	actor = visuals.actors.get(WORKER_ID) as Node2D
+	if not is_instance_valid(actor) or actor.is_queued_for_deletion():
+		visuals.actors.erase(WORKER_ID)
+		actor = visuals.ensure_actor(WORKER_ID, work.worker_spawn(CLAY, WORKER_ID))
+	if not is_instance_valid(actor):
+		check(false, "The assigned worker actor is available for the overlap fixture.")
+		_finish()
+		return
+	var overlap_position: Vector2 = marker.position
+	var overlap_base: CollisionPolygon2D = marker.get_node("ResourceBase/CollisionPolygon2D") as CollisionPolygon2D
+	var overlap_center: Vector2 = Vector2.ZERO
+	for point: Vector2 in overlap_base.polygon:
+		overlap_center += overlap_base.to_global(point)
+	overlap_center /= overlap_base.polygon.size()
+	player.global_position = marker.global_position + Vector2(300, 300)
+	worker.physical_approach.position = marker.global_position + Vector2(300, 300)
+	for other_actor: Node2D in visuals.actors.values():
+		if other_actor != actor and is_instance_valid(other_actor):
+			other_actor.global_position = marker.global_position + Vector2(300, 300)
+	actor.show()
+	actor.global_position = overlap_center - Vector2(0, 16)
+	check(actor.visible and visuals.actors.get(WORKER_ID) == actor, "The overlapping worker remains a visible live actor.")
+	_make_site_overdue(CLAY)
+	await _wait_resource_frames()
+	check(not work._site_regrowth_clear(marker), "A visible worker actor at a depleted site's base blocks regrowth.")
+	work._queue_depleted_sites()
+	await _wait_resource_frames()
+	check(marker.position == overlap_position and session.stock == 0, "An overdue deposit stays empty and fixed while a worker actor overlaps it.")
+	actor.global_position = marker.global_position + Vector2(300, 300)
+	work._queue_depleted_sites()
+	await _wait_resource_frames()
+	check(marker.position == overlap_position and session.stock == session.deposit_capacity and not overlap_base.disabled, "The same site refills at full capacity with collision restored after the visible worker clears it.")
+
+	# A saved approach pose must also protect the site before its actor exists.
+	# Remove the real actor, keep the worker assigned, and clear every other actor.
+	var saved_pose_actor: Node2D = visuals.actors.get(WORKER_ID) as Node2D
+	if saved_pose_actor != null:
+		visuals.actors.erase(WORKER_ID)
+		saved_pose_actor.queue_free()
+	for other_actor: Node2D in visuals.actors.values():
+		if is_instance_valid(other_actor):
+			other_actor.global_position = marker.global_position + Vector2(300, 300)
+	await get_tree().process_frame
+	worker = WorkerDatabase.get_worker_data(WORKER_ID)
+	worker.physical_approach.position = overlap_center
+	_make_site_overdue(CLAY)
+	await _wait_resource_frames()
+	check(not visuals.actors.has(WORKER_ID) and not work._site_regrowth_clear(marker), "An assigned worker's saved physical pose blocks regrowth before its actor is created.")
+	work._queue_depleted_sites()
+	await _wait_resource_frames()
+	check(marker.position == overlap_position and session.stock == 0, "An overdue deposit stays empty and fixed while only the worker's saved pose overlaps it.")
+	worker.physical_approach.position = marker.global_position + Vector2(300, 300)
+	work._queue_depleted_sites()
+	await _wait_resource_frames()
+	check(marker.position == overlap_position and session.stock == session.deposit_capacity and not overlap_base.disabled, "The same site refills at full capacity with collision restored after the saved worker pose clears.")
+	visuals.set_process(visuals_was_processing)
+
 	var colliderless_marker: Node2D = work.get_node("WorksiteMarkers/ClaySiteB")
 	var colliderless_base: Node = colliderless_marker.get_node("ResourceBase")
 	colliderless_base.queue_free()
@@ -388,6 +478,18 @@ func _advance_until_due(session) -> bool:
 		await get_tree().process_frame
 	return true
 
+func _make_site_overdue(site_id: StringName) -> void:
+	var session = work.sites[site_id]
+	var now: int = work.daily.now()
+	session.stock = 0
+	session.respawn_started_at = now - 2881
+	session.respawn_due_at = now - 1
+	work._set_site_depleted_presentation(site_id, true)
+
+func _wait_resource_frames() -> void:
+	for _frame: int in range(4):
+		await get_tree().process_frame
+
 func _authored_plot_relationship(marker: Node2D) -> Array[StringName]:
 	var bounds := Rect2(marker.global_position - Vector2(20, 20), Vector2(40, 40))
 	var relationship: Array[StringName] = []
@@ -409,6 +511,30 @@ func _move_worker_and_player_clear(marker: Node2D, worker: WorkerData, actor: No
 	worker.begin_physical_approach(str(approach.kind), str(approach.task), str(approach.owner), worker_feet, Vector2(approach.target))
 	actor.global_position = worker_feet - Vector2(0, 16)
 	player.global_position = marker.global_position + Vector2(300, 300)
+
+func _check_retained_straw_presentation(context: String) -> void:
+	var marker: Node2D = work.get_node("WorksiteMarkers/StrawSite")
+	var particles: CPUParticles2D = marker.get_node("ReadyParticles")
+	var collider: CollisionPolygon2D = marker.get_node("ResourceBase/CollisionPolygon2D")
+	check(not work.is_world_site_available(STRAW) and not work.daily.is_site_available(STRAW),
+		"Retired Straw stays unavailable for world interaction and new work: " + context)
+	check(not marker.is_visible_in_tree() and not particles.visible and not particles.emitting,
+		"Retired Straw has no visible marker or readiness emitter: " + context)
+	check(collider.disabled, "Retired Straw has no invisible collision: " + context)
+	check(work.sites[STRAW].finite_resource and work.sites[STRAW].stock == 72
+		and work.sites[STRAW].deposit_capacity == 72,
+		"Retired Straw retains its untouched compatibility reserve: " + context)
+
+func _isolated_profile_is_safe() -> bool:
+	var qa_root: String = ProjectSettings.globalize_path("res://../citysave_suite_qa").simplify_path()
+	var homes: Array[String] = []
+	for variable: String in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
+		var home: String = OS.get_environment(variable).simplify_path()
+		if home.is_empty() or not home.is_absolute_path() or not DirAccess.dir_exists_absolute(home) \
+			or not home.begins_with(qa_root + "/") or homes.has(home):
+			return false
+		homes.append(home)
+	return ProjectSettings.globalize_path("user://").simplify_path().begins_with(homes[0] + "/")
 
 func _finish() -> void:
 	print("FiniteResourceSitesTest: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)

@@ -106,10 +106,15 @@ func _write_flow() -> void:
 	var values = VALUES.new()
 	var old_raw: Dictionary = values.decode(before_start.state)
 	LEGACY.strip_v16_owners(old_raw)
+	# A v15 fixture cannot retain the v17 per-person timing ledgers.
+	old_raw.needs.erase("food_coverage_until")
+	old_raw.needs.erase("satisfaction_last_minute")
 	var old: Dictionary = before_start.duplicate(true)
 	old.schema_version = 15
 	old.state = values.encode(old_raw)
 	_expect(store.snapshot.prepare(old, content), "A v15 checkpoint stages an empty annex and route: " + store.snapshot.error)
+	if stopped:
+		return
 	_expect(store.snapshot.prepared.annex_storage.items.is_empty() and store.snapshot.prepared.transport.route.is_empty(), "Legacy staging invents no goods or cargo.")
 	var board: Node2D = runtime.get_node("CityStorageArea/Board")
 	var area: Node = runtime.get_node("CityStorageArea")

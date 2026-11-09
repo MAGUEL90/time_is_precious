@@ -66,8 +66,8 @@ func _need_matches(need: String, value: Variant) -> bool:
 	var texture: AtlasTexture = icon.texture as AtlasTexture
 	return card.get_node("Label").text == need and icon.visible == met and label.visible == not met \
 		and label.text == text and card.accessibility_name == need + ": " + text \
-		and card.tooltip_text == need + ": " + text and card.get_node("Icon").tooltip_text == need + ": " + text \
-		and card.get_node("Status").tooltip_text == need + ": " + text and icon.accessibility_name == need + ": " + text \
+		and card.tooltip_text.is_empty() and card.get_node("Icon").tooltip_text.is_empty() \
+		and card.get_node("Status").tooltip_text.is_empty() and icon.accessibility_name == need + ": " + text \
 		and texture != null and texture.region == Rect2(84, 68, 8, 8) \
 		and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
 
@@ -105,7 +105,7 @@ func _run() -> void:
 	second_citizen = _fixture_citizen(SECOND_ID, "Naram", second_profile)
 	CitizenManager.citizens_by_id[PERSON_ID] = first_citizen
 	CitizenManager.citizens_by_id[SECOND_ID] = second_citizen
-	CitizenManager.citizens_by_id[LEGACY_ID] = _fixture_citizen(LEGACY_ID, "Legacy", null)
+	CitizenManager.citizens_by_id[LEGACY_ID] = _fixture_citizen(LEGACY_ID, "Lugal", null)
 	get_tree().paused = true
 	TimeComponentManager.current_day = 40
 	TimeComponentManager.current_hour = 8
@@ -228,12 +228,13 @@ func _run() -> void:
 		and panel.find_child("PortraitVisual", true, false) == null
 		and name_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER,
 		"The Needs header has no portrait and centers the citizen's name.")
-	var left_spacer: Control = panel.get_node("Root/Frame/Margin/Contents/NameRow/LeftSpacer") as Control
-	_expect(is_equal_approx(left_spacer.size.x, close_button.size.x)
-		and absf(name_label.get_global_rect().get_center().x - frame.get_global_rect().get_center().x) < 1.0
-		and frame.get_global_rect().encloses(name_label.get_global_rect())
+	var name_plate: TextureRect = name_label.get_node("NamePlate") as TextureRect
+	_expect(name_plate.size.is_equal_approx(Vector2(54, 11))
+		and absf(name_plate.get_global_rect().get_center().x - frame.get_global_rect().get_center().x) <= 0.5
+		and name_plate.get_global_rect().encloses(name_label.get_global_rect())
+		and not name_plate.get_global_rect().intersects(close_button.get_global_rect())
 		and scroll.get_global_rect().encloses(satisfaction_bar.get_global_rect()),
-		"The name and close button fit with balanced margins and the needs remain visible.")
+		"The native nameplate stays centered and separate from Close while the needs remain visible.")
 	var initial_frame_rect: Rect2 = frame.get_global_rect()
 	await _capture("nonworker")
 	summary.name = "Naram"
@@ -244,19 +245,19 @@ func _run() -> void:
 		and panel.selected_id == SECOND_ID and _need_matches("Food", null),
 		"Switching resident updates the centered name and their displayed needs.")
 	await _capture("second")
-	summary.name = "Legacy"
+	summary.name = "Lugal"
 	panel.open_for(LEGACY_ID)
 	await _frames(3)
-	_expect(name_label.text == "Legacy" and panel.visible,
+	_expect(name_label.text == "Lugal" and panel.visible,
 		"A legacy person without a visual profile still has an accessible name.")
 	CitizenManager.citizens_by_id.erase(LEGACY_ID)
 	panel.call("_refresh_view")
-	_expect(panel.visible and name_label.text == "Legacy", "The summary remains usable without a portrait source.")
-	summary.name = "A very long citizen name that must not overlap the close button"
+	_expect(panel.visible and name_label.text == "Lugal", "The summary remains usable without a portrait source.")
+	summary.name = "Naram Lugal Ashur Nabu Enkiya Urani Dagan Tammuz Sinbel Iddin"
 	panel.open_for(PERSON_ID)
 	await _frames(3)
-	_expect(name_label.clip_text and name_label.text_overrun_behavior == TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
-		and name_label.tooltip_text == summary.name and name_label.accessibility_name == summary.name
+	_expect(name_label.text_overrun_behavior == TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
+		and name_label.tooltip_text.is_empty() and name_label.accessibility_name == summary.name
 		and name_label.get_global_rect().end.x <= close_button.get_global_rect().position.x,
 		"Long names stay within the centered header and remain fully accessible.")
 	await _capture("long-name")
@@ -300,16 +301,16 @@ func _run() -> void:
 		and name_label.text == "Bellum",
 		"Worker records remain intact without exposing Work details in the Needs card.")
 
-	summary.name = "An exceptionally long resident display name that must remain inside the header and be available in full"
+	summary.name = "Enkiya Naram Lugal Ashur Nabu Urani Dagan Tammuz Sinbel Iddin Enkiya Naram Lugal Ashur Nabu"
 	panel.call("_refresh_view")
 	var refresh_timer: Timer = panel.get_node("RefreshTimer") as Timer
 	refresh_timer.stop()
 	await _frames(3)
-	_expect(name_label.tooltip_text == summary.name and frame.get_global_rect().encloses(name_label.get_global_rect())
+	_expect(name_label.tooltip_text.is_empty() and name_label.accessibility_name == summary.name
+		and name_label.text_overrun_behavior == TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
+		and frame.get_global_rect().encloses(name_label.get_global_rect())
 		and not scroll.get_h_scroll_bar().visible and name_label.get_line_count() <= name_label.get_visible_line_count(),
-		"A long name remains bounded and available in full without clipping or horizontal scrolling (tooltip=%s lines=%d/%d label=%s frame=%s hbar=%s)." % [
-			name_label.tooltip_text == summary.name, name_label.get_line_count(), name_label.get_visible_line_count(),
-			name_label.get_global_rect(), frame.get_global_rect(), scroll.get_h_scroll_bar().visible])
+		"A long name is ellipsized, bounded and available through its accessibility name without a tooltip.")
 	scroll.scroll_vertical = 9999
 	await _frames(3)
 	var body: Control = scroll.get_node("Body") as Control

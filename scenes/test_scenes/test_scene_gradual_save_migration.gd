@@ -1,7 +1,7 @@
 extends "res://scenes/test_scenes/test_scene_satisfaction_condition_save.gd"
 
 ## Read the real v16 checkpoint written by the unmodified baseline test, then
-## save and reload a v17 checkpoint using only a disposable APPDATA profile.
+## save and reload the current checkpoint using only a disposable APPDATA profile.
 func _same_satisfaction(actual: Dictionary, expected: Dictionary) -> bool:
 	if actual.size() != expected.size():
 		return false
@@ -76,7 +76,7 @@ func _run() -> void:
 	_expect(store.save_checkpoint(), "The migrated state saves as a new checkpoint: " + store.last_error)
 	var v17_bytes: PackedByteArray = FileAccess.get_file_as_bytes(SAVE_PATH)
 	var v17: Dictionary = _parse_document(v17_bytes)
-	_expect(v17.get("schema_version") == 17 and FileAccess.get_file_as_bytes(SAVE_PATH + ".bak") == initial_bytes,
+	_expect(v17.get("schema_version") == store.snapshot.VERSION and FileAccess.get_file_as_bytes(SAVE_PATH + ".bak") == initial_bytes,
 		"The new version is written and the exact original v16 bytes are kept as its backup.")
 	var saved_satisfaction: Dictionary = _all_satisfactions()
 	var saved_coverage: Dictionary = CitizenNeedsManager.food_coverage_until.duplicate(true)

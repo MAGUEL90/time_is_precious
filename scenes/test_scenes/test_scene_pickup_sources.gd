@@ -1,6 +1,7 @@
 extends "res://scenes/test_scenes/test_scene_city_save.gd"
 
 const SOURCE_SCENE = preload("res://scenes/test_scenes/pickup_source_fixture.tscn")
+const WORKSITE_SCHEMA = preload("res://scenes/new_scenes/save_game/city_save_worksites.gd")
 var sources: Array[Node] = []
 var rename_source: bool = false
 
@@ -54,7 +55,9 @@ func _run() -> void:
 	_expect(sources[0].state == prior_states[0] and sources[1].state == prior_states[1], "Two instances of one prefab keep independent stable identities across map recreation.")
 	await _settle_source_views()
 	var codec = VALUES.new()
+	var current_schema_input: Dictionary = saved.duplicate(true)
 	var raw: Dictionary = codec.decode(saved.state)
+	var current_source_dictionary: Dictionary = raw.pickup_sources.duplicate(true)
 	var invalid: Dictionary = saved.duplicate(true)
 	var id: String = str(sources[0].state.name)
 	raw.pickup_sources[id].config.quantity += 1
@@ -77,20 +80,95 @@ func _run() -> void:
 	raw.erase("pickup_sources")
 	raw.date_palms = old_palms
 	_strip_post_v3_owner_fields(raw)
+	# The pre-v17 v3 schema predates these per-person timing ledgers. Keep this
+	# historical fixture accurate instead of weakening the production validator.
+	raw.needs.erase("food_coverage_until")
+	raw.needs.erase("satisfaction_last_minute")
+	# Keep only the registry that the existing v3 adapter recognizes. The
+	# current map contains newer resource sites that were absent from v3.
+	for site_id_value: Variant in raw.worksites.sites.keys():
+		if not WORKSITE_SCHEMA.LEGACY_SITE_IDS.has(str(site_id_value)):
+			raw.worksites.sites.erase(site_id_value)
+	_expect(old_palms.size() == 6 and current_source_dictionary.size() == 8,
+		"The v3 fixture keeps the original six palm records while current input retains every source record.")
+	_expect(not raw.needs.has("food_coverage_until") and not raw.needs.has("satisfaction_last_minute"),
+		"The v3 fixture omits both timing ledgers introduced after its schema.")
+	_expect(raw.worksites.sites.size() == WORKSITE_SCHEMA.LEGACY_SITE_IDS.size(),
+		"The v3 fixture omits worksite sites added after its supported legacy registry.")
 	var legacy: Dictionary = saved.duplicate(true)
 	legacy.schema_version = 3
 	# v3 predates the retired Reliability fields as well as newer pickup
 	# sources. Use the same genuine legacy encoding as CitySaveTest.
 	legacy.state = LEGACY_RELIABILITY.encode_city(codec, raw)
 	_strip_post_v3_worker_fields(legacy.state)
+	_expect(current_schema_input == saved and codec.decode(saved.state).pickup_sources == current_source_dictionary,
+		"Building the v3 fixture leaves the current schema input and source dictionary intact.")
+	var legacy_values = VALUES.new()
+	legacy_values.allow_legacy_worker_fields = true
+	legacy_values.allow_legacy_contract_fields = true
+	legacy_values.allow_legacy_approach_field = true
+	legacy_values.allow_legacy_reliability_field = true
+	legacy_values.allow_legacy_resignation_field = true
+	var encoded_legacy_raw: Variant = legacy_values.decode(legacy.state)
+	_expect(legacy_values.error.is_empty() and encoded_legacy_raw is Dictionary
+		and not encoded_legacy_raw.needs.has("food_coverage_until")
+		and not encoded_legacy_raw.needs.has("satisfaction_last_minute"),
+		"The encoded v3 fixture contains no post-v3 timing ledgers.")
+	var legacy_input_bytes: String = JSON.stringify(legacy, "", true, true)
+	for timing_field: String in ["food_coverage_until", "satisfaction_last_minute"]:
+		var malformed: Dictionary = legacy.duplicate(true)
+		var malformed_raw: Dictionary = raw.duplicate(true)
+		malformed.state = LEGACY_RELIABILITY.encode_city(codec, malformed_raw)
+		_strip_post_v3_worker_fields(malformed.state)
+		var malformed_needs: Variant = _encoded_value_for_key(malformed.state, "needs")
+		_expect(_append_encoded_entry(malformed_needs, timing_field, codec.encode({})),
+			"The %s corruption is injected after constructing the historical v3 payload." % timing_field)
+		var decoded_malformed: Variant = legacy_values.decode(malformed.state)
+		_expect(legacy_values.error.is_empty() and decoded_malformed is Dictionary
+			and decoded_malformed.needs.get(timing_field) == {},
+			"The malformed v3 payload actually retains %s after historical construction." % timing_field)
+		var malformed_input_bytes: String = JSON.stringify(malformed, "", true, true)
+		_expect(not store.snapshot.prepare(malformed, content), "v3 rejects a legacy fixture containing " + timing_field + ".")
+		_expect(store.snapshot.error == "Invalid legacy needs timing ledger.", "Malformed v3 timing field reports the strict ledger rejection.")
+		_expect(sentinel == store.snapshot.capture(content), "Malformed v3 timing field cannot mutate current owners.")
+		_expect(JSON.stringify(malformed, "", true, true) == malformed_input_bytes,
+			"Preparing malformed %s leaves the original input unchanged." % timing_field)
+	_expect(JSON.stringify(legacy, "", true, true) == legacy_input_bytes,
+		"The timing corruption probes leave the pristine historical v3 fixture unchanged.")
 	var prepared: bool = store.snapshot.prepare(legacy, content)
 	_expect(prepared, "v3 accepts new authored source types through explicit migration: " + store.snapshot.error)
 	_expect(sentinel == store.snapshot.capture(content), "Migration preparation does not reset new sources.")
+	_expect(JSON.stringify(legacy, "", true, true) == legacy_input_bytes,
+		"Preparing the v3 checkpoint leaves its original input document unchanged.")
 	if not prepared:
 		_finish()
 		return
+	var staged: Dictionary = store.snapshot.prepared.duplicate(true)
+	var runtime_worksite: Node = content.get_node("YSortWorld/WorkerRuntime")
+	for site_id: String in WORKSITE_SCHEMA.LEGACY_SITE_IDS:
+		_expect(int(staged.worksites.sites[site_id].stock) == int(encoded_legacy_raw.worksites.sites[site_id].stock),
+			"v3 migration preserves old worksite stock for " + site_id + ".")
+	for owner_field: String in ["clock", "inventory", "city_storage", "rng", "city_drops"]:
+		_expect(staged[owner_field] == encoded_legacy_raw[owner_field],
+			"v3 worksite migration preserves unrelated owner " + owner_field + ".")
+	for site_id: String in WORKSITE_SCHEMA.NEW_SITE_IDS:
+		if runtime_worksite.sites.has(StringName(site_id)):
+			var capacity: int = int(runtime_worksite.sites[StringName(site_id)].get("deposit_capacity"))
+			var initialized: Dictionary = staged.worksites.sites[site_id]
+			_expect(capacity > 0 and int(initialized.stock) == capacity,
+				"v3 initializes authored site " + site_id + " from its configured capacity.")
+			_expect(initialized.size() == 1 and not initialized.has("deposit_capacity") and not initialized.has("offset"),
+				"v3 initializes only stock for newly authored site " + site_id + ".")
+		else:
+			_expect(not staged.worksites.sites.has(site_id), "v3 does not invent absent site " + site_id + ".")
 	store.snapshot.apply_prepared(content, false)
 	await _settle_source_views()
+	for site_id: String in WORKSITE_SCHEMA.LEGACY_SITE_IDS:
+		_expect(int(runtime_worksite.sites[StringName(site_id)].stock) == int(encoded_legacy_raw.worksites.sites[site_id].stock),
+			"Applying v3 preserves old runtime stock for " + site_id + ".")
+	for site_id: String in ["WoodSiteD", "WoodSiteE"]:
+		_expect(int(runtime_worksite.sites[StringName(site_id)].stock) == int(runtime_worksite.sites[StringName(site_id)].get("deposit_capacity")),
+			"Applying v3 initializes " + site_id + " from its configured capacity.")
 	for source: Node in sources:
 		_expect(source.state.available == [true, true] and source.state.remaining_minutes == 0, "v3 initializes only previously unrecorded sources with fresh full stock.")
 	_finish()
@@ -122,3 +200,17 @@ func _settle_source_views() -> void:
 func _finish() -> void:
 	print("PickupSourcesTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
+
+func _encoded_value_for_key(payload: Variant, key: String) -> Variant:
+	if not payload is Dictionary or payload.get("$type") != "dictionary" or not payload.get("entries") is Array:
+		return null
+	for entry: Variant in payload.entries:
+		if entry is Array and entry.size() == 2 and entry[0] == key:
+			return entry[1]
+	return null
+
+func _append_encoded_entry(payload: Variant, key: String, encoded_value: Variant) -> bool:
+	if not payload is Dictionary or payload.get("$type") != "dictionary" or not payload.get("entries") is Array:
+		return false
+	payload.entries.append([key, encoded_value])
+	return true

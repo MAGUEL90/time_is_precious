@@ -13,6 +13,8 @@ const WOOD: String = "wood_log"
 const MAX_INT_VALUE: int = 9223372036854775807
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const LEGACY_FIXTURE = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
+const SAVE_WORKSITES = preload("res://scenes/new_scenes/save_game/city_save_worksites.gd")
 const LEGACY_PENDING_SAVE: String = FLOW_DIR + "/legacy_pending_v14.json"
 const OLD_STOCKPILES: Array[String] = ["ClayStorage", "WoodStorage", "ReedStorage", "StrawStorage", "WaterStorage"]
 
@@ -21,6 +23,9 @@ var city_tools: Node
 var continued: bool = false
 
 func _run() -> void:
+	if not _isolated_flow_profile_is_safe():
+		_expect(false, "NoStockpile fixture requires an isolated sibling citysave_suite_qa profile before any checkpoint operations.")
+		return
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--stockpile-phase="):
 			phase = argument.trim_prefix("--stockpile-phase=")
@@ -110,14 +115,37 @@ func _write_flow() -> void:
 	await _frames()
 	var hauler_card: Button = assignment.worker_list.get_node_or_null("Participant_" + HAULER_ID)
 	var laborer_card: Button = assignment.worker_list.get_node_or_null("Participant_" + WORKER_ID)
-	_expect(is_instance_valid(hauler_card) and hauler_card.disabled, "The real worksite UI disables an equipped Hauler.")
+	_expect(is_instance_valid(hauler_card) and not hauler_card.disabled,
+		"The unavailable Hauler card remains clickable to explain its existing assignment restriction.")
 	_expect(is_instance_valid(laborer_card) and not laborer_card.disabled, "The real worksite UI offers the paid Laborer.")
+	if stopped:
+		return
+	var unavailable_reason: String = runtime.daily.unavailable(HAULER_ID)
+	var before_blocked_clicks: Dictionary = store.snapshot.capture(content)
+	_expect(not unavailable_reason.is_empty() and not before_blocked_clicks.is_empty(),
+		"The equipped Hauler has a real policy rejection before any click.")
+	if stopped:
+		return
+	for _click: int in range(2):
+		await press(hauler_card)
+		_expect(assignment.selection_title_label.text == unavailable_reason
+			and not assignment.hauler_setup.visible
+			and not assignment.selected_worker_ids.has(HAULER_ID)
+			and runtime.daily.selected[WOOD_SITE].is_empty()
+			and runtime.daily.hauler_setups.is_empty()
+			and runtime.hauling.routes.is_empty()
+			and store.snapshot.capture(content) == before_blocked_clicks,
+			"A repeated blocked Hauler click explains the guard without opening setup, assigning a worker, spending money, or changing saved owners.")
+		if stopped:
+			return
 	var city_endpoint: Node = runtime.get_node("CityStorageArea/DeliveryPoint")
 	var city_path: NodePath = runtime.get_path_to(city_endpoint)
 	_expect(not runtime.daily.toggle(WOOD_SITE, HAULER_ID), "Direct toggle rejects a new Hauler.")
 	_expect(not runtime.daily.select_hauler(WOOD_SITE, HAULER_ID, city_path, "City Storage", 3), "Direct assignment to City Storage is rejected.")
 	_expect(not str(runtime._assign_hauler(HAULER_ID, city_path, 3)).is_empty(), "The UI assignment callback also rejects City Storage.")
-	_expect(runtime.daily.selected[WOOD_SITE].is_empty() and runtime.hauling.routes.is_empty(), "Rejected attempts create neither a draft nor a route.")
+	_expect(runtime.daily.selected[WOOD_SITE].is_empty() and runtime.daily.hauler_setups.is_empty()
+		and not assignment.selected_worker_ids.has(HAULER_ID) and runtime.hauling.routes.is_empty(),
+		"Rejected attempts create neither a selected worker, destination plan, nor route.")
 	if stopped:
 		return
 	laborer_card.pressed.emit()
@@ -282,28 +310,38 @@ func _test_all_authored_outputs() -> void:
 
 func _test_legacy_pending_migration(pending: int) -> void:
 	var document: Dictionary = store.snapshot.capture(content)
+	var modern_document: Dictionary = document.duplicate(true)
 	var codec = VALUES.new()
 	var raw: Dictionary = codec.decode(document.state)
 	# Synthetic v14: a job-owned wood unit and departed workers' clay and Reed
 	# were awaiting their old ground drop when the checkpoint was written.
 	raw.worksites.schema_version = 3
-	for added: String in ["ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
-		raw.worksites.sites.erase(added)
+	# Pre-v6 worksite registries contain exactly five legacy IDs, including
+	# when the current map has added further trees beyond the first four sites.
+	LEGACY_FIXTURE._strip_new_resource_sites(raw.worksites)
 	for site: Dictionary in raw.worksites.sites.values():
 		site.erase("offset")
-		site.erase("respawn_started_at")
-		site.erase("respawn_due_at")
+	var legacy_ids: Array = raw.worksites.sites.keys()
+	var expected_ids: Array = SAVE_WORKSITES.LEGACY_SITE_IDS.duplicate()
+	legacy_ids.sort()
+	expected_ids.sort()
+	_expect(legacy_ids == expected_ids and int(raw.worksites.jobs[str(WOOD_SITE)].units) == pending,
+		"The synthetic v14 source keeps exactly the historical site registry and its earned job-owned pending output.")
+	if stopped:
+		return
 	raw.worksites.sites.ClaySiteA.stock -= 2
 	raw.worksites.sites.ReedSite.stock -= 3
 	raw.worksites.pending_output["ClaySiteA"] = 2
 	raw.worksites.pending_output["ReedSite"] = 3
-	preload("res://scenes/test_scenes/legacy_reliability_fixture.gd").strip_v16_owners(raw)
+	LEGACY_FIXTURE.strip_v16_owners(raw)
 	document.schema_version = 14
 	document.state = codec.encode(raw)
 	_expect(codec.error.is_empty() and not FileAccess.file_exists(LEGACY_PENDING_SAVE),
 		"Create a fresh synthetic v14 pending-output checkpoint.")
 	var prepared: bool = store.snapshot.prepare(document, content)
 	_expect(prepared, "Synthetic v14 checkpoint validates and migrates: " + store.snapshot.error)
+	_expect(store.snapshot.capture(content) == modern_document,
+		"Historical projection and preparation do not mutate the live current-schema pending-output fixture.")
 	if stopped:
 		return
 	var file := FileAccess.open(LEGACY_PENDING_SAVE, FileAccess.WRITE)
@@ -408,3 +446,14 @@ func _read_evidence(stage: String) -> Dictionary:
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(FLOW_EVIDENCE))
 	_expect(data is Dictionary and data.get("stage") == stage, "The preceding isolated phase produced the expected evidence.")
 	return data if data is Dictionary and data.get("stage") == stage else {}
+
+func _isolated_flow_profile_is_safe() -> bool:
+	var qa_root: String = ProjectSettings.globalize_path("res://../citysave_suite_qa").simplify_path()
+	var homes: Array[String] = []
+	for variable: String in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
+		var home: String = OS.get_environment(variable).simplify_path()
+		if home.is_empty() or not home.is_absolute_path() or not DirAccess.dir_exists_absolute(home) \
+			or not home.begins_with(qa_root + "/") or homes.has(home):
+			return false
+		homes.append(home)
+	return ProjectSettings.globalize_path("user://").simplify_path().begins_with(homes[0] + "/")

@@ -16,6 +16,11 @@ var selected: Dictionary = {}
 var hauler_setups: Dictionary = {}
 # Content maps can restrict new assignments without interrupting existing routes.
 var allow_haulers: bool = true
+## Scene policy only; serialized jobs, stock and payroll remain owned as before.
+var site_available: Callable
+
+func is_site_available(site_id: StringName) -> bool:
+	return not site_available.is_valid() or bool(site_available.call(site_id))
 ## Completed output awaiting a successful ground drop, independent of workers.
 ## Entries contain a quantity and the transient worksite drop callback.
 var pending_output: Dictionary = {}
@@ -59,6 +64,8 @@ func is_hauler(id: String) -> bool:
 	return worker != null and worker.profession == WorkerData.Profession.HAULER
 
 func start_reason(site_id: StringName) -> String:
+	if not is_site_available(site_id):
+		return "Site disabled; assignment retained. Contract time still runs."
 	var count: int = 0
 	for id: String in selected[site_id]:
 		if is_hauler(id):
@@ -88,11 +95,13 @@ func _hauler_eligible(id: String, from_minute: int = -1, to_minute: int = -1) ->
 	for site_id in jobs:
 		var job: Dictionary = jobs[site_id]
 		if job.ids.has(id):
+			if not is_site_available(site_id):
+				return false
 			return now() >= int(job.starts[id]) and now() % 1440 >= SHIFT_START and now() % 1440 < SHIFT_END and now() >= arrival_time(site_id, id, now() / 1440)
 	return false
 
 func _site_depleted(site_id: StringName) -> bool:
-	return sites[site_id].stock <= 0
+	return not is_site_available(site_id) or sites[site_id].stock <= 0
 
 func departure_time(site_id: StringName, id: String, day: int) -> int:
 	if journey_provider.is_valid():
@@ -157,6 +166,8 @@ func unavailable(id: String) -> String:
 	return "Unavailable" if citizen != null and not citizen.can_be_assigned() else ""
 
 func toggle(site_id: StringName, id: String) -> bool:
+	if not is_site_available(site_id):
+		return false
 	var ids: Array = selected[site_id]
 	if ids.has(id):
 		ids.erase(id)
@@ -381,7 +392,7 @@ func activity(site_id: StringName, id: String) -> WorkerData.WorkStatus:
 		var visual: Dictionary = hauling.get_visual(id, float(now()))
 		if visual.get("moving", false):
 			return WorkerData.WorkStatus.TRAVELLING
-	if _payroll_blocked(id):
+	if not is_site_available(site_id) or _payroll_blocked(id):
 		return WorkerData.WorkStatus.RESTING
 	var first_day: int = int(jobs[site_id].starts[id]) / 1440
 	if now() < departure_time(site_id, id, first_day):
@@ -414,6 +425,8 @@ func _sync_activities() -> void:
 func status(site_id: StringName) -> String:
 	if not jobs.has(site_id):
 		return ""
+	if not is_site_available(site_id):
+		return "Site disabled; assignment retained. Contract time still runs."
 	var first_start: int = int(jobs[site_id].starts.values().min())
 	if now() < first_start:
 		return "Scheduled for Day %d, 07:00" % (first_start / 1440)
@@ -450,6 +463,8 @@ func tick() -> void:
 		ledger_day = day
 	if minute >= SHIFT_START and minute < SHIFT_END:
 		for site_id in jobs.keys():
+			if not is_site_available(site_id):
+				continue
 			var job: Dictionary = jobs[site_id]
 			var session = sites[site_id]
 			for id: String in job.ids:
@@ -579,6 +594,7 @@ func cleanup() -> void:
 	assignment_released = Callable()
 	hauler_ready = Callable()
 	tool_requirement = Callable()
+	site_available = Callable()
 	equipment_storage = null
 	if hauling != null:
 		hauling.routes.clear()

@@ -37,6 +37,10 @@ func _interact_at(target: Node2D) -> void:
 	await get_tree().process_frame
 
 func _run() -> void:
+	if not _isolated_profile_is_safe():
+		_expect(false, "Use distinct disposable XDG directories under the sibling citysave_suite_qa directory.")
+		get_tree().quit(1)
+		return
 	Inventory.items.clear()
 	WorkerDatabase.dismissed_workers.clear()
 	CitizenManager.citizens_by_id.clear()
@@ -109,7 +113,7 @@ func _run() -> void:
 	var contract_days: int = 9
 	var contract_index: int = WorkerDatabase.CONTRACT_DAYS.find(contract_days)
 	var contract_price: int = WorkerDatabase.get_contract_price(WorkerData.Profession.LABORER, contract_days)
-	_expect(contract_index >= 0 and contract_price > 0, "The Laborer has the configured nine-day package that covers construction.")
+	_expect(contract_index >= 0 and contract_price > 0, "The Laborer has the configured nine-day package for the original hire.")
 	if contract_index < 0 or contract_price <= 0:
 		_finish()
 		return
@@ -139,7 +143,7 @@ func _run() -> void:
 		"Hiring a normalized legacy applicant keeps the fixed ID and individual name.")
 	_expect(worker.payroll_contract_days == contract_days and worker.payroll_paid_from_day == hire_day
 		and worker.payroll_paid_until_day == hire_day + contract_days and not worker.is_payroll_blocked(),
-		"The selected prepaid period activates immediately and covers the planned construction.")
+		"The selected prepaid period activates immediately with the quoted duration.")
 	_expect(Inventory.items.is_empty(), "Hiring debits the exact wallet quote once without granting materials.")
 	board.job_board_ui.close_button.pressed.emit()
 	await get_tree().process_frame
@@ -197,21 +201,92 @@ func _run() -> void:
 	plot.menu._on_worker_assignment_next_requested([worker.worker_id] as Array[String])
 	plot.menu.build_button.pressed.emit()
 	_expect(plot.construction.phase == "building", "Gathered materials and hired worker can start construction without debug supply.")
-	_complete_fixture_plot_arrival(worker, plot, "building")
-	TimeComponentManager.advance_minutes(plot.construction.SOLO_MINUTES)
+	# Construction needs 4,320 paid worker-minutes across 07:00-15:00 shifts,
+	# not three elapsed calendar days. Gathering/clearing already consumed part
+	# of the original package, so fund one exact existing three-day renewal.
+	var old_paid_end: int = worker.get_paid_end_minute()
+	var renewal_price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
+	var wallet_before_renewal: int = int(Inventory.items.get("shekel", 0))
+	Inventory.add_item("shekel", renewal_price)
+	_expect(WorkerDatabase.renew_contract(worker.worker_id, 3)
+		and worker.get_paid_end_minute() == old_paid_end + 3 * 1440
+		and int(Inventory.items.get("shekel", 0)) == wallet_before_renewal,
+		"One explicitly funded three-day renewal charges its exact quote and extends the existing paid contract.")
+	var paid_materials: Dictionary = Inventory.items.duplicate(true)
+	if not _advance_fixture_build_shifts(worker, plot):
+		_finish()
+		return
 	await _frames()
+	_expect(Inventory.items == paid_materials, "Shift waits and construction do not repeat material or contract charges.")
 	_expect(plot.construction.phase == "built" and not worker.is_reserved() and not worker.is_payroll_blocked(),
 		"The workshop completes under the paid contract and releases the hired builder.")
 	var applicant_id: String = start.APPLICANT_ID
-	var citizen = CitizenManager.get_citizen(applicant_id)
+	var citizen: CitizenData = CitizenManager.get_citizen(applicant_id)
+	var city_hauler: CitizenData = CitizenManager.get_citizen(start.CITY_HAULER_APPLICANT_ID)
+	var retained: Dictionary = {}
+	for person: CitizenData in [citizen, hauler_applicant, city_hauler]:
+		retained[person.citizen_id] = {"person": person, "satisfaction": person.satisfaction,
+			"population": person.population_status, "employment": person.employment_status,
+			"food": person.food_fulfilled, "clothing": person.clothing_fulfilled, "shelter": person.shelter_fulfilled}
+	_expect(CitizenManager.get_all_applicants().is_empty() and hauler_applicant.satisfaction < 0.5
+		and city_hauler.satisfaction < 0.5 and hauler_applicant.satisfaction > 0.0 and city_hauler.satisfaction > 0.0
+		and hauler_applicant.population_status == CitizenData.PopulationStatus.RESIDENT
+		and city_hauler.population_status == CitizenData.PopulationStatus.RESIDENT
+		and hauler_applicant.employment_status == CitizenData.EmploymentStatus.APPLICANT
+		and city_hauler.employment_status == CitizenData.EmploymentStatus.APPLICANT,
+		"The long unsupplied fixture leaves both unhired starters below the hiring threshold.")
 	content.free()
 	content = preload("res://scenes/test_scenes/fixtures/content_worksites_map.tscn").instantiate()
 	content.get_node("YSortWorld/Worksites").seed_playtest_hauler = false
 	add_child(content)
 	await _frames()
 	_expect(CitizenManager.get_citizen(applicant_id) == citizen and WorkerDatabase.get_worker_data(applicant_id) == worker, "Reload keeps the existing hire instead of recreating the applicant.")
-	_expect(CitizenManager.get_all_applicants().size() == 2 and CitizenManager.get_citizen(hauler_applicant_id) == hauler_applicant, "Reload keeps the unhired Laborer and Hauler without recreating the hired worker.")
+	for id: String in retained:
+		var saved: Dictionary = retained[id]
+		var reloaded: CitizenData = CitizenManager.get_citizen(id)
+		_expect(reloaded == saved.person and reloaded.satisfaction == saved.satisfaction
+			and reloaded.population_status == saved.population and reloaded.employment_status == saved.employment
+			and reloaded.food_fulfilled == saved.food and reloaded.clothing_fulfilled == saved.clothing
+			and reloaded.shelter_fulfilled == saved.shelter,
+			"Scene reload preserves the starter's exact identity and current needs/employment state: " + id)
+	_expect(CitizenManager.citizens_by_id.size() == 3 and CitizenManager.get_all_residents().size() == 3
+		and CitizenManager.get_all_applicants().is_empty(), "Scene reload neither duplicates nor resets neglected starters to make them hireable again.")
 	_finish()
+
+func _advance_fixture_build_shifts(worker: WorkerData, plot: Node) -> bool:
+	var remaining: int = plot.construction.SOLO_MINUTES
+	var maximum_segments: int = 2 * (ceili(float(remaining) / (8.0 * 60.0)) + 1)
+	for _segment: int in range(maximum_segments):
+		if plot.construction.phase != "building":
+			break
+		var minute_of_day: int = posmod(_now(), 1440)
+		if minute_of_day < 7 * 60 or minute_of_day >= 15 * 60:
+			var wait: int = 7 * 60 - minute_of_day if minute_of_day < 7 * 60 else 1440 - minute_of_day + 7 * 60
+			var before_wait: int = plot.construction._remaining_work_units()
+			_expect(TimeComponentManager.advance_minutes(wait), "Advance through the closed shift with no earned construction time.")
+			_expect(plot.construction._remaining_work_units() == before_wait,
+				"Overnight waiting does not credit construction or skip next-shift arrival.")
+			continue
+		_expect(not worker.is_payroll_blocked() and worker.get_resolved_satisfaction() > 0.0,
+			"The builder remains paid and employed for the next shift segment.")
+		if failures > 0:
+			return false
+		if int(worker.physical_approach.get("arrival_minute", -1)) == WorkerData.PLOT_DEPARTURE_PENDING:
+			# This preserved fixture has no WorkerRuntime route owner. Begin the
+			# next native inbound pose, then exercise the existing arrival gate.
+			plot.begin_worker_approach(worker.worker_id, plot.construction.order_id + ":building")
+		_complete_fixture_plot_arrival(worker, plot, "building")
+		if failures > 0:
+			return false
+		var step: int = mini(remaining, 15 * 60 - minute_of_day)
+		_expect(step > 0 and TimeComponentManager.advance_minutes(step), "Advance only the available paid shift minutes.")
+		remaining -= step
+		_expect(plot.construction._remaining_work_units() == remaining,
+			"Every physically arrived paid worker-minute is credited exactly once.")
+		if failures > 0:
+			return false
+	_expect(remaining == 0 and plot.construction.phase == "built", "The bounded shift driver completes exactly the required construction work.")
+	return failures == 0
 
 func _complete_fixture_plot_arrival(worker: WorkerData, plot: Node, phase: String) -> void:
 	# This preserved worksite fixture has no WorkerRuntime. The current-map
@@ -240,3 +315,14 @@ func _capture(filename: String) -> void:
 		return
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(directory.path_join(filename))
+
+func _isolated_profile_is_safe() -> bool:
+	var qa_root: String = ProjectSettings.globalize_path("res://../citysave_suite_qa").simplify_path()
+	var homes: Array[String] = []
+	for variable: String in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
+		var home: String = OS.get_environment(variable).simplify_path()
+		if home.is_empty() or not home.is_absolute_path() or not DirAccess.dir_exists_absolute(home) \
+			or not home.begins_with(qa_root + "/") or homes.has(home):
+			return false
+		homes.append(home)
+	return ProjectSettings.globalize_path("user://").simplify_path().begins_with(homes[0] + "/")

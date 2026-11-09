@@ -21,6 +21,7 @@ var workshop_construction: Node
 var player: Player
 var visuals: Node2D
 var capture_dir: String = ""
+var authored_layer_source: Dictionary = {}
 
 
 func _ready() -> void:
@@ -57,6 +58,8 @@ func _run() -> void:
 	if player == null or house == null or workshop == null or visuals == null:
 		await _finish()
 		return
+	authored_layer_source = _snapshot_authored_house_layer(
+		content.get_node("AuthoredMap/Ground/Setelah Cleaning") as TileMapLayer)
 	construction = house.get("construction") as Node
 	workshop_construction = workshop.get("construction") as Node
 	_expect(construction != null and workshop_construction != null and construction != workshop_construction,
@@ -156,10 +159,10 @@ func _exercise_house() -> void:
 	_expect(construction.phase == "empty" and not first.is_reserved()
 		and first.get_linked_citizen().employment_status == CitizenData.EmploymentStatus.HIRED
 		and CityStockManager.shelter_capacity == baseline_capacity
-		and not house.get_node("SiteHouse").visible and not house.get_node("FinishedHouse").visible
+		and not house.get_node("FinishedHouse").visible
 		and not content.get_node("AuthoredMap/YSortWorld/ToBeClean1").visible
 		and _authored_cleared_footprint_visible(),
-		"All 180 cleaning minutes finish once, release the worker, preserve shelter and show the original authored footprint.")
+		"All 180 cleaning minutes finish once, release the worker, preserve shelter and show the authored or local site representation.")
 	if construction.phase != "empty":
 		return
 
@@ -358,15 +361,30 @@ func _count_npcs(node: Node) -> int:
 func _authored_cleared_footprint_visible() -> bool:
 	var binding: Node = content.get_node("ReviewHouseBinding")
 	var layer: TileMapLayer = content.get_node("AuthoredMap/Ground/Setelah Cleaning") as TileMapLayer
-	var original_cells: Array = binding.get("_cells")
-	if original_cells.size() != 9:
+	var house_view: Node2D = content.get_node("YSortWorld/CitizenHousePlot") as Node2D
+	var authored_cells: Array = binding.get("_cells")
+	var uses_authored_footprint: bool = bool(binding.get("_uses_authored_footprint"))
+	if not bool(binding.get("_bound")) or _snapshot_authored_house_layer(layer) != authored_layer_source:
 		return false
-	for entry: Dictionary in original_cells:
+	if authored_cells.is_empty():
+		return not uses_authored_footprint and layer.get_used_cells().is_empty() and house_view.get_node("SiteHouse").visible \
+			and not house_view.get_node("ToBeClean").visible
+	if authored_cells.size() != 9 or not uses_authored_footprint:
+		return false
+	for entry: Dictionary in authored_cells:
 		var cell: Vector2i = entry.cell
 		if layer.get_cell_source_id(cell) != entry.source or layer.get_cell_atlas_coords(cell) != entry.atlas \
 				or layer.get_cell_alternative_tile(cell) != entry.alternative:
 			return false
-	return true
+	return not house_view.get_node("SiteHouse").visible and not house_view.get_node("ToBeClean").visible
+
+
+func _snapshot_authored_house_layer(layer: TileMapLayer) -> Dictionary:
+	var result: Dictionary = {}
+	for cell: Vector2i in layer.get_used_cells():
+		result[cell] = [layer.get_cell_source_id(cell), layer.get_cell_atlas_coords(cell),
+			layer.get_cell_alternative_tile(cell)]
+	return result
 
 
 func _press_interact() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/citizen_inspection/citizen_inspection_panel.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
@@ -19,17 +19,6 @@ region = Rect2(1, 1, 168, 134)
 [sub_resource type="AtlasTexture" id="CheckTexture"]
 atlas = ExtResource("13_icons")
 region = Rect2(84, 68, 8, 8)
-
-[sub_resource type="StyleBoxTexture" id="NameLabelStyleBox"]
-content_margin_left = 6.0
-content_margin_top = 2.0
-content_margin_right = 6.0
-content_margin_bottom = 2.0
-texture = ExtResource("14_name_panel")
-texture_margin_left = 8.0
-texture_margin_top = 3.0
-texture_margin_right = 8.0
-texture_margin_bottom = 3.0
 
 [node name="CitizenInspectionPanel" type="CanvasLayer"]
 visible = false
@@ -87,26 +76,38 @@ layout_mode = 2
 theme_override_constants/separation = 3
 
 [node name="LeftSpacer" type="Control" parent="Root/Frame/Margin/Contents/NameRow"]
-custom_minimum_size = Vector2(8, 0)
+custom_minimum_size = Vector2(10, 0)
 layout_mode = 2
 mouse_filter = 2
 
 [node name="NameLabel" type="Label" parent="Root/Frame/Margin/Contents/NameRow"]
-custom_minimum_size = Vector2(54, 11)
+custom_minimum_size = Vector2(42, 11)
 layout_mode = 2
 size_flags_horizontal = 6
 size_flags_vertical = 4
 theme_type_variation = &"HudLabelMain"
 theme_override_font_sizes/font_size = 6
-theme_override_styles/normal = SubResource("NameLabelStyleBox")
 mouse_filter = 1
 text = "Citizen"
 autowrap_mode = 0
-clip_text = true
 text_overrun_behavior = 4
 max_lines_visible = 1
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="NamePlate" type="TextureRect" parent="Root/Frame/Margin/Contents/NameRow/NameLabel"]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -7.0
+offset_right = 5.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("14_name_panel")
 
 [node name="CloseButton" parent="Root/Frame/Margin/Contents/NameRow" instance=ExtResource("7_close")]
 layout_mode = 2
@@ -339,8 +340,9 @@ vertical_alignment = 1
 horizontal_alignment = 1
 
 [node name="SatisfactionBar" type="TextureProgressBar" parent="Root/Frame/Margin/Contents/BodyScroll/Body"]
-custom_minimum_size = Vector2(0, 7)
+custom_minimum_size = Vector2(46, 7)
 layout_mode = 2
+size_flags_horizontal = 4
 mouse_filter = 2
 texture_filter = 1
 value = 0.0
@@ -352,7 +354,6 @@ stretch_margin_right = 3
 stretch_margin_bottom = 3
 texture_under = ExtResource("11_bar_empty")
 texture_progress = ExtResource("12_bar_full")
-tint_progress = Color(0.7, 1, 0.6, 1)
 
 [node name="RefreshTimer" type="Timer" parent="."]
 wait_time = 0.2

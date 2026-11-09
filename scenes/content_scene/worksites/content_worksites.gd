@@ -10,6 +10,8 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var retain_resource_stock: bool = false
 @export var finite_resource_sites: bool = false
 @export var authored_resource_paths: Dictionary = {}
+## Prototype policy: retain disabled ledgers, but remove world access and new production.
+@export var disabled_world_sites: Array[StringName] = []
 # Explicitly temporary values authorized for testing; final balance is pending.
 const TEST_RESOURCE_CAPACITY: Dictionary = {
 	"clay_lump": 36, "wood_log": 24, "reed_bundle": 40, "water_jar": 48,
@@ -96,6 +98,7 @@ func _ready() -> void:
 			authored_resource_binding.clear()
 			_disable_runtime_after_binding_failure()
 			return
+	daily.site_available = is_world_site_available
 	daily.physical_arrival = _physical_site_arrival
 	daily.assignment_started = _begin_site_assignments
 	daily.assignment_released = _release_site_approach
@@ -113,6 +116,15 @@ func _ready() -> void:
 			session.stock = session.deposit_capacity
 			session.stock_settled.connect(_on_hourly_stock_settled.bind(site.name))
 		RESOURCE_PRESENTATION.configure(site, finite_resource_sites)
+		if not is_world_site_available(site.name):
+			site.hide()
+			var disabled_collider: CollisionPolygon2D = site.get_node_or_null("ResourceBase/CollisionPolygon2D")
+			if disabled_collider != null:
+				disabled_collider.disabled = true
+			var disabled_particles: CPUParticles2D = site.get_node_or_null("ReadyParticles")
+			if disabled_particles != null:
+				disabled_particles.emitting = false
+				disabled_particles.hide()
 		var footprint: CanvasItem = site.get_node_or_null("Footprint") as CanvasItem
 		_resource_art_visibility[site.name] = footprint.visible if footprint != null else false
 		var label: CanvasItem = site.get_node_or_null("Label") as CanvasItem
@@ -169,6 +181,36 @@ func _ready() -> void:
 		worker.display_name = "Belum"
 		worker.profession = WorkerData.Profession.HAULER
 		WorkerDatabase.workers_by_id[worker.worker_id] = worker
+
+
+# The shared worksite controller manages focus, while content owns whether a
+# site's world label is configured to show and whether its art is depleted.
+func _process(delta: float) -> void:
+	super._process(delta)
+	_sync_content_site_labels()
+
+func _hide_prompts() -> void:
+	super._hide_prompts()
+	_sync_content_site_labels()
+
+func _sync_content_site_labels() -> void:
+	for site: Marker2D in $WorksiteMarkers.get_children():
+		# A focus callback during initialization must not invent a default policy.
+		if not _resource_label_visibility.has(site.name):
+			continue
+		var label: CanvasItem = site.get_node_or_null("Label") as CanvasItem
+		if label != null:
+			label.visible = bool(_resource_label_visibility[site.name]) \
+				and not bool(_depleted_presentation.get(site.name, false)) \
+				and site != _highlighted_site
+
+func is_world_site_available(site_id: StringName) -> bool:
+	return not disabled_world_sites.has(site_id)
+
+func _open_site_panel(site: Marker2D) -> void:
+	if not is_instance_valid(site) or not is_world_site_available(site.name):
+		return
+	super._open_site_panel(site)
 
 func _disable_runtime_after_binding_failure() -> void:
 	# The shared base _ready has not run, so do not tear down partially initialized
@@ -277,6 +319,7 @@ func sync_resource_presentation() -> void:
 		_set_site_depleted_presentation(site_id, int(sites[site_id].stock) <= 0)
 
 func _set_site_depleted_presentation(site_id: StringName, depleted: bool) -> void:
+	depleted = depleted or not is_world_site_available(site_id)
 	var had_previous_presentation: bool = _depleted_presentation.has(site_id)
 	if had_previous_presentation and bool(_depleted_presentation[site_id]) == depleted:
 		return

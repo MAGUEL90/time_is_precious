@@ -537,7 +537,7 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 
 	var resident: CitizenData = CitizenData.new()
 	resident.citizen_id = "linked_worker_test"
-	resident.display_name = "Linked Worker"
+	resident.display_name = "Naram"
 	resident.satisfaction = 0.80
 	resident.population_status = CitizenData.PopulationStatus.RESIDENT
 	resident.employment_status = CitizenData.EmploymentStatus.HIRED
@@ -545,12 +545,12 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 
 	var linked_worker: WorkerData = WorkerData.new()
 	linked_worker.worker_id = resident.citizen_id
-	linked_worker.display_name = "Legacy Worker"
+	linked_worker.display_name = "Lugal"
 	linked_worker.satisfaction = 0.10
 	WorkerDatabase.workers_by_id[linked_worker.worker_id] = linked_worker
 
 	_expect(
-		linked_worker.get_resolved_display_name() == "Linked Worker",
+		linked_worker.get_resolved_display_name() == "Naram",
 		"Linked workers must resolve their display name from CitizenData."
 	)
 	_expect(
@@ -564,7 +564,7 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 
 	var legacy_worker: WorkerData = WorkerData.new()
 	legacy_worker.worker_id = "legacy_worker_test"
-	legacy_worker.display_name = "Legacy Worker"
+	legacy_worker.display_name = "Lugal"
 	legacy_worker.satisfaction = 0.30
 	legacy_worker.food_fulfilled = true
 	legacy_worker.clothing_fulfilled = true
@@ -575,7 +575,7 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 		"Legacy workers must remain unlinked when no matching CitizenData exists."
 	)
 	_expect(
-		legacy_worker.get_resolved_display_name() == "Legacy Worker",
+		legacy_worker.get_resolved_display_name() == "Lugal",
 		"Unlinked workers must retain their WorkerData display name."
 	)
 	_expect(

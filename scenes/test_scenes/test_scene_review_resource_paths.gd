@@ -265,8 +265,16 @@ func _assert_current_catalog_save(runtime: Node) -> bool:
 	var round_trip_envelope: Dictionary = round_trip.duplicate(true)
 	before_envelope.erase("state")
 	round_trip_envelope.erase("state")
-	_expect(round_trip_values.error.is_empty() and round_trip_raw == raw and round_trip_envelope == before_envelope,
-		"Current ten-site snapshot round-trips exactly after normalizing only JSON clock timer precision.")
+	# Decoding creates fresh CitizenData/VisualProfile instances. Compare their
+	# whitelisted saved fields, not RefCounted object identity.
+	var before_comparison_values = CITY_VALUES.new()
+	var round_trip_comparison_values = CITY_VALUES.new()
+	var before_value_state: Variant = before_comparison_values.encode(raw)
+	var round_trip_value_state: Variant = round_trip_comparison_values.encode(round_trip_raw)
+	_expect(round_trip_values.error.is_empty() and before_comparison_values.error.is_empty()
+		and round_trip_comparison_values.error.is_empty() and round_trip_value_state == before_value_state
+		and round_trip_envelope == before_envelope,
+		"Current ten-site snapshot values round-trip exactly after normalizing only JSON clock timer precision.")
 
 	var old_sites: Dictionary = {}
 	var old_ids: Array[String] = ["ClaySiteA", "ClaySiteB", "ReedSite", "ReedSiteB", "StrawSite", "WaterSite",

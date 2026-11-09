@@ -8,6 +8,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	super._ready()
+	if not world_view_enabled:
+		visible = false
+		return
 	# The pickup source and its world positions stay fixed; only the art sways.
 	var visual: Node = self
 	if visual is Sprite2D and not has_node("PalmSway"):

@@ -181,7 +181,7 @@ func _prepare_fixture() -> bool:
 	person_id = "citizen_live_needs_%d" % Time.get_ticks_usec()
 	person = CitizenData.new()
 	person.citizen_id = person_id
-	person.display_name = "Live Needs Resident"
+	person.display_name = "Nabu"
 	person.population_status = CitizenData.PopulationStatus.RESIDENT
 	person.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 	person.satisfaction = 0.91
@@ -222,7 +222,7 @@ func _run() -> void:
 	await _wait_for_panel_refresh()
 	_expect(panel.visible and str(panel.get("selected_id")) == person_id,
 		"The actual inspection panel opens for the real resident ID.")
-	_expect(_label("NameRow/NameLabel").text == "Live Needs Resident"
+	_expect(_label("NameRow/NameLabel").text == "Nabu"
 		and panel.find_child("DailyCheckLabel", true, false) == null
 		and panel.find_child("ConditionLabel", true, false) == null
 		and panel.find_child("ClothingDaysLabel", true, false) == null
@@ -440,8 +440,8 @@ func _need_matches(need: String, value: Variant) -> bool:
 	var texture: AtlasTexture = icon.texture as AtlasTexture
 	return card.get_node("Label").text == need and icon.visible == met and label.visible == not met \
 		and label.text == text and card.accessibility_name == need + ": " + text \
-		and card.tooltip_text == need + ": " + text and card.get_node("Icon").tooltip_text == need + ": " + text \
-		and card.get_node("Status").tooltip_text == need + ": " + text and icon.accessibility_name == need + ": " + text \
+		and card.tooltip_text.is_empty() and card.get_node("Icon").tooltip_text.is_empty() \
+		and card.get_node("Status").tooltip_text.is_empty() and icon.accessibility_name == need + ": " + text \
 		and texture != null and texture.region == Rect2(84, 68, 8, 8) \
 		and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST
 

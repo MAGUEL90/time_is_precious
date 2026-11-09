@@ -3,6 +3,10 @@ extends "res://scenes/test_scenes/test_scene_house_save_migration.gd"
 ## Isolated disk checkpoint for manual house work. The gameplay UI tests own
 ## input, session duration, collapse and animation; this checks save ownership.
 func _run() -> void:
+	if not _isolated_profile_is_safe():
+		push_error("HousePlayerSaveTest requires three distinct disposable XDG paths under the sibling citysave_suite_qa directory.")
+		get_tree().quit(1)
+		return
 	_snapshot_globals()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -26,14 +30,118 @@ func _run() -> void:
 	WorkerDatabase.get_worker_data(PRODUCTION_ID).profession_xp = 17
 	_select_house_path(test_root.path_join("player_house.json"))
 	var baseline: Dictionary = store.snapshot.capture(content)
-	_expect(store.snapshot.VERSION == 15 and store.snapshot.prepare(baseline, content),
+	var baseline_prepared: bool = baseline.schema_version == store.snapshot.VERSION and store.snapshot.prepare(baseline, content)
+	_expect(baseline_prepared,
 		"The current world validates before the player begins work.")
+	if not baseline_prepared:
+		_finish_player_save_test()
+		return
 	var values = MIGRATION_VALUES.new()
+	var old_raw: Dictionary = values.decode(baseline.state)
 	var legacy: Dictionary = baseline.duplicate(true)
 	legacy.schema_version = 11
-	legacy.state = MIGRATION_FIXTURE.encode_v11(values, values.decode(baseline.state))
-	_expect(store.snapshot.prepare(legacy, content) and _same_snapshot(baseline, store.snapshot.capture(content)),
-		"A v11 control still prepares without mutating the live world.")
+	legacy.state = MIGRATION_FIXTURE.encode_v11(values, old_raw)
+	var legacy_raw_value: Variant = values.decode(legacy.state)
+	var legacy_shape_ok: bool = values.error.is_empty() and legacy_raw_value is Dictionary
+	var legacy_raw: Dictionary = legacy_raw_value if legacy_shape_ok else {}
+	var legacy_ids: Array[String] = ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]
+	var nested_worksites: Variant = legacy_raw.get("worksites")
+	var legacy_sites: Variant = nested_worksites.get("sites") if nested_worksites is Dictionary else null
+	var legacy_needs: Variant = legacy_raw.get("needs")
+	var legacy_plots: Variant = legacy_raw.get("plots")
+	legacy_shape_ok = legacy_shape_ok and nested_worksites is Dictionary \
+		and int(nested_worksites.get("schema_version", -1)) == 2
+	legacy_shape_ok = legacy_shape_ok and legacy_sites is Dictionary and legacy_sites.size() == legacy_ids.size()
+	if legacy_sites is Dictionary:
+		for site_id: String in legacy_ids:
+			var site_record: Variant = legacy_sites.get(site_id)
+			legacy_shape_ok = legacy_shape_ok and site_record is Dictionary \
+				and site_record.size() == 1 and site_record.has("stock")
+		for site_id_value: Variant in legacy_sites:
+			legacy_shape_ok = legacy_shape_ok and legacy_ids.has(str(site_id_value))
+	legacy_shape_ok = legacy_shape_ok and legacy_plots is Dictionary and not legacy_plots.has(house_key)
+	legacy_shape_ok = legacy_shape_ok and legacy_needs is Dictionary \
+		and not legacy_needs.has("food_coverage_until") \
+		and not legacy_needs.has("satisfaction_last_minute") \
+		and not legacy_needs.has("satisfaction_accumulators")
+	_expect(legacy_shape_ok,
+		"The synthetic encode_v11 fixture has nested schema 2, exactly the five literal legacy sites, no house record, and none of the three modern needs ledgers.")
+	if not legacy_shape_ok:
+		_finish_player_save_test()
+		return
+	print("HOUSE_V11_FIXTURE_NOTE synthetic encode_v11 payload; not evidence from a genuine v11 writer.")
+	var expected_legacy_stocks: Dictionary = {}
+	for site_id: String in legacy_ids:
+		expected_legacy_stocks[site_id] = int(legacy_sites[site_id].stock)
+	var checkpoint_files_before: Dictionary = _house_files(store.disk.path)
+	var legacy_input_before: String = JSON.stringify(legacy, "", true, true)
+	var legacy_first_accepted: bool = store.snapshot.prepare(legacy, content)
+	var legacy_first_error: String = store.snapshot.error
+	var legacy_first_live_unchanged: bool = _same_snapshot(baseline, store.snapshot.capture(content))
+	var legacy_first_input_unchanged: bool = JSON.stringify(legacy, "", true, true) == legacy_input_before
+	var legacy_first_files_unchanged: bool = _house_files(store.disk.path) == checkpoint_files_before
+	var staged_legacy: Dictionary = store.snapshot.prepared.duplicate(true)
+	var staged_sites: Variant = staged_legacy.get("worksites", {}).get("sites")
+	var staged_stocks_ok: bool = legacy_first_accepted and staged_sites is Dictionary
+	if staged_sites is Dictionary:
+		for site_id: String in legacy_ids:
+			staged_stocks_ok = staged_stocks_ok and int(staged_sites.get(site_id, {}).get("stock", -1)) == int(expected_legacy_stocks[site_id])
+	var staged_house: Variant = staged_legacy.get("plots", {}).get(house_key)
+	var staged_house_ok: bool = staged_house is Dictionary and staged_house.get("phase") == "uncleared" \
+		and int(staged_house.get("clearing_remaining", -1)) == house_state.CLEARING_MINUTES \
+		and int(staged_legacy.get("stock", {}).get("shelter_capacity", -1)) == int(legacy_raw.stock.shelter_capacity)
+	var legacy_repeat_accepted: bool = store.snapshot.prepare(legacy, content)
+	var legacy_repeat_error: String = store.snapshot.error
+	var legacy_repeat_live_unchanged: bool = _same_snapshot(baseline, store.snapshot.capture(content))
+	var legacy_repeat_input_unchanged: bool = JSON.stringify(legacy, "", true, true) == legacy_input_before
+	var legacy_repeat_files_unchanged: bool = _house_files(store.disk.path) == checkpoint_files_before
+	var live_house_unchanged: bool = house_state.phase == "uncleared" \
+		and CityStockManager.shelter_capacity == int(legacy_raw.stock.shelter_capacity)
+	var legacy_positive_ok: bool = legacy_first_accepted and legacy_first_error.is_empty() \
+		and legacy_repeat_accepted and legacy_repeat_error.is_empty() and legacy_first_live_unchanged \
+		and legacy_repeat_live_unchanged and legacy_first_input_unchanged and legacy_repeat_input_unchanged \
+		and legacy_first_files_unchanged and legacy_repeat_files_unchanged and staged_stocks_ok \
+		and staged_house_ok and live_house_unchanged
+	_expect(legacy_positive_ok,
+		"A synthetic historical v11 payload prepares twice without changing live state, encoded input, checkpoint files, legacy stocks, or house shelter.")
+	var extra_site_raw: Dictionary = values.decode(legacy.state).duplicate(true)
+	extra_site_raw.worksites.sites["WoodSiteD"] = {"stock": 1}
+	var extra_site_document: Dictionary = legacy.duplicate(true)
+	extra_site_document.state = values.encode(extra_site_raw)
+	var extra_site_input_before: String = JSON.stringify(extra_site_document, "", true, true)
+	var extra_site_accepted: bool = store.snapshot.prepare(extra_site_document, content)
+	var extra_site_error: String = store.snapshot.error
+	var extra_site_unchanged: bool = _same_snapshot(baseline, store.snapshot.capture(content)) \
+		and JSON.stringify(extra_site_document, "", true, true) == extra_site_input_before \
+		and _house_files(store.disk.path) == checkpoint_files_before
+	var missing_site_raw: Dictionary = values.decode(legacy.state).duplicate(true)
+	missing_site_raw.worksites.sites.erase("WaterSite")
+	var missing_site_document: Dictionary = legacy.duplicate(true)
+	missing_site_document.state = values.encode(missing_site_raw)
+	var missing_site_input_before: String = JSON.stringify(missing_site_document, "", true, true)
+	var missing_site_accepted: bool = store.snapshot.prepare(missing_site_document, content)
+	var missing_site_error: String = store.snapshot.error
+	var missing_site_unchanged: bool = _same_snapshot(baseline, store.snapshot.capture(content)) \
+		and JSON.stringify(missing_site_document, "", true, true) == missing_site_input_before \
+		and _house_files(store.disk.path) == checkpoint_files_before
+	print("HOUSE_LEGACY_CONTROL ", JSON.stringify({
+		"synthetic_fixture": true,
+		"positive_accepted_twice": legacy_first_accepted and legacy_repeat_accepted,
+		"positive_error": legacy_first_error,
+		"positive_unchanged": legacy_positive_ok,
+		"extra_site_accepted": extra_site_accepted,
+		"extra_site_error": extra_site_error,
+		"extra_site_unchanged": extra_site_unchanged,
+		"missing_site_accepted": missing_site_accepted,
+		"missing_site_error": missing_site_error,
+		"missing_site_unchanged": missing_site_unchanged
+	}))
+	_expect(not extra_site_accepted and extra_site_error == "Legacy worksite registry differs from the saved city." \
+		and extra_site_unchanged,
+		"A synthetic v11 payload with WoodSiteD is rejected by the historical registry without mutation.")
+	_expect(not missing_site_accepted and missing_site_error == "Legacy worksite registry differs from the saved city." \
+		and missing_site_unchanged,
+		"A synthetic v11 payload missing WaterSite is rejected by the historical registry without mutation.")
 	_expect(store.save_checkpoint(), "An initial checkpoint saves before player work: " + store.last_error)
 	var initial_bytes: PackedByteArray = FileAccess.get_file_as_bytes(store.disk.path)
 	if not _test_player_cleaning(initial_bytes):

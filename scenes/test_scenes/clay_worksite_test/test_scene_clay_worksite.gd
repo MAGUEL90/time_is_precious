@@ -523,6 +523,8 @@ func _nearest_interaction_site() -> Marker2D:
 	var nearest: Marker2D = null
 	var nearest_distance: float = INF
 	for site: Marker2D in $WorksiteMarkers.get_children():
+		if not daily.is_site_available(site.name):
+			continue
 		var distance: float = player.global_position.distance_to(site.global_position)
 		var area: Area2D = site.get_node_or_null("WoodInteractionArea") as Area2D
 		var eligible: bool = area.overlaps_body(player) if area != null else distance <= INSPECTION_DISTANCE

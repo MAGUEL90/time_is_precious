@@ -22,6 +22,7 @@
 y_sort_enabled = true
 script = ExtResource("1_runtime")
 finite_resource_sites = true
+disabled_world_sites = Array[StringName]([&"StrawSite"])
 authored_resource_paths = {
 "WoodSite": NodePath("../../AuthoredMap/YSortWorld/Poplar"),
 "WoodSiteB": NodePath("../../AuthoredMap/YSortWorld/Poplar2"),

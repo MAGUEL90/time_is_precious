@@ -9,6 +9,12 @@ const MOOD_REFRESH_SECONDS := 0.25
 # Match the daily Satisfaction precision when raid arithmetic lands just below
 # a nominal band boundary; this never modifies the underlying value.
 const MOOD_COMPARISON_EPSILON := 0.000000001
+const CART_FRAME_COUNTS: Dictionary = {
+	"push_cart": 4,
+	"idle_cart": 2,
+}
+const CART_NATIVE_ANIMATION_PREFIX: String = "cart_native_"
+const CART_ASSET_ROOT: String = "res://assets/characters/shared_assets"
 const EMOTION_SHEETS := {
 	"dark": {
 		"angry": preload("res://assets/characters/shared_assets/head_assets/idle/dark/angry/dark.png"),
@@ -112,6 +118,9 @@ var _mood_refresh_left: float = 0.0
 var _last_requested_action: String = "idle"
 var _last_requested_direction: String = "right"
 var _visible_mood: String = ""
+# A narrow instance-local seam so the regression can exercise missing and
+# malformed imported art without replacing project assets or scene resources.
+var _cart_texture_loader: Callable = Callable()
 
 # Lifecycle
 
@@ -209,8 +218,8 @@ func play_visual(
 		hair_style = hair_style_id
 
 	var resolved_direction: String = _normalize_direction(direction)
-	_update_cart_visual(action, resolved_direction)
-	var resolved_action: String = _resolve_action(action, resolved_direction)
+	var resolved_action: String = _resolve_action(action, skin_tone_id, resolved_direction)
+	_update_cart_visual(action, resolved_direction, resolved_action in ["push_cart", "idle_cart"])
 	var visual_key: String = "%s|%s|%s|%s|%s|%s|%s" % [
 		skin_tone,
 		effective_expression,
@@ -222,6 +231,10 @@ func play_visual(
 	]
 
 	if current_visual_key == visual_key:
+		if _cart_pose_active:
+			# frame_changed fires on integer transitions only. Re-sync here so
+			# paused matching layers also follow the body's subframe progress.
+			_sync_cart_pose_frames()
 		return
 
 	current_visual_key = visual_key
@@ -247,7 +260,7 @@ func play_visual(
 	var hair_anim: String = "%s_%s" % [hair_style, base_anim]
 	var accessory_anim: String = "%s_%s" % [accessory, base_anim]
 	if resolved_action == "push_cart" or resolved_action == "idle_cart":
-		_play_cart_visual(resolved_action, resolved_direction, playback_speed)
+		_play_cart_visual(resolved_action, resolved_direction, playback_speed, skin_tone_id)
 		return
 	if resolved_action == "work":
 		_play_layer(body_sprite, body_anim, "", playback_speed)
@@ -527,75 +540,251 @@ func _sync_work_hair_frame() -> void:
 		hair_sprite.set_frame_and_progress(body_sprite.frame, body_sprite.frame_progress)
 
 
-func _update_cart_visual(action: String, direction: String) -> void:
+func _update_cart_visual(action: String, direction: String, sync_to_pose: bool) -> void:
 	var show_cart: bool = action in ["push_cart", "idle_cart"]
 	if show_cart and cart_visual == null:
-		cart_visual = preload("res://scenes/worker_visual/worker_cart.tscn").instantiate()
-		cart_visual.sprite_frames = cart_visual.sprite_frames.duplicate()
+		cart_visual = AnimatedSprite2D.new()
+		cart_visual.name = "CartVisual"
+		cart_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		cart_visual.sprite_frames = SpriteFrames.new()
 		add_child(cart_visual)
-	if cart_visual != null:
-		var was_visible: bool = cart_visual.visible
-		cart_visual.visible = show_cart
-		cart_visual.flip_h = direction == "left"
-		if show_cart:
-			cart_visual.sprite_frames.set_animation_speed(action, idle_anim_speed if action == "idle_cart" else anim_speed)
-			if not was_visible or cart_visual.animation != action:
-				cart_visual.play(action)
-				cart_visual.set_frame_and_progress(0, 0.0)
-			elif not cart_visual.is_playing() and not _cart_pose_active:
-				cart_visual.play(action)
+	if cart_visual == null:
+		return
+	var was_visible: bool = cart_visual.visible
+	var tool_ready: bool = show_cart and _ensure_cart_tool_animation(action)
+	var animation_name: String = _cart_tool_animation_name(action) if show_cart else ""
+	cart_visual.visible = show_cart and tool_ready
+	if not show_cart:
+		cart_visual.stop()
+		cart_visual.flip_h = false
+		return
+	cart_visual.flip_h = direction == "left"
+	if not tool_ready:
+		cart_visual.stop()
+		return
+	var playback_speed: float = idle_anim_speed if action == "idle_cart" else anim_speed
+	cart_visual.sprite_frames.set_animation_speed(animation_name, playback_speed)
+	if not was_visible or cart_visual.animation != StringName(animation_name):
+		cart_visual.play(animation_name)
+		cart_visual.set_frame_and_progress(0, 0.0)
+	elif sync_to_pose:
+		cart_visual.pause()
+	elif not cart_visual.is_playing():
+		# Preserve the prior fallback presentation: a valid cart tool may remain
+		# visible and animate while the worker uses its same-tone ordinary pose.
+		cart_visual.play(animation_name)
 
-func _play_cart_visual(action: String, direction: String, playback_speed: float) -> void:
-	# Use the supplied light body/head/hand sheets with their original colors.
-	var suffix: String = "light_%s_%s" % [action, direction]
-	_play_layer(body_sprite, suffix, "", playback_speed)
-	_play_layer(head_sprite, "base_%s" % suffix, "", playback_speed)
+
+func _play_cart_visual(action: String, direction: String, playback_speed: float, tone: String) -> void:
+	var frame_count: int = int(CART_FRAME_COUNTS.get(action, 0))
+	var core_animation: String = _cart_core_animation_name(tone, action, direction)
+	_play_layer(body_sprite, core_animation, "", playback_speed)
+	_play_layer(head_sprite, core_animation, "", playback_speed)
 	if action == "push_cart":
-		_play_layer(hand_sprite, suffix, "", playback_speed)
+		_play_layer(hand_sprite, core_animation, "", playback_speed)
 	else:
 		_hide_layer(hand_sprite)
-	# Cart sheets currently have no matching clothing, hair, or accessory layers.
-	# Keep those layers hidden instead of mixing ordinary walk art into the pose.
-	_hide_layer(clothes_sprite)
-	_hide_layer(hair_sprite)
+
+	_play_cart_optional_layer(
+		clothes_sprite,
+		"clothes",
+		clothes_id,
+		_cart_clothes_source_path(clothes_id, action),
+		action,
+		frame_count,
+		playback_speed
+	)
+	_play_cart_optional_layer(
+		hair_sprite,
+		"hair",
+		hair_style,
+		_cart_hair_source_path(hair_style, action),
+		action,
+		frame_count,
+		playback_speed
+	)
 	_hide_layer(accessories_sprite)
+
 	var mirrored: bool = direction == "left"
-	body_sprite.flip_h = mirrored
-	head_sprite.flip_h = mirrored
-	hand_sprite.flip_h = mirrored
-	# One clock keeps layers aligned when hands resume after an idle/cart change.
+	for layer: AnimatedSprite2D in [body_sprite, head_sprite, hand_sprite, clothes_sprite, hair_sprite]:
+		layer.flip_h = mirrored if layer.visible else false
+	if cart_visual != null and cart_visual.visible:
+		cart_visual.flip_h = mirrored
+
+	# The body remains the single clock for each matching cart layer.
 	_cart_pose_active = true
-	head_sprite.pause()
-	hand_sprite.pause()
-	cart_visual.pause()
+	for layer: AnimatedSprite2D in [head_sprite, hand_sprite, clothes_sprite, hair_sprite]:
+		if layer.visible:
+			layer.pause()
+	if cart_visual != null and cart_visual.visible:
+		cart_visual.pause()
 	_sync_cart_pose_frames()
+
+
+func _play_cart_optional_layer(
+	layer: AnimatedSprite2D,
+	layer_kind: String,
+	layer_id: String,
+	source_path: String,
+	action: String,
+	frame_count: int,
+	playback_speed: float
+) -> void:
+	if _is_default_option(layer_id) or source_path == "":
+		_hide_layer(layer)
+		return
+	var animation_name: String = _cart_optional_animation_name(layer_kind, layer_id, action)
+	if not _ensure_cart_layer_animation(layer, animation_name, source_path, frame_count):
+		_hide_layer(layer)
+		return
+	_play_layer(layer, animation_name, "", playback_speed)
 
 
 func _sync_cart_pose_frames() -> void:
 	if not _cart_pose_active:
 		return
-	for layer: AnimatedSprite2D in [head_sprite, hand_sprite, cart_visual]:
+	for layer: AnimatedSprite2D in [head_sprite, hand_sprite, clothes_sprite, hair_sprite, cart_visual]:
 		if layer != null and layer.visible:
 			layer.set_frame_and_progress(body_sprite.frame, body_sprite.frame_progress)
 
 
-func _resolve_action(action: String, direction: String) -> String:
+func _resolve_action(action: String, tone: String, direction: String) -> String:
 	if action != "push_cart" and action != "idle_cart":
 		return action
-	if not _has_cart_visual("light", action, direction):
+	if not _ensure_cart_core_animations(tone, action, direction):
 		return "walk" if action == "push_cart" else "idle"
 	return action
 
 
-func _has_cart_visual(skin_tone_id: String, action: String, direction: String) -> bool:
-	var suffix: String = "%s_%s_%s" % [skin_tone_id, action, direction]
-	var has_body_and_head: bool = (
-		_has_playable_animation(body_sprite, suffix)
-		and _has_playable_animation(head_sprite, "base_%s" % suffix)
-	)
-	if action == "idle_cart":
-		return has_body_and_head
-	return has_body_and_head and _has_playable_animation(hand_sprite, suffix)
+func _ensure_cart_core_animations(tone: String, action: String, direction: String) -> bool:
+	if tone not in skin_tones:
+		return false
+	var frame_count: int = int(CART_FRAME_COUNTS.get(action, 0))
+	if frame_count == 0:
+		return false
+	var animation_name: String = _cart_core_animation_name(tone, action, direction)
+	var body_path: String = _cart_tone_source_path("body_assets", action, tone)
+	var head_path: String = _cart_tone_source_path("head_assets", action, tone)
+	if not _ensure_cart_layer_animation(body_sprite, animation_name, body_path, frame_count):
+		return false
+	if not _ensure_cart_layer_animation(head_sprite, animation_name, head_path, frame_count):
+		return false
+	if action == "push_cart":
+		var hand_path: String = _cart_tone_source_path("hand_assets", action, tone)
+		if not _ensure_cart_layer_animation(hand_sprite, animation_name, hand_path, frame_count):
+			return false
+	return true
+
+
+func _ensure_cart_layer_animation(layer: AnimatedSprite2D, animation_name: String, source_path: String, frame_count: int) -> bool:
+	if layer == null or layer.sprite_frames == null or source_path == "":
+		return false
+	if _has_valid_cart_animation(layer, animation_name, source_path, frame_count):
+		return true
+	# Never replace an authored or previously installed non-empty clip. New
+	# native cart clips use their own names and are kept on this actor's copy.
+	if layer.sprite_frames.has_animation(animation_name):
+		return false
+	var texture: Texture2D = _load_valid_cart_texture(source_path, frame_count)
+	if texture == null:
+		return false
+	var frames: SpriteFrames = layer.sprite_frames
+	frames.add_animation(animation_name)
+	frames.set_animation_loop(animation_name, true)
+	for index: int in range(frame_count):
+		var atlas := AtlasTexture.new()
+		atlas.atlas = texture
+		atlas.region = Rect2(index * 32, 0, 32, 32)
+		frames.add_frame(animation_name, atlas)
+	return _has_valid_cart_animation(layer, animation_name, source_path, frame_count)
+
+
+func _has_valid_cart_animation(layer: AnimatedSprite2D, animation_name: String, source_path: String, frame_count: int) -> bool:
+	if layer == null or layer.sprite_frames == null or not layer.sprite_frames.has_animation(animation_name):
+		return false
+	var frames: SpriteFrames = layer.sprite_frames
+	if frames.get_frame_count(animation_name) != frame_count:
+		return false
+	for index: int in range(frame_count):
+		var texture: Texture2D = frames.get_frame_texture(animation_name, index)
+		if not texture is AtlasTexture:
+			return false
+		var atlas_texture: AtlasTexture = texture as AtlasTexture
+		if atlas_texture.atlas == null or atlas_texture.atlas.resource_path != source_path:
+			return false
+		if atlas_texture.atlas.get_size() != Vector2(frame_count * 32, 32):
+			return false
+		if atlas_texture.region != Rect2(index * 32, 0, 32, 32) or texture.get_size() != Vector2(32, 32):
+			return false
+	return true
+
+
+func _load_valid_cart_texture(source_path: String, frame_count: int) -> Texture2D:
+	if frame_count <= 0:
+		return null
+	var texture: Texture2D = _load_cart_texture(source_path)
+	if texture == null or texture.get_size() != Vector2(frame_count * 32, 32):
+		return null
+	return texture
+
+
+func _load_cart_texture(source_path: String) -> Texture2D:
+	if _cart_texture_loader.is_valid():
+		return _cart_texture_loader.call(source_path) as Texture2D
+	if not ResourceLoader.exists(source_path, "Texture2D"):
+		return null
+	return ResourceLoader.load(source_path) as Texture2D
+
+
+func _cart_tone_source_path(layer_kind: String, action: String, tone: String) -> String:
+	return "%s/%s/%s/%s.png" % [CART_ASSET_ROOT.path_join(layer_kind), action, tone, tone]
+
+
+func _cart_clothes_source_path(outfit: String, action: String) -> String:
+	if _is_default_option(outfit) or not clothes.has(outfit) or not outfit.is_valid_identifier() or not CART_FRAME_COUNTS.has(action):
+		return ""
+	return "%s/cloth_assets/%s/%s/%s.png" % [CART_ASSET_ROOT, outfit, action, action]
+
+
+func _cart_hair_source_path(style: String, action: String) -> String:
+	if _is_default_option(style) or not hair_styles.has(style):
+		return ""
+	var parts: PackedStringArray = style.split("_")
+	if parts.size() != 3:
+		return ""
+	if parts[0] not in ["black", "brown", "grey", "red"] or parts[1] not in ["female", "male"] or parts[2] not in ["01", "02", "03"]:
+		return ""
+	return "%s/hair_assets/%s/%s/%s/%s.png" % [CART_ASSET_ROOT, action, parts[0], parts[1], parts[2]]
+
+
+func _cart_core_animation_name(tone: String, action: String, direction: String) -> String:
+	return "%s%s_%s_%s_%s" % [CART_NATIVE_ANIMATION_PREFIX, "core", tone, action, direction]
+
+
+func _cart_optional_animation_name(layer_kind: String, layer_id: String, action: String) -> String:
+	return "%s%s_%s_%s" % [CART_NATIVE_ANIMATION_PREFIX, layer_kind, layer_id, action]
+
+
+func _cart_tool_animation_name(action: String) -> String:
+	return "%stool_%s" % [CART_NATIVE_ANIMATION_PREFIX, action]
+
+
+func _cart_tool_candidate_paths(action: String) -> Array[String]:
+	return [
+		"%s/tools_assets/%s/%s.png" % [CART_ASSET_ROOT, action, action],
+		"%s/tools/%s/%s.png" % [CART_ASSET_ROOT, action, action],
+	]
+
+
+func _ensure_cart_tool_animation(action: String) -> bool:
+	if cart_visual == null or cart_visual.sprite_frames == null:
+		return false
+	var frame_count: int = int(CART_FRAME_COUNTS.get(action, 0))
+	var animation_name: String = _cart_tool_animation_name(action)
+	for source_path: String in _cart_tool_candidate_paths(action):
+		if _ensure_cart_layer_animation(cart_visual, animation_name, source_path, frame_count):
+			return true
+	return false
 
 func _apply_work_timing(tired: bool) -> void:
 	for layer: AnimatedSprite2D in [body_sprite, head_sprite, clothes_sprite, hair_sprite, accessories_sprite]:

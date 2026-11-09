@@ -118,7 +118,7 @@ func _prepare_global_fixture() -> void:
 	WorkerDatabase.dismissed_workers.erase(TEST_WORKER_ID)
 	var worker := WorkerData.new()
 	worker.worker_id = TEST_WORKER_ID
-	worker.display_name = "City Supply Test Worker"
+	worker.display_name = "Ashur"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.wage_shekel_per_day = 1
 	WorkerDatabase.workers_by_id[TEST_WORKER_ID] = worker

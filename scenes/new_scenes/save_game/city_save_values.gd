@@ -60,6 +60,30 @@ func decode(data: Variant) -> Variant:
 	return _decode_value(data, 0)
 
 
+static func encode_float64_hex(value: float) -> String:
+	if not is_finite(value):
+		return ""
+	var bytes := PackedByteArray()
+	bytes.resize(8)
+	bytes.encode_double(0, value)
+	return bytes.hex_encode()
+
+
+static func decode_float64_hex(hex_value: String) -> Variant:
+	if hex_value.length() != 16:
+		return null
+	for index: int in range(hex_value.length()):
+		if not "0123456789abcdef".contains(hex_value.substr(index, 1)):
+			return null
+	var bytes: PackedByteArray = hex_value.hex_decode()
+	if bytes.size() != 8:
+		return null
+	var value: float = bytes.decode_double(0)
+	if not is_finite(value):
+		return null
+	return value
+
+
 func _encode_value(value: Variant, depth: int) -> Variant:
 	if depth > MAX_DEPTH:
 		_fail("Value nesting exceeds %d levels." % MAX_DEPTH)
@@ -153,7 +177,14 @@ func _encode_object(value: Object, depth: int) -> Variant:
 			if field_value != null and typeof(field_value) != TYPE_STRING:
 				_fail("WorkOrder.tool_used_instance_id must be null or String.")
 				return null
-		var encoded_field: Variant = _encode_value(field_value, depth + 1)
+		var encoded_field: Variant
+		if approved_name in ["CitizenData", "WorkerData"] and field_name == "satisfaction":
+			if typeof(field_value) != TYPE_FLOAT or not is_finite(field_value):
+				_fail("%s.satisfaction must be a finite float." % approved_name)
+				return null
+			encoded_field = _tagged("float64", {"value": encode_float64_hex(float(field_value))})
+		else:
+			encoded_field = _encode_value(field_value, depth + 1)
 		if not error.is_empty():
 			return null
 		fields[field_name] = encoded_field
@@ -213,6 +244,15 @@ func _decode_tagged_dictionary(data: Dictionary, depth: int) -> Variant:
 				_fail("Vector2 coordinates must be finite.")
 				return null
 			return Vector2(data["x"], data["y"])
+		"float64":
+			if not _has_exact_string_keys(data, [TAG_KEY, "value"]) or typeof(data["value"]) != TYPE_STRING:
+				_fail("Malformed float64 tag.")
+				return null
+			var decoded_float: Variant = decode_float64_hex(data["value"])
+			if decoded_float == null:
+				_fail("Float64 tag must contain canonical finite binary64 bytes.")
+				return null
+			return decoded_float
 		"array":
 			return _decode_array(data, depth)
 		"dictionary":

@@ -139,7 +139,7 @@ func _open_worker_details() -> void:
 	await get_tree().process_frame
 	worker_control._show_manage(TEST_ID)
 	worker_control.manage_details_button.pressed.emit()
-	_refresh_instructions("Worker Hub Details: Clothing Test")
+	_refresh_instructions("Worker Hub Details: Nabu")
 
 
 func _refresh_instructions(action: String) -> void:
@@ -228,7 +228,7 @@ func _clear_fixture_registries() -> void:
 func _create_fixture_people() -> void:
 	var resident: CitizenData = CitizenData.new()
 	resident.citizen_id = TEST_ID
-	resident.display_name = "Clothing Test"
+	resident.display_name = "Nabu"
 	resident.population_status = CitizenData.PopulationStatus.RESIDENT
 	resident.employment_status = CitizenData.EmploymentStatus.HIRED
 	resident.profession = WorkerData.Profession.LABORER
@@ -237,7 +237,7 @@ func _create_fixture_people() -> void:
 
 	var worker: WorkerData = WorkerData.new()
 	worker.worker_id = TEST_ID
-	worker.display_name = "Clothing Test"
+	worker.display_name = "Nabu"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.satisfaction = 0.5
 	WorkerDatabase.workers_by_id[TEST_ID] = worker

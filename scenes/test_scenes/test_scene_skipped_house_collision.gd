@@ -7,6 +7,26 @@ const HOUSE: PackedScene = preload("res://scenes/citizen_house_plot/citizen_hous
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
 var failures: int = 0
 
+# A deterministic pending participant makes the timing invariant observable
+# even on fast machines. It never advances the worker or the world itself.
+class RoutePlanningGate extends Node:
+	var worker: WorkerData
+	var construction: Node
+	var clock_before: int
+	var position_before: Vector2
+	var work_before: int
+	var pending_calls: int = 0
+	var state_changed_during_wait: bool = false
+
+	func prepare_simulated_minute(_arrival_minute: int) -> bool:
+		if pending_calls >= 25:
+			return true
+		pending_calls += 1
+		var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+		if now != clock_before or worker.physical_approach.position != position_before or construction._remaining_work_units() != work_before:
+			state_changed_during_wait = true
+		return false
+
 func _ready() -> void:
 	_run.call_deferred()
 
@@ -88,6 +108,10 @@ func _run() -> void:
 		_expect(change_result == OK, "Open the actual home scene")
 		for frame: int in range(5):
 			await get_tree().process_frame
+		# This route fixture fast-forwards overnight without playing the user's
+		# needs loop; prevent an unrelated faint coroutine from outliving the test.
+		var home_player: Player = get_tree().current_scene.get_node("YSortWorld/Player") as Player
+		home_player.debug_disable_player_needs = true
 		_expect(store.parked_worksite == runtime and runtime.can_simulate_plot_travel(), "The parked city geometry remains current")
 	_expect(TimeComponentManager.advance_minutes(1) and first_state.phase == "built", "The first house completes during skipped time")
 	var stopped_at: Vector2 = traveller.physical_approach.position
@@ -113,7 +137,9 @@ func _run() -> void:
 			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
-			_expect(TimeComponentManager.advance_minutes(1), "The parked worker can advance after the collider update")
+			var inbound_result: Dictionary = await TimeComponentManager.advance_minutes_staged(1, self)
+			_expect(bool(inbound_result.get("completed", false)) and int(inbound_result.get("advanced_minutes", 0)) == 1,
+				"The parked worker advances one staged minute after the collider update")
 			var current: Vector2 = traveller.physical_approach.position
 			var new_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {})
 			_expect(_walked_segments_clear(runtime.worksite_navigation, previous, current, old_route, new_route),
@@ -129,17 +155,31 @@ func _run() -> void:
 			and int(traveller.physical_approach.arrival_minute) == WorkerData.PLOT_DEPARTURE_PENDING,
 			"The next 15:00 shift close starts the retained outbound journey")
 		var before_departure: Vector2 = traveller.physical_approach.position
+		var gate := RoutePlanningGate.new()
+		gate.worker = traveller
+		gate.construction = second_state
+		gate.clock_before = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+		gate.position_before = before_departure
+		gate.work_before = second_state._remaining_work_units()
+		add_child(gate)
+		gate.add_to_group("staged_time_participants")
 		for frame: int in range(3):
 			await get_tree().process_frame
 		for minute: int in range(20):
 			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
-			_expect(TimeComponentManager.advance_minutes(1), "The parked worker advances outbound after shift")
+			var outbound_result: Dictionary = await TimeComponentManager.advance_minutes_staged(1, self)
+			_expect(bool(outbound_result.get("completed", false)) and int(outbound_result.get("advanced_minutes", 0)) == 1,
+				"The parked worker advances one staged outbound minute after shift")
 			var current: Vector2 = traveller.physical_approach.position
 			var new_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {})
 			_expect(_walked_segments_clear(runtime.worksite_navigation, previous, current, old_route, new_route),
 				"Every outbound waypoint avoids the completed house")
+		gate.remove_from_group("staged_time_participants")
+		_expect(gate.pending_calls == 25 and not gate.state_changed_during_wait,
+			"A route pending for more than 20 frames consumes no clock, movement or work before preflight completes")
+		gate.queue_free()
 		_expect(traveller.physical_approach.position != before_departure and runtime.can_simulate_plot_travel(),
 			"The outbound worker keeps moving with the player still at home")
 		var overnight_work: int = second_state._remaining_work_units()
@@ -150,7 +190,9 @@ func _run() -> void:
 			await get_tree().process_frame
 			var previous: Vector2 = traveller.physical_approach.position
 			var old_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {}).duplicate(true)
-			_expect(TimeComponentManager.advance_minutes(1), "The next shift can advance while still at home")
+			var return_result: Dictionary = await TimeComponentManager.advance_minutes_staged(1, self)
+			_expect(bool(return_result.get("completed", false)) and int(return_result.get("advanced_minutes", 0)) == 1,
+				"The next shift advances one staged minute while still at home")
 			var current: Vector2 = traveller.physical_approach.position
 			var new_route: Dictionary = visuals.plot_presence.states.get(traveller.worker_id, {})
 			_expect(_walked_segments_clear(runtime.worksite_navigation, previous, current, old_route, new_route),

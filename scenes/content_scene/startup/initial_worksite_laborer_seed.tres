@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="InitialCitizenSeed" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/content_scene/startup/initial_citizen_seed.gd" id="1_seed"]
+[ext_resource type="Script" path="res://resources/visual_profile/visual_profile.gd" id="2_profile"]
+
+[sub_resource type="Resource" id="Resource_profile"]
+script = ExtResource("2_profile")
+skin_tone = "light"
+expression = "base"
+hair_style = "grey_male_01"
+clothes_id = "clay_worn_wrap"
+accessory = "default"
+
+[resource]
+script = ExtResource("1_seed")
+display_name = "Lugal"
+satisfaction = 0.55
+visual_profile = SubResource("Resource_profile")

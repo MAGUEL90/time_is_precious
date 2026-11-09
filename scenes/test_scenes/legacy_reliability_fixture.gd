@@ -2,11 +2,17 @@ extends RefCounted
 
 ## Construct historical schemas without restoring retired runtime properties.
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
+const WORKSITE_SCHEMA = preload("res://scenes/new_scenes/save_game/city_save_worksites.gd")
 
 ## Old city checkpoints have neither the annex nor a payment-source marker.
 static func strip_v16_owners(raw: Dictionary) -> void:
 	raw.erase("annex_storage")
 	raw.erase("transport")
+	# Every outer schema through v16 predates these per-person timing ledgers.
+	if raw.get("needs") is Dictionary:
+		raw.needs.erase("food_coverage_until")
+		raw.needs.erase("satisfaction_last_minute")
+		raw.needs.erase("satisfaction_accumulators")
 	if raw.get("raid") is Dictionary:
 		raw.raid.erase("_work_paid_source")
 		raw.raid.erase("_refund_pending")
@@ -25,8 +31,9 @@ static func _add_old_empty_stockpiles(worksites: Dictionary, retained: Dictionar
 			worksites.storages[endpoint_id] = {"shared": false, "quantity": 0, "capacity": 96, "accepting": true}
 
 static func _strip_new_resource_sites(worksites: Dictionary) -> void:
-	for site_id: String in ["ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
-		worksites.sites.erase(site_id)
+	for site_id_value: Variant in worksites.sites.keys():
+		if not WORKSITE_SCHEMA.LEGACY_SITE_IDS.has(str(site_id_value)):
+			worksites.sites.erase(site_id_value)
 	for site: Dictionary in worksites.sites.values():
 		site.erase("respawn_started_at")
 		site.erase("respawn_due_at")

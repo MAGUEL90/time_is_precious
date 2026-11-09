@@ -9,7 +9,7 @@ const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sour
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
 const STARTERS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
-const VERSION: int = 17
+const VERSION: int = 18
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -23,7 +23,7 @@ const GROUPS: Dictionary = {
 	"stock": ["food_supply", "clothing_supply", "treasury_shekel", "shelter_capacity"],
 	"citizens": ["citizens_by_id"],
 	"workers": ["workers_by_id", "dismissed_workers"],
-	"needs": ["last_food_fulfilled_count", "last_food_unfulfilled_count", "last_clothing_fulfilled_count", "last_clothing_unfulfilled_count", "last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count", "last_processed_day", "last_food_processed_day", "last_clothing_processed_day", "clothing_allocations", "last_needs_results", "food_coverage_until", "satisfaction_last_minute"],
+	"needs": ["last_food_fulfilled_count", "last_food_unfulfilled_count", "last_clothing_fulfilled_count", "last_clothing_unfulfilled_count", "last_shelter_capacity_fulfilled_count", "last_shelter_capacity_unfulfilled_count", "last_processed_day", "last_food_processed_day", "last_clothing_processed_day", "clothing_allocations", "last_needs_results", "food_coverage_until", "satisfaction_last_minute", "satisfaction_accumulators"],
 	"immigration": ["pending_immigrants", "immigration_pressure"],
 	"generator": ["counter_id"],
 	"dialogue": ["intro_seen"],
@@ -116,6 +116,8 @@ func capture(map: Node) -> Dictionary:
 	var raw: Dictionary = {}
 	for key: String in GROUPS:
 		raw[key] = fields(nodes[key], GROUPS[key])
+	if not _stage_capture_satisfaction_accumulators(raw):
+		return {}
 	_without_retired_needs_fields(raw)
 	# Icons are authored presentation, never file-controlled resources.
 	raw.raid = _without_icons(raw.raid)
@@ -154,7 +156,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != 16 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != 16 and version != 17 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -222,8 +224,15 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		legacy_player.erase("focus")
 	if version < 10 and not _migrate_legacy_needs(raw):
 		return false
-	if version < VERSION and not _migrate_timing_ledgers(raw):
+	if version < 17 and not _migrate_timing_ledgers(raw):
 		return false
+	if version < 18:
+		var legacy_needs: Variant = raw.get("needs")
+		if not legacy_needs is Dictionary or legacy_needs.has("satisfaction_accumulators"):
+			return fail("Invalid legacy satisfaction accumulator ledger.")
+		legacy_needs = legacy_needs.duplicate()
+		legacy_needs["satisfaction_accumulators"] = {}
+		raw["needs"] = legacy_needs
 	for key: String in GROUPS:
 		if not _valid_fields(raw.get(key), nodes[key], GROUPS[key]):
 			return fail("Invalid " + key + " state.")
@@ -305,7 +314,8 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail(_sites.error)
 	_without_transient_worker_assignments(raw)
 	_stage_city_hauler_applicant(raw)
-	if migrated_worksites or version < VERSION:
+	var staged_starter_profiles: bool = _stage_missing_starter_profiles(raw)
+	if migrated_worksites or version < VERSION or staged_starter_profiles:
 		# Do not apply a legacy state that cannot be written by the existing
 		# bounded codec/disk format. The original checkpoint remains untouched.
 		var next_values = VALUES.new()
@@ -317,6 +327,26 @@ func prepare(document: Dictionary, map: Node) -> bool:
 			return fail("Migrated checkpoint exceeds the existing save size limit.")
 	prepared = raw
 	return true
+
+## Record the current starter baseline only when older data has no profile.
+## Saved names and non-null profiles are authoritative and never replaced.
+## This is not recovery of an appearance that was never stored in the file.
+func _stage_missing_starter_profiles(raw: Dictionary) -> bool:
+	var people: Dictionary = raw.citizens.citizens_by_id
+	var staged_people: Dictionary = people.duplicate()
+	var changed: bool = false
+	for id: String in [STARTERS.APPLICANT_ID, STARTERS.HAULER_APPLICANT_ID, STARTERS.CITY_HAULER_APPLICANT_ID]:
+		var person: CitizenData = people.get(id)
+		if person == null or person.visual_profile != null:
+			continue
+		var staged_person: CitizenData = person.duplicate()
+		staged_person.visual_profile = STARTERS.create_initial_visual_profile()
+		staged_people[id] = staged_person
+		changed = true
+	if changed:
+		raw.citizens = raw.citizens.duplicate()
+		raw.citizens.citizens_by_id = staged_people
+	return changed
 
 ## Stage the requested candidate without changing live state or save bytes.
 ## A nearly full valid checkpoint remains loadable even if one more citizen
@@ -332,6 +362,7 @@ func _stage_city_hauler_applicant(raw: Dictionary) -> void:
 	var candidate := CitizenData.new()
 	candidate.citizen_id = id
 	candidate.display_name = STARTERS.CITY_HAULER_NAME
+	candidate.visual_profile = STARTERS.create_initial_visual_profile()
 	candidate.population_status = CitizenData.PopulationStatus.RESIDENT
 	candidate.employment_status = CitizenData.EmploymentStatus.APPLICANT
 	candidate.profession = WorkerData.Profession.HAULER
@@ -568,6 +599,99 @@ func _without_retired_needs_fields(raw: Dictionary) -> void:
 			result.erase("reliability_delta")
 	needs.last_needs_results = results
 	raw.needs = needs
+
+func _stage_capture_satisfaction_accumulators(raw: Dictionary) -> bool:
+	# fields() returns live dictionaries. Copy both levels before dropping stale
+	# anchors so capture never normalizes the running manager in place.
+	var needs_value: Variant = raw.get("needs")
+	if not needs_value is Dictionary:
+		return fail("Invalid satisfaction accumulator ledger.")
+	var needs: Dictionary = needs_value.duplicate()
+	var ledger_value: Variant = needs.get("satisfaction_accumulators")
+	if not ledger_value is Dictionary or ledger_value.size() > VALUES.MAX_COLLECTION_SIZE:
+		return fail("Invalid satisfaction accumulator ledger.")
+	var ledger: Dictionary = ledger_value.duplicate(true)
+	needs["satisfaction_accumulators"] = ledger
+	raw["needs"] = needs
+	var now: int = _checkpoint_minute(raw.clock)
+	for id_value: Variant in ledger.keys():
+		if not id_value is String:
+			return fail("Invalid satisfaction accumulator entry.")
+		var computed: Variant = _satisfaction_accumulator_value(ledger[id_value], id_value, raw, now)
+		if computed == null:
+			return fail("Invalid satisfaction accumulator entry.")
+		var current: Variant = _resolved_saved_satisfaction(raw, id_value)
+		if current == null:
+			if not _known_saved_person(raw, id_value):
+				return fail("Invalid satisfaction accumulator identity.")
+			ledger.erase(id_value)
+			continue
+		if float(computed) != float(current):
+			ledger.erase(id_value)
+	return true
+
+func _satisfaction_accumulator_value(record: Variant, id: String, raw: Dictionary, now: int) -> Variant:
+	if id.is_empty() or id != id.strip_edges() or id.length() > 128 or not record is Dictionary or record.size() != 3:
+		return null
+	if not record.has("anchor_bits") or not record.has("minutes") or not record.has("cursor"):
+		return null
+	if typeof(record.anchor_bits) != TYPE_STRING or not record.minutes is int or not record.cursor is int:
+		return null
+	if int(record.cursor) < 0 or int(record.cursor) > now:
+		return null
+	var needs: Variant = raw.get("needs")
+	if not needs is Dictionary or not needs.get("satisfaction_last_minute") is Dictionary:
+		return null
+	var cursors: Dictionary = needs.satisfaction_last_minute
+	if not cursors.has(id) or not cursors[id] is int or int(cursors[id]) != int(record.cursor):
+		return null
+	var minute_limit: int = int(float(CitizenNeedsManager.MINUTES_PER_DAY) / CitizenNeedsManager.SATISFACTION_DAILY_STEP)
+	if int(record.minutes) < -minute_limit or int(record.minutes) > minute_limit:
+		return null
+	var anchor_value: Variant = VALUES.decode_float64_hex(record.anchor_bits)
+	if anchor_value == null or float(anchor_value) < 0.0 or float(anchor_value) > 1.0:
+		return null
+	var value: float = float(anchor_value) + CitizenNeedsManager.SATISFACTION_DAILY_STEP * float(record.minutes) / float(CitizenNeedsManager.MINUTES_PER_DAY)
+	if not is_finite(value) or value < 0.0 or value > 1.0:
+		return null
+	return value
+
+func _resolved_saved_satisfaction(raw: Dictionary, id: String) -> Variant:
+	var citizens_state: Variant = raw.get("citizens")
+	var workers_state: Variant = raw.get("workers")
+	if not citizens_state is Dictionary or not citizens_state.get("citizens_by_id") is Dictionary or not workers_state is Dictionary or not workers_state.get("workers_by_id") is Dictionary:
+		return null
+	var people: Dictionary = citizens_state.citizens_by_id
+	var citizens_value: Variant = people.get(id)
+	if citizens_value is CitizenData and citizens_value.population_status == CitizenData.PopulationStatus.RESIDENT:
+		return float(citizens_value.satisfaction)
+	# WorkerDatabase excludes a worker whenever a citizen with the same ID is
+	# registered, so only a genuinely standalone active worker owns this value.
+	var worker: Variant = workers_state.workers_by_id.get(id)
+	if worker is WorkerData and not people.has(id):
+		return float(worker.satisfaction)
+	return null
+
+func _known_saved_person(raw: Dictionary, id: String) -> bool:
+	var citizens_state: Variant = raw.get("citizens")
+	var workers_state: Variant = raw.get("workers")
+	if not citizens_state is Dictionary or not citizens_state.get("citizens_by_id") is Dictionary or not workers_state is Dictionary:
+		return false
+	if citizens_state.citizens_by_id.has(id):
+		return true
+	var active: Variant = workers_state.get("workers_by_id")
+	var dismissed: Variant = workers_state.get("dismissed_workers")
+	if active is Dictionary and active.has(id):
+		return true
+	if dismissed is Dictionary and dismissed.has(id):
+		return true
+	var immigration: Variant = raw.get("immigration")
+	var pending: Variant = immigration.get("pending_immigrants") if immigration is Dictionary else null
+	if pending is Array:
+		for immigrant: Variant in pending:
+			if immigrant is CitizenData and immigrant.citizen_id == id:
+				return true
+	return false
 
 func _without_transient_worker_assignments(raw: Dictionary) -> void:
 	# Workshop selector drafts have no persistent owner. Keep actual reservations,
@@ -1161,6 +1285,16 @@ func _validate_timing_ledgers(raw: Dictionary, now: int) -> bool:
 					return fail("Food coverage expiry is too far in the future.")
 			elif int(absolute_minute) > now:
 				return fail("Satisfaction cursor is ahead of the saved clock.")
+	var accumulators: Variant = needs.get("satisfaction_accumulators")
+	if not accumulators is Dictionary or accumulators.size() > VALUES.MAX_COLLECTION_SIZE:
+		return fail("Invalid satisfaction accumulator ledger.")
+	for id_value: Variant in accumulators:
+		if not id_value is String:
+			return fail("Invalid satisfaction accumulator identity.")
+		var computed: Variant = _satisfaction_accumulator_value(accumulators[id_value], id_value, raw, now)
+		var current: Variant = _resolved_saved_satisfaction(raw, id_value)
+		if computed == null or current == null or float(computed) != float(current):
+			return fail("Satisfaction accumulator differs from the saved person.")
 	return true
 
 func _capture_city_drops(map: Node) -> Array:

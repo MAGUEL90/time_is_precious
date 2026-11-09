@@ -1,0 +1,165 @@
+{
+  "status": "PASS for selected headless matrix only",
+  "engine": "4.5.1.stable.official.f62fdbde1",
+  "engine_sha256": "db07cae7de644278a1884d4552bdf2bca3f5d30131b18faf3a0c4d730080b199",
+  "broad_groups": [
+    {
+      "group": "frozen_core",
+      "runs": 13,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/frozen_core/manifest.json"
+    },
+    {
+      "group": "final_lifecycle",
+      "runs": 18,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_lifecycle/manifest.json"
+    },
+    {
+      "group": "final_finite",
+      "runs": 2,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_finite/manifest.json"
+    },
+    {
+      "group": "final_starter",
+      "runs": 6,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_starter/manifest.json"
+    },
+    {
+      "group": "final_final_core",
+      "runs": 6,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_final_core/manifest.json"
+    },
+    {
+      "group": "final_identity_final",
+      "runs": 4,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_identity_final/manifest.json"
+    },
+    {
+      "group": "final_palm_frozen",
+      "runs": 6,
+      "all_pass": true,
+      "manifest": "citysave_suite_qa/final_palm_frozen/manifest.json"
+    }
+  ],
+  "broad_execution_count": 55,
+  "home_execution_count": 14,
+  "home_manifest": "qa/final_run/manifest.json",
+  "focused_execution_count": 9,
+  "focused_results": [
+    {
+      "label": "final_resources",
+      "result": "qa/final_resources/result.json",
+      "passed": true,
+      "result_lines": [
+        "CartResourcePathsTest: PASS checks=49 failures=0"
+      ]
+    },
+    {
+      "label": "final_clothing",
+      "result": "qa/final_clothing/result.json",
+      "passed": true,
+      "result_lines": [
+        "CartClothingLookupTest checks=280 failures=0 PASS"
+      ]
+    },
+    {
+      "label": "final_cart",
+      "result": "qa/final_cart/result.json",
+      "passed": true,
+      "result_lines": [
+        "WorkerCartAnimationTest PASSED"
+      ]
+    },
+    {
+      "label": "final_owner",
+      "result": "qa/final_owner/result.json",
+      "passed": true,
+      "result_lines": [
+        "CartProfileOwnerTest: PASS checks=188 failures=0"
+      ]
+    },
+    {
+      "label": "final_transport",
+      "result": "qa/final_transport/result.json",
+      "passed": true,
+      "result_lines": [
+        "CityStorageTransportInterruptionTest: PASS"
+      ]
+    },
+    {
+      "label": "final_work_clothing",
+      "result": "qa/final_work_clothing/result.json",
+      "passed": true,
+      "result_lines": [
+        "WorkerWorkClothingTest PASSED"
+      ]
+    },
+    {
+      "label": "final_work_animation",
+      "result": "qa/final_work_animation/result.json",
+      "passed": true,
+      "result_lines": [
+        "WorkerWorkAnimationTest PASSED"
+      ]
+    },
+    {
+      "label": "final_work_hair",
+      "result": "qa/final_work_hair/result.json",
+      "passed": true,
+      "result_lines": [
+        "BUSY_WORK_HAIR_CHECK checks=1865 failures=0"
+      ]
+    },
+    {
+      "label": "final_house_save",
+      "result": "citysave_suite_qa/final_house_save/result.json",
+      "passed": true,
+      "result_lines": [
+        "HousePlayerSaveTest: PASS"
+      ]
+    }
+  ],
+  "final_combined_execution_count": 78,
+  "expected_nonzero_exit_controls": 3,
+  "baseline_unchanged": true,
+  "candidate_matches_frozen_manifest": true,
+  "combined_patch_sha256": "b71b671e50db01b36b644db2d6351c622bd1231626d555347f8cf4eb2b5a9121",
+  "schema17_research": {
+    "manifest": "/workspace/scratch/ce2b9f81926c/palm_home_genuine17_cloud_20261109/qa/final_byte_preserved/manifest.json",
+    "execution_count": 19,
+    "normal_execution_count": 17,
+    "expected_unsafe_profile_refusals": 2,
+    "assertions": 552,
+    "all_pass": true,
+    "test_only_byte_preserved_copy": true,
+    "production_migration_complete": false
+  },
+  "retained_invalid_harness_attempts": [
+    {
+      "directory": "matrix_initial",
+      "reason": "Parallel engines in one execution namespace collided on the unchanged addon loopback port 9877; rerun serially without changing addon or settings."
+    },
+    {
+      "directory": "matrix_final_",
+      "group": "core",
+      "reason": "Prefix final_ collided with the earlier final_core directory; no new core engine ran. Its stale six-run manifest was rejected. Replaced by uniquely named frozen_core; external harness now refuses existing profiles before reading manifests."
+    },
+    {
+      "directory": "qa/final_house_save",
+      "reason": "The original external generic harness selected qa/, but the unchanged HousePlayerSave guard requires citysave_suite_qa/. It refused before checkpoint work. The accepted retry uses that explicitly required isolated sibling root; no production guard was changed."
+    }
+  ],
+  "limits": [
+    "No laptop or real user saves accessed.",
+    "No user-authored map, artwork, settings, save implementation, validators, identities or gameplay rules changed.",
+    "No graphical/manual/Android/whole-project acceptance.",
+    "No merge, commit, push or deployment.",
+    "Production palm startup/reload and reviewed exact legacy migration are unresolved.",
+    "Real plain_worn_wrap cart sheets remain absent; synthetic test art is never shipped."
+  ]
+}

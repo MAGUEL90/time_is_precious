@@ -3,6 +3,7 @@ class_name NightmareWorld extends Node2D
 const TIMER_NORMAL_COLOR: Color = Color(0.3686, 0.2745, 0.1882, 1.0)
 const TIMER_CRITICAL_COLOR: Color = Color(0.8, 0.15, 0.1, 1.0)
 const MAX_NIGHTMARE_LEVEL: int = 5
+const RETURN_OPERATION: Script = preload("res://scenes/nightmare_world/nightmare_return_operation.gd")
 const NIGHTMARE_TIME_MULTIPLIER: Array[float] = [
 	1.0,
 	1.2,
@@ -89,7 +90,8 @@ func _process(delta: float) -> void:
 # Nightmare entry
 
 func start_nightmare(player: Player, tier: int) -> bool:
-	if is_active or not is_instance_valid(player):
+	if is_active or SceneTransition.has_node("NightmareReturnOperation") or not is_instance_valid(player) \
+			or player.is_queued_for_deletion() or not player.is_inside_tree():
 		return false
 
 	player_ref = player
@@ -196,32 +198,20 @@ func finish_nightmare(time_out: bool) -> void:
 		+ "Total world time: %d min" % total_minutes
 	)
 
-	player_ref.set_movement_locked(&"nightmare_return", true)
-
-	await SceneTransition.run_with_fade(
-		Callable(self, "_return_to_world").bind(total_minutes),
-		0.35,
-		scoreboard_duration,
-		scoreboard,
-		true
-	)
-
-	TimeComponentManager.is_paused = previous_time_paused
-	nightmare_active_changed.emit(false)
-
-	player_ref.set_movement_locked(&"nightmare_return", false)
-	nightmare_completed.emit(
-		base_minutes,
-		extra_minutes,
-		total_minutes
-	)
-
-func _return_to_world(total_minutes: int) -> bool:
-	nightmare_ui.hide()
-	player_ref.global_position = return_position
-	player_ref.apply_nightmare_consequences(total_minutes)
-
-	return true
+	# The transition autoload owns the operation so an interrupted/replaced
+	# scene cannot discard minutes already committed by the world clock.
+	var operation: Node = RETURN_OPERATION.new()
+	operation.name = "NightmareReturnOperation"
+	SceneTransition.add_child(operation)
+	# A forced scene/player teardown can invalidate the old typed reference
+	# before the exit callback. The persistent operation will find a live
+	# replacement without treating the old scene's coordinates as its spawn.
+	var live_player: Player = player_ref if is_instance_valid(player_ref) and not player_ref.is_queued_for_deletion() else null
+	operation.begin(self, live_player, return_position, previous_time_paused,
+		base_minutes, extra_minutes, total_minutes, scoreboard, scoreboard_duration)
+	# Preserve the original awaitable finish contract for scene-local callers;
+	# the operation itself still survives if this NightmareWorld is removed.
+	await operation.finished
 
 # Vision presentation
 

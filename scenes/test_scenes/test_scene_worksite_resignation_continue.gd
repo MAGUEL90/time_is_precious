@@ -13,7 +13,15 @@ func _run() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--resign-phase="):
 			phase = argument.trim_prefix("--resign-phase=")
-	_expect(phase in ["write", "read"], "A write or read phase is required.")
+	if phase not in ["write", "read"]:
+		_expect(false, "A write or read phase is required.")
+		print("WorksiteResignationContinueTest ", phase, ": FAIL (%d)" % failures)
+		get_tree().quit(1)
+		return
+	if not _isolated_profile_is_safe():
+		print("WorksiteResignationContinueTest ", phase, ": FAIL (unsafe isolated profile)")
+		get_tree().quit(2)
+		return
 	_snapshot_globals()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -29,6 +37,17 @@ func _run() -> void:
 	wood_storage = runtime.get_node("CityStorageArea/DeliveryPoint")
 	store = WorkStateRuntime.get_node("CitySave")
 	store.disk.path = RESIGN_CHECKPOINT
+	initial_wood_stock = int(runtime.sites[WOOD_SITE].stock)
+	_expect(runtime.sites[WOOD_SITE].finite_resource
+		and initial_wood_stock == int(runtime.sites[WOOD_SITE].deposit_capacity)
+		and initial_wood_stock > 3 and _wood_total() == initial_wood_stock
+		and int(city_storage.items.get("wood_log", 0)) == 0
+		and runtime._daily_output_count(WOOD_SITE) == 0
+		and runtime.daily.hauling.routes.is_empty(),
+		"The fixture starts with a full configured finite wood deposit and no stored, ground, or in-flight logs.")
+	if failures > 0:
+		await _finish_resign_continue()
+		return
 	if phase == "write":
 		_test_write()
 	else:
@@ -36,20 +55,26 @@ func _run() -> void:
 	await _finish_resign_continue()
 
 func _test_write() -> void:
-	_expect(not FileAccess.file_exists(RESIGN_CHECKPOINT), "Use a fresh isolated user-data directory.")
+	if FileAccess.file_exists(RESIGN_CHECKPOINT):
+		_expect(false, "Use a fresh isolated user-data directory.")
+		return
 	_prepare_city_state()
+	_expect(int(runtime.sites[WOOD_SITE].stock) == initial_wood_stock,
+		"Preparing the city fixture does not change the configured wood deposit.")
+	if failures > 0:
+		return
 	if not _hire_and_assign_team():
 		return
 	var laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)
 	var hauler: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)
 	var job: Dictionary = runtime.daily.jobs[WOOD_SITE]
 	job.progress[LABORER_ID] = PARTIAL
-	# One explicit three-log fixture load; the site, pile and later cargo total 72.
+	# One explicit three-log fixture load is conserved across site stock and cargo.
 	runtime.sites[WOOD_SITE].stock -= 3
 	_expect(runtime._drop_daily_output(3, runtime.get_node("WorksiteMarkers/WoodSite")), "Seed three real ground logs.")
 	TimeComponentManager.advance_minutes(1)
 	var route: Dictionary = runtime.hauling.routes[HAULER_ID]
-	_expect(route.phase == "outbound" and int(route.cargo.quantity) == 3 and _wood_total() == 72,
+	_expect(route.phase == "outbound" and int(route.cargo.quantity) == 3 and _wood_total() == initial_wood_stock,
 		"The real hauler has one conserved outbound load.")
 	var partial_before: float = float(job.progress[LABORER_ID])
 	CitizenManager.get_citizen(LABORER_ID).satisfaction = 0.0
@@ -94,18 +119,29 @@ func _test_write() -> void:
 	_expect(store.save_checkpoint(), "Save the pending real-city worksite: " + store.last_error)
 
 func _test_read() -> void:
+	var checkpoint_files_before: Dictionary = _checkpoint_files_snapshot()
+	if not bool(checkpoint_files_before[""]["present"]):
+		_expect(false, "The reader requires the writer's existing checkpoint.")
+		_expect(_checkpoint_files_snapshot() == checkpoint_files_before,
+			"A missing checkpoint read leaves all checkpoint files unchanged.")
+		return
 	city_storage.changed.connect(_on_restored_city_storage_changed)
 	runtime.daily.resignation_ready.connect(func(id: String):
 		if id == HAULER_ID:
 			ready_notifications += 1
 	)
-	_expect(store.load_checkpoint(), "Continue the pending shipment in a fresh process: " + store.last_error)
+	var load_succeeded: bool = store.load_checkpoint()
+	_expect(load_succeeded, "Continue the pending shipment in a fresh process: " + store.last_error)
+	if not load_succeeded:
+		_expect(_checkpoint_files_snapshot() == checkpoint_files_before,
+			"A failed Continue preserves all checkpoint files exactly.")
+		return
 	city_storage.changed.disconnect(_on_restored_city_storage_changed)
 	var worker: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)
 	var route: Dictionary = runtime.hauling.routes.get(HAULER_ID, {})
 	_expect(restore_notifications == 1, "City Storage observers run only after the route, worker and site progress are restored.")
 	_expect(worker != null and worker.resignation_pending and bool(route.get("resigning", false))
-		and int(route.get("cargo", {}).get("quantity", 0)) == 3 and _wood_total() == 72,
+		and int(route.get("cargo", {}).get("quantity", 0)) == 3 and _wood_total() == initial_wood_stock,
 		"Continue restores the same pending cargo and worker without duplication.")
 	_expect(not WorkerDatabase.has_worker_data(LABORER_ID)
 		and is_equal_approx(float(runtime.daily.pending_progress[WOOD_SITE][0]), PARTIAL),
@@ -119,7 +155,7 @@ func _test_read() -> void:
 	CitizenManager.get_citizen(HAULER_ID).satisfaction = 0.8
 	var remaining: int = maxi(1, int(route.arrival) - _clock_minute())
 	TimeComponentManager.advance_minutes(remaining)
-	_expect(int(city_storage.items.get("wood_log", 0)) == 3 and _wood_total() == 72
+	_expect(int(city_storage.items.get("wood_log", 0)) == 3 and _wood_total() == initial_wood_stock
 		and not WorkerDatabase.has_worker_data(HAULER_ID) and ready_notifications == 1,
 		"The original load is accepted once and the hauler resigns synchronously despite recovery.")
 	_expect(not runtime.daily.pending_output.has(FAILED_DROP_SITE)
@@ -138,6 +174,19 @@ func _test_read() -> void:
 	_expect(not runtime.daily.pending_progress.has(WOOD_SITE)
 		and is_equal_approx(float(runtime.daily.jobs[WOOD_SITE].progress[PRODUCTION_ID]), PARTIAL),
 		"The replacement claims the restored partial item once.")
+	_expect(_checkpoint_files_snapshot() == checkpoint_files_before,
+		"Continue preserves the presence and exact bytes of all four checkpoint files for repeat reads.")
+
+func _checkpoint_files_snapshot() -> Dictionary:
+	var files: Dictionary = {}
+	for suffix: String in ["", ".bak", ".tmp", ".pending"]:
+		var path: String = RESIGN_CHECKPOINT + suffix
+		var present: bool = FileAccess.file_exists(path)
+		files[suffix] = {
+			"present": present,
+			"bytes": FileAccess.get_file_as_bytes(path) if present else PackedByteArray()
+		}
+	return files
 
 func _on_restored_city_storage_changed() -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(HAULER_ID)

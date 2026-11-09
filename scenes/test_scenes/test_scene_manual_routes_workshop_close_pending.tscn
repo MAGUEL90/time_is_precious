@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/test_scenes/test_scene_manual_work_routes.gd" id="1"]
+
+[node name="ManualWorkRoutes" type="Node"]
+script = ExtResource("1")
+mode = "actual"
+manual_kind = "workshop"
+expect_repaired = true
+stop_kind = "close_pending"
+cross_shift = false

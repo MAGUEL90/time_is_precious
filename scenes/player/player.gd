@@ -83,6 +83,7 @@ var last_sleep_day: int = -1
 var last_staged_sleep_result: Dictionary = {}
 var is_collapsing: bool = false
 var last_collapse_day: int = -1
+var _nightmare_effects_applying: bool = false
 
 
 # Lifecycle and time updates
@@ -1040,31 +1041,60 @@ func collapse() -> void:
 		push_warning("Player failed to enter Nightmare World.")
 
 func apply_nightmare_consequences(total_world_minutes: int) -> bool:
-	if total_world_minutes <= 0 or not time_component_manager.can_advance_time():
+	# Keep the existing synchronous API for callers which require its all-or-
+	# nothing contract. The normal Nightmare return uses staged advancement.
+	if total_world_minutes <= 0 or is_sleeping or _nightmare_effects_applying \
+			or SceneTransition.has_node("NightmareReturnOperation") or not time_component_manager.can_advance_time():
 		return false
 	is_sleeping = true
 	if not time_component_manager.advance_minutes(total_world_minutes):
 		is_sleeping = false
 		return false
+	return _complete_nightmare_consequences(total_world_minutes) > 0
 
-	hunger = clampf(
-		hunger + collapse_hunger_cost,
-		min_hunger,
-		max_hunger
-	)
 
-	fatigue = clampf(
-		fatigue - collapse_fatigue_recovery,
-		min_fatigue,
-		max_fatigue
-	)
-
+## Returns 0 if rejected, 1 if applied but completion needs a live Player,
+## or 2 if both the fixed effects and completion signal have been dispatched.
+func _complete_nightmare_consequences(total_world_minutes: int) -> int:
+	if total_world_minutes <= 0 or not is_sleeping or _nightmare_effects_applying:
+		return 0
+	_nightmare_effects_applying = true
+	var player_weak: WeakRef = weakref(self)
+	hunger = clampf(hunger + collapse_hunger_cost, min_hunger, max_hunger)
+	fatigue = clampf(fatigue - collapse_fatigue_recovery, min_fatigue, max_fatigue)
 	is_sleeping = false
 	last_collapse_day = TimeComponentManager.current_day
 	last_sleep_day = TimeComponentManager.current_day
 	condition_changed.emit()
+	# An observer may remove the Player or change scenes synchronously. Keep
+	# the applied effects, but let the return operation deliver the completion
+	# on a valid replacement instead of signalling from a stale Player.
+	var live_player: Player = player_weak.get_ref() as Player
+	var emitted: bool = false
+	if is_instance_valid(live_player) and live_player.is_inside_tree() \
+			and not live_player.is_queued_for_deletion() and get_tree().current_scene != null \
+			and get_tree().current_scene.is_ancestor_of(live_player):
+		emitted = true
+		live_player.collapse_completed.emit(total_world_minutes)
+	live_player = player_weak.get_ref() as Player
+	if is_instance_valid(live_player):
+		live_player._nightmare_effects_applying = false
+	return 2 if emitted else 1
+
+
+## A scene change during condition_changed can defer the signal. It must not
+## reapply the fixed costs or allow a reentrant synchronous Nightmare request.
+func _emit_deferred_nightmare_completion(total_world_minutes: int) -> bool:
+	if total_world_minutes <= 0 or _nightmare_effects_applying:
+		return false
+	_nightmare_effects_applying = true
+	var player_weak: WeakRef = weakref(self)
 	collapse_completed.emit(total_world_minutes)
+	var live_player: Player = player_weak.get_ref() as Player
+	if is_instance_valid(live_player):
+		live_player._nightmare_effects_applying = false
 	return true
+
 
 func _enter_nightmare() -> bool:
 	var nightmare_world: NightmareWorld = (

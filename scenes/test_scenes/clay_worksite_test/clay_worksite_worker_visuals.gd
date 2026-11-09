@@ -152,6 +152,16 @@ func _process(delta: float) -> void:
 			# Active hauling below will set its current cargo label again.
 			if actor.has_node("CargoLabel"):
 				actor.get_node("CargoLabel").text = ""
+			if not schedule.is_site_available(site_id) and not schedule.is_hauler(id):
+				work_cycles.erase(id)
+				roaming.erase(id)
+				site_paths.erase(id)
+				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+				if worker != null and not worker.physical_approach.is_empty():
+					actor.global_position = worker.physical_approach.position - FEET_OFFSET
+				actor.show()
+				_play(actor, "idle", "right")
+				continue
 			if not fixture.enable_worker_commute:
 				actor.hide()
 				continue
@@ -371,7 +381,8 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	actor.set_meta("worker_id", id)
 	actor.set_meta("visual_has_worker", worker != null)
 	var profile: VisualProfile = citizen.visual_profile if citizen != null and citizen.visual_profile != null else VisualProfile.new()
-	actor.skin_tone = "light" if not is_instance_valid(resident_spawn) and get_parent().daily.is_hauler(id) else profile.skin_tone
+	# Native cart layers now retain the linked identity in both city and standalone scenes.
+	actor.skin_tone = profile.skin_tone
 	actor.expression = profile.expression
 	actor.clothes_id = profile.clothes_id
 	actor.hair_style = profile.hair_style

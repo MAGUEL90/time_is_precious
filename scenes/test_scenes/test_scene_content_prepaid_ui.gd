@@ -2,6 +2,11 @@ extends Node
 
 ## Isolated fixture only: explicit prices/funds exercise production UI bindings.
 const BOARD: PackedScene = preload("res://scenes/ui/job_board_ui/job_board_ui.tscn")
+const FIXTURE_NAMES: Dictionary = {
+	"first": "Naram", "second": "Lugal", "scroll_0": "Ashur", "scroll_1": "Nabu",
+	"scroll_2": "Enkiya", "scroll_3": "Urani", "scroll_4": "Dagan",
+	"a": "Tammuz", "b": "Sinbel", "other": "Iddin",
+}
 var failures: int = 0
 var board: JobBoardUI
 var callbacks: int = 0
@@ -16,6 +21,20 @@ func _expect(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
+
+func _card_index_for(citizen_id: String) -> int:
+	for index: int in range(board.applicants.size()):
+		if board.applicants[index].citizen_id != citizen_id:
+			continue
+		if index >= board.cards.size() or not is_instance_valid(board.cards[index]):
+			_expect(false, "No candidate card exists for " + citizen_id + ".")
+			return -1
+		if board.cards[index].citizen_id != citizen_id:
+			_expect(false, "Candidate card does not match applicant " + citizen_id + ".")
+			return -1
+		return index
+	_expect(false, "Applicant is missing from the board: " + citizen_id + ".")
+	return -1
 
 func _expect_no_tooltips(node: Node) -> void:
 	for control: Control in node.find_children("*", "Control", true, false):
@@ -134,7 +153,7 @@ func _hover_without_tooltip(control: Control) -> void:
 func _seed(id: String, profession: WorkerData.Profession, satisfaction: float) -> CitizenData:
 	var citizen := CitizenData.new()
 	citizen.citizen_id = id
-	citizen.display_name = "Fixture " + id
+	citizen.display_name = str(FIXTURE_NAMES[id])
 	citizen.population_status = CitizenData.PopulationStatus.RESIDENT
 	citizen.employment_status = CitizenData.EmploymentStatus.APPLICANT
 	citizen.profession = profession
@@ -157,7 +176,7 @@ func _run() -> void:
 	first_citizen.display_name = "Naram"
 	var second_citizen: CitizenData = _seed("second", WorkerData.Profession.CRAFTER, 0.87)
 	second_citizen.display_name = "Lugal"
-	var long_name: String = "A Very Long Worker Name Preserved In The Save"
+	var long_name: String = "Ashur Nabu Enkiya Urani Dagan Tammuz Sinbel Iddin"
 	var long_candidate: CitizenData
 	for i: int in range(5):
 		var candidate: CitizenData = _seed("scroll_%d" % i, WorkerData.Profession.LABORER, 0.5)
@@ -170,11 +189,22 @@ func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(board.cards.size() == 7 and board.applicant_list.item_count == 7, "All available applicants have cards and native list entries.")
+	var first_index: int = _card_index_for(first_citizen.citizen_id)
+	var second_index: int = _card_index_for(second_citizen.citizen_id)
+	var long_index: int = _card_index_for(long_candidate.citizen_id)
+	if first_index < 0 or second_index < 0 or long_index < 0:
+		print("ContentPrepaidUITest: FAIL (%d failed)" % failures)
+		get_tree().quit(1)
+		return
+	_expect(board.applicants[first_index] == first_citizen and board.applicants[second_index] == second_citizen
+		and board.applicants[long_index] == long_candidate and first_index != second_index
+		and first_index != long_index and second_index != long_index,
+		"The Laborer, Crafter, and long-name fixture have distinct matching applicant cards.")
 	_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Opening the board does not hire or charge.")
 	_expect(board.applicant_list.get_selected_items().is_empty() and board.hire_button.disabled,
 		"Opening the board leaves every applicant unselected and Hire disabled.")
-	_expect(board.cards[0].name_label.text == "Naram" and board.cards[0].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
-	_expect(board.cards[0].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
+	_expect(board.cards[first_index].name_label.text == "Naram" and board.cards[first_index].satisfaction_bar.value == 62, "Cards display actual names and satisfaction values.")
+	_expect(board.cards[first_index].portrait.size == Vector2(32, 32), "Portrait control retains native 32x32 size.")
 	_expect(board.feedback_label.text.is_empty(), "Remaining-time feedback is absent on open.")
 	_expect(not board.wallet_label.text.contains("Shekel") and not board.wallet_label.text.contains("Hours"), "Wallet and hours text do not appear in the menu.")
 	_expect(board.wallet_label.text == "0", "The balance remains the personal wallet even when city cash differs.")
@@ -204,14 +234,14 @@ func _run() -> void:
 	_expect(not board.feedback_label.get_global_rect().intersects(scroll_rect), "Contextual feedback does not overlap the candidate viewport.")
 	_expect(wallet_row.get_global_rect().position.x > board.hire_button.get_global_rect().end.x and wallet_row.get_global_rect().position.y >= scroll_rect.end.y,
 		"The wallet group is at the lower right, clear of the candidate area and Hire.")
-	_expect(board.cards[2].name_label.text != long_name and board.cards[2].name_label.tooltip_text.is_empty() and board.cards[2].name_label.accessibility_name == long_name and long_candidate.display_name == long_name, "Only the displayed name is shortened; the original identity remains accessible without a hover tooltip.")
-	_expect(board.cards[2].name_label.get_global_rect().end.x <= board.cards[2].role_label.get_global_rect().position.x, "Long display name does not overlap the role.")
+	_expect(board.cards[long_index].name_label.text != long_name and board.cards[long_index].name_label.tooltip_text.is_empty() and board.cards[long_index].name_label.accessibility_name == long_name and long_candidate.display_name == long_name, "Only the displayed name is shortened; the original identity remains accessible without a hover tooltip.")
+	_expect(board.cards[long_index].name_label.get_global_rect().end.x <= board.cards[long_index].role_label.get_global_rect().position.x, "Long display name does not overlap the role.")
 	_expect_no_tooltips(board)
 	await _hover_without_tooltip(wallet_icon)
 	await _capture("job-board-wallet-hover")
 	await _capture("job-board-initial")
-	board.cards[0].selection_button.set_pressed(true)
-	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0]) and not board.hire_button.disabled,
+	board.cards[first_index].selection_button.set_pressed(true)
+	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([first_index]) and not board.hire_button.disabled,
 		"Manually checking a candidate selects it and enables Hire.")
 	Inventory.items["shekel"] = 9223372036854775807
 	board._refresh_quote()
@@ -302,8 +332,8 @@ func _run() -> void:
 		board.duration_buttons[option].pressed.emit()
 		await get_tree().process_frame
 		await get_tree().process_frame
-		_expect(board.cards[0].wage_label.text == str(2 * (option + 1)), "Laborer card shows its price without trailing duration text.")
-		_expect(board.cards[1].wage_label.text == str(3 * (option + 1)), "Crafter card shows its own profession price.")
+		_expect(board.cards[first_index].wage_label.text == str(2 * (option + 1)), "Laborer card shows its price without trailing duration text.")
+		_expect(board.cards[second_index].wage_label.text == str(3 * (option + 1)), "Crafter card shows its own profession price.")
 		_expect(board.confirm_quote_amount_label.text == str(2 * (option + 1)) and board.confirm_quote_icon.visible, "The quoted price and coin are visible before confirmation.")
 		_expect(WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Choosing a duration does not hire or charge.")
 		_expect_confirmation_geometry(duration_and_quote_geometry, "%d-day selection keeps selector and quote geometry fixed" % days)
@@ -352,8 +382,9 @@ func _run() -> void:
 	await get_tree().process_frame
 	board.cancel_hire_button.pressed.emit()
 	_expect(not board.confirmation_open and board.visible and board.hire_button.has_focus() and WorkerDatabase.workers_by_id.is_empty() and Inventory.items.is_empty(), "Back returns focus to the board without hiring or charging.")
-	for index: int in range(1, board.cards.size()):
-		board.cards[index].selection_button.set_pressed(true)
+	for index: int in range(board.cards.size()):
+		if index != first_index:
+			board.cards[index].selection_button.set_pressed(true)
 	board.hire_button.pressed.emit()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -384,11 +415,17 @@ func _run() -> void:
 		and last_name_after_poll.get_global_rect().end.y <= names_scroll.get_global_rect().end.y + 0.1,
 		"Polling preserves the selected-name scroll position and last visible candidate.")
 	board.cancel_hire_button.pressed.emit()
-	for index: int in range(1, board.cards.size()):
-		board.cards[index].selection_button.set_pressed(false)
-	board.cards[1].selection_button.set_pressed(true)
-	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([0, 1]), "Checkboxes select independently.")
+	for index: int in range(board.cards.size()):
+		if index != first_index:
+			board.cards[index].selection_button.set_pressed(false)
+	board.cards[second_index].selection_button.set_pressed(true)
+	var expected_selection: Array[int] = [first_index, second_index]
+	expected_selection.sort()
+	_expect(board.applicant_list.get_selected_items() == PackedInt32Array(expected_selection), "Checkboxes select independently.")
 	board.hire_button.pressed.emit()
+	_expect(board._pending_hire_ids.size() == 2 and board._pending_hire_ids.has(first_citizen.citizen_id)
+		and board._pending_hire_ids.has(second_citizen.citizen_id),
+		"The confirmation selects the intended Laborer and Crafter by ID.")
 	_expect(board.confirm_quote_amount_label.text == "15" and board.selected_names_container.get_child_count() == 2, "Nine-day batch quote totals the selected candidates.")
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -443,6 +480,8 @@ func _run() -> void:
 	var hired: WorkerData = WorkerDatabase.get_worker_data("first")
 	_expect(hired != null and hired.payroll_contract_days == 9 and hired.payroll_paid_until_day == 109, "Exact funds hire the selected nine-day native contract.")
 	_expect(int(Inventory.items.get("shekel", 0)) == 0 and WorkerDatabase.workers_by_id.size() == 2, "Final confirmation buys both contracts atomically once.")
+	_expect(WorkerDatabase.has_worker_data(first_citizen.citizen_id) and WorkerDatabase.has_worker_data(second_citizen.citizen_id),
+		"The atomic hire contains the intended Laborer and Crafter.")
 	_expect(CityStockManager.treasury_shekel == 987, "Hiring leaves city cash unchanged.")
 	_expect(board.feedback_label.text.is_empty(), "Successful hiring leaves no success toast on the Job Board.")
 	Inventory.items["shekel"] = 100
@@ -450,12 +489,16 @@ func _run() -> void:
 	_expect(int(Inventory.items.get("shekel", 0)) == 100 and WorkerDatabase.workers_by_id.size() == 2, "Stale repeated confirmation cannot buy another batch.")
 	board._refresh_applicants(false)
 	await get_tree().process_frame
-	for index: int in range(board.applicants.size()):
-		if board.applicants[index].citizen_id == "scroll_0":
-			board.applicant_list.deselect_all()
-			board.applicant_list.select(index)
-			board.candidate_scroll.ensure_control_visible(board.cards[index])
-			break
+	var remaining_long_index: int = _card_index_for(long_candidate.citizen_id)
+	if remaining_long_index < 0:
+		print("ContentPrepaidUITest: FAIL (%d failed)" % failures)
+		get_tree().quit(1)
+		return
+	board.applicant_list.deselect_all()
+	board.applicant_list.select(remaining_long_index)
+	board.candidate_scroll.ensure_control_visible(board.cards[remaining_long_index])
+	_expect(board.applicant_list.get_selected_items() == PackedInt32Array([remaining_long_index]),
+		"The long-name confirmation selects exactly its intended applicant.")
 	board._refresh_quote()
 	board.hire_button.pressed.emit()
 	await get_tree().process_frame

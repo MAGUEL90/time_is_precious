@@ -1,5 +1,6 @@
 extends "res://scenes/test_scenes/test_scene_city_save_economy.gd"
 
+const MINUTE_RATE: float = 0.05 / 1440.0
 const SHIFT_CHECKPOINT: String = "user://workshop_shift_resignation_test/checkpoint.json"
 const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 const BUILDERS: Array[String] = ["shift_builder_1", "shift_builder_2", "shift_builder_3", "shift_builder_4", "shift_cleaner_1", "shift_cleaner_2", "shift_reentrant_builder", "shift_daily_builder_1", "shift_daily_builder_2"]
@@ -14,6 +15,10 @@ class BlockedNavigation extends RefCounted:
 		return not blocked
 
 func _run() -> void:
+	if not _isolated_profile_is_safe():
+		push_error("Refusing workshop-shift fixture outside the disposable QA profile.")
+		get_tree().quit(2)
+		return
 	_snapshot_globals()
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
@@ -219,17 +224,32 @@ func _run() -> void:
 		await get_tree().physics_frame
 	_expect(second_plot.has_player_access(), "The player reaches the second plot's authored interaction area.")
 	if second_plot.has_player_access():
-		var clearing_menu = preload("res://scenes/ui/workshop_plot_ui/workshop_plot_ui.tscn").instantiate()
-		second_plot.add_child(clearing_menu)
-		second_plot.menu = clearing_menu
-		clearing_menu.closed.connect(second_plot._on_menu_closed)
-		clearing_menu.open_menu(clearing)
+		second_plot.on_player_interact(player)
+		var clearing_menu = second_plot.menu
+		_expect(is_instance_valid(clearing_menu) and get_tree().paused,
+			"The real player interaction opens a valid paused clearing session.")
+		if not is_instance_valid(clearing_menu) or not get_tree().paused:
+			get_tree().quit(1)
+			return
 		var block_after_one_minute: Callable = func(_day: int, _hour: int, _minute: int, _weather: String) -> void:
 			store._busy = true
+		var completion: Dictionary = {"finished": false}
+		var on_finished: Callable = func() -> void: completion.finished = true
+		second_plot.clearing_finished.connect(on_finished, CONNECT_ONE_SHOT)
 		TimeComponentManager.time_changed.connect(block_after_one_minute, CONNECT_ONE_SHOT)
-		second_plot._on_clearing_requested([] as Array[String], true)
-		await second_plot.clearing_finished
+		clearing_menu.clearing_requested.emit([] as Array[String], true)
+		var deadline: int = Time.get_ticks_msec() + 10000
+		while not completion.finished and Time.get_ticks_msec() < deadline:
+			await get_tree().process_frame
+		_expect(completion.finished, "Manual clearing completes or interrupts within the bounded test deadline.")
+		if second_plot.clearing_finished.is_connected(on_finished):
+			second_plot.clearing_finished.disconnect(on_finished)
+		if TimeComponentManager.time_changed.is_connected(block_after_one_minute):
+			TimeComponentManager.time_changed.disconnect(block_after_one_minute)
 		store._busy = false
+		if not completion.finished:
+			get_tree().quit(1)
+			return
 		_expect(clearing.phase == "uncleared" and clearing.clearing_remaining == clearing.CLEARING_MINUTES - 1,
 			"A blocked clock interrupts manual clearing after its accrued minute without a no-progress loop.")
 	# An owner can receive a coalesced clock notification. Even a jump spanning
@@ -253,18 +273,20 @@ func _run() -> void:
 	coarse.free()
 	# Exercise the real daily needs event, not only direct zero/sweep calls.
 	var daily_person: CitizenData = CitizenManager.get_citizen(BUILDERS[5])
-	daily_person.satisfaction = 0.05
-	CityStockManager.shelter_capacity = 0
+	_seed_zero_crossing(BUILDERS[5], 9 * 60 + 10)
 	_expect(clearing.start_clearing([BUILDERS[5]] as Array[String], false).success,
-		"A worker at five percent starts the retained clearing work before the daily transition.")
+		"An unserved worker starts retained clearing work before the midnight zero crossing.")
 	_drive_arrivals(visuals, [BUILDERS[5]] as Array[String])
 	TimeComponentManager.advance_minutes(10)
 	var before_daily: int = clearing._remaining_work_units()
 	var stock_before_daily: Dictionary = Inventory.items.duplicate(true)
-	TimeComponentManager.advance_minutes(9 * 60)
+	TimeComponentManager.advance_minutes(9 * 60 - 1)
+	_expect(daily_person.satisfaction > 0.0 and absf(daily_person.satisfaction - MINUTE_RATE * 0.5) < 0.000000001
+		and WorkerDatabase.has_worker_data(BUILDERS[5]), "The clearing worker remains employed at positive Satisfaction just before midnight.")
+	TimeComponentManager.advance_minutes(1)
 	_expect(daily_person.satisfaction == 0.0 and daily_person.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
 		and not WorkerDatabase.has_worker_data(BUILDERS[5]) and WorkerDatabase.dismissed_workers.has(BUILDERS[5]),
-		"The actual midnight missing-shelter settlement resigns the worker exactly once.")
+		"The actual zero-crossing minute at midnight resigns the clearing worker.")
 	_expect(clearing.phase == "clearing" and clearing.worker_ids.is_empty() and clearing.get_replacement_slots() == 1
 		and clearing._remaining_work_units() == before_daily and Inventory.items == stock_before_daily,
 		"Midnight resignation preserves the clearing progress, vacancy and all inventory.")
@@ -277,7 +299,7 @@ func _run() -> void:
 	WorkStateRuntime.add_child(team)
 	Inventory.add_bulk_item(team.REQUIREMENTS)
 	var team_materials_before: Dictionary = Inventory.items.duplicate(true)
-	CitizenManager.get_citizen(BUILDERS[7]).satisfaction = 0.05
+	_seed_zero_crossing(BUILDERS[7], 16 * 60)
 	CitizenManager.get_citizen(BUILDERS[8]).satisfaction = 1.0
 	for id: String in BUILDERS.slice(7, 9):
 		var contracted: WorkerData = WorkerDatabase.get_worker_data(id)
@@ -300,10 +322,14 @@ func _run() -> void:
 		member.mark_physical_arrival(team.order_id + ":building")
 	TimeComponentManager.advance_minutes(7 * 60)
 	var team_work_before_midnight: int = team._remaining_work_units()
-	TimeComponentManager.advance_minutes(9 * 60)
+	TimeComponentManager.advance_minutes(9 * 60 - 1)
+	var leaver: CitizenData = CitizenManager.get_citizen(BUILDERS[7])
+	_expect(leaver.satisfaction > 0.0 and absf(leaver.satisfaction - MINUTE_RATE * 0.5) < 0.000000001
+		and WorkerDatabase.has_worker_data(BUILDERS[7]), "The builder remains employed while Satisfaction is positive at 23:59.")
+	TimeComponentManager.advance_minutes(1)
 	_expect(not WorkerDatabase.has_worker_data(BUILDERS[7]) and WorkerDatabase.dismissed_workers.has(BUILDERS[7])
 		and CitizenManager.get_citizen(BUILDERS[7]).employment_status == CitizenData.EmploymentStatus.UNEMPLOYED,
-		"A missing need at the real midnight boundary resigns the first builder.")
+		"The real midnight zero crossing resigns the first builder.")
 	var survivor: WorkerData = WorkerDatabase.get_worker_data(BUILDERS[8])
 	_expect(team.phase == "building" and team.worker_ids == [BUILDERS[8]] and team.get_replacement_slots() == 1
 		and survivor != null and survivor.current_order_id == team.order_id
@@ -360,3 +386,21 @@ func _test_route_obstruction(visuals: Node2D, worker: WorkerData) -> void:
 	runtime.worksite_navigation = saved_navigation
 	runtime._refresh_navigation()
 	_expect(not visuals.plot_presence.states.has(worker.worker_id), "A navigation refresh invalidates stale plot routes immediately.")
+
+func _seed_zero_crossing(id: String, minutes: int) -> void:
+	# Synthetic unmet-needs fixture. No elapsed time is fabricated by placing
+	# its cursor at the current clock; subsequent ticks run the real integrator.
+	city_storage.items.erase("barley_bread")
+	city_storage.food_portions.clear()
+	city_storage.items.erase("simple_clothes")
+	CitizenNeedsManager.food_coverage_until.erase(id)
+	CitizenNeedsManager.clothing_allocations.erase(id)
+	CitizenNeedsManager.satisfaction_last_minute[id] = _clock_minute()
+	CityStockManager.shelter_capacity = 0
+	CitizenNeedsManager.process_daily_shelter_capacity_needs()
+	var person: CitizenData = CitizenManager.get_citizen(id)
+	person.food_fulfilled = false
+	person.clothing_fulfilled = false
+	person.satisfaction = MINUTE_RATE * (float(minutes) - 0.5)
+	_expect(not person.shelter_fulfilled and city_storage.get_food_supply_points() == 0,
+		"The zero-crossing fixture has no covered need or replenishing food: " + id)

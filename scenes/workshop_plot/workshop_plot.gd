@@ -490,14 +490,15 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	_finish_manual_session(session_menu, session_player, session_scene)
 	clearing_finished.emit()
 
-func _manual_clearing_guard(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node, session_phase: String) -> bool:
+# Keep cached objects as Variants here so freed references reach is_instance_valid() instead of failing typed argument checks.
+func _manual_clearing_guard(session_menu: Variant, session_player: Variant, session_scene: Variant, session_construction: Variant, session_phase: String) -> bool:
 	if not _manual_clearing_context_is_valid(session_menu, session_player, session_scene, session_construction):
 		return false
 	if session_phase != "clearing" or session_construction.phase != "clearing" or not session_construction.clearing_by_player:
 		return false
 	return true
 
-func _manual_clearing_context_is_valid(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node) -> bool:
+func _manual_clearing_context_is_valid(session_menu: Variant, session_player: Variant, session_scene: Variant, session_construction: Variant) -> bool:
 	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
 		return false
 	if not is_instance_valid(session_menu) or menu != session_menu or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion():
@@ -512,7 +513,7 @@ func _manual_clearing_context_is_valid(session_menu: CanvasLayer, session_player
 		return false
 	return get_tree().paused and not TimeComponentManager.is_paused
 
-func _finish_manual_session(session_menu: CanvasLayer, session_player: Player, session_scene: Node) -> void:
+func _finish_manual_session(session_menu: Variant, session_player: Variant, session_scene: Variant) -> void:
 	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
 		return
 	if menu != session_menu and _menu_session_menu != session_menu:

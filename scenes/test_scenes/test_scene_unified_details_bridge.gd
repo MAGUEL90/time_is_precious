@@ -30,6 +30,9 @@ var worker: WorkerData
 var city_shortcuts: int = 0
 var underlay_presses: int = 0
 var goto_id: String = ""
+var removed_ids: Array[String] = []
+var fire_available: bool = true
+var goto_available: bool = true
 
 
 func _ready() -> void:
@@ -41,6 +44,22 @@ func _expect(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
+
+
+func _expect_ui_name(label: Label, expected: String, context: String) -> void:
+	if not is_instance_valid(label) or not label.is_visible_in_tree():
+		_expect(false, context + " name label is unavailable or hidden.")
+		return
+	_expect(label.text == expected and label.text not in ["Linked Worker", "Legacy Worker", "Resident"],
+		"%s must show %s rather than a technical label (actual: %s)." % [context, expected, label.text])
+
+
+func _expect_roster_name(worker_id: String, expected: String) -> void:
+	var button: Button = hub._find_manage_button(worker_id)
+	if not is_instance_valid(button):
+		_expect(false, "Status row is missing for " + expected + ".")
+		return
+	_expect_ui_name(button.get_parent().get_node_or_null("NameLabel") as Label, expected, "Status row")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -58,14 +77,21 @@ func _frames(count: int = 2) -> void:
 func _press_key(key: Key) -> void:
 	var press := InputEventKey.new()
 	press.keycode = key
-	press.physical_keycode = key
+	if key != KEY_TAB:
+		press.physical_keycode = key
 	press.pressed = true
-	get_viewport().push_input(press)
+	if key == KEY_TAB:
+		Input.parse_input_event(press)
+	else:
+		get_viewport().push_input(press)
 	await _frames(1)
 	var release := InputEventKey.new()
 	release.keycode = key
 	release.physical_keycode = key
-	get_viewport().push_input(release)
+	if key == KEY_TAB:
+		Input.parse_input_event(release)
+	else:
+		get_viewport().push_input(release)
 	await _frames(1)
 
 
@@ -85,6 +111,36 @@ func _click(point: Vector2) -> void:
 	await _frames(1)
 
 
+func _click_control(control: Control) -> void:
+	if not is_instance_valid(control) or not control.is_visible_in_tree():
+		_expect(false, "Expected visible GUI control is unavailable.")
+		return
+	if control is BaseButton and control.disabled:
+		_expect(false, "Expected GUI control is disabled: " + str(control.get_path()))
+		return
+	var bounds: Rect2 = control.get_global_rect()
+	if not get_viewport().get_visible_rect().encloses(bounds) or bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		_expect(false, "Expected GUI control is outside the viewport: " + str(control.get_path()))
+		return
+	await _click(bounds.get_center())
+
+
+func _capture(stage: String) -> void:
+	var directory: String = OS.get_environment("TIP_WORKER_ACCESS_CAPTURE_DIR")
+	if directory.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	if not directory.is_absolute_path() or DirAccess.make_dir_recursive_absolute(directory) != OK:
+		_expect(false, "Unable to create the requested capture directory.")
+		return
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var frame: Image = get_viewport().get_texture().get_image()
+	if frame.get_size() != Vector2i(400, 225):
+		_expect(false, "The worker capture must use the native 400x225 viewport.")
+		return
+	_expect(frame.save_png(directory.path_join(stage + ".png")) == OK, "Saved capture: " + stage)
+
+
 func _rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for id: String in [WORKER_ID, LEGACY_ID]:
@@ -92,8 +148,8 @@ func _rows() -> Array[Dictionary]:
 		if person == null:
 			continue
 		rows.append({"id": id, "name": person.get_resolved_display_name(),
-			"profession": "Laborer", "working": false, "can_fire": true,
-			"can_goto": true, "star": 1, "wage": "6 Shekel / 3 days", "needs": {}})
+			"profession": "Laborer", "working": false, "can_fire": fire_available,
+			"can_goto": goto_available, "star": 1, "wage": "6 Shekel / 3 days", "needs": {}})
 	return rows
 
 
@@ -134,6 +190,7 @@ func _run() -> void:
 		"citizens": CitizenManager.citizens_by_id.duplicate(),
 		"inventory": Inventory.items.duplicate(true),
 		"rates": WorkerDatabase.onboarding_period_rates.duplicate(true),
+		"dismissed": WorkerDatabase.dismissed_workers.duplicate(),
 		"tree_paused": get_tree().paused, "clock_paused": TimeComponentManager.is_paused,
 		"clock_processing": TimeComponentManager.is_processing()}
 	get_tree().paused = false
@@ -143,11 +200,11 @@ func _run() -> void:
 		TimeComponentManager.current_hour, TimeComponentManager.current_minute)
 	WorkerDatabase.onboarding_period_rates[WorkerData.Profession.LABORER] = 6
 	Inventory.items["shekel"] = 100
-	CitizenManager.citizens_by_id[WORKER_ID] = _new_citizen(WORKER_ID, "Linked Worker", true)
-	CitizenManager.citizens_by_id[RESIDENT_ID] = _new_citizen(RESIDENT_ID, "Resident", false)
-	worker = _new_worker(WORKER_ID, "Linked Worker")
+	CitizenManager.citizens_by_id[WORKER_ID] = _new_citizen(WORKER_ID, "Naram", true)
+	CitizenManager.citizens_by_id[RESIDENT_ID] = _new_citizen(RESIDENT_ID, "Nabu", false)
+	worker = _new_worker(WORKER_ID, "Naram")
 	WorkerDatabase.workers_by_id[WORKER_ID] = worker
-	WorkerDatabase.workers_by_id[LEGACY_ID] = _new_worker(LEGACY_ID, "Legacy Worker")
+	WorkerDatabase.workers_by_id[LEGACY_ID] = _new_worker(LEGACY_ID, "Lugal")
 
 	runtime = RuntimeStub.new()
 	add_child(runtime)
@@ -165,83 +222,109 @@ func _run() -> void:
 	runtime.worker_control = hub
 	runtime.add_child(hub)
 	hub.goto_requested.connect(func(id: String): goto_id = id)
+	# The stub owns no worksite, so its dismissal adapter calls the existing
+	# WorkerDatabase exactly as a host would and refreshes the visible roster.
+	hub.remove_requested.connect(func(id: String):
+		removed_ids.append(id)
+		WorkerDatabase.dismiss_worker(id)
+		hub.refresh.call_deferred()
+	)
 	controller = CONTROLLER_SCRIPT.new()
 	controller.configure(runtime, visuals)
 	runtime.add_child(controller)
 	panel = controller.get("panel") as CanvasLayer
 	await _frames()
+	var name_label: Label = panel.get_node("Root/Frame/Margin/Contents/NameRow/NameLabel") as Label
 
 	await _click(Vector2(70, 70))
 	_expect(panel.visible and panel.get("selected_id") == WORKER_ID and not get_tree().paused,
-		"Map click opens the linked worker's shared card without pausing.")
+		"Map click opens the worker's shared needs card without pausing.")
+	_expect_ui_name(name_label, "Naram", "Map worker card")
 	var shared_panel_id: int = panel.get_instance_id()
 	await _press_key(KEY_C)
 	_expect(not panel.visible and city_shortcuts == 1 and not get_tree().paused,
-		"C closes the map card and reaches the City Hub shortcut without changing pause.")
+		"C closes the map card and still reaches the City shortcut.")
 
+	# Compatibility-only checks for the retained host-facing signals. The card
+	# has no such buttons; these assertions are not evidence of a playable route.
 	await _click(Vector2(70, 70))
 	panel.emit_signal("renew_requested", WORKER_ID)
 	await _frames()
 	_expect(hub.visible and hub.contract_window.visible and not panel.visible and get_tree().paused,
-		"Map Renew opens the existing paused contract window.")
-	var before_wallet: int = int(Inventory.items.get("shekel", 0))
-	var before_end: int = worker.payroll_paid_until_day
-	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
-	hub.manage_renew_button.pressed.emit()
-	_expect(int(Inventory.items.get("shekel", 0)) == before_wallet - price
-		and worker.payroll_paid_until_day == before_end + 3,
-		"One map-origin Renew debits once and extends the existing contract.")
-	hub.contract_close_button.pressed.emit()
-	await _frames()
-	_expect(panel.visible and panel.get_instance_id() == shared_panel_id and panel.get("selected_id") == WORKER_ID
-		and not hub.visible and not get_tree().paused,
-		"Closing map-origin Contract restores the same nonmodal card and pause.")
-
+		"Synthetic host Renew signal still opens Contract for a worker.")
+	await _click_control(hub.contract_close_button)
+	_expect(panel.visible and panel.get_instance_id() == shared_panel_id and not hub.visible and not get_tree().paused,
+		"Closing synthetic map-origin Contract restores the nonmodal card and pause.")
 	panel.emit_signal("actions_requested", WORKER_ID)
-	_expect(hub.visible and hub.manage_window.visible and hub._manage_worker_id == WORKER_ID,
-		"Map Actions opens the original worker action menu.")
-	hub.manage_goto_button.pressed.emit()
-	_expect(goto_id == WORKER_ID, "Go To retains the selected worker identity.")
-	hub.manage_contract_button.pressed.emit()
-	_expect(hub.contract_window.visible, "Actions still offers the existing Contract window.")
-	hub.contract_close_button.pressed.emit()
-	_expect(hub.manage_window.visible, "Closing Contract entered from Actions returns to Actions.")
-	hub.manage_fire_button.pressed.emit()
-	_expect(hub._confirmation_overlay.visible, "Fire still asks for confirmation.")
-	hub._cancel_remove_confirmation()
-	_expect(WorkerDatabase.get_worker_data(WORKER_ID) == worker, "Cancelling Fire retains the worker.")
-	hub._close_manage()
 	await _frames()
-	_expect(panel.visible and not get_tree().paused, "Closing map Actions returns to the card.")
-	panel.call("close")
-
+	_expect(hub.visible and hub.manage_window.visible and hub._manage_worker_id == WORKER_ID and get_tree().paused,
+		"Synthetic host Actions signal still opens the worker menu.")
+	await _click_control(hub.manage_contract_button)
+	await _click_control(hub.contract_close_button)
+	_expect(hub.manage_window.visible and hub.manage_contract_button.has_focus(),
+		"Contract opened through the host API returns to Manage.")
+	await _press_key(KEY_ESCAPE)
+	_expect(panel.visible and not hub.visible and not get_tree().paused,
+		"Closing synthetic map-origin Manage restores the nonmodal card.")
+	await _press_key(KEY_ESCAPE)
 	await _click(Vector2(110, 70))
-	_expect(panel.visible and panel.get("selected_id") == LEGACY_ID,
-		"A legacy worker without a linked citizen remains inspectable.")
+	_expect(panel.visible and panel.get("selected_id") == LEGACY_ID, "A legacy worker remains inspectable from the map.")
+	_expect_ui_name(name_label, "Lugal", "Map legacy card")
 	panel.emit_signal("renew_requested", LEGACY_ID)
+	await _frames()
 	_expect(hub.contract_window.visible and hub._manage_worker_id == LEGACY_ID,
-		"A legacy worker can reach the existing contract window.")
-	hub.contract_close_button.pressed.emit()
-	panel.call("close")
-	await _click(Vector2(150, 70))
-	panel.emit_signal("renew_requested", RESIDENT_ID)
-	_expect(panel.visible and panel.get("selected_id") == RESIDENT_ID and not hub.visible,
-		"A nonworker cannot enter the contract flow.")
-	panel.call("close")
+		"The retained host Renew signal also accepts a legacy worker.")
+	await _click_control(hub.contract_close_button)
+	await _press_key(KEY_ESCAPE)
 
+	await _click(Vector2(150, 70))
+	_expect(panel.visible and panel.get("selected_id") == RESIDENT_ID and not hub.visible,
+		"A nonworker still opens the same nonmodal needs card.")
+	_expect_ui_name(name_label, "Nabu", "Map resident card")
+	panel.emit_signal("renew_requested", RESIDENT_ID)
+	_expect(panel.visible and not hub.visible, "The retained host Renew signal rejects a nonworker.")
+	_expect(panel.find_child("ActionsButton", true, false) == null and panel.find_child("RenewButton", true, false) == null,
+		"The nonworker needs card has no worker actions.")
+	await _press_key(KEY_ESCAPE)
+	_expect(not panel.visible and not get_tree().paused, "Escape closes the map card without changing pause.")
+
+	# Test the real rendered row with both eligibility-dependent actions disabled.
+	fire_available = false
+	goto_available = false
 	await _press_key(KEY_K)
-	_expect(hub.visible and get_tree().paused, "K opens and pauses the existing worker list.")
+	_expect(hub.visible and get_tree().paused, "K opens and pauses the existing Worker Hub.")
 	var row_button: Button = hub._find_manage_button(WORKER_ID)
-	_expect(is_instance_valid(row_button) and row_button.text == "Details", "The worker row is labeled Details.")
-	if is_instance_valid(row_button):
-		row_button.pressed.emit()
+	_expect_roster_name(WORKER_ID, "Naram")
+	_expect_roster_name(LEGACY_ID, "Lugal")
+	await _capture("01-status")
+	_expect(is_instance_valid(row_button) and row_button.text == "Manage" and row_button.is_visible_in_tree(),
+		"The visible Status row offers Manage for the correct worker.")
+	await _click_control(row_button)
+	_expect(hub.manage_window.visible and hub._manage_worker_id == WORKER_ID and not panel.visible,
+		"Clicking the row opens the worker's actual Manage popup.")
+	await _capture("02-manage-disabled-fire")
+	_expect(hub.manage_fire_button.disabled and hub.manage_goto_button.disabled and hub.manage_details_button.has_focus(),
+		"When Fire and Go To are unavailable, keyboard focus starts on Details.")
+	await _press_key(KEY_TAB)
+	var tab_focus: Control = get_viewport().gui_get_focus_owner()
+	_expect(hub.manage_contract_button.has_focus(), "Tab reaches Contract from Details (focus: %s)." % (str(tab_focus.get_path()) if is_instance_valid(tab_focus) else "none"))
+	await _press_key(KEY_TAB)
+	_expect(hub.manage_details_button.has_focus(), "Tab wraps inside Manage without focusing disabled actions or the background.")
+	await _press_key(KEY_ENTER)
 	await _frames()
 	_expect(panel.visible and panel.get_instance_id() == shared_panel_id and panel.get("selected_id") == WORKER_ID
-		and panel.layer > hub.layer and get_tree().paused,
-		"K Details opens the very same card for that worker above the paused list.")
+		and panel.layer > hub.layer and hub.manage_window.visible and get_tree().paused,
+		"Keyboard Details opens the same worker card above the paused Manage popup.")
+	_expect_ui_name(name_label, "Naram", "Worker Hub Details")
+	await _capture("03-details")
 	var panel_focus: Control = get_viewport().gui_get_focus_owner()
-	_expect(is_instance_valid(panel_focus) and panel.is_ancestor_of(panel_focus),
-		"Keyboard focus moves into the shared card while the hub remains underneath.")
+	_expect(is_instance_valid(panel_focus) and panel.is_ancestor_of(panel_focus), "Focus moves into the shared card.")
+	var frame: Control = panel.get_node("Root/Frame") as Control
+	var name_plate: TextureRect = name_label.get_node("NamePlate") as TextureRect
+	var bar: TextureProgressBar = panel.get_node("Root/Frame/Margin/Contents/BodyScroll/Body/SatisfactionBar") as TextureProgressBar
+	_expect(name_plate.size.is_equal_approx(Vector2(54, 11)) and name_label.get_theme_font_size("font_size") == 6
+		and frame.get_global_rect().encloses(bar.get_global_rect()) and bar.visible,
+		"Details keeps the native 54x11 nameplate, font size 6 and visible satisfaction bar.")
 	var underlay := Button.new()
 	underlay.position = Vector2.ZERO
 	underlay.size = Vector2(16, 16)
@@ -249,57 +332,119 @@ func _run() -> void:
 	hub.get_node("Root").add_child(underlay)
 	await _frames()
 	await _click(Vector2(4, 4))
-	_expect(underlay_presses == 0 and panel.visible, "Clicks outside the card cannot reach the worker list beneath it.")
-
-	panel.emit_signal("renew_requested", WORKER_ID)
-	_expect(hub.contract_window.visible and not panel.visible and get_tree().paused,
-		"K-origin Renew opens the same existing Contract window.")
-	before_wallet = int(Inventory.items.get("shekel", 0))
-	before_end = worker.payroll_paid_until_day
-	hub.manage_renew_button.pressed.emit()
-	_expect(int(Inventory.items.get("shekel", 0)) == before_wallet - price
-		and worker.payroll_paid_until_day == before_end + 3,
-		"One K-origin Renew also debits once and extends the existing contract.")
-	hub.contract_close_button.pressed.emit()
+	_expect(underlay_presses == 0 and panel.visible, "The shared card blocks clicks to the Hub underneath.")
+	await _press_key(KEY_ESCAPE)
 	await _frames()
-	_expect(panel.visible and panel.get_instance_id() == shared_panel_id and hub.visible and get_tree().paused,
-		"Closing K-origin Contract returns to the shared card without releasing pause.")
-	await _press_key(KEY_C)
-	_expect(not panel.visible and hub.visible and get_tree().paused and city_shortcuts == 1,
-		"C closes K-origin details, preserves the list's pause, and does not reach City Hub.")
+	_expect(not panel.visible and hub.manage_window.visible and hub.manage_details_button.has_focus() and get_tree().paused,
+		"Closing Details returns focus to its Manage button and preserves pause.")
+	await _press_key(KEY_ESCAPE)
+	_expect(not hub.manage_window.visible and row_button.has_focus() and hub.visible and get_tree().paused,
+		"Escape closes Manage and returns focus to its Status row.")
 
-	hub._show_tools_tab()
+	# Normal eligibility: interact only through rendered controls, never by
+	# emitting panel action signals or calling a renewal/dismissal backend.
+	fire_available = true
+	goto_available = true
+	hub.refresh()
+	await _frames()
+	row_button = hub._find_manage_button(WORKER_ID)
+	await _click_control(row_button)
+	_expect(hub.manage_fire_button.has_focus(), "An available Fire action receives initial focus.")
+	await _click_control(hub.manage_goto_button)
+	_expect(goto_id == WORKER_ID, "The visible Go To button routes the selected worker ID to its host.")
+	var before_wallet: int = int(Inventory.items.get("shekel", 0))
+	var before_treasury: int = CityStockManager.treasury_shekel
+	var before_end: int = worker.payroll_paid_until_day
+	var price: int = WorkerDatabase.get_contract_price(worker.profession, 3)
+	await _click_control(hub.manage_contract_button)
+	_expect(hub.contract_window.visible and not hub.manage_window.visible and get_tree().paused,
+		"The visible Contract action opens the existing paused contract panel.")
+	await _capture("04-contract")
+	await _click_control(hub.contract_day_buttons[0])
+	_expect(int(Inventory.items.get("shekel", 0)) == before_wallet and worker.payroll_paid_until_day == before_end,
+		"Opening Contract and selecting a duration do not charge or extend it.")
+	await _click_control(hub.manage_renew_button)
+	await _frames(3)
+	_expect(int(Inventory.items.get("shekel", 0)) == before_wallet - price
+		and worker.payroll_paid_until_day == before_end + 3 and CityStockManager.treasury_shekel == before_treasury,
+		"One visible Renew click debits the wallet once and extends the worker's contract by three days.")
+	await _press_key(KEY_ESCAPE)
+	_expect(not hub.contract_window.visible and hub.manage_window.visible and hub.manage_contract_button.has_focus(),
+		"Escape returns from Contract to its Manage button.")
+	await _click_control(hub.manage_fire_button)
+	_expect(hub._confirmation_overlay.visible and hub._confirm_no_button.has_focus(), "The visible Fire control opens confirmation with No focused.")
+	await _click_control(hub._confirm_no_button)
+	_expect(not hub._confirmation_overlay.visible and WorkerDatabase.get_worker_data(WORKER_ID) == worker
+		and removed_ids.is_empty() and hub.manage_fire_button.has_focus(),
+		"No cancels Fire, preserves the worker and returns focus to Manage.")
+	await _press_key(KEY_ESCAPE)
+	await _click_control(hub.tools_tab_button)
 	var tool_card: WorkerToolCard = hub.tools_worker_list.get_child(0) as WorkerToolCard
 	if is_instance_valid(tool_card):
-		tool_card.details_button.pressed.emit()
-	await _frames()
-	_expect(panel.visible and panel.get_instance_id() == shared_panel_id,
-		"The Tools information button also opens the shared card.")
+		await _click_control(tool_card.details_button)
+	_expect(panel.visible and panel.get_instance_id() == shared_panel_id and panel.get("selected_id") == WORKER_ID,
+		"Tools still opens the same shared needs card.")
 	await _press_key(KEY_ESCAPE)
-	_expect(not panel.visible and hub.visible and get_tree().paused and hub.tools_page.visible
-		and hub.tools_tab_button.has_focus(),
-		"Escape returns focus to the previous Tools tab with pause retained.")
-	hub._show_status_tab()
+	await _frames()
+	_expect(not panel.visible and hub.visible and get_tree().paused and hub.tools_page.visible and hub.tools_tab_button.has_focus(),
+		"Escape from Tools Details returns to the Tools tab without unpausing.")
+	await _click_control(hub.status_tab_button)
 	row_button = hub._find_manage_button(WORKER_ID)
-	if is_instance_valid(row_button):
-		row_button.pressed.emit()
+	await _click_control(row_button)
+	await _click_control(hub.manage_details_button)
 	await _press_key(KEY_K)
 	_expect(not panel.visible and not hub.visible and not get_tree().paused,
-		"K closes both the shared card and list and restores the previous pause.")
+		"K closes shared Details and Worker Hub and restores the previous pause.")
 	_expect(Vector3i(TimeComponentManager.current_day, TimeComponentManager.current_hour,
-		TimeComponentManager.current_minute) == starting_clock,
-		"Opening and closing the details flows does not advance the paused clock.")
+		TimeComponentManager.current_minute) == starting_clock, "The paused Hub does not advance the game clock.")
 
-	# The hub already preserves a prior pause. The shared card must not release it.
+	# Confirm Fire via a second worker so the renewal subject remains available.
+	await _press_key(KEY_K)
+	row_button = hub._find_manage_button(LEGACY_ID)
+	await _click_control(row_button)
+	await _click_control(hub.manage_fire_button)
+	await _click_control(hub._confirm_yes_button)
+	await _frames(3)
+	_expect(removed_ids == [LEGACY_ID] and WorkerDatabase.get_worker_data(LEGACY_ID) == null
+		and hub._find_manage_button(LEGACY_ID) == null and WorkerDatabase.get_worker_data(WORKER_ID) == worker,
+		"Yes routes one dismissal and removes only that worker from the refreshed Status list.")
+	_expect(int(Inventory.items.get("shekel", 0)) == before_wallet - price
+		and CityStockManager.treasury_shekel == before_treasury,
+		"The Fire cancel and confirmation do not alter either balance.")
+
+	# Long names must not hide the only Manage entry at 400x225.
+	var long_name: String = "Naram Lugal Ashur Nabu Enlil Ishtar Gilgamesh Shamash Marduk Sargon Adad Sin"
+	CitizenManager.citizens_by_id[WORKER_ID].display_name = long_name
+	hub.refresh()
+	await _frames(3)
+	row_button = hub._find_manage_button(WORKER_ID)
+	var status_scroll: ScrollContainer = hub.status_list.get_parent() as ScrollContainer
+	var row_in_bounds: bool = is_instance_valid(row_button) and row_button.is_visible_in_tree() \
+		and get_viewport().get_visible_rect().encloses(row_button.get_global_rect()) \
+		and status_scroll.get_global_rect().encloses(row_button.get_global_rect())
+	_expect(row_in_bounds, "An unusually long worker name keeps Manage inside the visible Status list and viewport.")
+	await _capture("05-long-name-status")
+	if row_in_bounds:
+		var roster_name: Label = row_button.get_parent().get_node("NameLabel") as Label
+		_expect(roster_name.clip_text and roster_name.accessibility_name == long_name,
+			"The bounded roster name retains its full accessible identity.")
+		await _click_control(row_button)
+		await _click_control(hub.manage_details_button)
+		_expect(panel.visible and name_label.text == long_name and name_label.accessibility_name == long_name,
+			"A long-name worker remains reachable through Manage and Details.")
+		await _capture("06-long-name-details")
+		await _press_key(KEY_ESCAPE)
+		await _press_key(KEY_ESCAPE)
+	await _press_key(KEY_K)
+	_expect(not hub.visible and not get_tree().paused, "Closing the Hub restores live play.")
+
+	# Preserve an already-paused caller as well.
 	hub.can_open = func(): return true
 	get_tree().paused = true
-	hub.open()
-	row_button = hub._find_manage_button(WORKER_ID)
-	if is_instance_valid(row_button):
-		row_button.pressed.emit()
 	await _press_key(KEY_K)
-	_expect(not panel.visible and not hub.visible and get_tree().paused,
-		"Closing shared details preserves a pause that predated the hub.")
+	_expect(hub.visible and get_tree().paused, "K can open without taking ownership of an existing pause.")
+	await _press_key(KEY_K)
+	_expect(not hub.visible and get_tree().paused, "Closing the Hub preserves a pause that predated it.")
 	get_tree().paused = false
 
 	_finish()
@@ -313,6 +458,7 @@ func _finish() -> void:
 	WorkerDatabase.workers_by_id.assign(saved.workers)
 	CitizenManager.citizens_by_id.assign(saved.citizens)
 	WorkerDatabase.onboarding_period_rates.assign(saved.rates)
+	WorkerDatabase.dismissed_workers.assign(saved.dismissed)
 	Inventory.items.assign(saved.inventory)
 	TimeComponentManager.is_paused = bool(saved.clock_paused)
 	TimeComponentManager.set_process(bool(saved.clock_processing))

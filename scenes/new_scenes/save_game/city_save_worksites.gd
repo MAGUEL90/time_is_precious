@@ -12,7 +12,7 @@ const MIN_RESPAWN_DELAY_MINUTES: int = 2880
 const MAX_RESPAWN_DELAY_MINUTES: int = 4320
 const MAX_RESPAWN_MINUTE: int = 9223372036854775807
 const LEGACY_SITE_IDS: Array[String] = ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]
-const NEW_SITE_IDS: Array[String] = ["ClaySiteB", "WoodSiteB", "WoodSiteC", "ReedSiteB"]
+const NEW_SITE_IDS: Array[String] = ["ClaySiteB", "WoodSiteB", "WoodSiteC", "ReedSiteB", "WoodSiteD", "WoodSiteE"]
 
 var error: String = ""
 var _restored_storage_notifications: Array[WeakRef] = []

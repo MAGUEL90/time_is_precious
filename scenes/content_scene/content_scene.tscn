@@ -151,6 +151,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(8, 30), Vector2(16, 40), Vector2(24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="DatePalmTree2" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-48, -512)
@@ -158,6 +159,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="DatePalmTree3" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-464, -408)
@@ -165,6 +167,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(8, 30), Vector2(16, 40), Vector2(24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="DatePalmTree4" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-48, -408)
@@ -172,6 +175,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="DatePalmTree5" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-464, -288)
@@ -179,6 +183,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="DatePalmTree6" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(-48, -288)
@@ -186,6 +191,7 @@ texture = ExtResource("11_a6f02")
 script = ExtResource("26_date_spawner")
 pickup_positions = Array[Vector2]([Vector2(-8, 30), Vector2(-16, 40), Vector2(-24, 22)])
 pickup_texture = ExtResource("12_fmlq8")
+world_view_enabled = false
 
 [node name="TopHUD" parent="." instance=ExtResource("7_ssn5y")]
 visible = false

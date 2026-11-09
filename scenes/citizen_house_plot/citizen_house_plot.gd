@@ -165,7 +165,7 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 	if was_clearing:
 		clearing_finished.emit()
 
-func _manual_house_work_guard(session_menu: CanvasLayer, session_player: Player, session_scene: Node, session_construction: Node, session_phase: String) -> bool:
+func _manual_house_work_guard(session_menu: Variant, session_player: Variant, session_scene: Variant, session_construction: Variant, session_phase: String) -> bool:
 	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
 		return false
 	if not is_instance_valid(session_menu) or menu != session_menu or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion():

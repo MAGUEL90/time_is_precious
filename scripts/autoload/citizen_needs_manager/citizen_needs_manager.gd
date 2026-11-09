@@ -2,6 +2,8 @@ extends Node
 
 signal needs_changed
 
+const SAVE_VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+
 const FOOD_SUPPLY_PER_CITIZEN_PER_DAY: int = 1
 const FOOD_SUPPLY_PER_WORKER_PER_DAY: int = 1
 const CLOTHING_LIFETIME_DAYS: int = 7
@@ -27,6 +29,8 @@ var clothing_allocations: Dictionary = {}
 var food_coverage_until: Dictionary = {}
 ## Absolute game minute through which gradual Satisfaction has already been applied.
 var satisfaction_last_minute: Dictionary = {}
+## Exact binary64 anchor plus signed elapsed minutes for subdivision-stable gradual movement.
+var satisfaction_accumulators: Dictionary = {}
 var last_needs_results: Dictionary = {}
 var _processing_daily_needs: bool = false
 var _processing_food: bool = false
@@ -152,6 +156,7 @@ func _on_citizen_added(citizen: CitizenData) -> void:
 	var id: String = citizen.citizen_id.strip_edges()
 	if not id.is_empty():
 		satisfaction_last_minute[id] = now
+		satisfaction_accumulators[id] = _new_satisfaction_accumulator(_person_satisfaction(citizen), now)
 	_refresh_after_roster_change()
 
 func _on_citizen_left(citizen: CitizenData) -> void:
@@ -161,6 +166,7 @@ func _on_citizen_left(citizen: CitizenData) -> void:
 		var departed_id: String = citizen.citizen_id.strip_edges()
 		food_coverage_until.erase(departed_id)
 		satisfaction_last_minute.erase(departed_id)
+		satisfaction_accumulators.erase(departed_id)
 		clothing_allocations.erase(departed_id)
 		return
 	var now: int = _now_total_minutes()
@@ -173,14 +179,17 @@ func _on_citizen_left(citizen: CitizenData) -> void:
 	var id: String = citizen.citizen_id.strip_edges()
 	if satisfaction_last_minute.has(id):
 		var cursor: int = int(satisfaction_last_minute[id])
-		if now > cursor:
-			var before: float = _person_satisfaction(citizen)
-			var after: float = _integrate_satisfaction(citizen, id, before, cursor, now)
-			if _crosses_worker_boundary(citizen, id, before, after):
-				WorkerDatabase.flush_before_daily_needs()
+		var before: float = _person_satisfaction(citizen)
+		var plan: Dictionary = _plan_satisfaction(citizen, id, before, cursor, now)
+		var after: float = float(plan.value)
+		var can_commit: bool = true
+		if after != before and now > cursor and _crosses_worker_boundary(citizen, id, before, after):
+			can_commit = WorkerDatabase.flush_before_daily_needs()
+		if can_commit and after != before:
 			_set_person_satisfaction(citizen, after)
 	food_coverage_until.erase(id)
 	satisfaction_last_minute.erase(id)
+	satisfaction_accumulators.erase(id)
 	clothing_allocations.erase(id)
 	_refresh_after_roster_change()
 
@@ -347,20 +356,23 @@ func _advance_satisfaction_to_minute(now: int, work_already_flushed: bool = fals
 		var id: String = _get_person_id(person)
 		if id.is_empty():
 			continue
-		if not satisfaction_last_minute.has(id):
-			satisfaction_last_minute[id] = now
-			continue
-		var cursor: int = int(satisfaction_last_minute[id])
+		var cursor: int = int(satisfaction_last_minute.get(id, now))
 		if cursor > now:
 			cursor = now
 		var before: float = _person_satisfaction(person)
-		var after: float = _integrate_satisfaction(person, id, before, cursor, now)
-		if after == before or now <= cursor:
-			plans.append({"person": person, "id": id, "cursor": now, "value": before, "changed": false})
-			continue
-		if _crosses_worker_boundary(person, id, before, after):
+		var plan: Dictionary = _plan_satisfaction(person, id, before, cursor, now)
+		var after: float = float(plan.value)
+		var changed_value: bool = after != before
+		if changed_value and now > cursor and _crosses_worker_boundary(person, id, before, after):
 			should_flush_work = true
-		plans.append({"person": person, "id": id, "cursor": now, "value": after, "changed": true})
+		plans.append({
+			"person": person,
+			"id": id,
+			"cursor": int(plan.accumulator.cursor),
+			"value": after,
+			"accumulator": plan.accumulator,
+			"changed": changed_value
+		})
 	if should_flush_work and not work_already_flushed and not WorkerDatabase.flush_before_daily_needs():
 		_satisfaction_retry_pending = true
 		_processing_daily_needs = false
@@ -374,13 +386,41 @@ func _advance_satisfaction_to_minute(now: int, work_already_flushed: bool = fals
 		if bool(plan.changed):
 			_set_person_satisfaction(person, float(plan.value))
 			changed = true
-		satisfaction_last_minute[str(plan.id)] = int(plan.cursor)
+		var id: String = str(plan.id)
+		satisfaction_last_minute[id] = int(plan.cursor)
+		satisfaction_accumulators[id] = plan.accumulator.duplicate(true)
 	return changed
 
 func _integrate_satisfaction(person: Variant, person_id: String, initial: float, from_minute: int, to_minute: int) -> float:
-	if to_minute <= from_minute:
-		return initial
+	# Direct callers get a pure calculation from the supplied value, without
+	# reading or committing the manager's persisted accumulator ledger.
+	return float(_plan_satisfaction_with_record(person, person_id, initial, from_minute, to_minute, {}).value)
+
+func _plan_satisfaction(person: Variant, person_id: String, initial: float, from_minute: int, to_minute: int) -> Dictionary:
+	return _plan_satisfaction_with_record(
+		person,
+		person_id,
+		initial,
+		from_minute,
+		to_minute,
+		satisfaction_accumulators.get(person_id, {})
+	)
+
+func _plan_satisfaction_with_record(person: Variant, person_id: String, initial: float, from_minute: int, to_minute: int, existing: Variant) -> Dictionary:
+	var anchor: float = initial
+	var minutes: int = 0
+	var reusable: Dictionary = _read_reusable_satisfaction_accumulator(existing, initial, from_minute)
+	if not reusable.is_empty():
+		anchor = float(reusable.anchor)
+		minutes = int(reusable.minutes)
+	# Reusable records were already checked against this exact value above.
+	# Starting from the supplied float also preserves it for zero-length plans.
 	var value: float = initial
+	if to_minute <= from_minute:
+		return {
+			"value": value,
+			"accumulator": {"anchor_bits": SAVE_VALUES.encode_float64_hex(anchor), "minutes": minutes, "cursor": from_minute}
+		}
 	var cursor: int = from_minute
 	while cursor < to_minute:
 		var segment_end: int = to_minute
@@ -405,13 +445,61 @@ func _integrate_satisfaction(person: Variant, person_id: String, initial: float,
 			bool(person.shelter_fulfilled)
 		)
 		var elapsed: int = segment_end - cursor
-		var movement: float = SATISFACTION_DAILY_STEP * float(elapsed) / float(MINUTES_PER_DAY)
-		# Do not round each minute: equivalent elapsed intervals must produce the
-		# same result regardless of frame/bulk subdivision. The target caps at .99,
-		# while an existing 1.0 value decays at the ordinary daily rate.
-		value = clampf(move_toward(value, target, movement), 0.0, 1.0)
+		if target == value:
+			anchor = target
+			minutes = 0
+			value = target
+		else:
+			var minute_limit: int = int(float(MINUTES_PER_DAY) / SATISFACTION_DAILY_STEP)
+			if elapsed >= minute_limit and value >= 0.0 and value <= 1.0:
+				# From any valid value, this many whole minutes reaches every target
+				# in [0, 1], so avoid adding an unbounded elapsed value.
+				anchor = target
+				minutes = 0
+				value = target
+			else:
+				minutes += elapsed if target > value else -elapsed
+				var candidate: float = anchor + SATISFACTION_DAILY_STEP * float(minutes) / float(MINUTES_PER_DAY)
+				if (target > value and candidate >= target) or (target < value and candidate <= target):
+					# Clamp only at the unchanged service target; make that exact value
+					# the next anchor so no gradual residual survives reaching it.
+					anchor = target
+					minutes = 0
+					value = target
+				else:
+					# Preserve the previous API's outer [0, 1] guard for synthetic
+					# direct-test inputs outside the runtime satisfaction domain.
+					var bounded_candidate: float = clampf(candidate, 0.0, 1.0)
+					if bounded_candidate != candidate:
+						anchor = bounded_candidate
+						minutes = 0
+						value = bounded_candidate
+					else:
+						value = candidate
 		cursor = segment_end
-	return value
+	return {
+		"value": value,
+		"accumulator": {"anchor_bits": SAVE_VALUES.encode_float64_hex(anchor), "minutes": minutes, "cursor": to_minute}
+	}
+
+func _new_satisfaction_accumulator(anchor: float, cursor: int) -> Dictionary:
+	return {"anchor_bits": SAVE_VALUES.encode_float64_hex(anchor), "minutes": 0, "cursor": cursor}
+
+func _read_reusable_satisfaction_accumulator(record: Variant, initial: float, from_minute: int) -> Dictionary:
+	if not record is Dictionary or record.size() != 3 or not record.has("anchor_bits") or not record.has("minutes") or not record.has("cursor"):
+		return {}
+	if typeof(record.anchor_bits) != TYPE_STRING or not record.minutes is int or not record.cursor is int or int(record.cursor) != from_minute:
+		return {}
+	var minute_limit: int = int(float(MINUTES_PER_DAY) / SATISFACTION_DAILY_STEP)
+	if int(record.minutes) < -minute_limit or int(record.minutes) > minute_limit:
+		return {}
+	var decoded_anchor: Variant = SAVE_VALUES.decode_float64_hex(record.anchor_bits)
+	if decoded_anchor == null or float(decoded_anchor) < 0.0 or float(decoded_anchor) > 1.0:
+		return {}
+	var recomputed: float = float(decoded_anchor) + SATISFACTION_DAILY_STEP * float(record.minutes) / float(MINUTES_PER_DAY)
+	if not is_finite(recomputed) or recomputed < 0.0 or recomputed > 1.0 or recomputed != initial:
+		return {}
+	return {"anchor": float(decoded_anchor), "minutes": int(record.minutes)}
 
 func _food_covered_at(person_id: String, absolute_minute: int) -> bool:
 	return int(food_coverage_until.get(person_id, -1)) > absolute_minute
@@ -452,6 +540,7 @@ func _refresh_live_service_flags(now: int) -> bool:
 		active[id] = true
 		if not satisfaction_last_minute.has(id):
 			satisfaction_last_minute[id] = now
+			satisfaction_accumulators[id] = _new_satisfaction_accumulator(_person_satisfaction(person), now)
 		previous_shelter[id] = bool(person.shelter_fulfilled)
 		var food: bool = _food_covered_at(id, now)
 		var clothing: bool = not _get_valid_clothing_allocation(id, day).is_empty()
@@ -467,6 +556,9 @@ func _refresh_live_service_flags(now: int) -> bool:
 	for id_value: Variant in satisfaction_last_minute.keys():
 		if not active.has(id_value):
 			satisfaction_last_minute.erase(id_value)
+	for id_value: Variant in satisfaction_accumulators.keys():
+		if not active.has(id_value):
+			satisfaction_accumulators.erase(id_value)
 	for id_value: Variant in clothing_allocations.keys():
 		if not active.has(id_value):
 			clothing_allocations.erase(id_value)
