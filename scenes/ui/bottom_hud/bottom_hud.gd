@@ -34,6 +34,7 @@ var shekel_panel: PanelContainer
 # Lifecycle
 
 func _ready() -> void:
+	$Root/BottomBar/SlotMargin/SlotRow/StatusButton2.pressed.connect(_on_inventory_button_pressed)
 	_setup_shekel_display()
 	_setup_status_text()
 	_set_drawer_y(DRAWER_CLOSED_Y)
@@ -59,6 +60,15 @@ func _notification(what: int) -> void:
 		_hide_condition_labels()
 
 # Input handling
+
+func _on_inventory_button_pressed() -> void:
+	# Reuse the keyboard route so existing modal input guards stay authoritative.
+	# Defer until the toolbar's mouse event has finished propagating.
+	for pressed: bool in [true, false]:
+		var event := InputEventAction.new()
+		event.action = &"open_inventory"
+		event.pressed = pressed
+		get_viewport().push_input.call_deferred(event)
 
 func _setup_shekel_display() -> void:
 	var panel := PanelContainer.new()
