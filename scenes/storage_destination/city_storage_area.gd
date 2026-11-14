@@ -2,6 +2,8 @@ extends Area2D
 
 ## Physical access to the shared city stock. Worker Hub only manages allocation.
 @export_enum("city", "annex") var storage_id: String = "city"
+## Scene-level introduction gate. Storage ledgers and delivery anchors remain intact.
+@export var world_access_enabled: bool = true
 @onready var interactable_label_component: InteractableLabelComponent = $InteractableLabelComponent
 @onready var access_shape: CollisionShape2D = $CollisionShape2D
 @onready var delivery_point: Node = get_node_or_null("DeliveryPoint")
@@ -23,6 +25,13 @@ func _ready() -> void:
 		add_to_group("city_storage_areas")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+	if not world_access_enabled:
+		hide()
+		access_shape.set_deferred("disabled", true)
+		set_deferred("monitoring", false)
+		var building_shape: CollisionShape2D = get_node_or_null("BuildingBody/CollisionShape2D")
+		if building_shape != null:
+			building_shape.set_deferred("disabled", true)
 
 func configure(next_player: Player, next_storage: Node, open_gate: Callable) -> void:
 	player = next_player
@@ -45,7 +54,7 @@ func _set_delivery_storage(next_storage: Node) -> void:
 		delivery_point.set("storage_path", next_storage.get_path())
 
 func _on_body_entered(body: Node2D) -> void:
-	if body == player:
+	if world_access_enabled and body == player:
 		player._on_interactable_activated(self)
 
 func _on_body_exited(body: Node2D) -> void:
@@ -54,6 +63,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player._on_interactable_deactivated(self)
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if not is_inside_tree() or not is_instance_valid(player) or not is_instance_valid(storage):
 		return false
 	if not player.is_inside_tree() or player.is_collapsing or player.is_sleeping or SceneTransition.is_transitioning:

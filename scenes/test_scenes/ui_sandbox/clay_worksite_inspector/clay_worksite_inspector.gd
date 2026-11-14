@@ -19,13 +19,14 @@ var _pending_remove_id: String = ""
 @onready var title: Label = $Center/TextureWindow/Margin/MainVBox/Header/TitleLabel
 @onready var close_button: TextureButton = $Center/TextureWindow/CloseButton
 @onready var duration_buttons: HBoxContainer = $Center/HourlySetup/Margin/Body/DurationRow/DurationButtons
-const DURATIONS: Array[int] = [180, 360, 540]
-var selected_duration: int = 180
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+const DURATIONS: Array[int] = GATHERING_CONFIG.HOURLY_DURATIONS
+var selected_duration: int = DURATIONS[0]
 var busy: bool = false
 var work_mode: String = ""
 var _hourly_setup: bool = false
 var _previous_mode: String = ""
-var _previous_duration: int = 180
+var _previous_duration: int = DURATIONS[0]
 @onready var hourly_setup_panel: NinePatchRect = $Center/HourlySetup
 @onready var next_button: Button = $Center/HourlySetup/Margin/Body/Footer/NextButton
 @onready var back_button: Button = $Center/HourlySetup/Margin/Body/Footer/BackButton
@@ -82,7 +83,15 @@ func _ready() -> void:
 	)
 	close_button.pressed.connect(func(): close_requested.emit())
 	start_button.pressed.connect(_request_work)
+	# Reuse the authored button style; configuration owns count, text and minutes.
+	while duration_buttons.get_child_count() < DURATIONS.size():
+		duration_buttons.add_child(duration_buttons.get_child(0).duplicate())
+	while duration_buttons.get_child_count() > DURATIONS.size():
+		var surplus: Node = duration_buttons.get_child(-1)
+		duration_buttons.remove_child(surplus)
+		surplus.queue_free()
 	for index: int in range(duration_buttons.get_child_count()):
+		duration_buttons.get_child(index).text = GATHERING_CONFIG.duration_label(DURATIONS[index])
 		duration_buttons.get_child(index).pressed.connect(select_duration.bind(index))
 	Inventory.items_changed.connect(_refresh_preview)
 
@@ -293,7 +302,7 @@ func _refresh_preview() -> void:
 	$Center/TextureWindow/Margin/MainVBox/Confirmation.visible = not work_mode.is_empty()
 	energy_label.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.visible = hourly
-	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.text = "Duration: %dh" % (selected_duration / 60)
+	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.text = "Duration: " + GATHERING_CONFIG.duration_label(selected_duration)
 	satiety_label.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/ToolEffectLabel.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel.visible = hourly or work_mode == "Daily"

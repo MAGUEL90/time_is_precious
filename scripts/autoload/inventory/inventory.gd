@@ -60,7 +60,17 @@ func get_remaining_capacity() -> float:
 	return max_load - total_weight
 
 func has_capacity_for(item_id: String, qty: int) -> bool:
-	return get_remaining_capacity() >= get_item_total_weight(item_id, qty)
+	if qty <= 0:
+		return get_remaining_capacity() >= 0.0
+	var current: int = int(items.get(item_id, 0))
+	if current > MAX_INT_VALUE - qty:
+		return false
+	# Compare the resulting counted inventory, as bulk additions do. Subtracting
+	# 99.9 from 100 can report less than the 0.1 needed for the final date.
+	var projected_items: Dictionary[String, int] = items.duplicate()
+	projected_items[item_id] = current + qty
+	var projected_weight: float = _bulk_items_weight(projected_items)
+	return is_finite(projected_weight) and is_finite(max_load) and max_load >= 0.0 and projected_weight <= max_load
 
 func try_add_item(item_id: String, qty: int) -> bool:
 	if _bulk_transaction_in_progress:

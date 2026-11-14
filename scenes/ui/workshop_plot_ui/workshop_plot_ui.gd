@@ -91,7 +91,7 @@ func _ready() -> void:
 
 func _on_player_selected(selected: bool) -> void:
 	var phase: String = _get_phase()
-	if phase != "uncleared" and not (_is_citizen_house() and phase == "empty"):
+	if phase != "uncleared" and not (_allows_player_construction() and phase == "empty"):
 		_use_player = false
 		player_button.set_pressed_no_signal(false)
 		_refresh_view()
@@ -235,15 +235,16 @@ func _refresh_view() -> void:
 	var was_showing_progress: bool = progress_page.visible
 	var phase: String = _get_phase()
 	var is_house: bool = _is_citizen_house()
-	if phase != "uncleared" and not (is_house and phase == "empty"):
+	if phase != "uncleared" and not (_allows_player_construction() and phase == "empty"):
 		_use_player = false
 	var clearing: bool = phase in ["uncleared", "clearing"]
 	var show_requirements: bool = phase in ["empty", "uncleared"]
+	assign_workers_button.visible = not (is_instance_valid(_construction) and _construction.is_selected_workshop())
 	replacement_button.visible = phase in ["building", "clearing"] and is_instance_valid(_construction) and _construction.get_replacement_slots() > 0
 	player_resume_button.visible = _can_resume_player()
 	materials_list.visible = not clearing
 	requirements_page.get_node("MaterialsTitle").visible = not clearing
-	player_button.visible = phase == "uncleared" or (is_house and phase == "empty")
+	player_button.visible = phase == "uncleared" or (_allows_player_construction() and phase == "empty")
 	player_button.set_pressed_no_signal(_use_player)
 	build_button.text = "Start Cleaning" if clearing else ("Build House" if is_house else "Build")
 	if is_house:
@@ -271,6 +272,9 @@ func _get_phase() -> String:
 	return str(_construction.get("phase"))
 
 
+func _allows_player_construction() -> bool:
+	return is_instance_valid(_construction) and _construction.allows_player_construction()
+
 func _is_citizen_house() -> bool:
 	return is_instance_valid(_construction) and _construction.has_method("is_citizen_house") and bool(_construction.call("is_citizen_house"))
 
@@ -284,7 +288,7 @@ func _is_player_work_active() -> bool:
 
 
 func _can_resume_player() -> bool:
-	if not _is_citizen_house() or _get_phase() not in ["building", "clearing"]:
+	if not _allows_player_construction() or _get_phase() not in ["building", "clearing"]:
 		return false
 	var workers: Variant = _construction.get("worker_ids")
 	return workers is Array and workers.is_empty() and not _is_player_work_active()
@@ -319,7 +323,7 @@ func _get_preview() -> Dictionary:
 	var selected_ids: Array[String] = _selected_worker_ids.duplicate()
 	if _get_phase() in ["uncleared", "clearing"]:
 		return _construction.get_clearing_preview(selected_ids, _use_player)
-	var result: Variant = _construction.call("get_preview", selected_ids, _use_player) if _is_citizen_house() else _construction.call("get_preview", selected_ids)
+	var result: Variant = _construction.call("get_preview", selected_ids, _use_player) if _allows_player_construction() else _construction.call("get_preview", selected_ids)
 	return result if result is Dictionary else {"message": "Preview is unavailable.", "can_start": false}
 
 
@@ -455,6 +459,8 @@ func _add_worker_row(available: bool) -> void:
 func _open_worker_assignment() -> void:
 	if _is_closing or is_instance_valid(_worker_assignment_menu):
 		return
+	if is_instance_valid(_construction) and _construction.is_selected_workshop():
+		return
 	var current_scene: Node = get_tree().current_scene
 	if current_scene == null:
 		show_error("Worker assignment is unavailable.")
@@ -526,7 +532,7 @@ func _refresh_preview() -> void:
 	var duration: int = int(preview.get("duration_minutes", 0))
 	var selected_count: int = _selected_worker_ids.size()
 	if _use_player:
-		if _is_citizen_house() and _get_phase() == "empty":
+		if _allows_player_construction() and _get_phase() == "empty":
 			var session_duration: int = mini(duration, int(_construction.CLEARING_MINUTES))
 			duration_label.text = "%s/session, %s total" % [
 				_format_compact_work_duration(session_duration),
@@ -577,7 +583,7 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 			progress_title.text = ("Clearing: %d%%" if phase == "clearing" else "Construction: %d%%") % roundi(progress * 100.0)
 		remaining_label.text = "Work left: %s" % (_format_work_duration(remaining) if _is_citizen_house() else _format_duration(remaining, true))
 		if worker_count == 0 and not player_active:
-			remaining_label.text = "Paused: assign player or workers" if _is_citizen_house() else "Paused: assign workers"
+			remaining_label.text = ("Paused: assign player or workers" if _is_citizen_house() else "Paused: assign player") if _allows_player_construction() else "Paused: assign workers"
 	else:
 		progress_bar.value = 100.0
 		progress_title.text = "House construction complete" if _is_citizen_house() else "Workshop construction complete"
@@ -587,7 +593,7 @@ func _update_progress_page(phase: String, preview: Dictionary) -> void:
 		"builder" if worker_count == 1 else "builders"
 	]
 	if player_active:
-		team_label.text = "Player clearing the site" if phase == "clearing" else "Player building the house"
+		team_label.text = "Player clearing the site" if phase == "clearing" else ("Player building the house" if _is_citizen_house() else "Player building the workshop")
 	elif phase == "clearing":
 		team_label.text = "1 worker clearing the site" if worker_count > 0 else "No worker assigned"
 	if phase in ["building", "clearing"] and worker_count > 0 and not player_active:
@@ -638,7 +644,10 @@ func _focus_primary_control() -> void:
 	if progress_page.visible:
 		progress_close_button.grab_focus()
 		return
-	assign_workers_button.grab_focus()
+	if assign_workers_button.visible:
+		assign_workers_button.grab_focus()
+	elif player_button.visible:
+		player_button.grab_focus()
 
 
 func _make_label(label_text: String, height: int) -> Label:
@@ -665,7 +674,7 @@ func _on_build_pressed() -> void:
 		return
 	if _get_phase() != "empty":
 		return
-	if _is_citizen_house() and _use_player:
+	if _allows_player_construction() and _use_player:
 		player_build_requested.emit()
 	else:
 		build_requested.emit(_selected_worker_ids.duplicate())

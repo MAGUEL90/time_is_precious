@@ -12,12 +12,13 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var authored_resource_paths: Dictionary = {}
 ## Prototype policy: retain disabled ledgers, but remove world access and new production.
 @export var disabled_world_sites: Array[StringName] = []
+## Idle civil art origins, relative to ResidentSpawn; empty retains legacy roaming.
+@export var resident_roam_rect: Rect2 = Rect2()
 # Explicitly temporary values authorized for testing; final balance is pending.
-const TEST_RESOURCE_CAPACITY: Dictionary = {
-	"clay_lump": 36, "wood_log": 24, "reed_bundle": 40, "water_jar": 48,
-}
-const RESPAWN_MIN_MINUTES: int = 2 * 1440
-const RESPAWN_MAX_MINUTES: int = 3 * 1440
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+const TEST_RESOURCE_CAPACITY: Dictionary = GATHERING_CONFIG.RESOURCE_CAPACITY
+const RESPAWN_MIN_MINUTES: int = GATHERING_CONFIG.RESPAWN_MIN_MINUTES
+const RESPAWN_MAX_MINUTES: int = GATHERING_CONFIG.RESPAWN_MAX_MINUTES
 const RESOURCE_OFFSETS: Array[Vector2] = [
 	Vector2.ZERO, Vector2(-48, 0), Vector2(48, 0), Vector2(0, -48), Vector2(0, 48),
 	Vector2(-48, -48), Vector2(48, -48), Vector2(-48, 48), Vector2(48, 48),
@@ -144,6 +145,7 @@ func _ready() -> void:
 	$WorkerVisuals.y_sort_enabled = true
 	var resident_spawn: Node2D = get_node_or_null("ResidentSpawn") as Node2D
 	if resident_spawn != null:
+		$WorkerVisuals.resident_roam_rect = resident_roam_rect
 		$WorkerVisuals.enable_city_residents(resident_spawn)
 		var inspection := preload("res://scenes/content_scene/citizen_inspection_controller.gd").new()
 		inspection.name = "CitizenInspectionController"
@@ -418,7 +420,32 @@ func _site_regrowth_clear(marker: Node2D) -> bool:
 			if worker != null and worker.physical_approach.get("position") is Vector2 \
 				and _point_near_resource_base(worker.physical_approach.position, polygon):
 				return false
+	# Cart visuals interpolate ahead of the last committed transport position.
+	# Regrowing over that anchor makes the next collision check fall back into
+	# the new collider. Protect it even while the actor is hidden or returning empty.
+	for transport: Node in get_tree().get_nodes_in_group("city_storage_transport"):
+		var transport_route: Variant = transport.get("route")
+		if transport_route is Dictionary and transport_route.get("leg_origin") is Vector2 \
+			and _point_near_resource_base(transport_route.leg_origin + Vector2(0, 16), polygon):
+			return false
+	# Legacy final shipments travel straight without replanning. Keep their
+	# delivery and empty return corridor clear until the old assignment ends.
+	for route: Dictionary in hauling.routes.values():
+		if bool(route.get("legacy_final", false)) and str(route.get("phase", "")) in ["outbound", "returning"] \
+			and _segment_near_resource_base(route.origin + Vector2(0, 16), route.target + Vector2(0, 16), polygon):
+			return false
 	return true
+
+func _segment_near_resource_base(start: Vector2, finish: Vector2, polygon: PackedVector2Array) -> bool:
+	if _point_near_resource_base(start, polygon) or _point_near_resource_base(finish, polygon):
+		return true
+	for index: int in range(polygon.size()):
+		var point: Vector2 = polygon[index]
+		if Geometry2D.segment_intersects_segment(start, finish, point, polygon[(index + 1) % polygon.size()]) != null:
+			return true
+		if point.distance_to(Geometry2D.get_closest_point_to_segment(point, start, finish)) <= worksite_navigation.CLEARANCE:
+			return true
+	return false
 
 func _resource_occupancy_polygon(marker: Node2D, base: CollisionPolygon2D) -> PackedVector2Array:
 	if base != null and base.polygon.size() >= 3:
@@ -614,6 +641,10 @@ func _queue_navigation_refresh(state_id: int, plot_id: int) -> void:
 		if _update_parked_plot_geometry(state_id, previous, state.phase):
 			navigation_geometry_phases[state_id] = state.phase
 		return
+	# A selectable plot commits its building kind when construction begins.
+	var live_plot: Node = instance_from_id(plot_id) as Node
+	if live_plot != null and live_plot.is_inside_tree():
+		navigation_plot_templates[state_id] = _plot_navigation_template(live_plot)
 	var template: Dictionary = navigation_plot_templates.get(state_id, {})
 	if not template.is_empty() and (previous == "built") == (state.phase == "built"):
 		# Known open phases share identical collision. Do not freeze unrelated
@@ -644,7 +675,10 @@ func _plot_navigation_template(plot: Node) -> Dictionary:
 	var script_path: String = plot_script.resource_path
 	var open: Array[PackedVector2Array] = []
 	var built: Array[PackedVector2Array] = []
-	if script_path == "res://scenes/citizen_house_plot/citizen_house_plot.gd":
+	if script_path == "res://scenes/map_authoring/initial_building_plot.gd" and plot.construction.building_kind == "mudbrick_workshop":
+		if not _append_live_template_shape(plot.get_node("WorkshopBody/CollisionShape2D"), built):
+			return {}
+	elif script_path in ["res://scenes/citizen_house_plot/citizen_house_plot.gd", "res://scenes/map_authoring/initial_building_plot.gd"]:
 		var house_shape: CollisionShape2D = plot.get_node_or_null("HouseBody/CollisionShape2D") as CollisionShape2D
 		if not _append_live_template_shape(house_shape, built):
 			return {}

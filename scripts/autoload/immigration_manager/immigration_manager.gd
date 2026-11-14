@@ -22,11 +22,14 @@ func spawn_immigration(amount: int) -> void:
 	
 	for i in range(amount):
 		var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
+		if generated_citizen == null:
+			break
 		generated_citizen.population_status = CitizenData.PopulationStatus.MIGRANT
 		generated_citizen.employment_status = CitizenData.EmploymentStatus.UNEMPLOYED
 		pending_immigrants.append(generated_citizen)
 	
-	immigration_requested.emit(pending_immigrants.duplicate())
+	if not pending_immigrants.is_empty():
+		immigration_requested.emit(pending_immigrants.duplicate())
 
 
 func accept_pending_immigrants() -> bool:

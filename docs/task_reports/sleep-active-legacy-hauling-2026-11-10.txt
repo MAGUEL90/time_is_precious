@@ -1,0 +1,120 @@
+TIDUR SAAT TIGA RUTE LEGACY AKTIF, LALU CONTINUE - 10 NOVEMBER 2026
+
+HASIL
+PASS: dua variasi, enam proses MCP, 267 assertion dan 840 sampel per menit tidur.
+Tidak ada bug produksi baru terbukti; kode game, toolbar dan aturan tidak diubah.
+Rute bermuatan/pulang kosong selesai saat Player tidur. Total lima wood_log dan
+satu clay_lump tidak berubah. Respawn overdue menunggu kota aktif kembali.
+
+TARGET DAN ISOLASI
+Godot 4.5.1 stable f62fdbde1, Compatibility.
+Salinan snapshot lengkap b32cc50:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Branch test/time-world/laptop-baseline-20261109.
+MCP stdio lokal melalui work/mcp-call.mjs; setiap begin/quit memverifikasi res://,
+user://, phase dan PID listener 9877 terhadap launch record. Tidak memakai CUA.
+APPDATA/LOCALAPPDATA/XDG/TEMP terpisah dan probe engine lulus.
+Profil sukses di outputs/citysave_suite_qa:
+- blocked-multi-legacy-multisleeploaded04-01; PID 24104/20088/19480.
+- blocked-multi-legacy-multisleepmixed-01; PID 15440/4604/7616.
+Seluruh proses QA sudah ditutup.
+
+FIXTURE YANG DIUJI
+Menggunakan tiga historical final shipment yang didukung validator save:
+Belum membawa tiga kayu, QA Wood Courier dua kayu, QA Clay Courier satu clay.
+Dua civil/cart tambahan hanya ada dalam QA. Civil asli tidak diganti identitasnya.
+legacy_final/removing aktif, daily.allow_haulers tetap false. Rekonstruksi ini
+bukan membuka assignment Hauler baru. Kapasitas cart legacy tetap tiga.
+
+Waktu awal QA ditetapkan ke menit 3600 sebelum kota dibuat, lalu snapshot waktu
+disinkronkan ke consumer yang ada. Ini initial-state fixture, bukan klaim telah
+memainkan dua hari sebelumnya. Snapshot lengkap lolos prepare/validation.
+Wood/Clay depleted pada posisi authored asli; started_at 740, due_at 3620.
+Delay 2880 menit valid. Tidak ada pemindahan marker, collider atau scene di disk.
+Save awal merekam rute aktif dan sumber pending. Kebutuhan/fatigue Player aktif,
+kapasitas tas 100; QA memberi makanan 40 kurma dan empat kayu pribadi sebagai
+sentinel. Player benar-benar berjalan ke rumah dan berinteraksi dengan SleepSpot.
+
+VARIASI A - SEMUA BERMUATAN
+134 assertion: writer 47, reader 52, verifier 35.
+Pada SleepSpot menit 3600, tiga route outbound masih memiliki cargo 3/2/1.
+Sleep aktual berjalan 420 menit sampai 4020. Monitor time_changed memeriksa
+setiap menit: cargo + legacy ground receipt tetap lima kayu dan satu clay,
+empat kayu Player tetap utuh, Wood/Clay tetap stock 0, collider disabled,
+deadline 3620 tetap tersimpan dan runtime bukan bagian peta aktif.
+
+VARIASI B - FASE CAMPURAN
+133 assertion: writer 46, reader 52, verifier 35.
+Clock native maju 12 menit sebelum masuk rumah. Pada SleepSpot menit 3612,
+Belum returning cargo 0; kedua route lain outbound dengan dua kayu dan satu clay.
+Sleep aktual 420 menit sampai 4032. Seluruh 420 sampel memenuhi invariant yang
+sama. Stok kayu yang sudah terkirim sebelum tidur dihitung bersama cargo tersisa.
+
+TRANSISI SELAMA TIDUR
+Owner hauling/daily native menjalankan settlement; harness hanya mengamati.
+Pada variasi A, receipt/return terjadi pada 3610, 3615, 3628; rute selesai pada
+3624, 3630, 3656. Variasi B melanjutkan rute yang sama dari menit 3612.
+Wood dan Clay due pada 3620 ketika beberapa rute masih aktif. Keduanya tidak
+refill dalam rumah, bahkan setelah seluruh route selesai.
+Runtime yang diparkir tetap di scene tree agar pekerjaan terus berjalan, tetapi
+tidak menjadi turunan peta aktif. Pemeriksaan memakai kondisi peta aktif ini.
+
+CONTINUE DAN AKTIVASI COLLIDER
+Untuk setiap variasi:
+1. Sleep menulis checkpoint HOME; route sudah hilang, worker tidak reserved,
+   sumber masih overdue/pending dan barang terkirim tepat sekali.
+2. Proses kedua melakukan Continue. Snapshot lengkap dan bytes checkpoint
+   sama, termasuk lima civil, nama/rambut/skin tone, receipt dan deadline.
+3. Player keluar rumah melalui ExitDoor. Wood refill 24, Clay refill 36,
+   collider aktif, deadline -1, offset authored nol. Actor yang terlihat tidak
+   berada di tapak collider yang aktif. Tick ekstra tidak menggandakan barang.
+4. Save kota kembali dibuat; proses ketiga melakukan Continue lagi. Tidak ada
+   route/job/pickup baru, worker tetap bebas, stok dan receipt tetap benar.
+Semua stderr pada enam proses sukses kosong.
+
+HASH CHECKPOINT
+Variasi A - HOME setelah tidur:
+ef3f68a5c17cbc7346e11aa086e55aa732af7ba7bf45ef7776efe3d517412df3
+Variasi A - CITY setelah kembali:
+f4d93f385be4ee17d635f64cc684ae7e3c61552ecde6bc9205cb89e95b196127
+Variasi B - HOME setelah tidur:
+84b2927afcdc2740458821f1bcd7c69dea73582c21ae1d5c338e14200f7af90c
+Variasi B - CITY setelah kembali:
+a9e4477e7e1150e2d1a70a42aec27e9808b3c69a7874ecdf999e2dc1cbecf527
+Writer -> reader dan reader -> verifier cocok. Hash save awal aktif juga
+disimpan dan diverifikasi dalam sleep-legacy-summary.json.
+
+PERCOBAAN HARNESS YANG TIDAK DIHITUNG LULUS
+- multisleeploaded: jam dipindah setelah kota dibuat; rekrutmen civil asli
+  ditolak, lalu helper mencoba memakai worker null. Tidak mencapai uji tidur.
+- multisleeploaded02: waktu awal belum disinkronkan ke consumer autoload;
+  validator menolak Workshop time cursor differs from the clock.
+- multisleeploaded03: oracle QA keliru mengharuskan parked runtime keluar dari
+  scene tree. Pemeriksaan diperbaiki menjadi tidak berada di peta aktif; kegagalan
+  lanjutan berasal dari alur harness yang sudah berhenti, bukan tidur produksi.
+Log dan profil ketiganya disimpan. Hanya harness diperbaiki; game tidak diubah.
+
+AUDIT DAN BATAS
+3.377 file manifest snapshot asli masih cocok dan Git sumber bersih. Hash dua
+file modified dari tahap sebelumnya sama sebelum/sesudah tahap ini. Toolbar,
+scene authored, project.godot, addons dan save schema tidak berubah.
+git diff --check lulus. Tidak commit, push atau merge.
+Save QA terbukti terisolasi melalui engine/MCP. Hash save pribadi tidak diklaim
+terverifikasi karena folder tersebut sebelumnya menolak akses baca.
+Suite headless lama tidak diulang karena kode game tidak berubah; tahap ini
+menggunakan playtest runtime MCP, validasi snapshot dan rantai hash save.
+
+Belum diuji: rute yang durasinya melampaui satu tidur 420 menit, tidur yang
+dibatalkan/terinterupsi, crossing midnight pada skenario ini, crash/quit di tengah
+penulisan save, semua jenis cargo, serta lebih dari tiga route. Tidak memakai
+save pribadi pengguna atau mengubah balancing untuk memperpanjang rute.
+
+BUKTI
+outputs/qa-evidence/sleep-legacy-summary.json;
+moving-{multisleeploaded04,multisleepmixed}-{write,read,verify}.result.json;
+edge-{multisleeploaded04,multisleepmixed}-*.launch.json/profile.log/stdout.log/stderr.log;
+edge-multisleeploaded*, mcp-retarget-transcript.jsonl;
+sleep-legacy-production-{before,after}.json, sleep-legacy-harness-hashes.json;
+final-source-audit.json.
+Harness eksternal: work/sleep_legacy.gd, launch-sleep-legacy.ps1,
+control-sleep-qa.ps1, summarize-sleep-legacy.ps1. Bukan bagian build game.

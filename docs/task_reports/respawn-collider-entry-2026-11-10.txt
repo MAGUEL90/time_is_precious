@@ -1,0 +1,126 @@
+TIME IS PRECIOUS - CIVIL MASUK SAAT COLLIDER RESPAWN AKTIF
+Tanggal: 2026-11-10
+Hasil: PASS dalam cakupan yang diuji. 214 pemeriksaan, 36 kombinasi batas,
+216 catatan tahap, dua proses game independen. Tidak ada bug produksi terbukti.
+
+TARGET
+Salinan kerja lengkap dari b32cc505b89c0a0b06d288b1b6ab48fcb9feccce:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Branch tetap test/time-world/laptop-baseline-20261109.
+MCP menggunakan server lokal dengan -p ke salinan kerja. res://, user:// dan PID
+pemilik port runtime 9877 diverifikasi sebelum begin pada writer dan verifier.
+Godot 4.5.1 stable, Compatibility/OpenGL. Tidak memakai computer use/editor lama.
+
+Save QA baru:
+outputs/citysave_suite_qa/blocked-multi-edge-edge-01
+APPDATA, LOCALAPPDATA, XDG data/config/cache serta temp diisolasi, dan user://
+diverifikasi oleh engine probe sebelum launch. Save personal tidak dibuka atau
+digunakan. File checkpoint QA sebelumnya tidak ditimpa.
+
+TUJUAN DAN KONDISI
+Tahap sebelumnya meluluskan penghalang bergerak bersama dan keluar bertahap.
+Tahap ini memeriksa civil yang berjalan masuk dari tepi WoodSite ketika stok
+habis sudah mencapai deadline dan collider akan diaktifkan kembali.
+Kode produksi memeriksa lokasi, mengisi stok, menjadwalkan collider, kemudian
+menjadwalkan pembaruan navigasi. Uji mencatat kedua jendela deferred tersebut.
+
+Fixture menyiapkan stok WoodSite nol dan deadline satu menit berikutnya agar
+batas dapat diuji berulang. Ini bukan pengujian durasi respawn 2-3 hari; durasi
+tersebut sudah diuji pada tahap sebelumnya. Clock tetap menggunakan API asli.
+Kapasitas deposit, kecepatan civil, kebutuhan Player dan tas 100 tidak diubah.
+Makanan QA diberikan sebelum tidur dan digunakan melalui inventori.
+
+CIVIL DAN PERGERAKAN
+Civil existing initial_city_storage_hauler, tanpa assignment aktif, digunakan
+sebagai resident berjalan. daily.jobs kosong diverifikasi. Nama, rambut dan
+skin tone ketiga civil dicatat dan dibandingkan sebelum/sesudah serta Continue.
+Saat setup antarpercobaan, visual owner dihentikan sementara dan civil ditempatkan
+tepat di luar zona penghalang. Target roaming diarahkan masuk. Setelah itu owner
+WorkerVisuals._process asli diaktifkan: langkah _roam, animasi, dan pemeriksaan
+segment_clear dijalankan oleh game sendiri, bukan dipanggil manual per langkah.
+Actor lain disembunyikan sementara agar tidak menjadi penghalang tambahan.
+Sesudah rangkaian uji, entrant berjalan keluar memakai owner asli sebelum tidur.
+
+MATRIKS 36 KOMBINASI
+Empat arah masuk: bawah, kiri, kanan, atas.
+Tiga offset di luar batas hasil pencarian: 0,03 / 0,2 / 1,0 piksel.
+Pencarian batas memakai resolusi 0,25 piksel dan zona clearance civil 4,5 piksel;
+offset tersebut bukan klaim jarak presisi dari tepi collider mentah.
+Tiga urutan pemicu:
+- before_owner: callback QA sebelum owner visual dalam process frame.
+- after_owner: callback QA sesudah owner visual dalam process frame.
+- physics_first: pemicu dari physics callback sebelum frame gerak berikutnya.
+Hanya priority callback QA yang dikontrol, tanpa perubahan source/settings game.
+
+Setiap percobaan mencatat:
+1. Sebelum clock.
+2. Sesudah permintaan respawn masuk antrean.
+3. Sesudah pemeriksaan lokasi, sebelum collider deferred dijalankan.
+4. Sesudah collider, sebelum navigasi diperbarui.
+5. Sesudah navigasi diperbarui.
+6. Sesudah lima frame gerakan native tambahan.
+Catatan berisi nomor process/physics frame, posisi kaki civil, stok, status
+collider, navigation_pending, dan hasil pemeriksaan occupancy/navigation.
+
+HASIL
+before_owner: 12 respawn lebih dulu, navigasi menahan entry berikutnya.
+after_owner: 2 entry ke zona penghalang lebih dulu, respawn tertahan;
+             10 respawn lebih dulu, entry tertahan.
+physics_first: 12 respawn lebih dulu, entry tertahan.
+Jumlah: 2 entry_blocks_respawn, 34 respawn_blocks_entry.
+
+Pada 34 refill, probe benar-benar menangkap urutan:
+- stok 24, collider masih disabled, navigation_pending true;
+- collider aktif, navigation_pending masih true;
+- navigasi selesai, navigation_pending false.
+Posisi civil serta nomor process/physics frame tetap sama di ketiga tahap itu.
+Tidak ada langkah native yang tersisip di dalam flush deferred pada percobaan
+ini. Setelah navigasi baru tersedia, langkah masuk ditolak. Pada dua entry yang
+lebih dulu masuk zona clearance, sumber tetap kosong dan collider nonaktif.
+Tidak ada event tercatat dengan sumber penuh sekaligus lokasi terhalang.
+Semua 36 percobaan memenuhi konsistensi stok/collider sesudah flush.
+
+PENTING TENTANG REPRODUKSI
+Uji tidak menyisipkan pemindahan actor atau panggilan _roam buatan di tengah
+antrean deferred. Pemindahan paksa semacam itu dapat menciptakan urutan yang
+tidak dibuktikan terjadi pada owner gerak normal, sehingga bukan dasar patch.
+Tidak ada patch produksi atau perubahan aturan respawn yang diperlukan dari
+bukti ini. Hasil ini tidak merupakan bukti formal untuk semua jadwal callback.
+
+TIDUR DAN CONTINUE
+Writer: 200 pemeriksaan, termasuk berjalan pulang dan tidur asli setelah kayu
+kembali penuh dan collider aktif. Verifier: 14 pemeriksaan dalam proses baru,
+Continue, snapshot lengkap sebelum clock, identitas civil, keluar rumah dan tick.
+Stok kayu tetap 24 dan timer -1. Stok lain tetap clay 36, reed 40, air 48.
+Hash save writer, file checkpoint, dan yang dimuat verifier sama:
+92faba27b4d5f83c6ff5b790d057ec7f026b956b6dcb811a1dd974a1908ecbd9
+Continue tidak menulis ulang checkpoint. Kedua stderr final kosong.
+
+BATAS CAKUPAN
+- Fokus pada collider WoodSite dan gerak resident native tanpa assignment.
+  Collider sumber lain, worker dalam rute assignment/hauling, serta Player
+  yang masuk pada batas frame belum diuji oleh rangkaian ini.
+- Tidak memaksakan perubahan FPS atau mensimulasikan setiap kemungkinan lag.
+- Tidak menguji save di tengah flush deferred atau di tengah rute civil.
+  Save/Continue diuji sesudah respawn selesai melalui tidur asli.
+- Posisi awal, target roaming, stok awal dan deadline adalah fixture QA;
+  bukan playthrough otonom tanpa fixture atau pengulangan gathering full stock.
+
+AUDIT
+3.377 berkas manifest snapshot asli tetap cocok; source Git bersih.
+Perubahan tracked salinan kerja tetap hanya test_scene_start_menu.gd dari
+baseline sebelumnya. Tahap ini menambah harness eksternal dan laporan ini.
+Toolbar, scene authored, identitas, project.godot, addons, balancing, format save
+dan kode produksi tidak diubah. git diff --check lulus. Tidak commit/push/merge.
+
+BUKTI DI outputs/qa-evidence
+- edge-summary.json: agregat, validasi jendela deferred dan hash checkpoint.
+- moving-edge-write.result.json: 36 trial dan seluruh event bernomor frame.
+- moving-edge-verify.result.json: hasil Continue independen.
+- edge-edge-{write,verify}.launch.json, profile.log, stdout.log, stderr.log.
+- mcp-retarget-transcript.jsonl: verifikasi runtime, begin/status/quit via MCP.
+- edge-harness-hashes.json: SHA-256 skrip QA.
+- final-source-audit.json: manifest snapshot asli dan perubahan salinan kerja.
+Harness: work/respawn_edge.gd, work/launch-edge.ps1, work/summarize-edge.ps1,
+dengan helper QA tahap sebelumnya. Nama prefix moving pada file result berasal
+dari helper bersama; seluruhnya memakai profil edge baru yang disebut di atas.

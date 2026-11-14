@@ -84,14 +84,15 @@ func _run() -> void:
 		var saved_sources: Dictionary = expected_raw.pickup_sources
 		_expect(store.snapshot._sources.capture() == saved_sources, "Continue restores every registered pickup source exactly.")
 		if mode == "city":
-			var view_count: int = 0
+			# These six sources retain their save ledgers but opt out of world
+			# pickups in the authored-map baseline. Continue must preserve both.
 			for index: int in range(6):
 				var palm: Node = get_tree().current_scene.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))
 				var slots: Array = saved_sources[str(palm.state.name)].available
-				view_count += slots.count(true)
-				for slot: int in range(slots.size()):
-					_expect(palm._pickups.has(slot) == slots[slot], "Continue projects the saved slot for " + str(palm.name))
-			_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == view_count, "Continue creates no duplicate palm views.")
+				_expect(palm.state.available == slots, "Continue retains every saved slot for " + str(palm.name))
+				_expect(not palm.world_view_enabled, "Continue keeps the legacy world view disabled for " + str(palm.name))
+				_expect(palm._pickups.is_empty(), "Continue creates no pickups for the hidden legacy source " + str(palm.name))
+			_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(), "Continue creates no hidden or duplicate legacy palm views.")
 		_expect(_same_snapshot(actual, expected), "Continue restores the full checkpoint without elapsed time or extra sleep.")
 		_expect(FileAccess.get_file_as_bytes(path) == bytes_before, "Continue never rewrites the checkpoint.")
 		if legacy_v8 and mode == "city":

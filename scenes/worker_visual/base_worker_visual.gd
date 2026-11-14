@@ -121,6 +121,7 @@ var _visible_mood: String = ""
 # A narrow instance-local seam so the regression can exercise missing and
 # malformed imported art without replacing project assets or scene resources.
 var _cart_texture_loader: Callable = Callable()
+var wood_work_pose: Node2D
 
 # Lifecycle
 
@@ -216,6 +217,24 @@ func play_visual(
 
 	if hair_style_id != "":
 		hair_style = hair_style_id
+
+	if action == "chop_wood":
+		if not is_instance_valid(wood_work_pose):
+			wood_work_pose = preload("res://scenes/worker_visual/work_2_axe_pose.gd").new()
+			wood_work_pose.name = "WoodWorkPose"
+			wood_work_pose.hide()
+			body_sprite.get_parent().add_child(wood_work_pose)
+			wood_work_pose.position = body_sprite.position
+		wood_work_pose.configure(skin_tone, skin_tone, skin_tone, hair_style)
+		for layer: AnimatedSprite2D in [body_sprite, clothes_sprite, head_sprite, hand_sprite, hair_sprite, accessories_sprite]:
+			layer.hide()
+		if cart_visual != null:
+			cart_visual.hide()
+		wood_work_pose.start(direction, 13.0 * maxf(anim_speed, 0.01) / 7.0)
+		current_visual_key = ""
+		return
+	if is_instance_valid(wood_work_pose):
+		wood_work_pose.hide()
 
 	var resolved_direction: String = _normalize_direction(direction)
 	var resolved_action: String = _resolve_action(action, skin_tone_id, resolved_direction)

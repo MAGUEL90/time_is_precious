@@ -3,7 +3,7 @@ extends RefCounted
 const POPLAR: Texture2D = preload("res://assets/objects/nature/trees/poplar.png")
 const STUMP: Texture2D = preload("res://assets/objects/nature/trees/cutted_poplar.png")
 const CUTTED_REED: Texture2D = preload("res://assets/objects/worksites/cutted_reed_site.png")
-const WOOD_ROOTS: Array[Vector2] = [Vector2(-18, -4), Vector2(-6, -8), Vector2(6, -8), Vector2(18, -4)]
+const WOOD_ROOTS: Array[Vector2] = [Vector2.ZERO]
 
 ## Contact geometry follows the authored art, without changing its visible pixels.
 static func configure(site: Node2D, finite_resource: bool = false) -> void:

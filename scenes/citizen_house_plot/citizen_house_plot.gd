@@ -206,7 +206,7 @@ func _sync_construction() -> void:
 	interaction_area.position = Vector2(0, 8)
 	interactable_label_component.position = Vector2(-8, -34)
 	$InteractableLabelComponent/HammerIcon.texture = HAND_ICON if construction.phase in ["uncleared", "clearing"] else HAMMER_ICON
-	interaction_area.set_deferred("monitoring", not built)
+	_set_plot_monitoring(not built)
 	if built:
 		close_menu()
 		interactable_label_component.hide()
@@ -219,6 +219,7 @@ func _sync_construction() -> void:
 		$Label.text = "No workers" if construction.worker_ids.is_empty() and not construction.is_player_work_active() else ("Contract expired" if construction._all_workers_payroll_blocked() and not construction.is_player_work_active() else "Building")
 	else:
 		$Label.text = ""
+	_apply_world_access()
 
 
 func _exit_tree() -> void:

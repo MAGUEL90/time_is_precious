@@ -1,0 +1,142 @@
+TIME IS PRECIOUS - STOK HABIS, RESPAWN, TIDUR, CONTINUE
+Tanggal: 2026-11-09
+Hasil final: PASS. 12 proses game, 841 pemeriksaan.
+
+TARGET DAN PERLINDUNGAN
+Snapshot lengkap b32cc505b89c0a0b06d288b1b6ab48fcb9feccce pada branch
+test/time-world/laptop-baseline-20261109, direktori:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+
+MCP Godot tetap memakai server lokal1.12.2 melalui koneksi stdio baru, dengan -p
+secara eksplisit ke salinan kerja. Sebelum setiap proses diuji, runtime memastikan
+res:// dan user:// sesuai, serta pemilik port9877 cocok dengan PID peluncuran.
+Tidak menggunakan computer use atau koneksi editor lama yang auto-launch.
+Godot4.5.1 stable, renderer Compatibility/OpenGL.
+
+Tidak ada perubahan pada gameplay, toolbar, scene, addons, project.godot,
+balancing, identitas civil, atau schema save. Tidak ada patch produksi karena
+tidak ditemukan bug produksi yang terkonfirmasi dalam cakupan ini.
+Perubahan test start-menu dan laporan dari tahap sebelumnya tetap dipertahankan.
+Tahap ini hanya menambah harness eksternal dan laporan ini. Tidak merge/push/commit.
+
+METODE DAN BATAS FIXTURE
+Satu lokasi per jenis aktif: WoodSite, ClaySiteA, ReedSite, WaterSite.
+Mulai dari New Game dan kapasitas sumber penuh yang sebenarnya. Tidak mengubah
+stok, kapasitas, posisi sumber, deadline respawn, atau RNG untuk mempercepat habis.
+Berjalan dan E memakai input gameplay, lalu signal tombol Hourly/Next/Start asli.
+Setiap sesi meminta180 menit dan hanya boleh berhenti lebih awal saat stok habis.
+Jumlah hasil di tas, City Storage, dan pickup tanah dihitung untuk konservasi.
+
+Bekal date_cluster diberikan sebagai fixture QA dan dikonsumsi melalui aksi
+inventori yang tersedia. Bekal ini bukan hasil progres ekonomi. Kebutuhan pemain
+tetap aktif, kapasitas tas100, dan gerak normal; tidak teleport atau bypass collapse.
+Hasil kayu dapat disetor melalui API transfer saat pemain mencapai City Storage.
+Barang yang tidak diterima City Storage memakai aksi Drop inventori biasa, tanpa
+menghilangkan hasil. Drop tersebut ikut tersimpan dan dibandingkan saat Continue.
+
+Auto tick clock dihentikan oleh harness untuk memungkinkan pemeriksaan menit
+yang tepat. Gathering dan tidur tetap memakai alur produksi. Waktu menunggu
+dilalui melalui TimeComponentManager.advance_minutes dalam langkah maksimal120
+menit, diselingi makan/tidur normal. Ini uji integrasi waktu terkontrol, bukan
+perjalanan survival penuh dengan menunggu2-3 hari pada kecepatan realtime.
+Makan dilakukan di kota karena scene rumah tidak memiliki InventoryUI.
+
+ALUR PER JENIS
+1. Gathering berulang menghabiskan kapasitas awal; hasil harus tepat sejumlah stok.
+2. Preview kerja pada sumber kosong ditolak tanpa biaya waktu/inventori.
+3. Depletion menetapkan deadline2-3 hari; settlement berulang tidak mengacak ulang.
+4. Berjalan pulang dan tidur sungguhan menulis checkpoint HOME berisi stok nol.
+5. Proses game baru menekan Continue, membandingkan seluruh snapshot dan deadline.
+6. Satu menit sebelum deadline stok tetap nol. Pada deadline, pemain berada di
+   rumah dan runtime kota tetap parked: sumber masih menunggu, sesuai perilaku
+   yang memang menunda validasi lokasi sampai kota aktif kembali.
+7. Keluar ke kota yang lokasinya clear. Pada tick clock normal berikutnya, sumber
+   pulih sekali ke kapasitas penuh pada posisi yang sama; timer dihapus.
+8. Gathering ulang menghasilkan barang dan mengurangi stok baru; tidur menyimpan
+   hasil tersebut. Proses ketiga melakukan Continue lagi, lalu keluar rumah untuk
+   memastikan tidak ada refill tambahan/duplikasi.
+
+HASIL
+Jenis          Kapasitas/hasil awal   Sesi akhir   Jeda respawn   Stok sesudah
+                                     (menit)      (menit)       gathering ulang
+Kayu           24 /24                124          4013          22
+Tanah liat     36 /36                157          3790          29
+Reed           40 /40                101          3694          30
+Air            48 /48                 26          2889          25
+
+Kayu memerlukan5 sesi gathering; ketiga jenis lainnya4 sesi. Semua hasil awal
+tepat sesuai kapasitas sumber. Tidak ada output yang hilang atau dibuat ganda.
+Semua jeda berada dalam rentang2880-4320 menit. Ketika kembali ke kota pada tepat
+deadline, stok masih nol sampai clock memproses menit berikutnya. Harness menguji
+tick itu secara eksplisit; tidak memaksa refill lewat fungsi internal.
+Posisi sumber tidak berubah; state presentasi kembali siap; event settlement
+berulang tidak menambah stok atau mengonsumsi RNG lagi.
+
+Pemeriksaan per jenis (writer / reader / verifier):
+WoodSite:102 /111 /14 =227.
+ClaySiteA:94 /105 /14 =213.
+ReedSite:97 /99 /14 =210.
+WaterSite:103 /74 /14 =191.
+Total841. Dua belas stderr final kosong; seluruh proses QA sudah ditutup.
+Screenshot MCP checkpoint rumah telah diperiksa. Presentasi depleted/ready diuji
+melalui state runtime; ini bukan audit visual lengkap seluruh animasi sumber.
+
+SAVE DAN IDENTITAS
+Snapshot sebelum respawn dan setelah gathering ulang disalin sebagai pending.json
+dan refilled.json. SHA256 masing-masing cocok dengan hash checkpoint yang dibaca
+proses Continue berikutnya. Continue tidak menulis ulang checkpoint saat load.
+Snapshot lengkap dibandingkan dengan toleransi numerik1e-9; nilai float64 yang
+berbentuk string hex dibandingkan persis. Nama, rambut, dan warna badan setiap
+civil dalam save juga dibandingkan secara eksplisit pada kedua Continue.
+
+Profil final relatif terhadap outputs/citysave_suite_qa:
+- respawn-WoodSite-02/
+- respawn-ClaySiteA-02/ untuk writer; -03/ untuk reader dan verifier.
+- respawn-ReedSite-02/
+- respawn-WaterSite-02/
+File save di masing-masing profil:
+data/Godot/app_userdata/time_is_precious/respawn_journey/
+Untuk tanah liat, pending checkpoint yang belum berubah disalin ke profil03 saat
+mengulang reader. Hash rantai writer02 -> reader03 -> verifier03 telah cocok.
+Profil percobaan sebelumnya dipertahankan; save pribadi tidak dibaca/dimigrasikan.
+Hash save pribadi tidak tersedia. Bukti perlindungan adalah isolasi environment
+APPDATA/LOCALAPPDATA/XDG_* dan verifikasi user:// setiap proses.
+
+PERCOBAAN TIDAK LULUS DAN KOREKSI HARNESS
+1. Reader kayu pertama memakai helper makan yang hanya cocok untuk kota di dalam
+   rumah. Node InventoryUI tidak ada di sana, sehingga timbul error harness.
+   Harness diperbaiki untuk keluar melalui pintu normal sebelum makan. Asumsi
+   refill langsung sebelum tick berikutnya juga diganti dengan pengujian satu
+   tick resmi setelah kota kembali aktif. Log lengkap: respawn-attempt1/.
+2. Reader tanah liat mencoba menyetor clay_lump secara pribadi ke City Storage.
+   Pemeriksaan kode menunjukkan accepts_item memang tidak menerima jenis itu;
+   ini bukan alasan untuk mengubah aturan penyimpanan. Harness kini memakai Drop
+   inventori untuk jenis yang ditolak dan menghitung pickup yang dihasilkan.
+   Reader diulang dari salinan pending checkpoint di profil03. Log kegagalan,
+   termasuk error lanjutan setelah assertion pertama, ada di respawn-attempt2/.
+Percobaan gagal tersebut tidak dimasukkan ke841 pemeriksaan final yang lulus.
+
+BELUM DIUJI DALAM TAHAP INI
+Lokasi respawn terhalang pemain/civil, beberapa deposit habis bersamaan, lebih
+dari satu siklus respawn per sumber, batas RNG tepat2880/4320, produksi Daily oleh
+civil, seluruh replika wood/clay, Android, dan keyboard/mouse fisik.
+Jerami tetap dinonaktifkan. Kurma belum terintegrasi pada alur runtime peta ini.
+Tidak mengklaim survival/progres ekonomi tanpa bantuan bekal QA sudah tervalidasi.
+
+AUDIT DAN BUKTI
+Seluruh3377 file snapshot sumber tetap cocok dengan SHA256SUMS. Source snapshot
+Git tetap clean; git diff --check pada salinan kerja PASS. Perubahan file existing
+tetap hanya test start-menu dari tahap baseline, bukan perubahan tahap ini.
+
+Relatif terhadap outputs/qa-evidence:
+- respawn-summary.json:12 hasil lengkap,841 checks, dan verifikasi rantai hash.
+- respawn-{Site}-{write|read|verify}.result.json: kondisi, hasil, waktu, dan stok.
+- File .launch.json, .profile.log, .stdout.log, .stderr.log, .engine.log terkait:
+  PID, target proyek, isolasi save, dan log aktual.
+- mcp-retarget-transcript.jsonl: status target, begin, screenshot, dan quit MCP.
+- respawn-{Site}-write.png: screenshot viewport setelah checkpoint tidur.
+- respawn-attempt1/ dan respawn-attempt2/: bukti percobaan tidak lulus.
+- final-source-audit.json / final-file-hashes.json: audit snapshot sumber.
+Harness di work/respawn_driver.gd, launch-respawn.ps1, run-respawn-rest.ps1,
+summarize-respawn.ps1; memakai helper gather_driver.gd, gather_runner.gd,
+mcp-call.mjs. Semua berada di luar kode game produksi.

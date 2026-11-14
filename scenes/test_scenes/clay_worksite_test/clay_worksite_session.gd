@@ -4,12 +4,13 @@ extends RefCounted
 ## unfinished output. Daily jobs have their own settlement_finished signal.
 signal stock_settled
 
-# Approved test balance, deliberately local to the playable fixture.
-const MINUTES_PER_CLAY: int = 10
-const INITIAL_STOCK: int = 72
-const DURATIONS: Array[int] = [180, 360, 540]
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+# Retain public aliases used by existing fixtures and callers.
+const MINUTES_PER_CLAY: int = GATHERING_CONFIG.DEFAULT_MINUTES_PER_UNIT
+const INITIAL_STOCK: int = GATHERING_CONFIG.DEFAULT_STOCK
+const DURATIONS: Array[int] = GATHERING_CONFIG.HOURLY_DURATIONS
 const WORKER_CAPACITY: int = 2 # Small worksite; Player occupies one slot.
-const ITEM_ID: String = "clay_lump"
+const ITEM_ID: String = GATHERING_CONFIG.DEFAULT_ITEM_ID
 
 # Defaults retain the existing Clay Site contract; authored markers may override.
 var item_id: String = ITEM_ID
@@ -79,7 +80,7 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 	elif working:
 		reason = "Workers are gathering."
 	elif not requested_minutes in DURATIONS:
-		reason = "Choose 3, 6 or 9 hours."
+		reason = GATHERING_CONFIG.duration_choice_message()
 	elif stock <= 0:
 		reason = "Site depleted."
 	elif not is_instance_valid(player) or player.is_queued_for_deletion():

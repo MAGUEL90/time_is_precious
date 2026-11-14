@@ -9,7 +9,7 @@ const SOURCES = preload("res://scenes/new_scenes/save_game/city_save_pickup_sour
 const CONSTRUCTION = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
 const SAVE_FILE = preload("res://scenes/new_scenes/save_game/city_save_file.gd")
 const STARTERS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
-const VERSION: int = 18
+const VERSION: int = 20
 const HOUSE_ID: String = "citizen_house_1"
 const LEGACY_TIME_ERROR_PREFIX: String = "Legacy checkpoint has unsynchronized times."
 const HOME_PATH: String = "res://scenes/player_home_interior/player_home_interior.tscn"
@@ -35,7 +35,7 @@ const GROUPS: Dictionary = {
 	"raid": ["notification_seen_keys", "phase", "wall_hp", "wall_level", "watchtower_built", "_work_base_max_hp", "_latest_minute", "_attack_at", "_departure_at", "_party", "_expedition_sequence", "_composition_stage", "_elapsed", "_hits", "_start_hp", "_attack_strength", "_report", "_report_sequence", "_work_kind", "_work_remaining", "_work_total", "_work_restore_hp", "_work_paid", "_work_paid_source", "_refund_pending", "last_work_message", "_breach_at", "_next_loot_at", "_loot_weight", "_stolen", "_retreat_reason", "_breach_losses"],
 	"merchant": ["_stock", "_offers", "_demand", "_budget", "_visit_day", "_latest_minute", "_present"]
 }
-const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "worker_capacity", "work_total_units", "started_at", "completes_at", "_latest_time", "payroll_work_remainder"]
+const PLOT_FIELDS: Array[String] = ["order_id", "phase", "clearing_remaining", "clearing_by_player", "worker_ids", "worker_capacity", "work_total_units", "started_at", "completes_at", "_latest_time", "payroll_work_remainder", "building_kind"]
 var error: String = ""
 var prepared: Dictionary = {}
 var prepared_location: String = "city"
@@ -156,7 +156,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 	prepared_location = "city"
 	# Version 1 was a city-only manual checkpoint. Its state fields stay intact.
 	var version: Variant = document.get("schema_version")
-	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != 16 and version != 17 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
+	if (version != 1 and version != 2 and version != 3 and version != 4 and version != 5 and version != 6 and version != 7 and version != 8 and version != 9 and version != 10 and version != 11 and version != 12 and version != 13 and version != 14 and version != 15 and version != 16 and version != 17 and version != 18 and version != 19 and version != VERSION) or document.get("scenario") != "city_mvp" or not document.has("state"):
 		return fail("Unsupported checkpoint version.")
 	if version == 1:
 		if document.size() != 3:
@@ -263,6 +263,13 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		return false
 	if version < 14 and not _migrate_additional_houses(raw, map):
 		return false
+	if version < 19:
+		# Stage the missing field in the decoded copy only. Older selectable plots
+		# had no construction command; never invent a building for an old record.
+		for plot: Variant in raw.plots.values():
+			if not plot is Dictionary or plot.has("building_kind"):
+				return fail("Invalid legacy building choice.")
+			plot["building_kind"] = ""
 	if not raw.get("city_drops") is Array:
 		return fail("Missing dropped inventory items.")
 	for drop: Variant in raw.city_drops:
@@ -726,6 +733,7 @@ func apply_prepared(map: Node, reopen_hub: bool = true) -> void:
 	var plot_nodes: Dictionary = plots(map)
 	for id: String in plot_nodes:
 		assign_fields(plot_nodes[id], prepared.plots[id])
+		plot_nodes[id].clear_building_preview()
 	_restore_stores(WorkManager.source_item_store_by_order_id, prepared.work_sources, nodes)
 	_restore_stores(WorkManager.output_item_store_by_order_id, prepared.work_outputs, nodes)
 	for id: String in WorkManager.active_orders:
@@ -1094,10 +1102,26 @@ func _validate_work(raw: Dictionary, map: Node, version: int = 0) -> bool:
 	if raw.plots.size() != plot_nodes.size():
 		return fail("Workshop layout differs.")
 	var plot_ids: Array[String] = [""]
+	var selected_workshops: int = 0
 	for id: String in plot_nodes:
 		if not _valid_fields(raw.plots.get(id), plot_nodes[id], PLOT_FIELDS):
 			return fail("Invalid workshop plot.")
 		var p: Dictionary = raw.plots[id]
+		var house: bool = plot_nodes[id].is_citizen_house()
+		if plot_nodes[id].supports_building_selection():
+			var active: bool = p.phase in ["building", "built"]
+			var valid_kinds: Array = ["house", "mudbrick_workshop"] if version >= 20 else ["house"]
+			if (active and p.building_kind not in valid_kinds) or (not active and not p.building_kind.is_empty()):
+				return fail("Invalid selected building for plot phase.")
+			if p.building_kind == "mudbrick_workshop":
+				selected_workshops += 1
+				if selected_workshops > 1 or p.work_total_units != CONSTRUCTION.SOLO_MINUTES or p.worker_capacity != 1 or not p.worker_ids.is_empty():
+					return fail("Invalid initial workshop limit or player construction.")
+			house = p.building_kind == "house"
+			if house and p.work_total_units != CONSTRUCTION.CITIZEN_HOUSE_SOLO_MINUTES:
+				return fail("Invalid selected house work total.")
+		elif not p.building_kind.is_empty():
+			return fail("Fixed plot cannot override its authored building.")
 		if p.order_id != plot_nodes[id].order_id or p.phase not in ["uncleared", "clearing", "empty", "building", "built"] or p.clearing_by_player or p.clearing_remaining < 0:
 			return fail("Invalid construction state.")
 		if p.payroll_work_remainder < 0 or p.payroll_work_remainder >= maxi(1, p.worker_ids.size()):
@@ -1118,7 +1142,7 @@ func _validate_work(raw: Dictionary, map: Node, version: int = 0) -> bool:
 				seen_team[worker_id] = true
 				var member: WorkerData = raw.workers.workers_by_id.get(worker_id)
 				var expected_job: String
-				if plot_nodes[id].is_citizen_house():
+				if house:
 					expected_job = "Build House" if p.phase == "building" else "Clear House Site"
 				else:
 					expected_job = "Build Workshop" if p.phase == "building" else "Clear Workshop Site"

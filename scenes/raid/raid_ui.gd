@@ -46,6 +46,7 @@ var construction_progress: Control
 
 var raid_state: Node
 var merchant_state: Node
+var merchant_notifications_enabled: bool = true
 var report_text: String = ""
 var _status_data: Dictionary = {}
 var _last_report: Dictionary = {}
@@ -121,7 +122,9 @@ func _ready() -> void:
 		WorkerDatabase.payroll_changed.connect(_on_workers_payroll_changed)
 	CitizenManager.citizen_added.connect(_on_residents_changed)
 	CitizenManager.citizen_left.connect(_on_residents_changed)
-	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"))
+	var merchant_view: Node = get_tree().get_first_node_in_group("traveling_merchants")
+	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"),
+		not is_instance_valid(merchant_view) or merchant_view.get("world_access_enabled") != false)
 	refresh()
 
 func _process(delta: float) -> void:
@@ -244,7 +247,8 @@ func set_city_management_available(available: bool) -> void:
 	if available:
 		refresh()
 
-func bind_merchant_state(next_state: Node) -> void:
+func bind_merchant_state(next_state: Node, notifications_enabled: bool = true) -> void:
+	merchant_notifications_enabled = notifications_enabled
 	if merchant_state == next_state:
 		_refresh_merchant_notice()
 		_refresh_notification_events()
@@ -535,6 +539,9 @@ func _can_use_city_ui() -> bool:
 	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
 
 func _refresh_merchant_notice() -> void:
+	merchant_notice_label.visible = merchant_notifications_enabled
+	if not merchant_notifications_enabled:
+		return
 	if not is_instance_valid(merchant_state):
 		merchant_notice_label.text = "- Merchant unavailable"
 		return
@@ -692,6 +699,8 @@ func _refresh_notification_events() -> void:
 	_set_notice_emergency(_city_management_available and (threat_active or _unread_notification))
 
 func _get_merchant_event_fingerprint() -> String:
+	if not merchant_notifications_enabled:
+		return ""
 	if not is_instance_valid(merchant_state) or not merchant_state.has_method("is_present"):
 		return ""
 	var visit_day: int = _get_optional_int_property(merchant_state, "_visit_day", -1)

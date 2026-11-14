@@ -15,6 +15,7 @@ const APPROACH_SPEED: float = 24.0
 var rng := RandomNumberGenerator.new()
 var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence.gd").new()
 var resident_spawn: Node2D
+var resident_roam_rect: Rect2 = Rect2()
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
@@ -211,7 +212,7 @@ func _process(delta: float) -> void:
 				_play(actor, "walk", direction)
 			elif schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				roaming.erase(id)
-				_update_work_cycle(id, actor, destination, direction, delta)
+				_update_work_cycle(id, actor, destination, direction, delta, fixture.sites[site_id].item_id == "wood_log")
 			else:
 				work_cycles.erase(id)
 				_roam(id, actor, delta)
@@ -325,7 +326,7 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	actor.show()
 	if state.arrived:
 		if schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
-			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta)
+			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta, fixture.sites[site_id].item_id == "wood_log")
 		else:
 			work_cycles.erase(id)
 			_play(actor, "idle", "right")
@@ -407,14 +408,14 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 
 func _roam(id: String, actor: Node2D, delta: float) -> void:
 	if not roaming.has(id):
-		roaming[id] = {"target": actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55)), "idle": 0.0, "direction": "right"}
+		roaming[id] = {"target": _roam_target(actor, true), "idle": 0.0, "direction": "right"}
 	var state: Dictionary = roaming[id]
 	if state.idle > 0.0:
 		state.idle -= delta
 		_play(actor, "idle", state.direction)
 		return
 	if actor.global_position.distance_to(state.target) < 0.1:
-		state.target = Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
+		state.target = _roam_target(actor, false)
 		state.idle = rng.randf_range(idle_min_seconds, idle_max_seconds)
 		_play(actor, "idle", state.direction)
 		return
@@ -429,6 +430,16 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 	actor.global_position = step
 	_play(actor, "walk", state.direction)
 
+func _roam_target(actor: Node2D, initial: bool) -> Vector2:
+	# Scope the idle stroll only. Assignment/hauling owners keep their routes.
+	if is_instance_valid(resident_spawn) and resident_roam_rect.has_area():
+		return resident_spawn.global_position + Vector2(
+			rng.randf_range(resident_roam_rect.position.x, resident_roam_rect.end.x),
+			rng.randf_range(resident_roam_rect.position.y, resident_roam_rect.end.y))
+	if initial:
+		return actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55))
+	return Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
+
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.
 	var footsteps: Node = actor.get_node_or_null("Footsteps")
@@ -441,7 +452,7 @@ func _play(actor: Node2D, action: String, direction: String) -> void:
 			if child is AnimatedSprite2D:
 				child.reparent(foot, true)
 
-func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
+func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float, wood: bool = false) -> void:
 	if _reed_working(id):
 		work_cycles.erase(id)
 		return
@@ -472,7 +483,7 @@ func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: S
 		duration = _phase_duration(cycle, actor)
 	var action: String = "idle"
 	if cycle.phase == 1 or cycle.phase == 2:
-		action = "work"
+		action = "chop_wood" if wood else "work"
 	elif cycle.phase == 4:
 		action = "walk"
 		actor.global_position = cycle.origin.lerp(cycle.target, cycle.elapsed / duration)

@@ -1,0 +1,110 @@
+UJI HAULING WORKSITE LEGACY SAAT RESPAWN - 10 NOVEMBER 2026
+
+HASIL
+Satu bug baru terbukti dua kali melalui MCP: pengiriman legacy berjalan lurus
+menembus collider sumber yang baru respawn di depan cart. Muatan tidak hilang.
+Perbaikan menunda respawn pada koridor pergi-pulang legacy_final yang aktif,
+sampai pengiriman terakhir dan perjalanan pulangnya selesai. Tidak mengaktifkan
+assignment Hauler baru, mengubah timer, kecepatan, tujuan, atau format save.
+
+LINGKUNGAN DAN KEAMANAN
+Godot 4.5.1 stable f62fdbde1, Compatibility. Salinan lengkap snapshot b32cc50:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Branch: test/time-world/laptop-baseline-20261109.
+MCP stdio lokal @yanhuifair/godot-mcp dipanggil melalui work/mcp-call.mjs.
+Setiap proses diverifikasi lewat runtime get_qa_status: res:// salinan kerja,
+user:// profil QA, dan PID listener 9877 cocok dengan launch record.
+Tidak memakai computer use atau alat editor dengan koneksi cache proyek lama.
+Profil live: outputs/citysave_suite_qa/blocked-multi-legacy-legacyfixed-01.
+APPDATA, LOCALAPPDATA, XDG, TEMP/TMP diisolasi; probe engine terpisah lulus.
+Proses fixed write/read/verify: 14656 / 26344 / 13116; semuanya sudah ditutup.
+
+KONDISI AWAL DAN REPRODUKSI
+Baseline menyertakan fix city cart leg_origin dari tahap sebelumnya. Jalur
+hauling worksite legacy memakai owner berbeda yang tidak melakukan replanning.
+Fixture merekonstruksi historical final shipment yang didukung save validator:
+initial_city_storage_hauler, Cart authored, WoodSite -> legacy WoodStorage/Ground,
+tiga wood_log; legacy_final=true, removing=true. Seluruh snapshot fixture lolos
+prepare/validation sebelum uji. Tidak mengaktifkan daily.allow_haulers.
+Wood marker hanya dipindahkan dalam memori QA untuk meletakkan tapak depleted
+sekitar 30 piksel di depan cart. Scene authored di disk tidak diedit.
+
+Repro MCP pertama dan pengulangan kedua:
+- Menit 600: stok Wood menjadi 24 dan collider aktif walau jalur akan dilewati.
+- Menit 602: kaki cart masuk area clearance tapak.
+- Menit 603: kaki cart berada di dalam polygon aktif (sekitar 57.9,-184.2).
+- Cargo tiga dan total cargo + legacy ground receipt tetap tiga.
+Keduanya gagal pada assertion cart tidak memasuki collider baru.
+Tes regresi legacy-haul-red juga gagal pada baseline sebelum fix legacy:
+exit 1, 7,47 detik, assertion koridor pengiriman seharusnya tetap kosong.
+
+PERUBAHAN
+scenes/content_scene/worksites/content_worksites.gd:
+- Tambahan 17 baris untuk active legacy_final outbound/returning.
+- Uji ruas origin-target pada tinggi kaki terhadap polygon dan clearance yang
+  sudah digunakan worksite; tahan refill jika ruas memotong/berdekatan.
+- Koridor dipertahankan untuk pengiriman bermuatan dan kepulangan kosong.
+- Setelah route dihapus owner lama, refill berjalan melalui mekanisme existing.
+Delapan baris fix city cart sebelumnya dipertahankan.
+Tes baru: test_scene_respawn_legacy_haul.gd dan .tscn.
+
+PLAYTEST MCP SETELAH FIX: 108 PEMERIKSAAN, NOL KEGAGALAN
+Writer (19): sumber tetap kosong dan collider disabled saat cart melewati tapak;
+cargo tiga dan stok pribadi empat tetap utuh. Nama, rambut, skin tone tetap sama.
+Marker dikembalikan ke posisi authored; sumber refill 24; save dibuat saat cargo
+masih tiga. Semua kebutuhan Player aktif dan kapasitas tas normal 100.
+Reader (74): Continue proses baru memulihkan snapshot lengkap dan bytes save
+identik. Cargo tiba satu kali; cart kembali kosong dan worker lepas dari job.
+Tiap tick menjaga cargo + receipt tepat tiga dan stok pribadi empat. Tick ekstra
+tidak membuat pickup atau receipt baru. Player berjalan ke rumah dan tidur asli
+420 menit dengan eligibility/kebutuhan normal; QA memberi makanan 40 kurma.
+Verifier (15): Continue proses ketiga dari HOME, lalu keluar rumah; receipt tiga,
+route sudah hilang, worker bebas, dan identitas civil tetap sama.
+Seluruh stderr ketiga proses fixed kosong.
+
+HASH CHECKPOINT
+CITY bermuatan:
+b05e190586aac201a7e6e91c6e825797b98b0bf7043f5ac073eaa5d05a88b20f
+HOME setelah tidur:
+8ef1458b342f753021acfac4a15f93dff781d62ab8e267f0283f269c4b02c6c3
+Writer -> Reader serta Reader -> Verifier cocok. Continue tidak menulis ulang.
+
+REGRESI HEADLESS (PROFIL QA TERPISAH)
+- RespawnLegacyHaulTest: PASS, exit 0, 9,98 detik. Koridor pergi/pulang aman,
+  Clay yang tidak terkait tetap refill, receipt sekali, worker selesai, Wood
+  refill dan collider aktif setelah route dilepas.
+- WorksiteHaulerGuardTest: PASS, exit 0, 3,34 detik. Kebijakan menolak assignment
+  baru dan menyelesaikan pengiriman legacy tetap berlaku.
+- RespawnCartAnchorTest: PASS, exit 0, 10,20 detik. Fix city cart tetap berlaku.
+- FiniteResourceSitesTest: PASS, exit 0, 71,32 detik. Regresi sumber finite,
+  collider, save/load dan reserve kompatibilitas Straw.
+Keempat stderr kosong. Fixture headless existing dapat menonaktifkan kebutuhan
+Player; hasilnya dibedakan dari playtest MCP berkebutuhan normal di atas.
+
+AUDIT DAN BATAS
+3.377 file manifest snapshot asli cocok seluruhnya; Git sumber tetap bersih.
+git diff --check lulus. Perubahan lama test_scene_start_menu.gd tetap ada.
+Toolbar, scene authored, project.godot, addons dan save schema tidak diubah.
+Tidak commit, push, atau merge.
+Path QA diverifikasi engine dan MCP. Hash save pribadi tidak terverifikasi:
+akses baca folder profil Hendro ditolak. Daftar kosong pada sentinel awal tidak
+boleh dianggap bukti ketiadaan save. Lihat legacy-personal-save-audit.json.
+
+Batas uji: memakai rekonstruksi legacy final shipment tervalidasi, bukan save
+pribadi pengguna. Geometri penghalang buatan dipulihkan sebelum checkpoint;
+persistensi posisi penghalang QA tidak diklaim. Belum diuji semua jenis cargo
+legacy, beberapa route legacy sekaligus, semua variasi FPS/lag, save tepat di
+tengah flush collider, atau penghalang statis yang sudah ada sebelum perjalanan.
+Fix ini menjaga ruang respawn, tidak menambahkan pathfinding baru untuk legacy.
+
+BUKTI
+outputs/qa-evidence/legacy-summary.json dan legacy-harness-hashes.json;
+legacy-{legacy,legacyrepeat,legacyfixed}-probe.json;
+moving-legacyfixed-{write,read,verify}.result.json;
+edge-legacy*-*.launch.json/profile.log/stdout.log/stderr.log;
+legacy-haul-{red,green}.*, guard-after-legacy-fix.*,
+cart-anchor-after-legacy-fix.*, finite-after-legacy-fix.*;
+mcp-retarget-transcript.jsonl, final-source-audit.json,
+legacy-personal-save-audit.json.
+Harness eksternal: work/legacy_cart_edge.gd, launch-legacy.ps1,
+summarize-legacy.ps1. Tidak diperlukan dalam build game.
