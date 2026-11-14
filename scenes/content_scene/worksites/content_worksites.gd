@@ -418,7 +418,32 @@ func _site_regrowth_clear(marker: Node2D) -> bool:
 			if worker != null and worker.physical_approach.get("position") is Vector2 \
 				and _point_near_resource_base(worker.physical_approach.position, polygon):
 				return false
+	# Cart visuals interpolate ahead of the last committed transport position.
+	# Regrowing over that anchor makes the next collision check fall back into
+	# the new collider. Protect it even while the actor is hidden or returning empty.
+	for transport: Node in get_tree().get_nodes_in_group("city_storage_transport"):
+		var transport_route: Variant = transport.get("route")
+		if transport_route is Dictionary and transport_route.get("leg_origin") is Vector2 \
+			and _point_near_resource_base(transport_route.leg_origin + Vector2(0, 16), polygon):
+			return false
+	# Legacy final shipments travel straight without replanning. Keep their
+	# delivery and empty return corridor clear until the old assignment ends.
+	for route: Dictionary in hauling.routes.values():
+		if bool(route.get("legacy_final", false)) and str(route.get("phase", "")) in ["outbound", "returning"] \
+			and _segment_near_resource_base(route.origin + Vector2(0, 16), route.target + Vector2(0, 16), polygon):
+			return false
 	return true
+
+func _segment_near_resource_base(start: Vector2, finish: Vector2, polygon: PackedVector2Array) -> bool:
+	if _point_near_resource_base(start, polygon) or _point_near_resource_base(finish, polygon):
+		return true
+	for index: int in range(polygon.size()):
+		var point: Vector2 = polygon[index]
+		if Geometry2D.segment_intersects_segment(start, finish, point, polygon[(index + 1) % polygon.size()]) != null:
+			return true
+		if point.distance_to(Geometry2D.get_closest_point_to_segment(point, start, finish)) <= worksite_navigation.CLEARANCE:
+			return true
+	return false
 
 func _resource_occupancy_polygon(marker: Node2D, base: CollisionPolygon2D) -> PackedVector2Array:
 	if base != null and base.polygon.size() >= 3:
