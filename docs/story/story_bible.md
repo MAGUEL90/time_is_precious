@@ -103,7 +103,7 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Siapa yang memimpin kelompok penyerang.
 - Rincian keadaan Babylon dan penduduknya ketika Arkad kembali, di luar keadaan rusak, tanpa pendudukan penjahat, tetapi masih rentan terhadap serangan.
 - Kebenaran nasib kedua orang tua Arkad.
-- Bagaimana Gabbi dan ayahnya menjalani masa pendudukan Babylon, serta keadaan mereka ketika Arkad kembali.
+- Di mana Gabbi dan ayahnya berada selama masa pendudukan Babylon, dan bagaimana keadaan mereka ketika Arkad kembali.
 
 ### 9. Catatan Pengembangan
 
