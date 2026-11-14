@@ -185,13 +185,6 @@ custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CancelButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
-custom_minimum_size = Vector2(64, 18)
-layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "Cancel"
-
 [node name="Control" type="Control" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -252,16 +245,9 @@ custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ProgressPage/Footer"]
-custom_minimum_size = Vector2(64, 18)
-layout_mode = 2
-size_flags_horizontal = 8
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "Close"
-
 [node name="CloseButton" parent="Root/Center/Window/Margin/MainVBox/TitleHeader" instance=ExtResource("4_close")]
 layout_mode = 1
+focus_mode = 2
 anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0

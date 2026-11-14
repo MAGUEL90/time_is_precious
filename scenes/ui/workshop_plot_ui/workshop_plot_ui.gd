@@ -32,7 +32,6 @@ signal player_resume_requested
 @onready var worker_list: HBoxContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage/WorkerScroll/WorkerList
 @onready var duration_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow/DurationLabel
 @onready var status_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementsPage/StatusLabel
-@onready var cancel_button: Button = $Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/CancelButton
 @onready var build_button: Button = $Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/BuildButton
 @onready var progress_page: VBoxContainer = $Root/Center/Window/Margin/MainVBox/ProgressPage
 @onready var progress_title: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/ProgressTitle
@@ -40,8 +39,7 @@ signal player_resume_requested
 @onready var remaining_label: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/RemainingLabel
 @onready var team_label: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/TeamLabel
 @onready var progress_footer: HBoxContainer = $Root/Center/Window/Margin/MainVBox/ProgressPage/Footer
-@onready var progress_close_button: Button = $Root/Center/Window/Margin/MainVBox/ProgressPage/Footer/CloseButton
-@onready var close_button: BaseButton = $Root/Center/Window/Margin/MainVBox/TitleHeader/CloseButton
+@onready var close_button: TextureButton = $Root/Center/Window/Margin/MainVBox/TitleHeader/CloseButton
 
 var _construction: Node
 var _selected_worker_ids: Array[String] = []
@@ -58,10 +56,9 @@ func _ready() -> void:
 	visible = false
 	requirements_page.show()
 	progress_page.hide()
-	cancel_button.pressed.connect(close_menu)
 	build_button.pressed.connect(_on_build_pressed)
-	progress_close_button.pressed.connect(close_menu)
 	close_button.pressed.connect(close_menu)
+	close_button.texture_focused = close_button.texture_hover
 	assign_workers_button.pressed.connect(_open_worker_assignment)
 	_style_worker_scrollbar()
 	player_button = Button.new()
@@ -265,7 +262,7 @@ func _refresh_view() -> void:
 	else:
 		_update_progress_page(phase, _get_preview())
 		if not was_showing_progress:
-			progress_close_button.grab_focus()
+			close_button.grab_focus()
 
 
 func _get_phase() -> String:
@@ -644,7 +641,7 @@ func _format_duration(total_minutes: int, include_zero_units: bool) -> String:
 
 func _focus_primary_control() -> void:
 	if progress_page.visible:
-		progress_close_button.grab_focus()
+		close_button.grab_focus()
 		return
 	if assign_workers_button.visible:
 		assign_workers_button.grab_focus()
