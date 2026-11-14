@@ -19,7 +19,7 @@ Kelompok penjahat berhasil menyerang Babylon melalui pertahanan kota yang melema
 
 Kekayaan kota dirampas, kehidupan masyarakat terguncang, dan kejayaan Babylon runtuh.
 
-Dalam peristiwa tersebut, sejumlah warga berusaha menyelamatkan Arkad dengan mengevakuasinya keluar dari kota.
+Dalam peristiwa tersebut, Arkad yang berusia **10 tahun** diselamatkan oleh sejumlah warga yang mengevakuasinya keluar dari kota.
 
 Arkad terpisah dari kedua orang tuanya dan masyarakat yang selama ini menjadi bagian dari kehidupannya.
 
@@ -66,7 +66,6 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 
 ### 8. Keputusan yang Masih Terbuka (TBD)
 
-- Usia Arkad ketika dievakuasi.
 - Siapa warga yang menyelamatkannya.
 - Ke mana Arkad dibawa setelah meninggalkan Babylon.
 - Berapa lama Arkad hidup dalam pengungsian.
