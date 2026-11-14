@@ -61,6 +61,67 @@ BATAS DAN CARA KERJA
   penulisan dengan aman dan laporkan proses aktif. Jangan mengklaim laptop
   aman dimatikan tanpa pemeriksaan.
 
+ATURAN BRANCH, PR, DAN SINKRONISASI LAPTOP
+Arahan pengguna, 14 November 2026:
+Branch integrasi polishing adalah feature/initial-scene/polish.
+Setiap tahap implementasi polishing harus memakai branch terpisah; jangan
+bekerja langsung atau push perubahan tahap ke branch integrasi tersebut.
+Pembaruan dokumen handover ini langsung pada branch integrasi secara khusus
+diminta pengguna; ini bukan izin push langsung untuk tahap polishing lain.
+
+Untuk setiap tahap polishing:
+1. Tunggu persetujuan pengguna atas cakupan tahap. Audit awal tetap baca saja.
+2. Fetch branch integrasi terbaru. Pertahankan semua perubahan lokal;
+   jangan reset, clean, stash, menghapus atau menimpa pekerjaan yang ada.
+   Jika checkout awal cloud kotor, catat status/diff dan pertahankan checkout
+   tersebut. Gunakan worktree terpisah dari origin/feature/initial-scene/polish
+   untuk audit, sesuai izin pengguna. Jangan menganggap file .uid/.import
+   atau perubahan project.godot boleh dibuang karena tampak hasil generator.
+3. Setelah tahap disetujui, buat branch dari origin/feature/initial-scene/polish
+   terbaru dengan nama sesuai pekerjaan:
+   - fix/initial-scene/<nama-perbaikan>
+   - feature/initial-scene/<nama-fitur>
+   - refactor/initial-scene/<nama-refactor>
+   Jika worktree audit detached HEAD, buat branch sebelum mengedit.
+4. Kerjakan hanya tahap yang disetujui. Jangan mencampur perubahan lain.
+5. Uji memakai profil/save QA terpisah. Jangan memasukkan save, cache .godot,
+   log atau artefak uji sementara ke commit. Tinjau .uid dan .import satu per
+   satu; jangan stage secara massal tanpa alasan dan pemeriksaan diff.
+6. Tinjau diff, lalu commit dan push hanya branch tahap tersebut.
+7. Buat PR dengan base feature/initial-scene/polish, bukan main.
+   Jangan merge sendiri, force-push atau menulis ulang riwayat terpublikasi.
+
+Setiap laporan dan PR wajib memuat:
+- Tujuan dan perubahan perilaku.
+- Branch asal, commit baseline, dan commit hasil.
+- Daftar file berubah beserta alasan; tandai khusus .tscn, .tres, aset,
+  project.godot, serta kode save.
+- Tes yang lulus, gagal, dan belum dilakukan.
+- Risiko layout, identitas karakter, gameplay, dan kompatibilitas save.
+- Cara membatalkan tahap secara terarah tanpa reset/menimpa proyek.
+- Catatan sinkronisasi laptop: file yang harus dibandingkan dengan pekerjaan
+  lokal sebelum pembaruan ditarik.
+
+Jangan mengubah layout new_map_authoring, identitas karakter, aturan gameplay
+atau format save tanpa persetujuan khusus. Gunakan MCP Godot untuk pengujian
+runtime jika tersedia; jika tidak, laporkan keterbatasan dan tes yang belum
+dilakukan. Jangan menyamakan pemeriksaan statis dengan bukti runtime.
+
+Setelah satu tahap selesai dan PR dibuat, berhenti. Tunggu review/merge
+pengguna sebelum tahap berikutnya. Tahap berikutnya berangkat dari branch
+integrasi terbaru setelah hasil sebelumnya digabung.
+
+Sinkronisasi laptop dilakukan terpisah setelah diminta pengguna:
+- Simpan scene editor, periksa status/diff lokal, dan buat checkpoint aman
+  tanpa memasukkan atau menimpa save pribadi/playtest.
+- Fetch, periksa daftar perubahan remote, dan bandingkan dengan pekerjaan
+  lokal. Jika bersih dan riwayat sesuai, gunakan fast-forward saja.
+- Jika ada perubahan lokal, konflik atau riwayat bercabang, berhenti untuk
+  meninjau penggabungan terarah. Jangan checkout paksa, reset --hard atau
+  menyalin seluruh folder cloud menimpa proyek laptop.
+- Save playtest laptop berada di luar repo, tetapi perubahan kode save tetap
+  perlu uji kompatibilitas pada profil QA sebelum save playtest dibuka.
+
 KONDISI FITUR SCENE AWAL
 - Plot 3 rumah player siap pakai. Plot 1, 2, 4 bisa diinteraksi, dibersihkan,
   menampilkan palu, membuka pilihan kategori, lalu membangun House.
@@ -159,3 +220,6 @@ Pertahankan layout new_map_authoring, pixel skala asli, aturan gameplay,
 identitas civil dan save. Gunakan MCP Godot dan save QA terpisah.
 Jelaskan kandidat satu tahap polishing kecil dulu; tunggu keputusan saya
 sebelum implementasi. Jangan menjalankan game atau menulis save saat audit. Setelah tahap perubahan yang disetujui, tes, laporkan, lalu berhenti.
+Untuk setiap tahap implementasi, ikuti bagian ATURAN BRANCH, PR, DAN
+SINKRONISASI LAPTOP: branch tahap terpisah, PR ke feature/initial-scene/polish,
+dan tunggu merge pengguna sebelum melanjutkan tahap berikutnya.
