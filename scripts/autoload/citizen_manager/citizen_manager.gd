@@ -18,8 +18,9 @@ func _ready() -> void:
 			"03", "Sukkalgir", "red_male_01", "dark", "default"))
 	if seed_generated_citizen:
 		var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
-		generated_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
-		add_citizen(generated_citizen)
+		if generated_citizen != null:
+			generated_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
+			add_citizen(generated_citizen)
 
 func _create_test_citizen(
 	id: String,
