@@ -6,6 +6,7 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.
 const DAILY_PICKUP_SCRIPT = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_daily_pickup.gd")
 const WORK_FADE_SECONDS: float = 0.15
 const WORK_BLACKOUT_SECONDS: float = 1.0
+const WOOD_WORK_PRESENTATION_SECONDS: float = 3.0 # Three visual loops; no extra game minutes.
 signal work_finished
 const INSPECTION_DISTANCE: float = 32.0 # Fixture interaction reach, not production tuning.
 @export var prepare_overflow_test: bool = false
@@ -411,20 +412,33 @@ func _start_work(minutes: int) -> void:
 	interruption_message.hide()
 	blackout.modulate.a = 0.0
 	blackout.show()
+	var wood_animation: bool = sites[_selected_site.name].item_id == "wood_log"
+	if wood_animation:
+		# Live stock/condition refreshes can show child panels again. Keep the
+		# modal input owner active, but hide its whole presentation until done.
+		inspector.modulate.a = 0.0
 	await _fade_work(1.0)
 	if is_queued_for_deletion():
 		return
+	if wood_animation:
+		player.player_visual.begin_wood_work("right", blackout)
 	# Keep the modal restriction during the time skip; collapse owns a separate lock.
 	last_work_result = sites[_selected_site.name].execute(minutes, player, self, _drop_output)
+	if wood_animation and last_work_result.interrupted:
+		player.player_visual.end_wood_work()
+		blackout.modulate.a = 1.0
 	if last_work_result.interrupted:
 		var reason: String = "Too exhausted to continue." if player.is_collapsing else "Work interrupted."
 		interruption_message.text = "%s\nWorked %d min." % [reason, int(last_work_result.minutes)]
 		interruption_message.show()
-	await get_tree().create_timer(WORK_BLACKOUT_SECONDS, true).timeout
+	await get_tree().create_timer(WOOD_WORK_PRESENTATION_SECONDS if wood_animation and not last_work_result.interrupted else WORK_BLACKOUT_SECONDS, true).timeout
+	if wood_animation:
+		player.player_visual.end_wood_work()
 	if player.is_collapsing:
 		# Close behind opaque black, then resume the existing faint/Nightmare flow.
 		# Keep our cover until the global transition owns an opaque frame.
 		inspector.close_panel()
+		inspector.modulate.a = 1.0
 		player.set_movement_locked(&"worksite", false)
 		$FixtureNotes/Label.hide()
 		while player.is_collapsing and SceneTransition.fade_overlay.modulate.a < 0.999:
@@ -446,6 +460,7 @@ func _start_work(minutes: int) -> void:
 	_working = false
 	inspector.set_busy(false)
 	_close_inspector()
+	inspector.modulate.a = 1.0
 	inspector.window.show()
 	$FixtureNotes/Label.text = "Gathered %d units in %d min%s\nApproach a site and press E to work" % [
 		int(last_work_result.units), int(last_work_result.minutes),

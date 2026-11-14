@@ -24,10 +24,16 @@ class_name PlayerVisual extends Node2D
 var current_action: String = ""
 var current_direction: String = ""
 var is_action_locked: bool = false
+var wood_work_pose: Node2D
 
 # Playback API
 
 func play_visual(action: String, direction: String) -> void:
+	if is_instance_valid(wood_work_pose) and wood_work_pose.visible:
+		if action != "faint":
+			return
+		wood_work_pose.hide()
+		is_action_locked = false
 	if is_action_locked and action != "pickup" and action != "faint":
 		return
 
@@ -59,6 +65,44 @@ func play_visual(action: String, direction: String) -> void:
 
 	_play_optional_layer(accessories_sprite, accessory_id, accessory_anim, playback_speed)
 
+
+func begin_wood_work(direction: String, presentation_parent: Control = null) -> void:
+	if not is_instance_valid(wood_work_pose):
+		wood_work_pose = preload("res://scenes/worker_visual/work_2_axe_pose.gd").new()
+		wood_work_pose.name = "WoodWorkPose"
+		wood_work_pose.process_mode = Node.PROCESS_MODE_ALWAYS
+		wood_work_pose.hide()
+		add_child(wood_work_pose)
+	var hair_texture: Texture2D = null
+	if hair_id == "player_hair":
+		hair_texture = hair_sprite.sprite_frames.get_frame_texture("player_hair_idle_right", 0)
+	var head_texture: Texture2D = head_sprite.sprite_frames.get_frame_texture("base_%s_idle_right" % head_id, 0)
+	wood_work_pose.configure(body_id, head_id, hand_id, hair_id, hair_texture, head_texture)
+	for layer: AnimatedSprite2D in [body_sprite, clothes_sprite, head_sprite, hand_sprite, hair_sprite, accessories_sprite]:
+		layer.hide()
+	current_action = "chop_wood"
+	current_direction = direction
+	is_action_locked = true
+	wood_work_pose.start(direction)
+	if presentation_parent != null:
+		wood_work_pose.reparent(presentation_parent, false)
+		wood_work_pose.position = (presentation_parent.size * 0.5).round()
+		wood_work_pose.scale *= 2.0
+
+func end_wood_work() -> void:
+	if not is_instance_valid(wood_work_pose):
+		return
+	var was_visible: bool = wood_work_pose.visible
+	wood_work_pose.hide()
+	if wood_work_pose.get_parent() != self:
+		wood_work_pose.reparent(self, false)
+	wood_work_pose.position = Vector2.ZERO
+	wood_work_pose.scale = Vector2.ONE
+	if not was_visible:
+		return
+	is_action_locked = false
+	current_action = ""
+	play_visual("idle", current_direction)
 
 func play_pickup(direction: String) -> void:
 	is_action_locked = true

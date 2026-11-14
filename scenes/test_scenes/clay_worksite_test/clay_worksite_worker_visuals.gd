@@ -211,7 +211,7 @@ func _process(delta: float) -> void:
 				_play(actor, "walk", direction)
 			elif schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				roaming.erase(id)
-				_update_work_cycle(id, actor, destination, direction, delta)
+				_update_work_cycle(id, actor, destination, direction, delta, fixture.sites[site_id].item_id == "wood_log")
 			else:
 				work_cycles.erase(id)
 				_roam(id, actor, delta)
@@ -325,7 +325,7 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	actor.show()
 	if state.arrived:
 		if schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
-			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta)
+			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta, fixture.sites[site_id].item_id == "wood_log")
 		else:
 			work_cycles.erase(id)
 			_play(actor, "idle", "right")
@@ -441,7 +441,7 @@ func _play(actor: Node2D, action: String, direction: String) -> void:
 			if child is AnimatedSprite2D:
 				child.reparent(foot, true)
 
-func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
+func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float, wood: bool = false) -> void:
 	if _reed_working(id):
 		work_cycles.erase(id)
 		return
@@ -472,7 +472,7 @@ func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: S
 		duration = _phase_duration(cycle, actor)
 	var action: String = "idle"
 	if cycle.phase == 1 or cycle.phase == 2:
-		action = "work"
+		action = "chop_wood" if wood else "work"
 	elif cycle.phase == 4:
 		action = "walk"
 		actor.global_position = cycle.origin.lerp(cycle.target, cycle.elapsed / duration)
