@@ -27,7 +27,9 @@ Arkad terpisah dari kedua orang tuanya dan masyarakat yang selama ini menjadi ba
 
 Arkad dibawa ke **Sippar**, kota perdagangan Mesopotamia, oleh **ayah Gabbi**, seorang **pedagang dari Babylon** yang mengenal keluarga Arkad. Setibanya di Sippar, ayah Gabbi menitipkan Arkad kepada **pedagang lain yang kemudian menjadi orang tua asuh Arkad**. Pedagang pengasuh ini **bukan ayah Gabbi** dan **bukan keluarga Gabbi**.
 
-**Keluarga Gabbi berasal dari Babylon**, sehingga keberadaan Gabbi di Babylon pada awal permainan tidak memerlukan alasan perpindahan dari Sippar. Arkad dan Gabbi sudah saling mengenal saat kecil di Babylon, tetapi pengasuhan Arkad di Sippar **bukan masa kecil yang dijalani bersama Gabbi dalam satu keluarga asuh**. Kapan ayah Gabbi kembali ke Babylon serta bagaimana Gabbi menjalani masa setelah kejatuhan kota masih TBD.
+**Gabbi juga ikut mengungsi ke Sippar bersama ayahnya.** Di Sippar, Gabbi tinggal bersama ayahnya di rumah yang berbeda dari Arkad, sedangkan Arkad diasuh oleh pedagang setempat. Mereka tumbuh di kota yang sama dan tetap saling mengenal, **bukan sebagai anak-anak dalam satu keluarga asuh**.
+
+Dalam kehidupannya di Sippar, **ayah Gabbi yang bekerja sebagai pedagang terjerat kebiasaan berjudi melalui permainan papan bertaruhan**. Ketika Gabbi mulai beranjak dewasa, ayahnya pergi meninggalkannya. Ke mana ia pergi dan bagaimana nasibnya kemudian masih TBD. Kisah ketergantungan ini adalah latar karakter fiksi; istilah *gaming tables* tidak berarti adanya kasino modern yang telah terbukti secara historis.
 
 #### Titipan kedua orang tua: Clay Tablet of Wisdom
 
@@ -67,6 +69,12 @@ Dia memulai perjalanan sebagai rakyat biasa, bukan sebagai penguasa yang mewaris
 
 Keberhasilan Arkad nantinya bergantung pada tindakan dan keputusan pemain.
 
+#### Kepulangan Gabbi dan pertemuan kembali
+
+Setelah ditinggalkan ayahnya, **Gabbi memutuskan kembali sendiri ke Babylon untuk menata kehidupan baru**. Ia mengetahui bahwa Babylon tidak lagi dikuasai para penjahat dan relatif lebih aman untuk ditinggali, walaupun kondisi kota masih jauh dari pulih.
+
+**Arkad juga kembali ke Babylon** setelah mendengar kabar mengenai berakhirnya pendudukan, tetapi motivasi awalnya adalah mencari kepastian nasib kedua orang tuanya. **Gabbi dan Arkad kemudian bertemu kembali di Babylon**. Urutan kedatangan, waktu pasti pertemuan, dan dialog pertama mereka masih TBD. Tidak diperlukan scene perjalanan atau masa kecil.
+
 #### Batas cerita yang ditampilkan di game
 
 **Awal gameplay langsung menempatkan Arkad di Babylon yang telah runtuh.** Tidak ada scene gameplay yang menampilkan Arkad kecil tinggal bersama orang tua asuhnya di Sippar. Masa kecil, evakuasi, dan pengasuhan di Sippar adalah **latar belakang cerita (backstory)**, bukan prolog playable atau kewajiban membuat scene tambahan. Cara mengungkap backstory di dalam game masih TBD.
@@ -88,22 +96,23 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Penghubung antara Arkad dan masyarakat biasa.
 - Peduli pada kesejahteraan rakyat.
 - Latar karakter sudah memiliki dokumen khusus di GitHub.
-- **Ayah Gabbi adalah pedagang asal Babylon** yang menyelamatkan Arkad dan mengantarnya ke Sippar, lalu menitipkannya kepada pedagang lain. Ia **bukan orang tua asuh Arkad**. Detail perjalanan serta kehidupan ayah Gabbi berikutnya masih TBD.
+- **Ayah Gabbi adalah pedagang asal Babylon** yang menyelamatkan Arkad dan mengantarnya ke Sippar, lalu menitipkannya kepada pedagang lain. Ia **bukan orang tua asuh Arkad**; Gabbi tinggal bersamanya di rumah terpisah di Sippar.
+- Ayah Gabbi kemudian terjerat kebiasaan perjudian permainan papan bertaruhan dan **meninggalkan Gabbi ketika Gabbi beranjak dewasa**. Gabbi memutuskan kembali sendiri ke Babylon dan di sana bertemu Arkad.
 - Dokumen karakter Gabbi mencatat ibunya meninggal akibat sakit ketika keluarga tidak mampu memperoleh perawatan yang memadai. **Usulan baru:** peristiwa itu terjadi ketika Gabbi masih kecil; usia dan tahun tepatnya belum diputuskan.
 
 ### 8. Keputusan yang Masih Terbuka (TBD)
 
-- Nama, rincian profesi perdagangan, dan nasib ayah Gabbi (pedagang asal Babylon) setelah mengevakuasi Arkad; kapan dan bagaimana ia kembali ke Babylon.
+- Nama dan rincian usaha perdagangan ayah Gabbi, kapan kebiasaan berjudinya bermula, ke mana ia pergi setelah meninggalkan Gabbi, serta nasib akhirnya.
 - Identitas pedagang lain di Sippar yang mengasuh Arkad, serta bagaimana ia mengenal ayah Gabbi.
 - Bagaimana dan kapan titipan tablet dari kedua orang tuanya diterima Arkad.
 - Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
-- Rincian kehidupan Arkad selama diasuh pedagang Sippar, serta kehidupan Gabbi setelah mereka berpisah.
+- Rincian kehidupan Arkad dan Gabbi yang tinggal terpisah di Sippar, serta pengalaman mereka selama masa pengungsian.
 - Waktu pasti kematian ibu Gabbi; usulan bahwa itu terjadi saat Gabbi masih kecil belum disahkan sebagai waktu definitif.
 - Bagaimana Arkad memperoleh pengetahuan ekonomi selama diasuh pedagang lain di Sippar.
 - Siapa yang memimpin kelompok penyerang.
 - Rincian keadaan Babylon dan penduduknya ketika Arkad kembali, di luar keadaan rusak, tanpa pendudukan penjahat, tetapi masih rentan terhadap serangan.
 - Kebenaran nasib kedua orang tua Arkad.
-- Di mana Gabbi dan ayahnya berada selama masa pendudukan Babylon, dan bagaimana keadaan mereka ketika Arkad kembali.
+- Urutan kedatangan Gabbi dan Arkad di Babylon, kapan tepatnya mereka bertemu kembali, serta bagaimana percakapan pertama mereka berlangsung.
 
 ### 9. Catatan Pengembangan
 
