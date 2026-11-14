@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=30 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -30,6 +30,8 @@
 [ext_resource type="Script" path="res://scenes/map_authoring/house_site_binding.gd" id="30_review_binding"]
 [ext_resource type="Script" path="res://scenes/map_authoring/ready_player_home_binding.gd" id="31_ready_home"]
 [ext_resource type="Script" path="res://scenes/map_authoring/map_boundary.gd" id="32_boundary"]
+
+[ext_resource type="PackedScene" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="30_gabbi"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -238,3 +240,9 @@ door_path = NodePath("../YSortWorld/HomeDoor")
 exit_spawn_path = NodePath("../YSortWorld/SpawnPoints/HomeEntryPoint")
 
 [editable path="YSortWorld/TravelingMerchant"]
+
+[node name="Gabbi" parent="YSortWorld" instance=ExtResource("30_gabbi")]
+position = Vector2(-51, -359)
+allow_random_walk = false
+daily_satisfaction_decay = 0.0
+use_city_rebuilding_dialogue = true
