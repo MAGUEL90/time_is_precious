@@ -1,0 +1,103 @@
+TIME IS PRECIOUS - PLAYTEST GATHERING, TIDUR, CONTINUE
+Tanggal: 2026-11-09
+Status: PASS, 39 pemeriksaan (writer 24, reader 15)
+
+RUANG LINGKUP
+Melanjutkan snapshot lengkap b32cc505b89c0a0b06d288b1b6ab48fcb9feccce pada
+branch test/time-world/laptop-baseline-20261109. Tahap ini hanya konfigurasi MCP,
+harness QA eksternal, dan laporan. Tidak ada perubahan gameplay, scene, toolbar,
+project.godot, addons, identitas civil, atau format save.
+Perbaikan test start-menu dari tahap baseline sebelumnya tetap terpisah.
+Tidak ada merge, push, atau commit baru dalam tahap ini.
+
+1. TARGET MCP DAN ISOLASI
+Konfigurasi persisten mcp_servers.godot_time_is_precious pada config.toml telah
+diganti dari proyek lama OneDrive ke:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Environment APPDATA, LOCALAPPDATA, dan XDG_* server diberi profil mcp-default
+terpisah. Hanya bagian server ini yang diedit; konfigurasi semula dibackup privat
+di work/config-before-retarget.toml, bukan disertakan dalam output publik.
+
+Koneksi tool lama dalam chat dapat menyimpan argumen startup lama. Karena itu
+pengujian memakai sesi MCP stdio baru, dengan server @yanhuifair/godot-mcp 1.12.2
+yang sama dan SDK MCP lokal, secara eksplisit -p ke salinan kerja. Tidak memanggil
+tool editor dari sesi lama yang dapat auto-launch proyek OneDrive.
+MCP baru membaca laporan baseline khusus salinan kerja. Runtime MCP kemudian
+membaca res:// dan user:// langsung dari node QA di proses game yang diuji.
+Port 127.0.0.1:9877 dimiliki PID5080 (writer), lalu PID26152 (reader).
+Keduanya cocok dengan PID yang dicatat saat peluncuran QA.
+
+Profil save uji:
+outputs/citysave_suite_qa/gather-sleep-01/data/Godot/app_userdata/time_is_precious/
+Checkpoint: gather_sleep_continue/checkpoint.json
+Snapshot pembanding: gather_sleep_continue/expected.json
+Probe sebelum tiap peluncuran dan pemeriksaan runtime sama-sama membuktikan
+user:// berada dalam profil tersebut. Save pribadi tidak dibaca, disalin, atau
+dimigrasikan. Hash save pribadi tidak tersedia karena batas akses; tidak mengklaim
+perbandingan hash save pribadi. Tidak menggunakan computer use.
+
+2. METODE
+Godot 4.5.1 stable, renderer Compatibility/OpenGL, pada salinan kerja lengkap.
+Harness GDScript di luar repo dipasang lewat --script. MCP memanggil begin() pada
+harness, membaca status, mengambil screenshot viewport, dan menutup proses QA.
+Pergerakan memakai Input actions melalui walker yang sudah ada, dengan collision
+dan pathfinding, tanpa teleport. E memakai InputEventAction pada viewport game.
+New Game/Continue memakai signal tombol menu; gathering menggunakan API produksi
+_start_work(180) setelah inspector dibuka lewat interaksi. Ini uji integrasi runtime
+terotomasi, bukan validasi klik manual seluruh tombol atau keyboard fisik.
+Kebutuhan pemain aktif, kapasitas normal, speed 50, clock 1 detik/menit.
+Tidak memberikan barang, mengubah stok, mempercepat clock, atau bypass collapse.
+Game dijeda hanya setelah rangkaian selesai untuk mengamankan bukti screenshot.
+
+3. HASIL
+Writer: 24 pemeriksaan PASS, nol kegagalan.
+- New Game: tas kosong, Continue tidak tersedia pada profil baru.
+- Berjalan dari spawn ke WoodSite dan E membuka inspector lokasi yang tepat.
+- Gathering 180 menit tidak terinterupsi: 4 wood_log, semuanya masuk tas.
+- Jumlah hasil sama dengan pengurangan stok alam; stok kota tidak berubah.
+- Berjalan pulang melalui HomeDoor, menuju SleepSpot, lalu interaksi tidur.
+- Tidur selesai tanpa collapse; checkpoint valid dibuat di profil QA.
+- Waktu saat bangun: menit1209 (20:09). Inventory: 4 wood_log.
+- Kebutuhan tetap aktif. Jarak perjalanan terukur sekitar322.50 piksel.
+
+Reader: 15 pemeriksaan PASS, nol kegagalan, proses game baru.
+- Continue tersedia, memulihkan PlayerHomeInterior.
+- Snapshot lengkap cocok sebelum clock berjalan lagi (perbandingan numerik
+  toleransi1e-9; float64 yang disimpan sebagai string hex dibandingkan persis).
+- Nama, rambut, dan warna badan ketiga civil cocok dengan checkpoint:
+  initial_workshop_laborer: Naram, grey_male_01, light.
+  initial_worksite_hauler: Lugal, grey_male_01, light.
+  initial_city_storage_hauler: Belum, grey_male_01, light.
+- Inventory tetap4 wood_log; checkpoint tidak ditulis ulang oleh Continue.
+- Pemain bisa berjalan keluar rumah dan kembali ke kota dengan kebutuhan aktif.
+- SHA256 checkpoint sebelum dan sesudah Continue sama:
+  03269289c942bd9e0693d46de689495fb261426ac2e2fe7c03b361f41bec70db
+Stdout/stderr diperiksa; tidak ada error runtime/script pada kedua proses.
+Screenshot viewport rumah sesudah tidur dan kota sesudah Continue telah dilihat.
+Audit akhir: seluruh3377 file snapshot asli tetap cocok dengan SHA256SUMS.
+Pada salinan kerja, satu-satunya perubahan file sumber existing adalah test
+start-menu dari tahap baseline. File laporan baru dicatat sebagai untracked.
+git diff --check PASS. Kedua proses QA ditutup setelah bukti selesai diambil.
+
+4. BATAS PENGUJIAN DAN PEKERJAAN SELANJUTNYA
+Tidak ada bug produksi terbukti pada rute yang diuji ini, sehingga tidak ada patch
+gameplay. Toolbar dipertahankan; sambungan tombol tas tetap pekerjaan berikutnya
+sesuai keputusan pengguna, bukan diperbaiki diam-diam.
+Belum diuji dalam tahap ini: gathering semua jenis sumber, tas penuh/overflow,
+hiring/assignment/produksi, perjalanan multi-hari, kebutuhan pangan civil setelah
+pergantian hari, keyboard fisik, Android, dan scene terbaru lain di luar snapshot.
+Integrasi authored palm serta migrasi save tetap menunggu keputusan terpisah.
+Laporan baseline sebelumnya tetap berlaku untuk riwayat audit/problema fallback
+editor lama. Pernyataan di laporan lama bahwa config belum berubah sudah digantikan
+oleh bukti retarget pada laporan tahap ini; tidak ada editor lama diluncurkan lagi.
+
+BUKTI
+Semua path berikut relatif terhadap outputs/qa-evidence:
+- mcp-config-after.txt: konfigurasi server sesudah retarget, tanpa section lain.
+- mcp-retarget-transcript.jsonl: panggilan dan hasil server MCP baru.
+- gather-write/read.launch.json: project, PID, profil, dan argumen peluncuran.
+- gather-write/read.profile.log: bukti isolasi user://.
+- gather-write/read.result.json: pemeriksaan dan state terukur.
+- gather-write/read.stdout.log, stderr.log, engine.log: log proses lengkap.
+- gather-slept-home.png, gather-continued-city.png: screenshot langsung MCP.
+- final-source-audit.json dan final-file-hashes.json: audit sumber snapshot.

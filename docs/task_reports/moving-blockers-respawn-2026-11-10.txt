@@ -1,0 +1,117 @@
+TIME IS PRECIOUS - PENGHALANG BERGERAK BERSAMAAN
+Tanggal: 2026-11-10
+Hasil: PASS, 430 pemeriksaan dalam 6 proses game independen.
+Tambahan observasi: 4.284 pemeriksaan sumber per frame, tanpa overlap terdeteksi.
+
+TARGET DAN PERLINDUNGAN
+Branch kerja tetap test/time-world/laptop-baseline-20261109, dari snapshot lengkap
+b32cc505b89c0a0b06d288b1b6ab48fcb9feccce. Tidak mengambil ulang proyek dari GitHub.
+Project aktif:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+MCP memakai server lokal dengan -p ke project tersebut. Setiap proses diverifikasi
+melalui res://, user:// dan PID pemilik port runtime 9877 sebelum begin().
+Godot 4.5.1 stable, Compatibility/OpenGL. Tidak menggunakan computer use.
+
+Dua profil baru di outputs/citysave_suite_qa:
+- blocked-multi-moving-across-01
+- blocked-multi-moving-relay-01
+APPDATA, LOCALAPPDATA, XDG_DATA_HOME, config, cache, dan temp diarahkan ke QA.
+Engine probe memverifikasi isolasi sebelum game dijalankan. Save personal tidak
+dibuka atau digunakan. Tidak mengklaim audit hash atas save personal.
+
+KONDISI AWAL DAN CARA UJI
+Tahap sebelumnya sudah meluluskan depletion, respawn, Player diam sebagai
+penghalang, tidur dan Continue. Tahap ini menambah gerakan beberapa civil.
+Empat sumber diberi fixture stok nol pada menit 600. Signal settlement asli
+menentukan deadline acak secara normal, tanpa memaksa deadline atau seed.
+Tidak ada output gathering yang diberikan oleh fixture depletion ini.
+
+Tiga civil yang sudah ada digunakan: initial_city_storage_hauler,
+initial_workshop_laborer, initial_worksite_hauler. Tidak membuat identitas baru.
+Owner visual otomatis dinonaktifkan sementara agar tidak berebut gerakan dengan
+fixture. Posisi awal dan tujuan dikontrol QA; pergerakan memakai fungsi _roam
+produksi pada frame proses, termasuk pemeriksaan segment_clear navigasi asli.
+Titik awal dipilih di bagian tapak yang benar-benar dapat dilalui, bukan di dalam
+collider lain. Civil bergerak bolak-balik kecil selama tapak terhalang, kemudian
+berjalan keluar melalui segmen navigasi yang sah. Owner asli diaktifkan kembali
+sebelum pulang dan tidur.
+
+Waktu dipercepat melalui API clock asli; kebutuhan Player dan kapasitas tas 100
+tetap aktif. Makanan QA ditambahkan dan digunakan melalui inventori agar uji
+deadline tidak menjadi uji kelaparan. Ini bukan playthrough survival tanpa grant.
+
+SKENARIO ACROSS - TIGA LOKASI
+Civil masing-masing menempati WoodSite, ClaySiteA, ReedSite sambil bergerak.
+Setelah seluruh deadline lewat, ketiganya tetap stok nol dengan deadline semula;
+WaterSite yang tidak terhalang pulih sendiri. Ketiga civil kemudian keluar
+bersamaan. Semua sumber pulih menjadi kayu 24, clay 36, reed 40, air 48 dan timer
+kembali -1. Tidak ada refill pada sumber yang masih terhalang pada frame sampel.
+Gerakan aktual: 55,64 / 55,75 / 55,21 piksel.
+157 frame dengan setidaknya dua civil bergerak; 1.520 pemeriksaan sumber/frame.
+Pemeriksaan writer / reader / verifier: 25 / 159 / 18 = 202.
+
+SKENARIO RELAY - DUA CIVIL DI KAYU
+Dua civil bergerak di WoodSite, satu civil di ClaySiteA. Reed dan air bebas.
+Civil pertama di kayu dan civil di clay berjalan keluar bersamaan. Clay pulih,
+tetapi kayu tetap kosong karena civil kedua masih bergerak di tapaknya.
+Setelah civil terakhir keluar, kayu pulih. Stok akhir 24 / 36 / 40 / 48.
+Gerakan aktual: 63,24 / 165,13 / 62,22 piksel; jarak civil kedua mencakup
+bolak-balik selama menahan respawn sebelum keluar.
+146 frame dengan setidaknya dua civil bergerak; 2.764 pemeriksaan sumber/frame.
+Pemeriksaan writer / reader / verifier: 25 / 185 / 18 = 228.
+
+TIDUR, CONTINUE, IDENTITAS
+Masing-masing skenario menggunakan tiga proses:
+1. New Game, empat sumber pending, pulang dan tidur untuk checkpoint HOME.
+2. Continue checkpoint tersebut, tidur lagi sebelum deadline, kembali ke kota,
+   jalankan uji gerakan, lalu pulang dan tidur sesudah semua sumber pulih.
+3. Continue dalam proses baru, keluar rumah, dan tick clock untuk memverifikasi
+   stok penuh serta timer yang sudah selesai.
+Continue dibandingkan terhadap snapshot lengkap yang disimpan sebelum clock
+berjalan. SHA-256 writer -> reader dan reader -> verifier sesuai, dan Continue
+tidak menulis ulang checkpoint. Nama, rambut, serta skin tone ketiga civil
+dibandingkan langsung sebelum/sesudah gerakan dan saat Continue.
+Enam stderr final kosong. Semua proses QA telah ditutup; port 9877 tidak listening.
+
+BATAS CAKUPAN
+- Bukan uji AI penugasan atau perjalanan worker otonom end-to-end. Tujuan gerak
+  disuplai fixture, tetapi langkah gerak dan validasi navigasi memakai kode asli.
+- Belum menguji civil baru yang masuk tepat di sela pengecekan respawn dan
+  pengaktifan collider deferred pada frame yang sama.
+- Belum menguji Continue tepat di tengah rute visual civil. Checkpoint tahap ini
+  berada sebelum/sesudah rangkaian gerak, melalui tidur asli.
+- Air menjadi kontrol lokasi kosong; penghalang bergerak pada air belum diuji.
+- Full depletion gathering dan tas penuh tidak diulang, karena sudah dicatat
+  pada tahap sebelumnya dan tidak ada perubahan produksi pada tahap ini.
+- Observasi bebas overlap berlaku pada frame yang disampel dalam dua skenario.
+
+PERCOBAAN HARNESS YANG TIDAK DIHITUNG LULUS
+Tiga percobaan awal diarsipkan terpisah: kesalahan tipe Dictionary/Array pada
+skrip QA, lalu dua percobaan dengan bukti frame gerak yang belum cukup. Fixture
+diperbaiki untuk memilih titik navigasi sah dan menunggu frame proses nyata,
+bukan hanya physics catch-up frame. Pembandingan identitas juga mengambil
+langsung tiga record CitizenManager agar tidak membandingkan dictionary kosong.
+Checkpoint QA pending dipulihkan dari waiting.json ketika reader diulang;
+checkpoint percobaan sebelumnya tetap diarsipkan. Tidak ada bug produksi yang
+terbukti dari kegagalan harness tersebut; tidak ada patch gameplay.
+
+AUDIT PERUBAHAN
+3.377 berkas manifest snapshot asli masih cocok; source Git tetap bersih.
+Satu perubahan tracked di salinan kerja tetap test_scene_start_menu.gd dari
+tahap baseline sebelumnya. Tahap ini menambah harness eksternal dan laporan ini.
+Toolbar, scene authored, addons, project.godot, aturan permainan, format save,
+dan balancing tidak diubah. git diff --check lulus. Tidak commit, push atau merge.
+
+BUKTI
+Di folder outputs/qa-evidence:
+- moving-summary.json: hasil agregat, hitungan, jarak, stok, hash checkpoint.
+- moving-{across,relay}-{write,read,verify}.result.json dan log engine/stdout/stderr.
+- moving-*.launch.json dan profile.log: target proses dan isolasi save.
+- mcp-retarget-transcript.jsonl: request/response MCP termasuk verifikasi target.
+- moving-across-read.png: checkpoint tidur terlihat tersimpan.
+- moving-relay-motion.png: kota sesudah lokasi kosong dan sumber pulih;
+  bukan bukti video seluruh lintasan.
+- final-source-audit.json: audit 3.377 berkas snapshot.
+- moving-harness-{parse,position,frame}-attempt: percobaan yang tidak lulus.
+Harness eksternal: work/moving_blockers.gd, launch-moving.ps1, run-moving.ps1,
+summarize-moving.ps1; menggunakan helper QA tahap sebelumnya di folder work.
