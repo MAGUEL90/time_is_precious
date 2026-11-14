@@ -19,13 +19,13 @@ Kelompok penjahat berhasil menyerang Babylon melalui pertahanan kota yang melema
 
 Kekayaan kota dirampas, kehidupan masyarakat terguncang, dan kejayaan Babylon runtuh.
 
-Dalam peristiwa tersebut, sejumlah warga mengevakuasi Arkad yang berusia **10 tahun** keluar dari kota. Orang yang secara langsung menyelamatkannya berasal dari lingkungan tempat tinggalnya, yakni tetangga atau orang dekat di sekitar rumahnya. Identitas dan hubungan pastinya masih belum ditentukan.
+Dalam peristiwa tersebut, sejumlah warga mengevakuasi Arkad yang berusia **10 tahun** keluar dari kota. Orang yang secara langsung menyelamatkannya adalah **ayah Gabbi**, tetangga atau orang dekat keluarga Arkad. Nama dan detail kehidupannya belum ditentukan.
 
 Arkad terpisah dari kedua orang tuanya dan masyarakat yang selama ini menjadi bagian dari kehidupannya.
 
 #### Pengungsian ke Sippar
 
-Arkad dibawa ke **Sippar**, sebuah kota kuno di Mesopotamia yang memiliki kegiatan perdagangan. Setibanya di sana, orang yang menyelamatkannya menitipkan Arkad kepada **seorang pedagang setempat yang kemudian mengasuhnya**. Sippar menjadi latar kehidupan Arkad setelah meninggalkan Babylon; identitas pedagang, lama pengasuhan, dan pengalaman Arkad di sana masih TBD.
+Arkad dibawa ke **Sippar**, sebuah kota kuno di Mesopotamia yang memiliki kegiatan perdagangan, oleh **ayah Gabbi**. Setibanya di sana, ayah Gabbi menitipkan Arkad kepada **seorang pedagang setempat yang kemudian mengasuhnya**, lalu kembali ke Babylon. Sippar menjadi latar kehidupan Arkad setelah meninggalkan Babylon; identitas pedagang, lama pengasuhan, dan pengalaman Arkad di sana masih TBD. Keberadaan ayah Gabbi pada saat Arkad kembali 15 tahun kemudian masih TBD.
 
 #### Titipan kedua orang tua: Clay Tablet of Wisdom
 
@@ -86,10 +86,11 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Penghubung antara Arkad dan masyarakat biasa.
 - Peduli pada kesejahteraan rakyat.
 - Latar karakter sudah memiliki dokumen khusus di GitHub.
+- **Ayah Gabbi adalah orang yang menyelamatkan Arkad saat Babylon jatuh**, membawanya ke Sippar, menitipkannya kepada pedagang, lalu kembali ke Babylon. Keputusan ini menambah latar hubungan kedua keluarga, tanpa menetapkan bahwa kehidupan ayah Gabbi setelahnya selalu baik atau tanpa masalah.
 
 ### 8. Keputusan yang Masih Terbuka (TBD)
 
-- Identitas dan hubungan pasti penyelamat Arkad dari lingkungan tempat tinggalnya.
+- Nama, latar pribadi, dan nasib ayah Gabbi setelah kembali ke Babylon.
 - Bagaimana dan kapan titipan tablet dari kedua orang tuanya diterima Arkad.
 - Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
 - Rincian masa pengasuhan dan kehidupan Arkad di Sippar selama rentang 15 tahun sebelum kepulangannya.
