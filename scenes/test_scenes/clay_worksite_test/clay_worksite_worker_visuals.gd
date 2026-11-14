@@ -15,6 +15,7 @@ const APPROACH_SPEED: float = 24.0
 var rng := RandomNumberGenerator.new()
 var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence.gd").new()
 var resident_spawn: Node2D
+var resident_roam_rect: Rect2 = Rect2()
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
@@ -407,14 +408,14 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 
 func _roam(id: String, actor: Node2D, delta: float) -> void:
 	if not roaming.has(id):
-		roaming[id] = {"target": actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55)), "idle": 0.0, "direction": "right"}
+		roaming[id] = {"target": _roam_target(actor, true), "idle": 0.0, "direction": "right"}
 	var state: Dictionary = roaming[id]
 	if state.idle > 0.0:
 		state.idle -= delta
 		_play(actor, "idle", state.direction)
 		return
 	if actor.global_position.distance_to(state.target) < 0.1:
-		state.target = Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
+		state.target = _roam_target(actor, false)
 		state.idle = rng.randf_range(idle_min_seconds, idle_max_seconds)
 		_play(actor, "idle", state.direction)
 		return
@@ -428,6 +429,16 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 		return
 	actor.global_position = step
 	_play(actor, "walk", state.direction)
+
+func _roam_target(actor: Node2D, initial: bool) -> Vector2:
+	# Scope the idle stroll only. Assignment/hauling owners keep their routes.
+	if is_instance_valid(resident_spawn) and resident_roam_rect.has_area():
+		return resident_spawn.global_position + Vector2(
+			rng.randf_range(resident_roam_rect.position.x, resident_roam_rect.end.x),
+			rng.randf_range(resident_roam_rect.position.y, resident_roam_rect.end.y))
+	if initial:
+		return actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55))
+	return Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
 
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.

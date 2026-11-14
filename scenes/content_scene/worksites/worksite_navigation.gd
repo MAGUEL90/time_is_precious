@@ -8,13 +8,18 @@ const ROUTE_SEARCH = preload("res://scenes/content_scene/worksites/worksite_rout
 var polygons: Array[PackedVector2Array] = []
 var resource_bottoms: Dictionary = {}
 var revision: int = 0
+var walkable_rect: Rect2 = Rect2()
 
 func configure(map: Node) -> void:
 	revision += 1
 	polygons.clear()
 	resource_bottoms.clear()
+	walkable_rect = Rect2()
 	if not is_instance_valid(map):
 		return
+	var boundary: Node = map.get_node_or_null("MapBoundary")
+	if boundary != null and boundary.has_method("get_world_rect"):
+		walkable_rect = boundary.get_world_rect()
 	_collect(map)
 
 ## The plot worker's physical approach is advanced synchronously for time
@@ -36,6 +41,10 @@ func replace_polygons(next: Array[PackedVector2Array]) -> void:
 	revision += 1
 
 func _collect(node: Node) -> void:
+	# Civil routes store feet points, not player circles. The explicit region
+	# rejects outside points without padding inward over existing edge work slots.
+	if node.name == "MapBoundary" and node.has_method("get_world_rect"):
+		return
 	if node is Sprite2D and node.name == "ResourceIcon" and node.get_parent() is Marker2D:
 		_resource_contact(node)
 	elif node is CollisionShape2D and not node.disabled and node.shape != null:
@@ -128,7 +137,12 @@ func _add_polygon(points: PackedVector2Array, transform: Transform2D) -> void:
 	if world.size() >= 2:
 		polygons.append(world)
 
+func is_in_region(point: Vector2) -> bool:
+	return not walkable_rect.has_area() or walkable_rect.has_point(point)
+
 func is_clear(point: Vector2) -> bool:
+	if not is_in_region(point):
+		return false
 	for polygon: PackedVector2Array in polygons:
 		if polygon.size() > 2 and Geometry2D.is_point_in_polygon(point, polygon):
 			return false
@@ -171,6 +185,8 @@ func route(from: Vector2, to: Vector2) -> PackedVector2Array:
 		for point: Vector2 in polygon:
 			bounds = bounds.expand(point)
 	bounds = bounds.grow(GRID * 2.0)
+	if walkable_rect.has_area():
+		bounds = bounds.intersection(walkable_rect)
 	var min_cell := Vector2i((bounds.position / GRID).floor())
 	var max_cell := Vector2i((bounds.end / GRID).ceil())
 	var start := Vector2i((from / GRID).round())

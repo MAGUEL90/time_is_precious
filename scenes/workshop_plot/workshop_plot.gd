@@ -16,6 +16,8 @@ const MAX_MANUAL_CLEARING_MINUTES: int = 180
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
+## Scene introduction gate; construction identity and production remain active.
+@export var world_access_enabled: bool = true
 @export var worker_dust_enabled: bool = true
 ## Local plot coordinates; keeps activity puffs inside the work area.
 @export var worker_dust_area: Rect2 = Rect2(-14, -14, 28, 36)
@@ -223,7 +225,7 @@ func _ready() -> void:
 	_sync_construction()
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player and construction.phase != "built":
+	if world_access_enabled and body is Player and construction.phase != "built":
 		player = body
 		player._on_interactable_activated(self)
 
@@ -233,6 +235,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player._on_interactable_deactivated(self)
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if construction == null or construction.phase == "built":
 		return false
 	if not is_instance_valid(player) or not player.is_inside_tree():
@@ -315,6 +319,7 @@ func _sync_construction() -> void:
 		elif old_backend == null:
 			var workshop: WorkShop = WORKSHOP.instantiate()
 			workshop.name = "BuiltWorkshop"
+			workshop.world_access_enabled = world_access_enabled
 			workshop.set_meta("interaction_highlight_root", self)
 			# Keep the existing production/claim backend; this plot owns its artwork.
 			workshop.get_node("Sprite2D").hide()
@@ -333,6 +338,25 @@ func _sync_construction() -> void:
 			$Label.text = "No workers" if construction.worker_ids.is_empty() else ("Contract expired" if construction._all_workers_payroll_blocked() else "Building")
 		else:
 			$Label.text = ""
+	_apply_world_access()
+
+
+func _apply_world_access() -> void:
+	if world_access_enabled:
+		return
+	hide()
+	# Keep state/view bindings, but remove invisible interaction and solid bodies.
+	# Layer masks stay zero even when a keeper's phase sync toggles its shapes.
+	var pending: Array[Node] = [self]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if node is CollisionObject2D:
+			node.set_deferred("collision_layer", 0)
+			node.set_deferred("collision_mask", 0)
+			if node is Area2D:
+				node.set_deferred("monitoring", false)
+				node.set_deferred("monitorable", false)
+		pending.append_array(node.get_children())
 
 
 func _retire_built_workshop() -> void:
@@ -347,6 +371,7 @@ func _retire_built_workshop() -> void:
 
 
 func _set_plot_monitoring(enabled: bool) -> void:
+	enabled = enabled and world_access_enabled
 	_desired_plot_monitoring = enabled
 	if not _plot_monitoring_sync_queued and interaction_area.monitoring != enabled:
 		_plot_monitoring_sync_queued = true

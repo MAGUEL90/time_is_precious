@@ -57,6 +57,8 @@ func _init(nav: RefCounted, from: Vector2, to: Vector2) -> void:
 	origin = from
 	target = to
 	bounds = Rect2(from, Vector2.ZERO).expand(to).grow(grid * 4.0)
+	if not navigation.is_in_region(from) or not navigation.is_in_region(to):
+		status = "unreachable"
 
 ## Return the number of work units consumed. The caller shares the budget
 ## among all plot workers in the same rendered frame, including a +1d skip.
@@ -157,6 +159,9 @@ func _begin_point(value: Vector2, done: String) -> void:
 	phase = "point"
 
 func _check_point() -> void:
+	if not navigation.is_in_region(point):
+		_finish_point(false)
+		return
 	var count: int = segment_candidates.size() if point_done == "segment" else navigation.polygons.size()
 	if point_polygon >= count:
 		_finish_point(true)
@@ -209,6 +214,9 @@ func _begin_segment(from: Vector2, to: Vector2, done: String) -> void:
 	segment_steps = maxi(1, ceili(from.distance_to(to) / 2.0))
 	segment_index = 0
 	segment_done = done
+	if not navigation.is_in_region(from) or not navigation.is_in_region(to):
+		_finish_segment(false)
+		return
 	segment_bounds = Rect2(from, to - from).abs()
 	segment_candidates.clear()
 	segment_scan = 0
@@ -222,6 +230,8 @@ func _finish_segment(clear: bool) -> void:
 				status = "found"
 			else:
 				bounds = bounds.grow(grid * 2.0)
+				if navigation.walkable_rect.has_area():
+					bounds = bounds.intersection(navigation.walkable_rect)
 				min_cell = Vector2i((bounds.position / grid).floor())
 				max_cell = Vector2i((bounds.end / grid).ceil())
 				start = Vector2i((origin / grid).round())

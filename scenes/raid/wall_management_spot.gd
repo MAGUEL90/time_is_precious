@@ -1,6 +1,7 @@
 extends Node2D
 
 ## Wall caretaker: dialogue requests work; the persistent HUD remains read-only.
+@export var world_access_enabled: bool = true
 const BALLOON: PackedScene = preload("res://dialogue/game_dialogue_balloon/game_dialogue_balloon.tscn")
 const DIALOGUE: DialogueResource = preload("res://dialogue/game_dialogue_conversations/wall_caretaker.dialogue")
 var greeting_balloon: BaseGameDialogueBalloon
@@ -17,13 +18,19 @@ func _ready() -> void:
 	add_to_group("wall_management_spots")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(false)
+	if not world_access_enabled:
+		hide()
+		interaction_area.collision_mask = 0
+		interaction_area.set_deferred("monitoring", false)
+		$InteractionArea/CollisionShape2D.set_deferred("disabled", true)
+		return
 	_dialogue_manager = get_node("/root/DialogueManager")
 	_dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
 	interaction_area.body_entered.connect(_on_body_entered)
 	interaction_area.body_exited.connect(_on_body_exited)
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player:
+	if world_access_enabled and body is Player:
 		player = body
 		player._on_interactable_activated(self)
 
@@ -34,6 +41,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player = null
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if not is_instance_valid(player) or not player.is_inside_tree():
 		return false
 	if player.current_interactable != self or player.is_sleeping or player.is_collapsing:

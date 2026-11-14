@@ -9,6 +9,7 @@ var player_reff: Player
 @export var available_processes: Array[ProcessData] = []
 @export_range(1, 4, 1) var max_assigned_worker_slots: int = 2
 @export_range(0.0, 5000.0, 10.0) var storage_capacity: float = 200.0
+@export var world_access_enabled: bool = true
 
 var assigned_worker_ids: Array[String] = []
 var last_start_job_error: String = ""
@@ -17,6 +18,12 @@ var last_start_job_error: String = ""
 func _ready() -> void:
 	if WorkShopStorage != null:
 		WorkShopStorage.max_load = storage_capacity
+	if not world_access_enabled:
+		hide()
+		interactable_component.set_deferred("monitoring", false)
+		$InteractableComponent/CollisionShape2D.set_deferred("disabled", true)
+		$StaticBody2D.set_deferred("collision_layer", 0)
+		return
 
 	player_reff = get_tree().get_first_node_in_group("player") as Player
 
@@ -30,6 +37,8 @@ func _ready() -> void:
 	interactable_component.interactable_deactivated.connect(_on_claim_range_exited)
 
 func _on_claim_range_entered() -> void:
+	if not world_access_enabled:
+		return
 	var workshop_storage: Node = get_node_or_null("/root/WorkShopStorage")
 	if workshop_storage != null and workshop_storage.has_method("set_player_in_claim_area"):
 		workshop_storage.call("set_player_in_claim_area", true)
@@ -40,6 +49,8 @@ func _on_claim_range_exited() -> void:
 		workshop_storage.call("set_player_in_claim_area", false)
 
 func on_player_interact(player: Player) -> void:
+	if not world_access_enabled:
+		return
 	if player != null and player.has_method("open_workshop_menu"):
 		player.call("open_workshop_menu", self, 0)
 

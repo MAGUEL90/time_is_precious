@@ -12,6 +12,8 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 @export var authored_resource_paths: Dictionary = {}
 ## Prototype policy: retain disabled ledgers, but remove world access and new production.
 @export var disabled_world_sites: Array[StringName] = []
+## Idle civil art origins, relative to ResidentSpawn; empty retains legacy roaming.
+@export var resident_roam_rect: Rect2 = Rect2()
 # Explicitly temporary values authorized for testing; final balance is pending.
 const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
 const TEST_RESOURCE_CAPACITY: Dictionary = GATHERING_CONFIG.RESOURCE_CAPACITY
@@ -143,6 +145,7 @@ func _ready() -> void:
 	$WorkerVisuals.y_sort_enabled = true
 	var resident_spawn: Node2D = get_node_or_null("ResidentSpawn") as Node2D
 	if resident_spawn != null:
+		$WorkerVisuals.resident_roam_rect = resident_roam_rect
 		$WorkerVisuals.enable_city_residents(resident_spawn)
 		var inspection := preload("res://scenes/content_scene/citizen_inspection_controller.gd").new()
 		inspection.name = "CitizenInspectionController"

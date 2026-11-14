@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=29 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -28,6 +28,8 @@
 
 [ext_resource type="PackedScene" path="res://scenes/map_authoring/new_map_authoring.tscn" id="29_review_map"]
 [ext_resource type="Script" path="res://scenes/map_authoring/house_site_binding.gd" id="30_review_binding"]
+[ext_resource type="Script" path="res://scenes/map_authoring/ready_player_home_binding.gd" id="31_ready_home"]
+[ext_resource type="Script" path="res://scenes/map_authoring/map_boundary.gd" id="32_boundary"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -35,6 +37,9 @@ size = Vector2(20, 8)
 [node name="ContentScene" type="Node2D"]
 metadata/_edit_vertical_guides_ = [355.0, 87.0, -133.0]
 metadata/_edit_horizontal_guides_ = [180.0, 24.0, 153.0]
+
+[node name="MapBoundary" type="StaticBody2D" parent="."]
+script = ExtResource("32_boundary")
 
 [node name="Ground" type="Node2D" parent="."]
 visible = false
@@ -81,25 +86,29 @@ tile_set = ExtResource("27_wall_tiles")
 
 [node name="WallManagementSpot" parent="YSortWorld" instance=ExtResource("28_wall_spot")]
 position = Vector2(-264, -296)
+world_access_enabled = false
 
 [node name="Player" parent="YSortWorld" instance=ExtResource("6_u7qxx")]
-position = Vector2(-256, -337)
+position = Vector2(-88, -360)
 
 [node name="SpawnPoints" type="Node2D" parent="YSortWorld"]
 
 [node name="HomeEntryPoint" type="Marker2D" parent="YSortWorld/SpawnPoints"]
-position = Vector2(-256, -461)
+position = Vector2(-88, -360)
 
 [node name="WorkshopPlot" parent="YSortWorld" instance=ExtResource("17_keeper_plot")]
 position = Vector2(-312, -482)
 plot_id = "main_workshop"
+world_access_enabled = false
 
 [node name="WorkshopPlot2" parent="YSortWorld" instance=ExtResource("17_workshop_plot")]
 position = Vector2(-199, -482)
 plot_id = "workshop_2"
+world_access_enabled = false
 
 [node name="CitizenHousePlot" parent="YSortWorld" instance=ExtResource("17_citizen_house")]
 authored_marker_path = NodePath("../../AuthoredMap/YSortWorld/ToBeClean1")
+world_access_enabled = true
 
 [node name="InitialWorksites" parent="YSortWorld" instance=ExtResource("18_initial")]
 position = Vector2(-336, -425)
@@ -110,13 +119,17 @@ retain_resource_stock = true
 
 [node name="TravelingMerchant" parent="YSortWorld" instance=ExtResource("21_merchant")]
 position = Vector2(-170, -426)
+world_access_enabled = false
+
+[node name="Caption" parent="YSortWorld/TravelingMerchant" index="4"]
+visible = false
 
 [node name="WatchtowerDisplayAnchor" type="Marker2D" parent="YSortWorld"]
 editor_description = "Temporary presentation position until the map's defense layout is decided."
 position = Vector2(-6, -428)
 
 [node name="HomeDoor" type="Area2D" parent="YSortWorld"]
-position = Vector2(-256, -478)
+position = Vector2(-88, -377)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("22_home_door")
@@ -129,6 +142,7 @@ position = Vector2(0, -16)
 texture = ExtResource("24_home_icon")
 
 [node name="Label" type="Label" parent="YSortWorld/HomeDoor"]
+visible = false
 offset_left = -26.0
 offset_top = 5.0
 offset_right = 26.0
@@ -215,3 +229,12 @@ script = ExtResource("30_review_binding")
 footprint_path = NodePath("../AuthoredMap/Ground/Setelah Cleaning")
 marker_path = NodePath("../AuthoredMap/YSortWorld/ToBeClean1")
 house_path = NodePath("../YSortWorld/CitizenHousePlot")
+
+[node name="ReadyPlayerHomeBinding" type="Node" parent="."]
+script = ExtResource("31_ready_home")
+marker_path = NodePath("../AuthoredMap/YSortWorld/ToBeClean3")
+footprint_path = NodePath("../AuthoredMap/Ground/Setelah Cleaning")
+door_path = NodePath("../YSortWorld/HomeDoor")
+exit_spawn_path = NodePath("../YSortWorld/SpawnPoints/HomeEntryPoint")
+
+[editable path="YSortWorld/TravelingMerchant"]
