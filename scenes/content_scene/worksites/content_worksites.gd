@@ -641,6 +641,10 @@ func _queue_navigation_refresh(state_id: int, plot_id: int) -> void:
 		if _update_parked_plot_geometry(state_id, previous, state.phase):
 			navigation_geometry_phases[state_id] = state.phase
 		return
+	# A selectable plot commits its building kind when construction begins.
+	var live_plot: Node = instance_from_id(plot_id) as Node
+	if live_plot != null and live_plot.is_inside_tree():
+		navigation_plot_templates[state_id] = _plot_navigation_template(live_plot)
 	var template: Dictionary = navigation_plot_templates.get(state_id, {})
 	if not template.is_empty() and (previous == "built") == (state.phase == "built"):
 		# Known open phases share identical collision. Do not freeze unrelated
@@ -671,7 +675,10 @@ func _plot_navigation_template(plot: Node) -> Dictionary:
 	var script_path: String = plot_script.resource_path
 	var open: Array[PackedVector2Array] = []
 	var built: Array[PackedVector2Array] = []
-	if script_path == "res://scenes/citizen_house_plot/citizen_house_plot.gd":
+	if script_path == "res://scenes/map_authoring/initial_building_plot.gd" and plot.construction.building_kind == "mudbrick_workshop":
+		if not _append_live_template_shape(plot.get_node("WorkshopBody/CollisionShape2D"), built):
+			return {}
+	elif script_path in ["res://scenes/citizen_house_plot/citizen_house_plot.gd", "res://scenes/map_authoring/initial_building_plot.gd"]:
 		var house_shape: CollisionShape2D = plot.get_node_or_null("HouseBody/CollisionShape2D") as CollisionShape2D
 		if not _append_live_template_shape(house_shape, built):
 			return {}

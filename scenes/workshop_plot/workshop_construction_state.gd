@@ -13,6 +13,10 @@ const CITIZEN_HOUSE_REQUIREMENTS: Dictionary = {"wood_log": 4, "clay_lump": 8, "
 const CITIZEN_HOUSE_SOLO_MINUTES: int = 2880
 const CITIZEN_HOUSE_SHELTER_CAPACITY: int = 3
 
+# Initial general plots currently offer House only. This gates new choices,
+# not saved Workshop identity/progress or fixed legacy production systems.
+const INITIAL_WORKSHOP_SELECTION_ENABLED: bool = false
+
 const CLEARING_MINUTES: int = 180
 const SHIFT_START: int = 7 * 60
 const SHIFT_END: int = 15 * 60
@@ -20,6 +24,10 @@ const SHIFT_END: int = 15 * 60
 var order_id: String = ORDER_ID
 
 var phase: String = "uncleared"
+# Only selectable plots persist a choice. Fixed legacy plots keep their authored kind.
+var building_kind: String = ""
+var _preview_building_kind: String = ""
+var _building_selection_enabled: bool = false
 var clearing_remaining: int = CLEARING_MINUTES
 var clearing_by_player: bool = false
 # Manual house building is a transient session. A paused building keeps its
@@ -40,8 +48,8 @@ var payroll_work_remainder: int = 0
 # Authored spatial binding survives the map being replaced by the home interior.
 # Save data validates approach targets against this value; it never supplies it.
 var worker_entry_position: Vector2 = Vector2.ZERO
-# Plot kind is authored by the view, never read from a checkpoint. Keep the
-# owner while the view is absent so offscreen construction retains its kind.
+# Fixed plot kind and selection capability are authored by the view. Keep the
+# binding while the view is absent; selectable choices use building_kind above.
 var _plot_kind_bound: bool = false
 var _citizen_house_plot: bool = false
 var _active_plot_view: WeakRef
@@ -53,10 +61,48 @@ func _ready() -> void:
 	_latest_time = _now()
 
 func is_citizen_house() -> bool:
+	if _building_selection_enabled:
+		return building_kind == "house" or _preview_building_kind == "house"
 	if _plot_kind_bound:
 		return _citizen_house_plot
 	# Legacy standalone state fixtures predate authored plot-kind binding.
 	return order_id == CITIZEN_HOUSE_ORDER_ID
+
+func supports_building_selection() -> bool:
+	return _building_selection_enabled
+
+func is_selected_workshop() -> bool:
+	return _building_selection_enabled and (building_kind == "mudbrick_workshop" or _preview_building_kind == "mudbrick_workshop")
+
+func allows_player_construction() -> bool:
+	return is_citizen_house() or is_selected_workshop()
+
+func can_choose_workshop() -> bool:
+	if not INITIAL_WORKSHOP_SELECTION_ENABLED:
+		return false
+	# Reservations count during callbacks before the material transaction commits.
+	# Retained states live together even while the city view is absent.
+	if not _building_selection_enabled or get_parent() == null:
+		return false
+	for other: Node in get_parent().get_children():
+		if other == self or not other.has_method("is_selected_workshop"):
+			continue
+		if other.is_selected_workshop() and (other._starting or other.phase in ["building", "built"]):
+			return false
+	return true
+
+func begin_building_preview(kind: String) -> bool:
+	if not _building_selection_enabled or _starting or phase != "empty" or not building_kind.is_empty() or kind not in ["house", "mudbrick_workshop"]:
+		return false
+	if kind == "mudbrick_workshop" and not can_choose_workshop():
+		return false
+	_preview_building_kind = kind
+	return true
+
+func clear_building_preview() -> void:
+	# A committed choice remains authoritative after its modal closes.
+	if not _starting:
+		_preview_building_kind = ""
 
 
 func bind_plot_view(view: Node, citizen_house: bool) -> bool:
@@ -67,10 +113,12 @@ func bind_plot_view(view: Node, citizen_house: bool) -> bool:
 		return false
 	# A retained owner must not silently become a different building after a
 	# scene handoff or when two authored plots use the same identity.
-	if _plot_kind_bound and _citizen_house_plot != citizen_house:
+	var selectable: bool = view.has_method("allows_building_selection") and bool(view.call("allows_building_selection"))
+	if _plot_kind_bound and (_citizen_house_plot != citizen_house or _building_selection_enabled != selectable):
 		return false
 	_plot_kind_bound = true
 	_citizen_house_plot = citizen_house
+	_building_selection_enabled = selectable
 	_active_plot_view = weakref(view)
 	return true
 
@@ -147,7 +195,7 @@ func get_preview(selected_ids: Array[String], use_player: bool = false) -> Dicti
 		if not reason.is_empty():
 			message = reason
 			break
-	if use_player and (not is_citizen_house() or not selected_ids.is_empty()):
+	if use_player and (not allows_player_construction() or not selected_ids.is_empty()):
 		message = "Choose player or workers."
 	elif selected_ids.is_empty() and not use_player:
 		message = "Select available workers."
@@ -169,7 +217,16 @@ func get_preview(selected_ids: Array[String], use_player: bool = false) -> Dicti
 		message = "Shelter capacity is full; construction paused."
 	elif _starting:
 		message = "Starting construction."
-	var duration: int = get_solo_minutes() if use_player and is_citizen_house() else (ceili(float(get_solo_minutes()) / selected_ids.size()) if not selected_ids.is_empty() else 0)
+	if _building_selection_enabled and phase == "empty" and _preview_building_kind not in ["house", "mudbrick_workshop"]:
+		message = "Choose a building first."
+	if is_selected_workshop() and phase == "empty":
+		if not INITIAL_WORKSHOP_SELECTION_ENABLED:
+			message = "Mudbrick Workshop is not available yet."
+		elif not can_choose_workshop():
+			message = "Only one Mudbrick Workshop is available in this scene."
+		elif not use_player:
+			message = "Assign Player to build this workshop."
+	var duration: int = get_solo_minutes() if use_player and allows_player_construction() else (ceili(float(get_solo_minutes()) / selected_ids.size()) if not selected_ids.is_empty() else 0)
 	var remaining: int = maxi(completes_at - _latest_time, 0) if phase == "building" else 0
 	var progress: float = 0.0
 	if phase == "building":
@@ -275,6 +332,9 @@ func start_build(selected_ids: Array[String], use_player: bool = false) -> Dicti
 		player_building = previous_player_building
 		_finish_transaction()
 		return {"success": false, "message": "Materials changed; construction was not started."}
+	if _building_selection_enabled:
+		building_kind = _preview_building_kind
+		_preview_building_kind = ""
 	changed.emit()
 	_finish_transaction()
 	return {"success": true, "message": "Construction started."}
@@ -480,7 +540,7 @@ func resign_worker(worker_id: String) -> bool:
 
 
 func get_replacement_slots() -> int:
-	if phase not in ["building", "clearing"] or is_player_work_active():
+	if is_selected_workshop() or phase not in ["building", "clearing"] or is_player_work_active():
 		return 0
 	return maxi(0, worker_capacity - worker_ids.size())
 
@@ -589,9 +649,9 @@ func _initialize_approaches(ids: Array[String] = []) -> void:
 				plot.begin_worker_approach(id, order_id + ":" + phase)
 			return
 
-## A player may take over an unstaffed house without repaying its materials.
+## Manual-capable buildings resume without repaying their materials.
 func resume_player_work() -> Dictionary:
-	if not is_citizen_house() or _starting or is_player_work_active() or phase not in ["building", "clearing"] or not worker_ids.is_empty():
+	if not allows_player_construction() or _starting or is_player_work_active() or phase not in ["building", "clearing"] or not worker_ids.is_empty():
 		return {"success": false, "message": "Player cannot take over this work."}
 	_starting = true
 	flush_elapsed_work()

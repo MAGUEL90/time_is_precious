@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=4 uid="uid://dtqsj6h6lollc"]
+[gd_scene load_steps=31 format=4 uid="uid://dtqsj6h6lollc"]
 
 [ext_resource type="TileSet" uid="uid://ch772gsu1d2kn" path="res://scenes/content_scene/ground_tile_set.tres" id="1_ground"]
 [ext_resource type="PackedScene" uid="uid://d3a6pd8qq562a" path="res://scenes/player/player.tscn" id="6_u7qxx"]
@@ -32,6 +32,7 @@
 [ext_resource type="Script" path="res://scenes/map_authoring/map_boundary.gd" id="32_boundary"]
 
 [ext_resource type="PackedScene" path="res://scenes/npc_children/npc_gabbi/npc_gabbi.tscn" id="30_gabbi"]
+[ext_resource type="Script" path="res://scenes/map_authoring/initial_building_plot.gd" id="34_initial_plot"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_home_door"]
 size = Vector2(20, 8)
@@ -109,7 +110,20 @@ plot_id = "workshop_2"
 world_access_enabled = false
 
 [node name="CitizenHousePlot" parent="YSortWorld" instance=ExtResource("17_citizen_house")]
+script = ExtResource("34_initial_plot")
 authored_marker_path = NodePath("../../AuthoredMap/YSortWorld/ToBeClean1")
+world_access_enabled = true
+
+[node name="InitialPlot2" parent="YSortWorld" instance=ExtResource("17_citizen_house")]
+script = ExtResource("34_initial_plot")
+plot_id = "initial_plot_2"
+authored_marker_path = NodePath("../../AuthoredMap/YSortWorld/ToBeClean2")
+world_access_enabled = true
+
+[node name="InitialPlot4" parent="YSortWorld" instance=ExtResource("17_citizen_house")]
+script = ExtResource("34_initial_plot")
+plot_id = "initial_plot_4"
+authored_marker_path = NodePath("../../AuthoredMap/YSortWorld/ToBeClean4")
 world_access_enabled = true
 
 [node name="InitialWorksites" parent="YSortWorld" instance=ExtResource("18_initial")]
@@ -238,6 +252,18 @@ marker_path = NodePath("../AuthoredMap/YSortWorld/ToBeClean3")
 footprint_path = NodePath("../AuthoredMap/Ground/Setelah Cleaning")
 door_path = NodePath("../YSortWorld/HomeDoor")
 exit_spawn_path = NodePath("../YSortWorld/SpawnPoints/HomeEntryPoint")
+
+[node name="InitialPlot2Binding" type="Node" parent="."]
+script = ExtResource("30_review_binding")
+footprint_path = NodePath("../AuthoredMap/Ground/Setelah Cleaning")
+marker_path = NodePath("../AuthoredMap/YSortWorld/ToBeClean2")
+house_path = NodePath("../YSortWorld/InitialPlot2")
+
+[node name="InitialPlot4Binding" type="Node" parent="."]
+script = ExtResource("30_review_binding")
+footprint_path = NodePath("../AuthoredMap/Ground/Setelah Cleaning")
+marker_path = NodePath("../AuthoredMap/YSortWorld/ToBeClean4")
+house_path = NodePath("../YSortWorld/InitialPlot4")
 
 [editable path="YSortWorld/TravelingMerchant"]
 
