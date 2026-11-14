@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=4 uid="uid://cjv8ulk47168m"]
+[gd_scene load_steps=14 format=4 uid="uid://cjv8ulk47168m"]
 
 [ext_resource type="TileSet" uid="uid://bqjt5tuwqj8fs" path="res://resources/tile_map_resources/map_authoring_tileset_02_11_2026.tres" id="1_tiles"]
 [ext_resource type="Texture2D" uid="uid://yutg1ax64b0w" path="res://assets/ui/building/to_be_clean_1.png" id="2_bgb48"]
@@ -9,7 +9,10 @@
 [ext_resource type="Texture2D" uid="uid://cahfdsr0h6b6m" path="res://assets/objects/nature/plant/small_green_plant.png" id="6_irc21"]
 [ext_resource type="Texture2D" uid="uid://bywjqs8u1ygkf" path="res://assets/objects/nature/plant/red_plant_01.png" id="7_jsfyh"]
 [ext_resource type="Texture2D" uid="uid://bbvjpaonfvtp4" path="res://assets/objects/nature/stone/small_stone.png" id="9_jsfyh"]
+[ext_resource type="Texture2D" uid="uid://cpqkibgpx517m" path="res://assets/objects/nature/trees/date_palm_tree.png" id="11_300sm"]
 [ext_resource type="Texture2D" uid="uid://07j1wwvi65y8" path="res://assets/objects/worksites/reed_site.png" id="11_kfg7a"]
+[ext_resource type="Script" path="res://scenes/pickup_item/date_palm_spawner.gd" id="12_palm_spawner"]
+[ext_resource type="Texture2D" path="res://assets/objects/dates_pickup.png" id="13_dates_pickup"]
 
 [node name="NewMapAuthoring" type="Node2D"]
 
@@ -27,7 +30,7 @@ tile_set = ExtResource("1_tiles")
 
 [node name="Base2" type="TileMapLayer" parent="Ground"]
 z_index = -20
-tile_map_data = PackedByteArray("AAAIAPf/AAARAAMAAAAHAPf/AAAQAAMAAAAGAPf/AAAQAAMAAAAFAPf/AAAQAAMAAAAEAPf/AAAQAAMAAAADAPf/AAARAAMAAAADAPb/AAARAAIAAAADAPX/AAARAAEAAAAIAPv/AAARAAMAAAAIAPz/AAARAAQAAAAIAPr/AAARAAIAAAAIAPn/AAARAAQAAAAIAPj/AAARAAQAAAAIAP3/AAARAAUAAAAJAPf/AAASAAMAAAAKAPf/AAASAAMAAAALAPf/AAASAAMAAAAMAPf/AAASAAMAAAANAPf/AAASAAMAAAAOAPf/AAASAAMAAAAPAPf/AAASAAMAAAAQAPf/AAASAAMAAAARAPf/AAASAAMAAAASAPf/AAASAAMAAAATAPf/AAASAAMAAAAUAPf/AAARAAMAAAAUAPj/AAARAAQAAAAUAPn/AAARAAQAAAAUAPr/AAARAAQAAAAUAPv/AAARAAUAAAANAPv/AAAVAAMAAAANAPz/AAARAAUAAAAEAPn/AAAQAAgAAAAEAPr/AAAQAAkAAAAFAPn/AAARAAgAAAAFAPr/AAARAAkAAAAFAPP/AAAMAAgAAAAFAPT/AAAMAAkAAAAFAPX/AAAMAAoAAAAGAPP/AAANAAgAAAAGAPT/AAANAAkAAAAGAPX/AAANAAoAAAAHAPP/AAAOAAgAAAAHAPT/AAAOAAkAAAAHAPX/AAAOAAoAAAAKAPz/AAAPAAgAAAAUAPb/AAARAAIAAAAUAPX/AAARAAIAAAAUAPT/AAARAAIAAAAUAPP/AAARAAEAAAAJAPL/AAAQAAgAAAAJAPP/AAAQAAkAAAAKAPL/AAARAAgAAAAKAPP/AAARAAkAAAAQAPn/AAAMAAgAAAAQAPr/AAAMAAkAAAAQAPv/AAAMAAoAAAARAPn/AAANAAgAAAARAPr/AAANAAkAAAARAPv/AAANAAoAAAASAPn/AAAOAAgAAAASAPr/AAAOAAkAAAASAPv/AAAOAAoAAAACAPf/AAAPAAMAAAARAPL/AAAPAAgAAAAJAPv/AAASAAMAAAAKAPv/AAASAAMAAAALAPv/AAASAAMAAAAMAPv/AAASAAMAAAA=")
+tile_map_data = PackedByteArray("AAAIAPf/AAARAAMAAAAHAPf/AAAQAAMAAAAGAPf/AAAQAAMAAAAFAPf/AAAQAAMAAAAEAPf/AAAQAAMAAAADAPf/AAARAAMAAAADAPb/AAARAAIAAAADAPX/AAARAAEAAAAIAPv/AAARAAMAAAAIAPz/AAARAAQAAAAIAPr/AAARAAIAAAAIAPn/AAARAAQAAAAIAPj/AAARAAQAAAAIAP3/AAARAAUAAAAJAPf/AAASAAMAAAAKAPf/AAASAAMAAAALAPf/AAASAAMAAAAMAPf/AAASAAMAAAANAPf/AAASAAMAAAAOAPf/AAASAAMAAAAPAPf/AAASAAMAAAAQAPf/AAASAAMAAAARAPf/AAASAAMAAAASAPf/AAASAAMAAAATAPf/AAASAAMAAAAUAPf/AAARAAMAAAAUAPj/AAARAAQAAAAUAPn/AAARAAQAAAAUAPr/AAARAAQAAAAUAPv/AAARAAUAAAANAPv/AAAVAAMAAAANAPz/AAARAAUAAAAEAPn/AAAQAAgAAAAEAPr/AAAQAAkAAAAFAPn/AAARAAgAAAAFAPr/AAARAAkAAAAKAPz/AAAPAAgAAAAUAPb/AAARAAIAAAAUAPX/AAARAAIAAAAUAPT/AAARAAIAAAAUAPP/AAARAAEAAAAQAPn/AAAMAAgAAAAQAPr/AAAMAAkAAAAQAPv/AAAMAAoAAAARAPn/AAANAAgAAAARAPr/AAANAAkAAAARAPv/AAANAAoAAAASAPn/AAAOAAgAAAASAPr/AAAOAAkAAAASAPv/AAAOAAoAAAACAPf/AAAPAAMAAAARAPL/AAAPAAgAAAAJAPv/AAASAAMAAAAKAPv/AAASAAMAAAALAPv/AAASAAMAAAAMAPv/AAASAAMAAAAIAPL/AAAQAAgAAAAIAPP/AAAQAAkAAAAJAPL/AAARAAgAAAAJAPP/AAARAAkAAAA=")
 tile_set = ExtResource("1_tiles")
 
 [node name="Setelah Cleaning" type="TileMapLayer" parent="Ground"]
@@ -66,7 +69,7 @@ position = Vector2(204, -104)
 texture = ExtResource("3_hhxux")
 
 [node name="Poplar" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(93, -242)
+position = Vector2(91, -236)
 texture = ExtResource("3_rwbfr")
 
 [node name="Poplar2" type="Sprite2D" parent="YSortWorld"]
@@ -82,7 +85,7 @@ position = Vector2(253, -72)
 texture = ExtResource("3_rwbfr")
 
 [node name="Poplar5" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(232, -239)
+position = Vector2(194, -238)
 texture = ExtResource("3_rwbfr")
 
 [node name="BlockedStone" type="Sprite2D" parent="YSortWorld"]
@@ -109,12 +112,8 @@ texture = ExtResource("6_irc21")
 position = Vector2(262, -213)
 texture = ExtResource("6_irc21")
 
-[node name="SmallGreenPlant6" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(193, -219)
-texture = ExtResource("6_irc21")
-
 [node name="RedPlant01" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(104, -191)
+position = Vector2(146, -214)
 texture = ExtResource("7_jsfyh")
 
 [node name="RedPlant02" type="Sprite2D" parent="YSortWorld"]
@@ -144,3 +143,9 @@ texture = ExtResource("2_irc21")
 [node name="ReedSite" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(230, -183)
 texture = ExtResource("11_kfg7a")
+
+[node name="DatePalmTree" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(114, -187)
+texture = ExtResource("11_300sm")
+script = ExtResource("12_palm_spawner")
+pickup_texture = ExtResource("13_dates_pickup")
