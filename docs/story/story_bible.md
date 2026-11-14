@@ -55,6 +55,8 @@ Namun, kabar tersebut belum memiliki bukti yang dapat memastikan kebenarannya.
 
 ### 5. Kepulangan Arkad
 
+**Usia Arkad saat kembali dan saat gameplay dimulai: 25 tahun.** Tepat **15 tahun telah berlalu** sejak ia dievakuasi dari Babylon pada usia 10 tahun. Rentang ini tidak dengan sendirinya menentukan seluruh rincian kehidupannya selama di Sippar.
+
 Arkad memutuskan kembali ke Babylon karena ingin membangun kembali kota kelahirannya dan mengembalikan kejayaan yang telah hilang.
 
 Dia memulai perjalanan sebagai rakyat biasa, bukan sebagai penguasa yang mewarisi kekuasaan.
@@ -88,7 +90,7 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Identitas dan hubungan pasti penyelamat Arkad dari lingkungan tempat tinggalnya.
 - Bagaimana dan kapan titipan tablet dari kedua orang tuanya diterima Arkad.
 - Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
-- Berapa lama Arkad hidup dalam pengungsian.
+- Rincian masa pengasuhan dan kehidupan Arkad di Sippar selama rentang 15 tahun sebelum kepulangannya.
 - Bagaimana Arkad memperoleh pengetahuan ekonomi selama diasuh pedagang di Sippar.
 - Apa yang memicu keputusan Arkad untuk kembali.
 - Siapa yang memimpin kelompok penyerang.
