@@ -57,7 +57,9 @@ Namun, kabar tersebut belum memiliki bukti yang dapat memastikan kebenarannya.
 
 **Usia Arkad saat kembali dan saat gameplay dimulai: 25 tahun.** Tepat **15 tahun telah berlalu** sejak ia dievakuasi dari Babylon pada usia 10 tahun. Rentang ini tidak dengan sendirinya menentukan seluruh rincian kehidupannya selama di Sippar.
 
-Arkad memutuskan kembali ke Babylon karena ingin membangun kembali kota kelahirannya dan mengembalikan kejayaan yang telah hilang.
+Ketika berusia **25 tahun**, Arkad mendengar kabar bahwa kelompok penjahat yang dahulu menduduki Babylon sudah tidak lagi menguasai kota. Meski kabar mengenai kematian kedua orang tuanya belum pernah dipastikan, kondisi ini mendorongnya kembali untuk **mencari jejak keluarga dan memastikan nasib kedua orang tuanya**.
+
+Setibanya di Babylon, Arkad menemukan kota kelahirannya masih rusak dan jauh dari kemakmuran masa lalu. **Babylon tidak lagi diduduki para penjahat, tetapi bukan berarti sudah aman sepenuhnya:** pertahanan kota masih lemah dan serangan penjarah tetap menjadi ancaman. Melihat keadaan kota dan masyarakatnya, Arkad kemudian mengembangkan tujuan yang lebih besar: **membangun kembali Babylon dan mengembalikan kejayaannya tanpa mengulangi kesalahan para pemimpin terdahulu**.
 
 Dia memulai perjalanan sebagai rakyat biasa, bukan sebagai penguasa yang mewarisi kekuasaan.
 
@@ -92,9 +94,8 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
 - Rincian masa pengasuhan dan kehidupan Arkad di Sippar selama rentang 15 tahun sebelum kepulangannya.
 - Bagaimana Arkad memperoleh pengetahuan ekonomi selama diasuh pedagang di Sippar.
-- Apa yang memicu keputusan Arkad untuk kembali.
 - Siapa yang memimpin kelompok penyerang.
-- Bagaimana kondisi Babylon ketika Arkad kembali.
+- Rincian keadaan Babylon dan penduduknya ketika Arkad kembali, di luar keadaan rusak, tanpa pendudukan penjahat, tetapi masih rentan terhadap serangan.
 - Kebenaran nasib kedua orang tua Arkad.
 - Bagaimana Arkad dan Gabbi bertemu kembali.
 
