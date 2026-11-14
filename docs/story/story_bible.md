@@ -23,6 +23,21 @@ Dalam peristiwa tersebut, sejumlah warga mengevakuasi Arkad yang berusia **10 ta
 
 Arkad terpisah dari kedua orang tuanya dan masyarakat yang selama ini menjadi bagian dari kehidupannya.
 
+#### Pengungsian ke Sippar
+
+Arkad dibawa ke **Sippar**, sebuah kota kuno di Mesopotamia yang memiliki kegiatan perdagangan. Sippar menjadi tempat pengungsiannya dan latar kehidupan Arkad setelah meninggalkan Babylon. Lama tinggalnya, orang yang membesarkannya, dan pengalaman ekonominya di sana masih TBD.
+
+#### Titipan kedua orang tua: Clay Tablet of Wisdom
+
+Ketika meninggalkan Babylon, Arkad membawa **satu titipan dari kedua orang tuanya**, berupa tablet tanah liat bernama **Clay Tablet of Wisdom**.
+
+- Tablet merupakan peninggalan keluarga yang dibawa Arkad selama pengungsian.
+- Isi tulisan, makna, dan cara Arkad memahami tablet **belum ditentukan**.
+- Bagaimana tablet sampai ke tangan Arkad sebelum atau selama evakuasi juga **belum ditentukan**.
+- Tablet tidak otomatis ditetapkan memiliki kekuatan gaib, memberikan uang, atau menjadi mekanik gameplay sebelum ada keputusan desain.
+
+**Inspirasi kreatif:** *The Richest Man in Babylon* karya George S. Clason. Inspirasi ini tidak menetapkan bahwa karakter, isi tablet, atau alur game harus sama dengan buku; cerita dan tulisan dalam game akan dirancang secara orisinal.
+
 ### 3. Nasib Kedua Orang Tua Arkad
 
 Arkad menerima kabar bahwa kedua orang tuanya telah meninggal setelah kejatuhan Babylon.
@@ -67,7 +82,8 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 ### 8. Keputusan yang Masih Terbuka (TBD)
 
 - Identitas dan hubungan pasti penyelamat Arkad dari lingkungan tempat tinggalnya.
-- Ke mana Arkad dibawa setelah meninggalkan Babylon.
+- Bagaimana dan kapan titipan tablet dari kedua orang tuanya diterima Arkad.
+- Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
 - Berapa lama Arkad hidup dalam pengungsian.
 - Bagaimana Arkad bertahan hidup dan memperoleh pengetahuan ekonomi.
 - Apa yang memicu keputusan Arkad untuk kembali.
