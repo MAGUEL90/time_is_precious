@@ -44,7 +44,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(220, 208)
+custom_minimum_size = Vector2(240, 208)
 layout_mode = 2
 texture = SubResource("AtlasTexture_window")
 patch_margin_left = 16
@@ -61,9 +61,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 13
-theme_override_constants/margin_right = 18
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
@@ -112,7 +112,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
 [node name="BuilderHeader" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 2
 
@@ -125,7 +125,7 @@ text = "Builder team"
 vertical_alignment = 1
 
 [node name="AssignWorkersButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader"]
-custom_minimum_size = Vector2(52, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
@@ -181,12 +181,12 @@ autowrap_mode = 3
 layout_mode = 2
 
 [node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="CancelButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
@@ -197,7 +197,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="BuildButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
-custom_minimum_size = Vector2(52, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
@@ -248,11 +248,12 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
+theme_override_constants/separation = 4
 
 [node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ProgressPage/Footer"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 size_flags_horizontal = 8
 theme_type_variation = &"HudShortcutButton"

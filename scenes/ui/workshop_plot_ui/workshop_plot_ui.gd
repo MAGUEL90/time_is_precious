@@ -11,6 +11,7 @@ const WORKER_PORTRAIT_ICON: Texture2D = preload(
 )
 const WORKER_CARD_SIZE: Vector2 = Vector2(24, 24)
 const WORKER_PORTRAIT_SIZE: Vector2 = Vector2(11, 15)
+const ACTION_BUTTON_SIZE: Vector2 = Vector2(64, 18)
 const MISSING_MATERIAL_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
 const WORKER_ASSIGNMENT_UI: PackedScene = preload(
 	"res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.tscn"
@@ -65,6 +66,7 @@ func _ready() -> void:
 	_style_worker_scrollbar()
 	player_button = Button.new()
 	player_button.text = "Assign Player"
+	player_button.custom_minimum_size = ACTION_BUTTON_SIZE
 	player_button.theme_type_variation = &"HudShortcutButton"
 	player_button.add_theme_font_size_override("font_size", 6)
 	player_button.toggle_mode = true
@@ -73,7 +75,7 @@ func _ready() -> void:
 	replacement_button = Button.new()
 	replacement_button.name = "ReplacementButton"
 	replacement_button.text = "Assign"
-	replacement_button.custom_minimum_size = Vector2(52, 16)
+	replacement_button.custom_minimum_size = ACTION_BUTTON_SIZE
 	replacement_button.theme_type_variation = &"HudShortcutButton"
 	replacement_button.add_theme_font_size_override("font_size", 6)
 	replacement_button.pressed.connect(_open_worker_assignment)
@@ -82,7 +84,7 @@ func _ready() -> void:
 	player_resume_button = Button.new()
 	player_resume_button.name = "PlayerResumeButton"
 	player_resume_button.text = "Assign Player"
-	player_resume_button.custom_minimum_size = Vector2(62, 16)
+	player_resume_button.custom_minimum_size = ACTION_BUTTON_SIZE
 	player_resume_button.theme_type_variation = &"HudShortcutButton"
 	player_resume_button.add_theme_font_size_override("font_size", 6)
 	player_resume_button.pressed.connect(_on_player_resume_pressed)
@@ -254,7 +256,7 @@ func _refresh_view() -> void:
 	$Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader/BuildersTitle.text = "Cleaner" if clearing else "Builder team"
 	requirements_page.visible = show_requirements
 	progress_page.visible = not show_requirements
-	window.custom_minimum_size = Vector2(220, 160 if clearing else 208) if show_requirements else Vector2(220, 118)
+	window.custom_minimum_size = Vector2(240, 160 if clearing else 208) if show_requirements else Vector2(240, 128)
 
 	if show_requirements:
 		_populate_material_rows()
