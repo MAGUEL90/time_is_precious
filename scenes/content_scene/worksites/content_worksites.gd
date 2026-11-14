@@ -13,11 +13,10 @@ extends "res://scenes/test_scenes/clay_worksite_test/test_scene_clay_worksite.gd
 ## Prototype policy: retain disabled ledgers, but remove world access and new production.
 @export var disabled_world_sites: Array[StringName] = []
 # Explicitly temporary values authorized for testing; final balance is pending.
-const TEST_RESOURCE_CAPACITY: Dictionary = {
-	"clay_lump": 36, "wood_log": 24, "reed_bundle": 40, "water_jar": 48,
-}
-const RESPAWN_MIN_MINUTES: int = 2 * 1440
-const RESPAWN_MAX_MINUTES: int = 3 * 1440
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+const TEST_RESOURCE_CAPACITY: Dictionary = GATHERING_CONFIG.RESOURCE_CAPACITY
+const RESPAWN_MIN_MINUTES: int = GATHERING_CONFIG.RESPAWN_MIN_MINUTES
+const RESPAWN_MAX_MINUTES: int = GATHERING_CONFIG.RESPAWN_MAX_MINUTES
 const RESOURCE_OFFSETS: Array[Vector2] = [
 	Vector2.ZERO, Vector2(-48, 0), Vector2(48, 0), Vector2(0, -48), Vector2(0, 48),
 	Vector2(-48, -48), Vector2(48, -48), Vector2(-48, 48), Vector2(48, 48),
