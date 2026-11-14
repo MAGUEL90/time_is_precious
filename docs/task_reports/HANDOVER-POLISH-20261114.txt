@@ -1,0 +1,161 @@
+TIME IS PRECIOUS — HANDOVER SESI POLISHING
+Tanggal: 14 November 2026
+
+CATATAN KHUSUS SESI CLOUD
+- Mulai dari checkout repository branch feature/initial-scene/polish terbaru.
+  Path repository di cloud mengikuti lingkungan Codex, bukan path Windows
+  yang dicatat di bawah. Root checkout berisi project.godot dan AGENTS.md.
+- Path Windows, workspace/outputs/qa-evidence, checkpoints, work dan playtest
+  di dokumen ini adalah referensi laptop. Folder di luar repo tersebut tidak
+  ikut dipush. Jangan menganggap launcher, profil atau bukti mentah tersedia
+  di cloud. Laporan dalam docs/task_reports bisa dibaca dari repository.
+- Angka tes di bawah merupakan ringkasan historis. Jika bukti mentah lokal
+  tidak tersedia, tandai belum diverifikasi ulang; jangan mengarang hasil.
+- MCP Godot Windows dan editor pengguna tidak otomatis terhubung ke cloud.
+  Periksa tool yang tersedia. Jika tidak ada, lanjutkan audit statis dan
+  laporkan bahwa runtime/editor belum diperiksa. Jangan menginstal engine,
+  plugin atau mengubah konfigurasi hanya untuk tahap audit ini.
+- Tahap pembuka hanya baca: jangan edit file, jalankan game/test yang menulis
+  save, commit, push atau membuat PR. Laporkan audit lalu tunggu persetujuan.
+
+MULAI DARI SINI
+Workspace:
+C:\Users\Hendro\Documents\Codex\2026-11-09\halo-aku-ingin-melanjutkan-pengembangan-game
+Proyek aktif:
+C:\Users\Hendro\Documents\Codex\2026-11-09\halo-aku-ingin-melanjutkan-pengembangan-game\outputs\Time-is-Precious-project
+Branch: feature/initial-scene/polish
+Baseline: 40c3084acd69e17fa0f5075431dd337292ce141e
+Remote: https://github.com/MAGUEL90/time_is_precious.git
+Status cloud: sudah dipush dan diverifikasi via ls-remote pada 14 November.
+Upstream lokal: origin/feature/initial-scene/polish. Baseline game 40c3084; sesudahnya ada commit dokumentasi handover ini.
+URL: https://github.com/MAGUEL90/time_is_precious/tree/feature/initial-scene/polish
+Belum ada PR polishing karena belum ada perubahan baru.
+
+PR #127 sudah digabung pengguna ke chore/time-world/cloud-handover-20261109,
+bukan main. Branch polish dibuat dari hasil merge tersebut. Pada pemeriksaan
+14 November, origin/main masih f99b663 dan belum memuat progres ini.
+Jangan checkout main atau mengambil proyek lama sebagai dasar polishing.
+Isi baseline identik dengan feature/initial-scene/mvp-playable (8097529).
+14 commit sebelumnya sudah dipisah menurut fitur, QA, dan metadata Godot.
+Branch polishing belum memiliki perubahan game baru. Handover ini tersedia
+di repository: docs/task_reports/HANDOVER-POLISH-20261114.txt.
+
+BATAS DAN CARA KERJA
+- Baca AGENTS.md dan docs/agent-control/00 - AGENT - READ ME FIRST.md,
+  lalu urutan wajibnya sebelum implementasi. Baca juga konsep, arsitektur,
+  roadmap dan handover terkait; laporan lama memuat nama branch historis.
+- Satu tahap kecil setiap giliran; setelah tes/laporan berhenti dan tunggu.
+- Prioritas polishing belum dipilih. Audit dulu dan usulkan satu tahap kecil;
+  jangan otomatis mengubah balancing, sistem, layout, aset atau seluruh UI.
+- Scene rancangan pengguna adalah scenes/map_authoring/new_map_authoring.tscn.
+  Periksa perubahan lokal dan editor yang belum disimpan sebelum bekerja.
+- Jangan reset, clean, force-push, menimpa scene, atau merge sendiri ke main.
+- Gunakan MCP Godot pada salinan kerja di atas; jangan computer use.
+- QA harus memakai profil dan save terpisah. Jangan memigrasi QA lama;
+  arsipkan sebagai bukti. Jangan menyentuh save pribadi atau manual playtest.
+- Identitas civil (nama, rambut, kulit) harus tetap; tubuh dan tangan seragam.
+  Kombinasi rambut+kulit unik berlaku untuk New Game/pendatang baru;
+  penampilan civil dalam save Continue tetap dipertahankan.
+- Jika desain belum jelas atau ada risiko save, jelaskan dan tanyakan dulu.
+- Jika pengguna berkata berhenti: jangan mulai langkah baru; selesaikan
+  penulisan dengan aman dan laporkan proses aktif. Jangan mengklaim laptop
+  aman dimatikan tanpa pemeriksaan.
+
+KONDISI FITUR SCENE AWAL
+- Plot 3 rumah player siap pakai. Plot 1, 2, 4 bisa diinteraksi, dibersihkan,
+  menampilkan palu, membuka pilihan kategori, lalu membangun House.
+- Courtyard House terkunci. Pilihan Workshop juga dinonaktifkan atas arahan
+  pengguna: saat ini hanya House yang boleh dibangun. Sistem konstruksi dan
+  produksi workshop tetap tersimpan; produksi wet mudbrick belum dibuka.
+- Kategori menu: Residential, Production, Food & Farming,
+  Storage & Logistic, Civic & Services. Pilihan lain masih terkunci/placeholder.
+- Merchant Stop, job board, workplot di luar map, City Storage/Annex,
+  NPC pengelola tembok dan akses air tidak diperkenalkan di scene awal.
+  Sistemnya dipertahankan, City Hub dipertahankan. Jangan membuka kembali
+  hiring/hauling atau menentukan posisi storage tanpa keputusan pengguna.
+- Gathering Wood/Clay/Reed dan kurma authored tersedia. Poplar satu sprite
+  pohon per marker. Jangan mengubah susunan DatePalmTree buatan pengguna.
+- Durasi kerja, output, dan regrowth gathering sudah dikumpulkan agar mudah
+  dituning; perubahan angka tetap memerlukan keputusan, bukan polishing otomatis.
+- Inventori menangani kapasitas tepat di batas; hasil yang tidak muat tidak
+  boleh masuk tas. Periksa perilaku drop/pickup sesuai pengujian terkait.
+- Tombol tas toolbar terhubung ke inventori dengan aturan modal. Tampilan
+  toolbar dipertahankan; ikon lain jangan diasumsikan semua sudah fungsional.
+- Player gathering kayu tetap transisi gelap dengan animasi work_2 kapak
+  di tengah. Civil memakai animasi dunia. Tangan di depan rambut;
+  clay_worn_wrap adalah pilihan pakaian MVP yang disengaja.
+- Gabbi berdiri dekat depan rumah, aset rambut/pakaian khusus pengguna,
+  interaksi E untuk dialog pembangunan kota, bukan intro demo. Alignment,
+  mirror kiri-kanan dan portrait telah melalui tahap koreksi sebelumnya.
+- Aktivitas kota dibatasi area rancangan. Civil spawn/jalan santai dekat
+  rumah, batas fisik/navigasi tetap. Nightmare adalah pengecualian.
+- Kamera kota sekarang zoom (1,1), bukan zoom pecahan. Area luar map ditutup
+  hitam bila viewport lebih lebar; HUD tetap. Pengguna telah mengonfirmasi
+  pixel benar. Jangan mengembalikan zoom pecahan untuk memenuhi layar.
+  Batas visual Rect2(8,-248,368,240); fisik/nav Rect2(24,-232,336,208).
+  File terkait: scenes/map_authoring/map_boundary.gd.
+  Kamera interior/Nightmare mempertahankan perilaku masing-masing.
+
+BUKTI PENGUJIAN DAN BATAS KLAIM
+Laporan terperinci berada di workspace\outputs\qa-evidence\.
+Hasil berikut adalah bukti tahap sebelumnya, bukan tes ulang saat handover:
+- LAPORAN-camera-pixels-20261114.txt: 146 check lulus, 4 ukuran window,
+  sudut/batas map, render pixel/margin, tidur, Continue, Nightmare dan kembali.
+  Pengguna kemudian mengonfirmasi pixel sudah benar.
+- LAPORAN-natural-house-20261114.txt: New Game perjalanan input biasa sampai
+  House, tidur, Continue; 400 check. Tanpa memberi item/tenaga. Ada tekanan
+  kebutuhan makanan (27 kurma dalam perjalanan uji); pengguna menunda kurma.
+- LAPORAN-commit-per-fitur-20261114.txt: 14 commit; audit byte identik,
+  clean archive Godot 4.5.1 mengimpor 557 aset, menu headless exit 0.
+- Laporan lain: house-choice, house-edge, house-only, gathering-config,
+  gathering-extra, clay-player, reed-player, reed-focus, last-stock,
+  save-resilience, immigrant-worker, work2, nightmare, gabbi.
+- Tahap lama mencakup tas penuh, pingsan kerja/lapar, depletion/respawn,
+  tidur/Continue, Nightmare tier/timeout, identitas imigran-worker dan
+  pemulihan cadangan save. Baca rincian sebelum mengklaim skenario tertentu.
+- Fullscreen, perubahan DPI/multi-monitor, Android/export, semua urutan
+  kegiatan dan semua seed belum dijamin. Seluruh gameplay tidak diulang
+  pada tiap intermediate commit. Tidak ada klaim aman dari segala kondisi.
+- Handover/branch ini hanya diverifikasi melalui Git; tidak menjalankan
+  game, save, editor atau QA baru.
+
+MANUAL PLAYTEST PENGGUNA
+Launcher yang memakai save playtest yang sama:
+C:\Users\Hendro\Documents\Codex\2026-11-09\halo-aku-ingin-melanjutkan-pengembangan-game\MAIN-TIME-IS-PRECIOUS.cmd
+Script: workspace\playtest\Launch-Playtest.ps1
+Profil: workspace\playtest\profile-hendro-01
+Save: profile-hendro-01\data\Godot\app_userdata\time_is_precious\city_save\authored_map\checkpoint_v1.json
+Jangan mengganti profil dengan MAIN-SCENE-AWAL-REVIEW atau MAIN-PLOT-REVIEW;
+keduanya memakai profil berbeda. Jangan memulihkan arsip atau membuat
+New Game otomatis. Jika diminta membuka game: menu utama, window terlihat,
+tanpa input otomatis, lalu serahkan kontrol. Launcher tidak dijalankan saat
+handover ini. Verifikasi proses aktual sebelum meluncurkan ulang.
+
+ENGINE / MCP / QA
+Engine:
+C:\Users\Hendro\Downloads\Programs\Godot_v4.5.1-stable_win64.exe\Godot_v4.5.1-stable_win64.exe
+Wrapper MCP yang dipakai: workspace\work\mcp-call.mjs
+Contoh: node work/mcp-call.mjs <tool> <file-argumen-json>
+Memakai @yanhuifair/godot-mcp@1.12.2, port 9877. Verifikasi target proyek
+dan proses aktif sebelum kontrol. Hindari stop_project yang bisa mengenai
+semua Godot; tutup proses QA yang benar secara terarah.
+Profil QA terdahulu berada di outputs\citysave_suite_qa; buat profil baru
+untuk tahap baru. Isolasi APPDATA/LOCALAPPDATA dan direktori sementara.
+Jangan memakai proyek validasi outputs\feature-commits-validation-20261114
+sebagai salinan kerja utama, atau proyek lama di OneDrive.
+
+PEMULIHAN
+Baseline polishing: 40c3084. Branch MVP sebelumnya tetap dipertahankan.
+Checkpoint sebelum commit: workspace\checkpoints\feature-commits-20261114-01.
+Jangan menyalin checkpoint seluruhnya atau reset --hard: tinjau perubahan
+dan dependensi, cadangkan pekerjaan baru, pulihkan hanya bagian disetujui.
+Save pribadi/playtest/QA tidak disertakan dalam commit atau checkpoint ini.
+
+PROMPT PENDEK UNTUK SESI BARU
+Lanjutkan polishing Time Is Precious dari feature/initial-scene/polish
+di root checkout repository. Baca handover ini dan AGENTS.md dulu.
+Tahap pertama hanya audit baca. Periksa status Git dan editor jika tersedia.
+Pertahankan layout new_map_authoring, pixel skala asli, aturan gameplay,
+identitas civil dan save. Gunakan MCP Godot dan save QA terpisah.
+Jelaskan kandidat satu tahap polishing kecil dulu; tunggu keputusan saya
+sebelum implementasi. Jangan menjalankan game atau menulis save saat audit. Setelah tahap perubahan yang disetujui, tes, laporkan, lalu berhenti.
