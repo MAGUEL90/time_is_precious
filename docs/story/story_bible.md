@@ -25,7 +25,7 @@ Arkad terpisah dari kedua orang tuanya dan masyarakat yang selama ini menjadi ba
 
 #### Pengungsian ke Sippar
 
-Arkad dibawa ke **Sippar**, sebuah kota kuno di Mesopotamia yang memiliki kegiatan perdagangan. Sippar menjadi tempat pengungsiannya dan latar kehidupan Arkad setelah meninggalkan Babylon. Lama tinggalnya, orang yang membesarkannya, dan pengalaman ekonominya di sana masih TBD.
+Arkad dibawa ke **Sippar**, sebuah kota kuno di Mesopotamia yang memiliki kegiatan perdagangan. Setibanya di sana, orang yang menyelamatkannya menitipkan Arkad kepada **seorang pedagang setempat yang kemudian mengasuhnya**. Sippar menjadi latar kehidupan Arkad setelah meninggalkan Babylon; identitas pedagang, lama pengasuhan, dan pengalaman Arkad di sana masih TBD.
 
 #### Titipan kedua orang tua: Clay Tablet of Wisdom
 
@@ -61,6 +61,10 @@ Dia memulai perjalanan sebagai rakyat biasa, bukan sebagai penguasa yang mewaris
 
 Keberhasilan Arkad nantinya bergantung pada tindakan dan keputusan pemain.
 
+#### Batas cerita yang ditampilkan di game
+
+**Awal gameplay langsung menempatkan Arkad di Babylon yang telah runtuh.** Tidak ada scene gameplay yang menampilkan Arkad kecil tinggal bersama orang tua asuhnya di Sippar. Masa kecil, evakuasi, dan pengasuhan di Sippar adalah **latar belakang cerita (backstory)**, bukan prolog playable atau kewajiban membuat scene tambahan. Cara mengungkap backstory di dalam game masih TBD.
+
 ### 6. Tema Utama
 
 **Time, Wealth, Power, and Legacy**
@@ -85,7 +89,7 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 - Bagaimana dan kapan titipan tablet dari kedua orang tuanya diterima Arkad.
 - Isi dan makna sebenarnya dari Clay Tablet of Wisdom.
 - Berapa lama Arkad hidup dalam pengungsian.
-- Bagaimana Arkad bertahan hidup dan memperoleh pengetahuan ekonomi.
+- Bagaimana Arkad memperoleh pengetahuan ekonomi selama diasuh pedagang di Sippar.
 - Apa yang memicu keputusan Arkad untuk kembali.
 - Siapa yang memimpin kelompok penyerang.
 - Bagaimana kondisi Babylon ketika Arkad kembali.
