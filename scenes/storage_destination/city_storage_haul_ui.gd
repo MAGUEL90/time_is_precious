@@ -45,14 +45,14 @@ func _ready() -> void:
 	back_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	back_button.expand_icon = false
 	back_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		var style: StyleBox = back_button.get_theme_stylebox(style_name).duplicate() as StyleBox
-		style.content_margin_left = 0.0
-		style.content_margin_right = 0.0
-		style.content_margin_top = 0.0
-		style.content_margin_bottom = 0.0
-		back_button.add_theme_stylebox_override(style_name, style)
-	back_button.add_theme_stylebox_override("focus", back_button.get_theme_stylebox("hover").duplicate() as StyleBox)
+	var empty_style := StyleBoxEmpty.new()
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		back_button.add_theme_stylebox_override(style_name, empty_style)
+	back_button.add_theme_color_override("icon_hover_color", Color(1.4, 1.4, 1.2))
+	back_button.add_theme_color_override("icon_focus_color", Color(1.4, 1.4, 1.2))
+	back_button.add_theme_color_override("icon_pressed_color", Color(0.65, 0.65, 0.65))
+	back_button.add_theme_color_override("icon_hover_pressed_color", Color(0.65, 0.65, 0.65))
+	back_button.add_theme_color_override("icon_disabled_color", Color(1.0, 1.0, 1.0, 0.4))
 	back_button.pressed.connect(close)
 	source_option.select(0)
 	quantity_spin.min_value = 1

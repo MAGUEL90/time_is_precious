@@ -516,12 +516,12 @@ func _set_action_icon(button: Button, texture: Texture2D, action_name: String) -
 	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.expand_icon = false
 	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# The artwork already contains transparent padding; keep it at native size.
-	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		var style: StyleBox = button.get_theme_stylebox(style_name).duplicate() as StyleBox
-		style.content_margin_left = 0.0
-		style.content_margin_right = 0.0
-		style.content_margin_top = 0.0
-		style.content_margin_bottom = 0.0
-		button.add_theme_stylebox_override(style_name, style)
-	button.add_theme_stylebox_override("focus", button.get_theme_stylebox("hover").duplicate() as StyleBox)
+	# Keep the 16px hit area while displaying only the original artwork.
+	var empty_style := StyleBoxEmpty.new()
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		button.add_theme_stylebox_override(style_name, empty_style)
+	button.add_theme_color_override("icon_hover_color", Color(1.4, 1.4, 1.2))
+	button.add_theme_color_override("icon_focus_color", Color(1.4, 1.4, 1.2))
+	button.add_theme_color_override("icon_pressed_color", Color(0.65, 0.65, 0.65))
+	button.add_theme_color_override("icon_hover_pressed_color", Color(0.65, 0.65, 0.65))
+	button.add_theme_color_override("icon_disabled_color", Color(1.0, 1.0, 1.0, 0.4))
