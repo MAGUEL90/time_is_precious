@@ -25,6 +25,13 @@ func _frames(count: int = 3) -> void:
 	for _index: int in range(count):
 		await get_tree().process_frame
 
+func _move_mouse(position: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = position
+	motion.global_position = position
+	get_viewport().push_input(motion, true)
+	await _frames()
+
 func _rect_contains(outer: Rect2, inner: Rect2, tolerance: float = 1.0) -> bool:
 	return (
 		inner.position.x >= outer.position.x - tolerance
@@ -127,6 +134,7 @@ func _run() -> void:
 	_expect(not menu.subtitle.text.contains("Plot 1"), "The subtitle omits the plot label.")
 	_check_compact_frame(menu, Vector2(290, 105), "Category menu")
 	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu")
+	_expect((menu.buttons["residential"].get_parent().get_node("Caption") as Label).modulate.a == 1.0, "Category names remain visible.")
 	_expect(menu.buttons["residential"].has_focus(), "Keyboard focus starts on Residential.")
 
 	menu.buttons["residential"].emit_signal("pressed")
@@ -138,6 +146,19 @@ func _run() -> void:
 	var courtyard_button: Button = menu.buttons.get("courtyard_house") as Button
 	_expect(house_button != null and not house_button.disabled, "House is enabled.")
 	_expect(courtyard_button != null and courtyard_button.disabled, "Courtyard House is locked.")
+	var house_caption: Label = house_button.get_parent().get_node("Caption") as Label
+	var courtyard_caption: Label = courtyard_button.get_parent().get_node("Caption") as Label
+	await _move_mouse(Vector2(1, 1))
+	var frame_before_hover: Rect2 = menu.window.get_global_rect()
+	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 0.0, "Building names are hidden without a hover.")
+	await _move_mouse(house_button.get_global_rect().get_center())
+	_expect(house_caption.modulate.a == 1.0 and courtyard_caption.modulate.a == 0.0, "Hovering House shows only its name.")
+	_expect(menu.window.get_global_rect().is_equal_approx(frame_before_hover), "The panel stays in place while hovering House.")
+	await _move_mouse(courtyard_button.get_global_rect().get_center())
+	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 1.0, "Hovering locked Courtyard House shows only its name.")
+	_expect(menu.window.get_global_rect().is_equal_approx(frame_before_hover), "The panel stays in place while hovering a locked building.")
+	await _move_mouse(Vector2(1, 1))
+	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 0.0, "Building names disappear after the pointer leaves.")
 	if house_button != null:
 		_expect(house_button.has_focus(), "Keyboard focus starts on House.")
 	if courtyard_button != null:
@@ -161,6 +182,11 @@ func _run() -> void:
 	_check_compact_frame(menu, Vector2(200, 145), "Locked Production menu")
 	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop"], "Locked Production menu")
 	_expect(workshop_button != null and workshop_button.disabled, "Workshop is disabled when workshop_enabled is false.")
+	var workshop_caption: Label = workshop_button.get_parent().get_node("Caption") as Label
+	await _move_mouse(workshop_button.get_global_rect().get_center())
+	_expect(workshop_caption.modulate.a == 1.0, "Hovering locked Workshop shows its name.")
+	await _move_mouse(Vector2(1, 1))
+	_expect(workshop_caption.modulate.a == 0.0, "Workshop name disappears after the pointer leaves.")
 	_expect(menu.choices.get_node_or_null("Notice") == null, "The locked Production choice has no extra notice.")
 	_expect(menu.back_button.visible, "Back remains visible in the Production menu.")
 	await _frames()

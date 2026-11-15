@@ -58,7 +58,7 @@ func _clear_choices() -> void:
 	_choice_row.alignment = BoxContainer.ALIGNMENT_BEGIN
 	choices.add_child(_choice_row)
 
-func _add_button(id: String, text: String, action: Callable, locked: bool = false) -> Button:
+func _add_button(id: String, text: String, action: Callable, locked: bool = false, hover_caption: bool = false) -> Button:
 	var tile := VBoxContainer.new()
 	tile.name = "%sTile" % id
 	tile.custom_minimum_size = Vector2(48, 0)
@@ -102,6 +102,11 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.add_child(caption)
+	if hover_caption:
+		# Keep the caption's space so the window stays still while the mouse moves.
+		caption.modulate.a = 0.0
+		button.mouse_entered.connect(func() -> void: caption.modulate.a = 1.0)
+		button.mouse_exited.connect(func() -> void: caption.modulate.a = 0.0)
 	buttons[id] = button
 	return button
 
@@ -139,15 +144,15 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	back_button.show()
 	match id:
 		"residential":
-			_add_button("house", "House", _show_building.bind("house"))
-			_add_button("courtyard_house", "Courtyard House", Callable(), true)
+			_add_button("house", "House", _show_building.bind("house"), false, true)
+			_add_button("courtyard_house", "Courtyard House", Callable(), true, true)
 			buttons["house"].grab_focus.call_deferred()
 		"production":
 			if not workshop_enabled:
-				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true)
+				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true, true)
 				back_button.grab_focus.call_deferred()
 				return
-			_add_button("mudbrick_workshop", "Mudbrick Workshop" if workshop_available else "Mudbrick Workshop (Limit: 1)", _show_building.bind("mudbrick_workshop"), not workshop_available)
+			_add_button("mudbrick_workshop", "Mudbrick Workshop" if workshop_available else "Mudbrick Workshop (Limit: 1)", _show_building.bind("mudbrick_workshop"), not workshop_available, true)
 			if workshop_available:
 				buttons["mudbrick_workshop"].grab_focus.call_deferred()
 			else:
