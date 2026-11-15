@@ -248,7 +248,7 @@ func _on_item_slot_clicked(item_id: String, _quantity: int, slot_ref: ItemSlot) 
 
 	_close_option_panel()
 
-	var option_panel_path: PackedScene = preload("res://scenes/ui/option_panel/option_panel.tscn")
+	var option_panel_path: PackedScene = preload("res://scenes/ui/option_panel/inventory_option_panel.tscn")
 	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
 
 	active_option_panel = option_panel_path.instantiate()
