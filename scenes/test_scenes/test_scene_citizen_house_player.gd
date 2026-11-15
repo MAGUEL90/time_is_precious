@@ -70,13 +70,26 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-rubble"):
 		return
 	var menu: WorkshopPlotUI = house.get("menu") as WorkshopPlotUI
-	_expect(menu.player_button.visible and not menu.player_button.button_pressed,
-		"Physical E opens cleaning with Assign Player visible and initially unselected.")
-	menu.player_button.button_pressed = true
+	_expect(menu.assign_workers_button.visible and not menu.player_button.visible and not menu._use_player,
+		"Physical E opens cleaning with one Assign button and no player selection.")
+	menu.assign_workers_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._assignment_choice_open and menu.worker_choice_button.visible
+		and menu.player_choice_button.visible and not menu.worker_choice_button.disabled
+		and not menu.player_choice_button.disabled and menu.get_node("Root/Center").visible,
+		"Assign opens a small Worker/Player choice over the unchanged House panel.")
+	menu.assignment_choice_back_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(not menu._use_player and menu._selected_worker_ids.is_empty()
+		and not menu._assignment_choice_open and menu.assign_workers_button.has_focus(),
+		"Back closes the choice without changing its draft and restores Assign focus.")
+	await _choose_player_assignment(menu, true)
 	_expect(menu._use_player and menu._selected_worker_ids.is_empty() and not menu.build_button.disabled,
 		"Selecting the player enables cleaning without also selecting a worker.")
 	await _capture("house-player-cleaning-selected")
 	menu.assign_workers_button.pressed.emit()
+	await get_tree().process_frame
+	menu.worker_choice_button.pressed.emit()
 	await get_tree().process_frame
 	var assignment: Node = menu.get("_worker_assignment_menu") as Node
 	_expect(assignment != null, "The normal worker selector opens from the house menu.")
@@ -88,6 +101,8 @@ func _test_player_and_worker_routes() -> void:
 		"Back from an unchanged worker selector returns to the selected player.")
 	menu.assign_workers_button.pressed.emit()
 	await get_tree().process_frame
+	menu.worker_choice_button.pressed.emit()
+	await get_tree().process_frame
 	assignment = menu.get("_worker_assignment_menu") as Node
 	if assignment == null or not await _select_worker_in_menu(assignment, FIRST_ID):
 		return
@@ -95,9 +110,12 @@ func _test_player_and_worker_routes() -> void:
 		"Choosing a worker clears the player selection rather than mixing assignments.")
 	assignment.get_node("Root/Center/TextureWindow/Margin/MainVBox/OverviewPage/Footer/BackButton").pressed.emit()
 	await get_tree().process_frame
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, true)
 	_expect(menu._use_player and menu._selected_worker_ids.is_empty(),
 		"Switching back to the player clears the previously selected worker.")
+	await _choose_player_assignment(menu, false)
+	_expect(not menu._use_player and menu._selected_worker_ids.is_empty(),
+		"Choosing Player again toggles the manual assignment off without restoring workers.")
 	menu.close_menu()
 	await get_tree().process_frame
 	_expect(not get_tree().paused and player.can_move and construction.phase == "uncleared"
@@ -106,17 +124,17 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-cleaning"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
-	_expect(not menu.player_button.button_pressed and not menu._use_player,
+	_expect(not menu._use_player and not menu.player_button.visible,
 		"Reopening does not retain a stale player draft.")
 	player.fatigue = player.fatigue_critical_threshold
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, true)
 	var refused_at: int = _now()
 	menu.build_button.pressed.emit()
 	_expect(_now() == refused_at and construction.phase == "uncleared" and is_instance_valid(house.menu),
 		"A critically tired player cannot start cleaning or advance time.")
 	player.fatigue = 0.10
-	menu.player_button.button_pressed = false
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, false)
+	await _choose_player_assignment(menu, true)
 	var reentrant_start: int = _now()
 	construction.changed.connect(_close_while_cleaning_starts, CONNECT_ONE_SHOT)
 	menu.build_button.pressed.emit()
@@ -128,7 +146,7 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-menu-queued-during-start"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, true)
 	var queued_menu_start: int = _now()
 	construction.changed.connect(_queue_free_menu_while_cleaning_starts, CONNECT_ONE_SHOT)
 	menu.build_button.pressed.emit()
@@ -140,7 +158,7 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-after-start-cancel"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, true)
 	var start: int = _now()
 	var start_hunger: float = player.hunger
 	var start_fatigue: float = player.fatigue
@@ -165,9 +183,9 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-build"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
-	_expect(menu.player_button.visible and not menu.player_button.button_pressed,
-		"The cleared house exposes an unselected Assign Player action.")
-	menu.player_button.button_pressed = true
+	_expect(menu.assign_workers_button.visible and not menu.player_button.visible and not menu._use_player,
+		"The cleared house exposes one Assign button with no player selection.")
+	await _choose_player_assignment(menu, true)
 	_expect(menu._use_player and not menu.build_button.disabled,
 		"Selecting player with the materials enables house construction.")
 	await _capture("house-player-build-selected")
@@ -196,8 +214,8 @@ func _test_player_and_worker_routes() -> void:
 	if not await _open_house_menu("house-player-paused"):
 		return
 	menu = house.get("menu") as WorkshopPlotUI
-	_expect(menu.player_resume_button.visible and menu.replacement_button.visible,
-		"A paused house offers both player continuation and worker replacement.")
+	_expect(not menu.player_resume_button.visible and menu.replacement_button.visible,
+		"A paused house combines player continuation and worker replacement under Assign.")
 	menu.close_menu()
 	await get_tree().process_frame
 	_expect(construction._remaining_work_units() == remaining and Inventory.items == paid_stock,
@@ -210,7 +228,12 @@ func _test_player_and_worker_routes() -> void:
 	start_fatigue = player.fatigue
 	block_after_minutes = 5
 	TimeComponentManager.time_changed.connect(_block_clock_after_minutes)
-	menu.player_resume_button.pressed.emit()
+	menu.replacement_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._assignment_choice_open and not menu.worker_choice_button.disabled
+		and not menu.player_choice_button.disabled,
+		"Paused House Assign enables both worker replacement and player continuation.")
+	menu.player_choice_button.pressed.emit()
 	var stopped: bool = await _wait_manual_session("Resuming and interrupting player work")
 	TimeComponentManager.time_changed.disconnect(_block_clock_after_minutes)
 	store._busy = false
@@ -228,7 +251,9 @@ func _test_player_and_worker_routes() -> void:
 	start_fatigue = player.fatigue
 	block_after_minutes = 5
 	TimeComponentManager.time_changed.connect(_close_house_after_minutes)
-	menu.player_resume_button.pressed.emit()
+	menu.replacement_button.pressed.emit()
+	await get_tree().process_frame
+	menu.player_choice_button.pressed.emit()
 	stopped = await _wait_manual_session("Closing player work from a time callback")
 	TimeComponentManager.time_changed.disconnect(_close_house_after_minutes)
 	if not stopped:
@@ -242,6 +267,10 @@ func _test_player_and_worker_routes() -> void:
 		return
 	menu = house.get("menu") as WorkshopPlotUI
 	menu.replacement_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._assignment_choice_open and not menu.worker_choice_button.disabled,
+		"Paused House Assign exposes the existing worker replacement route.")
+	menu.worker_choice_button.pressed.emit()
 	await get_tree().process_frame
 	assignment = menu.get("_worker_assignment_menu") as Node
 	if assignment == null or not await _select_worker_in_menu(assignment, FIRST_ID):
@@ -324,7 +353,7 @@ func _test_critical_interruption() -> void:
 	if not await _open_house_menu("house-player-critical"):
 		return
 	var menu: WorkshopPlotUI = house.get("menu") as WorkshopPlotUI
-	menu.player_button.button_pressed = true
+	await _choose_player_assignment(menu, true)
 	var start: int = _now()
 	menu.build_button.pressed.emit()
 	var deadline: int = Time.get_ticks_msec() + 15000
@@ -363,6 +392,21 @@ func _test_critical_interruption() -> void:
 		and construction.phase == "building" and construction._remaining_work_units() == remaining
 		and Inventory.items == paid_stock and CityStockManager.shelter_capacity == shelter_before,
 		"Returning restores movement/time and keeps the interrupted construction, paid materials and shelter unchanged.")
+
+
+func _choose_player_assignment(menu: WorkshopPlotUI, selected: bool) -> void:
+	if menu._use_player == selected:
+		return
+	menu.assign_workers_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._assignment_choice_open and not menu.player_choice_button.disabled,
+		"Assign exposes the legal Player choice.")
+	if not menu._assignment_choice_open or menu.player_choice_button.disabled:
+		return
+	menu.player_choice_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._use_player == selected,
+		"The Player choice updates the existing manual assignment state.")
 
 
 func _select_worker_in_menu(assignment: Node, worker_id: String) -> bool:

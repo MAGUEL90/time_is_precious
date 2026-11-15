@@ -359,10 +359,16 @@ func _house_session() -> void:
 		return
 	var menu: WorkshopPlotUI = house.menu
 	if construction.phase == "building":
-		_expect(menu.player_resume_button.visible and not menu.player_resume_button.disabled, "An unstaffed house can be resumed by the player.")
-		menu.player_resume_button.pressed.emit()
+		_expect(menu.replacement_button.visible and not menu.player_resume_button.visible, "An unstaffed house exposes its combined Assign action.")
+		menu.replacement_button.pressed.emit()
+		await get_tree().process_frame
+		_expect(menu._assignment_choice_open and not menu.player_choice_button.disabled, "The player can be chosen to resume the house.")
+		menu.player_choice_button.pressed.emit()
 	else:
-		menu.player_button.button_pressed = true
+		menu.assign_workers_button.pressed.emit()
+		await get_tree().process_frame
+		_expect(menu._assignment_choice_open and not menu.player_choice_button.disabled, "The player can be selected to clear or build the house.")
+		menu.player_choice_button.pressed.emit()
 		_expect(not menu.build_button.disabled, "The player can clear or build the house with their own materials.")
 		menu.build_button.pressed.emit()
 	var deadline: int = Time.get_ticks_msec() + 20000

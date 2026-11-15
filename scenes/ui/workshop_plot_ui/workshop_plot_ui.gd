@@ -30,7 +30,7 @@ signal player_resume_requested
 @onready var assign_workers_button: Button = $Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader/AssignWorkersButton
 @onready var worker_scroll: ScrollContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage/WorkerScroll
 @onready var worker_list: HBoxContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage/WorkerScroll/WorkerList
-@onready var duration_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow/DurationLabel
+@onready var duration_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/DurationRow/DurationLabel
 @onready var status_label: Label = $Root/Center/Window/Margin/MainVBox/RequirementsPage/StatusLabel
 @onready var build_button: Button = $Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/BuildButton
 @onready var progress_page: VBoxContainer = $Root/Center/Window/Margin/MainVBox/ProgressPage
@@ -40,6 +40,11 @@ signal player_resume_requested
 @onready var team_label: Label = $Root/Center/Window/Margin/MainVBox/ProgressPage/TeamLabel
 @onready var progress_footer: HBoxContainer = $Root/Center/Window/Margin/MainVBox/ProgressPage/Footer
 @onready var close_button: TextureButton = $Root/Center/Window/Margin/MainVBox/TitleHeader/CloseButton
+@onready var assignment_choice_center: CenterContainer = $Root/AssignmentChoiceCenter
+@onready var assignment_choice_blocker: ColorRect = $Root/AssignmentChoiceBlocker
+@onready var worker_choice_button: Button = $Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions/WorkerChoiceButton
+@onready var player_choice_button: Button = $Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions/PlayerChoiceButton
+@onready var assignment_choice_back_button: Button = $Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceFooter/CancelChoiceButton
 
 var _construction: Node
 var _selected_worker_ids: Array[String] = []
@@ -47,6 +52,8 @@ var _status_override: String = ""
 var _is_closing: bool = false
 var _worker_assignment_menu: WorkshopWorkerAssignmentUI
 var _use_player: bool = false
+var _assignment_choice_open: bool = false
+var _assignment_choice_return_control: Button
 var player_button: Button
 var replacement_button: Button
 var player_resume_button: Button
@@ -59,7 +66,10 @@ func _ready() -> void:
 	build_button.pressed.connect(_on_build_pressed)
 	close_button.pressed.connect(close_menu)
 	close_button.texture_focused = close_button.texture_hover
-	assign_workers_button.pressed.connect(_open_worker_assignment)
+	assign_workers_button.pressed.connect(_on_assign_pressed)
+	worker_choice_button.pressed.connect(_on_worker_choice_pressed)
+	player_choice_button.pressed.connect(_on_player_choice_pressed)
+	assignment_choice_back_button.pressed.connect(_on_assignment_choice_back_pressed)
 	_style_worker_scrollbar()
 	player_button = Button.new()
 	player_button.text = "Assign Player"
@@ -75,7 +85,7 @@ func _ready() -> void:
 	replacement_button.custom_minimum_size = ACTION_BUTTON_SIZE
 	replacement_button.theme_type_variation = &"HudShortcutButton"
 	replacement_button.add_theme_font_size_override("font_size", 6)
-	replacement_button.pressed.connect(_open_worker_assignment)
+	replacement_button.pressed.connect(_on_replacement_pressed)
 	progress_footer.add_child(replacement_button)
 	progress_footer.move_child(replacement_button, 0)
 	player_resume_button = Button.new()
@@ -101,6 +111,153 @@ func _on_player_selected(selected: bool) -> void:
 	if _is_citizen_house():
 		_status_override = ""
 	_refresh_view()
+
+
+func _on_assign_pressed() -> void:
+	if _should_open_assignment_choice():
+		_open_assignment_choice(assign_workers_button)
+	else:
+		_open_worker_assignment()
+
+
+func _on_replacement_pressed() -> void:
+	if _should_open_assignment_choice():
+		_open_assignment_choice(replacement_button)
+	else:
+		_open_worker_assignment()
+
+
+func _should_open_assignment_choice() -> bool:
+	return (
+		_is_citizen_house()
+		or _player_assignment_available()
+		or _get_phase() in ["uncleared", "clearing"]
+	)
+
+
+func _open_assignment_choice(return_control: Button) -> void:
+	if _is_closing or _assignment_choice_open or is_instance_valid(_worker_assignment_menu):
+		return
+	var worker_available: bool = _worker_assignment_available()
+	var player_available: bool = _player_assignment_available()
+	if not worker_available and not player_available:
+		return
+	_assignment_choice_return_control = return_control
+	_assignment_choice_open = true
+	worker_choice_button.show()
+	worker_choice_button.disabled = not worker_available
+	player_choice_button.show()
+	player_choice_button.disabled = not player_available
+	player_choice_button.set_pressed_no_signal(_use_player)
+	assignment_choice_blocker.show()
+	assignment_choice_center.show()
+	_set_assignment_choice_focus_loop()
+	if _use_player and player_available:
+		player_choice_button.grab_focus()
+	elif worker_available:
+		worker_choice_button.grab_focus()
+	else:
+		player_choice_button.grab_focus()
+
+
+func _worker_assignment_available() -> bool:
+	var phase: String = _get_phase()
+	if requirements_page.visible:
+		return not (is_instance_valid(_construction) and _construction.is_selected_workshop())
+	if progress_page.visible and phase in ["building", "clearing"]:
+		return (
+			is_instance_valid(_construction)
+			and not _construction.is_selected_workshop()
+			and _construction.get_replacement_slots() > 0
+		)
+	return false
+
+
+func _player_assignment_available() -> bool:
+	if requirements_page.visible:
+		var phase: String = _get_phase()
+		return phase == "uncleared" or (_allows_player_construction() and phase == "empty")
+	if progress_page.visible:
+		return _can_resume_player()
+	return false
+
+
+func _set_assignment_choice_focus_loop() -> void:
+	var worker_available: bool = not worker_choice_button.disabled
+	var player_available: bool = not player_choice_button.disabled
+	var first_option: Control = worker_choice_button if worker_available else player_choice_button
+	var last_option: Control = player_choice_button if player_available else worker_choice_button
+	if worker_available and player_available:
+		worker_choice_button.focus_neighbor_left = worker_choice_button.get_path_to(player_choice_button)
+		worker_choice_button.focus_neighbor_right = worker_choice_button.get_path_to(player_choice_button)
+		worker_choice_button.focus_neighbor_top = worker_choice_button.get_path_to(assignment_choice_back_button)
+		worker_choice_button.focus_neighbor_bottom = worker_choice_button.get_path_to(assignment_choice_back_button)
+		worker_choice_button.focus_next = worker_choice_button.get_path_to(player_choice_button)
+		worker_choice_button.focus_previous = worker_choice_button.get_path_to(assignment_choice_back_button)
+		player_choice_button.focus_neighbor_left = player_choice_button.get_path_to(worker_choice_button)
+		player_choice_button.focus_neighbor_right = player_choice_button.get_path_to(worker_choice_button)
+		player_choice_button.focus_neighbor_top = player_choice_button.get_path_to(assignment_choice_back_button)
+		player_choice_button.focus_neighbor_bottom = player_choice_button.get_path_to(assignment_choice_back_button)
+		player_choice_button.focus_next = player_choice_button.get_path_to(assignment_choice_back_button)
+		player_choice_button.focus_previous = player_choice_button.get_path_to(worker_choice_button)
+	else:
+		_set_focus_neighbors(first_option, assignment_choice_back_button)
+	_set_focus_neighbors(assignment_choice_back_button, first_option)
+	if worker_available and player_available:
+		assignment_choice_back_button.focus_neighbor_top = assignment_choice_back_button.get_path_to(first_option)
+		assignment_choice_back_button.focus_neighbor_bottom = assignment_choice_back_button.get_path_to(last_option)
+		assignment_choice_back_button.focus_neighbor_left = assignment_choice_back_button.get_path_to(first_option)
+		assignment_choice_back_button.focus_neighbor_right = assignment_choice_back_button.get_path_to(last_option)
+	assignment_choice_back_button.focus_next = assignment_choice_back_button.get_path_to(first_option)
+	assignment_choice_back_button.focus_previous = assignment_choice_back_button.get_path_to(last_option)
+
+
+func _set_focus_neighbors(control: Control, neighbor: Control) -> void:
+	var neighbor_path: NodePath = control.get_path_to(neighbor)
+	control.focus_neighbor_top = neighbor_path
+	control.focus_neighbor_bottom = neighbor_path
+	control.focus_neighbor_left = neighbor_path
+	control.focus_neighbor_right = neighbor_path
+	control.focus_next = neighbor_path
+	control.focus_previous = neighbor_path
+
+
+func _close_assignment_choice(restore_focus: bool) -> void:
+	if not _assignment_choice_open:
+		return
+	_assignment_choice_open = false
+	assignment_choice_blocker.hide()
+	assignment_choice_center.hide()
+	_refresh_view()
+	if (
+		restore_focus
+		and is_instance_valid(_assignment_choice_return_control)
+		and _assignment_choice_return_control.is_visible_in_tree()
+	):
+		_assignment_choice_return_control.grab_focus()
+
+
+func _on_worker_choice_pressed() -> void:
+	if not _assignment_choice_open or worker_choice_button.disabled:
+		return
+	_close_assignment_choice(false)
+	_open_worker_assignment()
+
+
+func _on_player_choice_pressed() -> void:
+	if not _assignment_choice_open or player_choice_button.disabled:
+		return
+	_close_assignment_choice(false)
+	if requirements_page.visible:
+		_on_player_selected(not _use_player)
+	else:
+		_on_player_resume_pressed()
+	if is_instance_valid(_assignment_choice_return_control) and _assignment_choice_return_control.is_visible_in_tree():
+		_assignment_choice_return_control.grab_focus()
+
+
+func _on_assignment_choice_back_pressed() -> void:
+	_close_assignment_choice(true)
 
 
 func _style_worker_scrollbar() -> void:
@@ -228,8 +385,6 @@ func _on_inventory_items_changed() -> void:
 func _refresh_view() -> void:
 	if _is_closing or not visible:
 		return
-	# Keep the parent form alive, but don't stack its frame behind the selector.
-	$Root/Center.visible = not is_instance_valid(_worker_assignment_menu)
 
 	var was_showing_progress: bool = progress_page.visible
 	var phase: String = _get_phase()
@@ -238,12 +393,29 @@ func _refresh_view() -> void:
 		_use_player = false
 	var clearing: bool = phase in ["uncleared", "clearing"]
 	var show_requirements: bool = phase in ["empty", "uncleared"]
-	assign_workers_button.visible = not (is_instance_valid(_construction) and _construction.is_selected_workshop())
-	replacement_button.visible = phase in ["building", "clearing"] and is_instance_valid(_construction) and _construction.get_replacement_slots() > 0
-	player_resume_button.visible = _can_resume_player()
+	var selected_workshop: bool = is_instance_valid(_construction) and _construction.is_selected_workshop()
+	var requirements_worker_available: bool = not selected_workshop
+	var progress_worker_available: bool = (
+		phase in ["building", "clearing"]
+		and is_instance_valid(_construction)
+		and _construction.get_replacement_slots() > 0
+		and not selected_workshop
+	)
+	var requirements_player_available: bool = (
+		phase == "uncleared"
+		or (_allows_player_construction() and phase == "empty")
+	)
+	var progress_player_available: bool = _can_resume_player()
+	assign_workers_button.visible = requirements_worker_available or requirements_player_available
+	replacement_button.visible = (
+		progress_worker_available
+		or progress_player_available
+		or (not is_house and phase in ["building", "clearing"] and is_instance_valid(_construction) and _construction.get_replacement_slots() > 0)
+	)
+	player_resume_button.visible = false
 	materials_list.visible = not clearing
 	requirements_page.get_node("MaterialsTitle").visible = not clearing
-	player_button.visible = phase == "uncleared" or (_allows_player_construction() and phase == "empty")
+	player_button.visible = false
 	player_button.set_pressed_no_signal(_use_player)
 	build_button.text = "Start Cleaning" if clearing else ("Build House" if is_house else "Build")
 	if is_house:
@@ -254,6 +426,33 @@ func _refresh_view() -> void:
 	requirements_page.visible = show_requirements
 	progress_page.visible = not show_requirements
 	window.custom_minimum_size = Vector2(240, 160 if clearing else 208) if show_requirements else Vector2(240, 128)
+	var choice_closed_by_state_change: bool = false
+	if _assignment_choice_open:
+		_assignment_choice_return_control = assign_workers_button if show_requirements else replacement_button
+		worker_choice_button.disabled = not (
+			requirements_worker_available if show_requirements else progress_worker_available
+		)
+		player_choice_button.disabled = not (
+			requirements_player_available if show_requirements else progress_player_available
+		)
+		player_choice_button.set_pressed_no_signal(_use_player)
+		if worker_choice_button.disabled and player_choice_button.disabled:
+			_assignment_choice_open = false
+			assignment_choice_blocker.hide()
+			assignment_choice_center.hide()
+			choice_closed_by_state_change = true
+		else:
+			_set_assignment_choice_focus_loop()
+			var focus_owner: Control = get_viewport().gui_get_focus_owner() as Control
+			if (
+				focus_owner == worker_choice_button and worker_choice_button.disabled
+			) or (
+				focus_owner == player_choice_button and player_choice_button.disabled
+			):
+				assignment_choice_back_button.grab_focus()
+	$Root/Center.visible = not is_instance_valid(_worker_assignment_menu)
+	assignment_choice_blocker.visible = _assignment_choice_open
+	assignment_choice_center.visible = _assignment_choice_open
 
 	if show_requirements:
 		_populate_material_rows()
@@ -261,7 +460,15 @@ func _refresh_view() -> void:
 		_refresh_preview()
 	else:
 		_update_progress_page(phase, _get_preview())
-		if not was_showing_progress:
+		if not was_showing_progress and not _assignment_choice_open:
+			close_button.grab_focus()
+	if choice_closed_by_state_change:
+		if (
+			is_instance_valid(_assignment_choice_return_control)
+			and _assignment_choice_return_control.is_visible_in_tree()
+		):
+			_assignment_choice_return_control.grab_focus()
+		else:
 			close_button.grab_focus()
 
 
@@ -489,6 +696,10 @@ func _open_worker_assignment() -> void:
 		WorkerData.Profession.NONE,
 		worker_options
 	)
+	var assignment_back_button: Button = _worker_assignment_menu.get_node(
+		"Root/Center/TextureWindow/Margin/MainVBox/OverviewPage/Footer/BackButton"
+	)
+	assignment_back_button.grab_focus()
 	$Root/Center.hide()
 
 
@@ -515,6 +726,7 @@ func _on_worker_assignment_next_requested(worker_ids: Array[String]) -> void:
 		replacement_requested.emit(_selected_worker_ids.duplicate())
 		_selected_worker_ids.clear()
 	_refresh_view()
+	_focus_assignment_return_control()
 
 
 func _on_worker_assignment_returned() -> void:
@@ -524,6 +736,21 @@ func _on_worker_assignment_returned() -> void:
 	get_tree().paused = true
 	_status_override = ""
 	_refresh_view()
+	_focus_assignment_return_control()
+
+
+func _focus_assignment_return_control() -> void:
+	if (
+		is_instance_valid(_assignment_choice_return_control)
+		and _assignment_choice_return_control.is_visible_in_tree()
+	):
+		_assignment_choice_return_control.grab_focus()
+	elif requirements_page.visible and assign_workers_button.is_visible_in_tree():
+		assign_workers_button.grab_focus()
+	elif replacement_button.is_visible_in_tree():
+		replacement_button.grab_focus()
+	else:
+		close_button.grab_focus()
 
 
 func _refresh_preview() -> void:

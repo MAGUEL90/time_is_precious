@@ -107,7 +107,14 @@ func _run() -> void:
 	await _capture("cleaning")
 	plot.menu.assign_workers_button.pressed.emit()
 	await get_tree().process_frame
+	_expect(plot.menu.assignment_choice_center.visible and not plot.menu.worker_choice_button.disabled, "Cleaning Assign offers the existing worker selection flow.")
+	plot.menu.worker_choice_button.pressed.emit()
+	await get_tree().process_frame
 	var clearing_assignment = plot.menu._worker_assignment_menu
+	if not is_instance_valid(clearing_assignment):
+		_expect(false, "The worker selector opens from the cleaning choice.")
+		_finish(content, state, ids)
+		return
 	_expect(clearing_assignment.max_worker_slots == 1, "Clearing allows exactly one worker slot.")
 	await _assign_worker_from_slot(clearing_assignment, ids[0], 0)
 	clearing_assignment.get_node("Root/Center/TextureWindow/Margin/MainVBox/OverviewPage/Footer/BackButton").pressed.emit()

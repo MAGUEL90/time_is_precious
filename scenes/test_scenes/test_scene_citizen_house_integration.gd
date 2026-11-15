@@ -106,13 +106,25 @@ func _exercise_house() -> void:
 		return
 	var menu: WorkshopPlotUI = house.get("menu") as WorkshopPlotUI
 	var title: Label = menu.get_node("Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel") as Label
-	_expect(title.text == "CLEAR HOUSE SITE" and menu.player_button.visible
+	_expect(title.text == "CLEAR HOUSE SITE" and menu.assign_workers_button.visible
+		and not menu.player_button.visible
 		and menu.build_button.text == "Start Cleaning" and not player.can_move and get_tree().paused,
-		"Physical E opens the house-cleaning menu with Assign Player available.")
-	menu._on_player_selected(true)
-	_expect(menu._use_player and menu.player_button.button_pressed,
+		"Physical E opens the house-cleaning menu with one Assign action.")
+	menu.assign_workers_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._assignment_choice_open and not menu.worker_choice_button.disabled
+		and not menu.player_choice_button.disabled,
+		"The real cleaning state offers both legal assignment modes.")
+	menu.player_choice_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(menu._use_player and menu._selected_worker_ids.is_empty(),
 		"Player selection is retained in the house cleaning menu.")
-	menu._on_player_selected(false)
+	menu.assign_workers_button.pressed.emit()
+	await get_tree().process_frame
+	menu.player_choice_button.pressed.emit()
+	await get_tree().process_frame
+	_expect(not menu._use_player and menu._selected_worker_ids.is_empty(),
+		"Choosing Player again cancels the manual assignment without changing worker selection.")
 	await _capture("house-cleaning-menu")
 	_prepare_departure_actor(FIRST_ID)
 	menu._on_worker_assignment_next_requested([FIRST_ID] as Array[String])

@@ -144,30 +144,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="DurationRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="ClockIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
-custom_minimum_size = Vector2(16, 16)
-layout_mode = 2
-size_flags_vertical = 4
-texture_filter = 1
-texture = ExtResource("5_clock")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="DurationLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudLabelShortcut"
-theme_override_font_sizes/font_size = 6
-text = "—"
-vertical_alignment = 1
-
 [node name="StatusLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
 custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
@@ -185,9 +161,30 @@ custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Control" type="Control" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+[node name="DurationRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ClockIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/DurationRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+texture_filter = 1
+texture = ExtResource("5_clock")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DurationLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/DurationRow"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "—"
+vertical_alignment = 1
+clip_text = true
 
 [node name="BuildButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
 custom_minimum_size = Vector2(64, 18)
@@ -196,6 +193,94 @@ theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 disabled = true
 text = "Build"
+
+[node name="AssignmentChoiceBlocker" type="ColorRect" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.22)
+
+[node name="AssignmentChoiceCenter" type="CenterContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ChoiceWindow" type="NinePatchRect" parent="Root/AssignmentChoiceCenter"]
+custom_minimum_size = Vector2(176, 104)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="ChoiceMargin" type="MarginContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="ChoiceVBox" type="VBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ChoiceTitle" type="Label" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "ASSIGN"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ChoiceOptions" type="HBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="WorkerChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Worker"
+
+[node name="PlayerChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "Player"
+
+[node name="ChoiceFooter" type="HBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CancelChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceFooter"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
 
 [node name="ProgressPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 visible = false

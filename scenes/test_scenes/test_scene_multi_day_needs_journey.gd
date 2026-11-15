@@ -382,6 +382,12 @@ func _replace_from_plot(id: String) -> bool:
 	return chosen and construction.worker_ids.has(id)
 
 func _choose_plot_worker(id: String) -> bool:
+	if plot.menu.assignment_choice_center.visible:
+		_check(not plot.menu.worker_choice_button.disabled, "The assignment choice offers the worker route.")
+		if plot.menu.worker_choice_button.disabled:
+			return false
+		plot.menu.worker_choice_button.pressed.emit()
+		await get_tree().process_frame
 	var assignment: WorkshopWorkerAssignmentUI = plot.menu._worker_assignment_menu
 	_check(is_instance_valid(assignment), "The actual plot worker selector opens.")
 	if not is_instance_valid(assignment):
