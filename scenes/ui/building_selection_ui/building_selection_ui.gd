@@ -16,8 +16,7 @@ const CATEGORIES: Dictionary = {
 @onready var subtitle: Label = $Root/Center/Window/Margin/Content/Subtitle
 @onready var choices: VBoxContainer = $Root/Center/Window/Margin/Content/Choices
 @onready var back_button: Button = $Root/Center/Window/Margin/Content/Footer/Back
-@onready var close_button: BaseButton = $Root/Center/Window/Margin/Content/Header/CloseButton
-@onready var done_button: Button = $Root/Center/Window/Margin/Content/Footer/Close
+@onready var close_button: TextureButton = $Root/Center/Window/Margin/Content/Header/CloseButton
 
 var current_category: String = ""
 var selected_building: String = ""
@@ -30,7 +29,7 @@ var workshop_enabled: bool = true
 func _ready() -> void:
 	back_button.pressed.connect(go_back)
 	close_button.pressed.connect(close_menu)
-	done_button.pressed.connect(close_menu)
+	close_button.texture_focused = close_button.texture_hover
 
 func open_menu(plot_label: String) -> void:
 	_plot_label = plot_label

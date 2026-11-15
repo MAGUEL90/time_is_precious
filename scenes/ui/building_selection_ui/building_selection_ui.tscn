@@ -87,6 +87,7 @@ vertical_alignment = 1
 [node name="CloseButton" parent="Root/Center/Window/Margin/Content/Header" instance=ExtResource("4_close")]
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 2
 
 [node name="Subtitle" type="Label" parent="Root/Center/Window/Margin/Content"]
 layout_mode = 2
@@ -116,10 +117,3 @@ script = ExtResource("tip_back_style")
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-
-[node name="Close" type="Button" parent="Root/Center/Window/Margin/Content/Footer"]
-custom_minimum_size = Vector2(64, 18)
-layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "Close"
