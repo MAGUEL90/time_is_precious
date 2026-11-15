@@ -31,6 +31,7 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
 @onready var shekel_amount: Label = $Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow/ShekelAmount
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
+@onready var item_info_panel: ItemInfoPanel = $Root/ItemInfoPanelRoot
 
 var player_ref: Player
 var current_category: int = CATEGORY_ALL
@@ -198,6 +199,12 @@ func _refresh_inventory_grid() -> void:
 		if slot.has_signal("slot_clicked"):
 			slot.slot_clicked.connect(_on_item_slot_clicked)
 
+		if slot.has_signal("slot_hovered"):
+			slot.slot_hovered.connect(_on_item_slot_hovered)
+
+		if slot.has_signal("slot_unhovered"):
+			slot.slot_unhovered.connect(_on_item_slot_unhovered)
+
 		if slot.has_signal("slot_drag_started"):
 			slot.slot_drag_started.connect(_on_slot_drag_started)
 
@@ -267,9 +274,23 @@ func _on_option_use_requested() -> void:
 func _on_option_drop_requested() -> void:
 	_open_item_action_confirm_panel("drop")
 
+# Slot hover
+
+func _on_item_slot_hovered(item_id: String, _quantity: int, _slot_ref: ItemSlot) -> void:
+	if is_inventory_action_busy or not active_drag_data.is_empty():
+		return
+	if is_instance_valid(active_action_confirm_panel) or is_instance_valid(active_option_panel):
+		return
+	if item_info_panel.display_item(item_id):
+		item_info_panel.position_lower_center(page_selector.global_position.y)
+
+func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
+	item_info_panel.clear_item()
+
 # Drag and drop
 
 func _on_slot_drag_started(data: Dictionary) -> void:
+	item_info_panel.clear_item()
 	active_drag_data = data
 
 func _notification(what: int) -> void:
@@ -383,6 +404,7 @@ func _on_page_changed(page: int) -> void:
 # Option panel
 
 func _close_option_panel() -> void:
+	item_info_panel.clear_item()
 	if active_option_panel != null and is_instance_valid(active_option_panel):
 		active_option_panel.queue_free()
 	active_option_panel = null
@@ -533,6 +555,7 @@ func _on_item_action_confirmed(action: String, item_id: String, quantity: int) -
 # Floating panel cleanup
 
 func _close_inventory_floating_panels() -> void:
+	item_info_panel.clear_item()
 	_close_item_action_confirm_panel()
 	_close_option_panel()
 	_set_slots_interaction_locked(false)

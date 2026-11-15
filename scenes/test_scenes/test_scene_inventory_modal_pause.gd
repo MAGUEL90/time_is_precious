@@ -53,6 +53,95 @@ func _expect_action_popup_inside_viewport(entry_path: String) -> void:
 		and popup_rect.end.y <= bounds.end.y - margin,
 		entry_path + " keeps the complete confirmation panel inside the viewport margin.")
 
+func _move_mouse(position: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = position
+	motion.global_position = position
+	get_viewport().push_input(motion, true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+func _click_mouse(position: Vector2) -> void:
+	var button := InputEventMouseButton.new()
+	button.position = position
+	button.global_position = position
+	button.button_index = MOUSE_BUTTON_LEFT
+	button.button_mask = MOUSE_BUTTON_MASK_LEFT
+	button.pressed = true
+	get_viewport().push_input(button, true)
+	await get_tree().process_frame
+	button = InputEventMouseButton.new()
+	button.position = position
+	button.global_position = position
+	button.button_index = MOUSE_BUTTON_LEFT
+	get_viewport().push_input(button, true)
+	await get_tree().process_frame
+
+func _find_item_slot(item_id: String) -> ItemSlot:
+	for child: Node in inventory.grid.get_children():
+		var slot: ItemSlot = child as ItemSlot
+		if slot != null and not slot.is_queued_for_deletion() and slot._item_id == item_id:
+			return slot
+	return null
+
+func _test_item_info_hover() -> void:
+	var original_items: Dictionary = Inventory.items.duplicate(true)
+	Inventory.items = {"barley_bread": 3, "wood_log": 2}
+	Inventory.items_changed.emit()
+	inventory.open_inventory()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var bread: ItemSlot = _find_item_slot("barley_bread")
+	var wood: ItemSlot = _find_item_slot("wood_log")
+	_expect(is_instance_valid(bread) and is_instance_valid(wood), "Hover fixture contains two item slots.")
+	if is_instance_valid(bread) and is_instance_valid(wood):
+		await _move_mouse(Vector2(399, 1))
+		_expect(not inventory.item_info_panel.visible, "Item information starts hidden.")
+		await _move_mouse(bread.get_global_rect().get_center())
+		var info: ItemInfoPanel = inventory.item_info_panel
+		_expect(info.visible and info.name_label.text.contains(ItemDatabase.get_item_data("barley_bread").display_name),
+			"Hovering a populated slot shows its existing item information.")
+		_expect(get_viewport().get_visible_rect().encloses(info.get_global_rect())
+			and is_equal_approx(info.get_global_rect().get_center().x, get_viewport().get_visible_rect().get_center().x)
+			and info.get_global_rect().end.y <= inventory.page_selector.global_position.y,
+			"The item information stays centered and above the Inventory footer.")
+		await _capture("inventory-item-info")
+		await _move_mouse(wood.get_global_rect().get_center())
+		_expect(info.visible and info.name_label.text.contains(ItemDatabase.get_item_data("wood_log").display_name),
+			"Moving to another item updates the information.")
+		await _move_mouse(Vector2(399, 1))
+		_expect(not info.visible, "Moving away hides the information.")
+		await _move_mouse(bread.get_global_rect().get_center())
+		await _click_mouse(bread.get_global_rect().get_center())
+		_expect(is_instance_valid(inventory.active_option_panel) and not info.visible,
+			"An item can be clicked through the information panel and the action menu hides it.")
+		await _move_mouse(wood.get_global_rect().get_center())
+		_expect(not info.visible, "Item information stays hidden while the action menu is open.")
+		inventory._close_option_panel()
+		await _move_mouse(Vector2(399, 1))
+		await _move_mouse(bread.get_global_rect().get_center())
+		_expect(info.visible, "Hover information works again after closing the action menu.")
+		bread.slot_drag_started.emit({"item_id": "barley_bread", "quantity": 3, "slot_ref": bread})
+		_expect(not info.visible, "Starting a drag hides the item information.")
+		bread.slot_hovered.emit("barley_bread", 3, bread)
+		_expect(not info.visible, "Item information stays hidden during a drag.")
+		inventory.active_drag_data.clear()
+		await _move_mouse(Vector2(399, 1))
+		await _move_mouse(bread.get_global_rect().get_center())
+		Inventory.items_changed.emit()
+		await get_tree().process_frame
+		_expect(not info.visible, "Refreshing Inventory clears stale information.")
+		_expect(Inventory.items == {"barley_bread": 3, "wood_log": 2},
+			"Hovering and opening the action menu do not change inventory.")
+	inventory.close_inventory()
+	inventory.open_inventory()
+	await get_tree().process_frame
+	_expect(not inventory.item_info_panel.visible, "Reopening Inventory does not restore stale item information.")
+	inventory.close_inventory()
+	Inventory.items = original_items
+	Inventory.items_changed.emit()
+	await get_tree().process_frame
+
 func _test_action_popup_edge_layout() -> void:
 	var original_items: Dictionary = Inventory.items.duplicate(true)
 	Inventory.items = {"wood_log": 1}
@@ -144,6 +233,7 @@ func _run() -> void:
 		await _press(&"ui_cancel")
 		_expect(not inventory.visible and city_ui.details_panel.visible, "Escape closes only the foreground Inventory and preserves City Hub below it.")
 		city_ui.close_details()
+	await _test_item_info_hover()
 	await _test_action_popup_edge_layout()
 
 	for cycle: int in range(2):

@@ -2,7 +2,7 @@ extends CanvasLayer
 
 signal closed
 
-const PANEL_SIZE := Vector2(230, 208)
+const PANEL_SIZE := Vector2(234, 208)
 const CURRENCY_ICONS: Array[Texture2D] = [
 	preload("res://resources/ui_icons/small_copper.tres"),
 	preload("res://resources/ui_icons/small_shekel.tres"),
@@ -65,9 +65,8 @@ func _ready() -> void:
 	_set_action_icon(deposit_button, DEPOSIT_ICON)
 	deposit_button.pressed.connect(_open_transfer.bind("deposit"))
 	categories.category_changed.connect(func(_category): _refresh_view())
-	# Four native-size cards fit beside the scrollbar without shrinking artwork.
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 2)
+	# The shared ItemGrid supplies Inventory's slot spacing.
+	grid.columns = 7
 	grid.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_connect_refresh_signals()
 	_add_supply_icon(food_summary, preload("res://assets/items/butcher’s_cut.png"))

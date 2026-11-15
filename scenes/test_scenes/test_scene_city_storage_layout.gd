@@ -75,8 +75,11 @@ func _run() -> void:
 	var back_button: Button = footer.get_node("Back") as Button
 	var content: Control = panel.view.get_node("Margin/Content")
 	var bag: Control = panel.view.get_node("Margin/Content/BagGrid")
-	_expect(panel.view.size == Vector2(230, 208) and panel.grid.columns == 4,
-		"Storage keeps a fixed frame wide enough for native action icons and four native-size columns.")
+	_expect(panel.view.size == Vector2(234, 208) and panel.grid.columns == 7,
+		"Storage keeps a fixed frame wide enough for seven native-size columns and the scrollbar.")
+	_expect(panel.grid.get_theme_constant("h_separation") == 4
+		and panel.grid.get_theme_constant("v_separation") == 2,
+		"Storage uses the same horizontal and vertical slot spacing as Inventory.")
 	var fixed_panel_rect: Rect2 = panel.view.get_global_rect()
 	_expect(panel.stock_summary.get_child_count() == 3, "All three currency entries use icons.")
 	_expect(back_button.text == "Back" and back_button.icon == BACK_ICON
@@ -126,7 +129,19 @@ func _run() -> void:
 			and slot.get_global_rect().end.x <= scroll.get_global_rect().end.x,
 			"The 6-pixel quantity and card stay within the grid horizontally: " + slot._item_id)
 	_expect(shown == expected, "All available registered items appear exactly once with their actual quantities.")
-	_expect(scroll.get_v_scroll_bar().max_value > scroll.get_v_scroll_bar().page, "Many items produce a real vertical scroll range.")
+	var scrollbar: VScrollBar = scroll.get_v_scroll_bar()
+	_expect(scrollbar.visible and scrollbar.max_value > scrollbar.page, "Many items produce a real vertical scroll range.")
+	if panel.grid.get_child_count() >= 8:
+		var first: ItemSlot = panel.grid.get_child(0) as ItemSlot
+		var second: ItemSlot = panel.grid.get_child(1) as ItemSlot
+		var seventh: ItemSlot = panel.grid.get_child(6) as ItemSlot
+		var eighth: ItemSlot = panel.grid.get_child(7) as ItemSlot
+		_expect(is_equal_approx(second.global_position.x - first.get_global_rect().end.x, 4.0)
+			and is_equal_approx(seventh.global_position.y, first.global_position.y)
+			and is_equal_approx(eighth.global_position.y - first.get_global_rect().end.y, 2.0),
+			"Seven slots fit across with the Inventory spacing before the next row.")
+		_expect(seventh.get_global_rect().end.x <= scrollbar.get_global_rect().position.x,
+			"The seventh slot stays clear of the visible scrollbar.")
 	var wheel := InputEventMouseButton.new()
 	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 	wheel.pressed = true
