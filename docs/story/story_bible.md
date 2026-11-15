@@ -121,3 +121,20 @@ Pilihan pemain dalam mengelola kekayaan, waktu, tenaga kerja, dan kesejahteraan 
 Dokumen ini menjadi ringkasan diskusi, bukan pengganti otomatis untuk dokumen `docs/game-concept.md` yang sudah ada di repository. Rincian karakter Gabbi merujuk pada `docs/characters/gabbi.md`.
 
 Keputusan cerita lanjutan dan penyelesaian butir TBD tetap berada pada Game Director.
+
+### 10. Catatan Inspirasi — Empat Milestone Besar Babylon
+
+**Status: ide yang dititipkan oleh Game Director (15 November 2026), bukan keputusan desain final.** Belum ada persetujuan untuk menambahkan bangunan, mekanik, target level, hadiah, atau scene baru.
+
+Game Director membayangkan **empat milestone pembangunan/pencapaian terbesar** untuk pemulihan Babylon:
+
+1. **Great Walls — level maksimum.** Gagasan milestone pertahanan kota dari Game Director.
+2. **Great Canal.** Gagasan milestone kanal besar dari Game Director.
+3. **TBD — milestone ketiga.**
+4. **TBD — milestone keempat.**
+
+**Opsi brainstorming asisten, belum disetujui sebagai milestone final:**
+- *Great Ziggurat / Etemenanki* (monumen dan legacy).
+- *Grand Trading District* (pusat perdagangan; nama rancangan game, bukan monumen sejarah resmi).
+
+Keduanya hanya kandidat untuk slot ketiga dan keempat, bukan keputusan canon. Pembahasan **ditunda atas permintaan Game Director** agar fokus tetap pada storyline. Simpan catatan ini untuk dipertimbangkan kembali saat desain milestone/progression dibahas.
