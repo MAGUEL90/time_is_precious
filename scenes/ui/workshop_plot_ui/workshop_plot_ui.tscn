@@ -220,7 +220,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="ChoiceWindow" type="NinePatchRect" parent="Root/AssignmentChoiceCenter"]
-custom_minimum_size = Vector2(176, 104)
+custom_minimum_size = Vector2(164, 104)
 layout_mode = 2
 texture = SubResource("AtlasTexture_window")
 patch_margin_left = 16

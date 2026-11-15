@@ -9,6 +9,7 @@ const SCROLL_GRABBER_TEXTURE: Texture2D = preload(
 const WORKER_PORTRAIT_ICON: Texture2D = preload(
 	"res://assets/ui/ui_icon/worker_portrait_icon.png"
 )
+const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
 const WORKER_CARD_SIZE: Vector2 = Vector2(24, 24)
 const WORKER_PORTRAIT_SIZE: Vector2 = Vector2(11, 15)
 const ACTION_BUTTON_SIZE: Vector2 = Vector2(64, 18)
@@ -71,6 +72,14 @@ func _ready() -> void:
 	assign_workers_button.pressed.connect(_on_assign_pressed)
 	worker_choice_button.pressed.connect(_on_worker_choice_pressed)
 	player_choice_button.pressed.connect(_on_player_choice_pressed)
+	assignment_choice_back_button.icon = BACK_ICON
+	assignment_choice_back_button.expand_icon = false
+	assignment_choice_back_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = assignment_choice_back_button.get_theme_stylebox(style_name).duplicate() as StyleBox
+		style.content_margin_top = 1.0
+		style.content_margin_bottom = 1.0
+		assignment_choice_back_button.add_theme_stylebox_override(style_name, style)
 	assignment_choice_back_button.pressed.connect(_on_assignment_choice_back_pressed)
 	_style_worker_scrollbar()
 	player_button = Button.new()
