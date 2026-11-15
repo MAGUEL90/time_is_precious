@@ -56,12 +56,13 @@ func _ready() -> void:
 	$Root/CitySupplyPanel.hide()
 	_build_currency_summary()
 	var back_button: Button = view.get_node("Margin/Content/Footer/Back") as Button
-	_set_action_icon(back_button, BACK_ICON, "Back")
+	back_button.custom_minimum_size = Vector2(64, 18)
+	_set_action_icon(back_button, BACK_ICON)
 	back_button.pressed.connect(close)
 	view.get_node("Close").pressed.connect(close)
 	var footer: Node = view.get_node("Margin/Content/Footer")
 	deposit_button = _make_button("Deposit", footer, 64.0)
-	_set_action_icon(deposit_button, DEPOSIT_ICON, "Deposit")
+	_set_action_icon(deposit_button, DEPOSIT_ICON)
 	deposit_button.pressed.connect(_open_transfer.bind("deposit"))
 	categories.category_changed.connect(func(_category): _refresh_view())
 	# Four native-size cards fit beside the scrollbar without shrinking artwork.
@@ -165,7 +166,7 @@ func _ensure_haul_button() -> void:
 	if is_instance_valid(haul_button):
 		return
 	haul_button = _make_button("Send", deposit_button.get_parent(), 64.0)
-	_set_action_icon(haul_button, SEND_ICON, "Send")
+	_set_action_icon(haul_button, SEND_ICON)
 	haul_button.pressed.connect(_open_haul)
 
 func _open_haul() -> void:
@@ -441,8 +442,10 @@ func _open_transfer(mode: String) -> void:
 	transfer_ui.allowed_category = InventoryCategorySelector.CATEGORY_ALL
 	var transfer_window: Control = transfer_ui.get_node("Root/Center/Window") as Control
 	transfer_window.custom_minimum_size = Vector2(300, transfer_window.custom_minimum_size.y)
-	_set_action_icon(transfer_ui.back_button, BACK_ICON, "Back")
-	_set_action_icon(transfer_ui.confirm_button, DEPOSIT_ICON, "Deposit")
+	_set_action_icon(transfer_ui.back_button, BACK_ICON)
+	_set_action_icon(transfer_ui.confirm_button, DEPOSIT_ICON)
+	transfer_ui.back_button.custom_minimum_size = Vector2(64, 18)
+	transfer_ui.confirm_button.custom_minimum_size = Vector2(64, 18)
 	transfer_ui.transfer_confirmed.connect(_confirm_transfer.bind(transfer_ui))
 	transfer_ui.transfer_back_requested.connect(_return_from_transfer.bind(transfer_ui))
 	transfer_ui.transfer_cancelled.connect(_return_from_transfer.bind(transfer_ui))
@@ -455,7 +458,7 @@ func _refresh_transfer(message: String = "") -> void:
 	var items: Dictionary = {}
 	for row: Dictionary in storage.get_depositable_items():
 		items[str(row.item_id)] = int(row.quantity)
-	transfer_ui.open_transfer("Deposit to City (no return)", items, "")
+	transfer_ui.open_transfer("Deposit to City (no return)", items, "Deposit")
 	if not message.is_empty():
 		transfer_ui.refresh_items(items, message)
 
@@ -505,23 +508,14 @@ func _make_button(text: String, parent: Node, min_width: float = 36.0) -> Button
 	parent.add_child(button)
 	return button
 
-func _set_action_icon(button: Button, texture: Texture2D, action_name: String) -> void:
-	button.text = ""
-	button.accessibility_name = action_name
-	button.tooltip_text = action_name
-	button.theme_type_variation = &"WorkshopSquareButton16"
-	button.custom_minimum_size = Vector2(16, 16)
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+func _set_action_icon(button: Button, texture: Texture2D) -> void:
 	button.icon = texture
-	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.expand_icon = false
 	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# Keep the 16px hit area while displaying only the original artwork.
-	var empty_style := StyleBoxEmpty.new()
-	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
-		button.add_theme_stylebox_override(style_name, empty_style)
-	button.add_theme_color_override("icon_hover_color", Color(1.4, 1.4, 1.2))
-	button.add_theme_color_override("icon_focus_color", Color(1.4, 1.4, 1.2))
-	button.add_theme_color_override("icon_pressed_color", Color(0.65, 0.65, 0.65))
-	button.add_theme_color_override("icon_hover_pressed_color", Color(0.65, 0.65, 0.65))
-	button.add_theme_color_override("icon_disabled_color", Color(1.0, 1.0, 1.0, 0.4))
+	# Keep the 16px artwork at native size inside the shared 18px action height.
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = button.get_theme_stylebox(style_name).duplicate() as StyleBox
+		style.content_margin_top = 1.0
+		style.content_margin_bottom = 1.0
+		button.add_theme_stylebox_override(style_name, style)
+	button.custom_minimum_size = Vector2(button.custom_minimum_size.x, maxf(button.custom_minimum_size.y, 18.0))

@@ -123,7 +123,7 @@ func _write_flow() -> void:
 	if stopped:
 		return
 	var access: Node = area.menu
-	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button) and access.haul_button.accessibility_name == "Send", "The real city storage board offers Send.")
+	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button) and access.haul_button.text == "Send", "The real city storage board offers Send.")
 	if stopped:
 		return
 	await press(access.haul_button)

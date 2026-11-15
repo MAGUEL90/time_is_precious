@@ -79,13 +79,13 @@ func _run() -> void:
 		"Storage keeps a fixed frame wide enough for native action icons and four native-size columns.")
 	var fixed_panel_rect: Rect2 = panel.view.get_global_rect()
 	_expect(panel.stock_summary.get_child_count() == 3, "All three currency entries use icons.")
-	_expect(back_button.text.is_empty() and back_button.accessibility_name == "Back" and back_button.icon == BACK_ICON
+	_expect(back_button.text == "Back" and back_button.icon == BACK_ICON
 		and back_button.icon.get_size() == Vector2(16, 16),
-		"Back uses the native icon with an accessible name and no visible text.")
-	_expect(back_button.custom_minimum_size == Vector2(16, 16)
-		and panel.deposit_button.custom_minimum_size == Vector2(16, 16)
-		and panel.deposit_button.text.is_empty() and panel.deposit_button.icon == DEPOSIT_ICON,
-		"Back and Deposit use matching 16x16 icon-only controls.")
+		"Back keeps its label and displays the native 16x16 icon.")
+	_expect(back_button.custom_minimum_size == Vector2(64, 18)
+		and panel.deposit_button.custom_minimum_size == Vector2(64, 18)
+		and panel.deposit_button.text == "Deposit" and panel.deposit_button.icon == DEPOSIT_ICON,
+		"Back and Deposit keep matching action widths, labels and native icon assets.")
 	var content_rect: Rect2 = content.get_global_rect()
 	_expect(is_equal_approx(content_rect.position.x - fixed_panel_rect.position.x, 16.0)
 		and is_equal_approx(fixed_panel_rect.end.x - content_rect.end.x, 16.0)

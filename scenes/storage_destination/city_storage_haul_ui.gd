@@ -35,24 +35,14 @@ func _ready() -> void:
 	start_button.pressed.connect(_start_route)
 	cancel_button.pressed.connect(_cancel_route)
 	var back_button: Button = $Center/Panel/Margin/Content/Footer/Back as Button
-	back_button.text = ""
-	back_button.accessibility_name = "Back"
-	back_button.tooltip_text = "Back"
-	back_button.theme_type_variation = &"WorkshopSquareButton16"
-	back_button.custom_minimum_size = Vector2(16, 16)
-	back_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	back_button.icon = BACK_ICON
-	back_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	back_button.expand_icon = false
 	back_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var empty_style := StyleBoxEmpty.new()
-	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
-		back_button.add_theme_stylebox_override(style_name, empty_style)
-	back_button.add_theme_color_override("icon_hover_color", Color(1.4, 1.4, 1.2))
-	back_button.add_theme_color_override("icon_focus_color", Color(1.4, 1.4, 1.2))
-	back_button.add_theme_color_override("icon_pressed_color", Color(0.65, 0.65, 0.65))
-	back_button.add_theme_color_override("icon_hover_pressed_color", Color(0.65, 0.65, 0.65))
-	back_button.add_theme_color_override("icon_disabled_color", Color(1.0, 1.0, 1.0, 0.4))
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = back_button.get_theme_stylebox(style_name).duplicate() as StyleBox
+		style.content_margin_top = 1.0
+		style.content_margin_bottom = 1.0
+		back_button.add_theme_stylebox_override(style_name, style)
 	back_button.pressed.connect(close)
 	source_option.select(0)
 	quantity_spin.min_value = 1
