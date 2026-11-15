@@ -99,11 +99,12 @@ alignment = 1
 [node name="FooterRow" type="HBoxContainer" parent="Center/Frame/Margin/Contents"]
 custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
-alignment = 2
+size_flags_vertical = 3
 
 [node name="BackButton" type="Button" parent="Center/Frame/Margin/Contents/FooterRow"]
 custom_minimum_size = Vector2(42, 14)
 layout_mode = 2
+size_flags_vertical = 8
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"

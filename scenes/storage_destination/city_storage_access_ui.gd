@@ -450,7 +450,7 @@ func _open_transfer(mode: String) -> void:
 	transfer_ui.transfer_back_requested.connect(_return_from_transfer.bind(transfer_ui))
 	transfer_ui.transfer_cancelled.connect(_return_from_transfer.bind(transfer_ui))
 	clear_button = _make_button("Clear", transfer_ui.back_button.get_parent(), 64.0)
-	clear_button.get_parent().move_child(clear_button, transfer_ui.back_button.get_index())
+	clear_button.get_parent().move_child(clear_button, transfer_ui.confirm_button.get_index())
 	clear_button.pressed.connect(_clear_transfer.bind(transfer_ui))
 	_refresh_transfer()
 

@@ -6,7 +6,7 @@ signal transfer_cancelled()
 
 @onready var title_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Header/TitleLabel
 @onready var grid_container: GridContainer = $Root/Center/Window/MarginContainer/MainVBox/ScrollContainer/GridContainer
-@onready var selected_summary_label: Label = $Root/Center/Window/MarginContainer/MainVBox/Footer/SelectedSummaryLabel
+@onready var selected_summary_label: Label = $Root/Center/Window/MarginContainer/MainVBox/SelectedSummaryLabel
 @onready var back_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/BackButton
 @onready var confirm_button: Button = $Root/Center/Window/MarginContainer/MainVBox/Footer/ConfirmButton
 @onready var close_button: TextureButton = $Root/Center/Window/CloseButton

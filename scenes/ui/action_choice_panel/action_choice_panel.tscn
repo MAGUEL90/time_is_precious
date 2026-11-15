@@ -67,6 +67,12 @@ theme = ExtResource("3_vsm6h")
 theme_type_variation = &"HudShortcutButton"
 text = "Confirm"
 
+[node name="BackSpacer" type="Control" parent="ContentMargin/ContentVBox/ActionButtons"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
 [node name="SecondaryButton" type="Button" parent="ContentMargin/ContentVBox/ActionButtons"]
 custom_minimum_size = Vector2(44, 16)
 layout_mode = 2

@@ -67,6 +67,16 @@ func _run() -> void:
 		and transfer.confirm_button.custom_minimum_size == Vector2(64, 18)
 		and transfer_window.custom_minimum_size.x == 300.0,
 		"City Storage deposit actions share the same size in a locally widened transfer dialog.")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var transfer_rect: Rect2 = transfer_window.get_global_rect()
+	var transfer_back_rect: Rect2 = transfer.back_button.get_global_rect()
+	_expect(is_equal_approx(transfer_back_rect.position.x - transfer_rect.position.x, 16.0)
+		and is_equal_approx(transfer_rect.end.y - transfer_back_rect.end.y, 16.0)
+		and transfer.selected_summary_label.get_global_rect().end.y <= transfer_back_rect.position.y
+		and not transfer_back_rect.intersects(panel.clear_button.get_global_rect())
+		and not panel.clear_button.get_global_rect().intersects(transfer.confirm_button.get_global_rect()),
+		"Deposit places Back in the lower-left inset with the summary and other actions clear of it.")
 	_expect(transfer.transfer_confirmed.get_connections().size() == 1, "Deposit has one commit callback.")
 	_select(transfer, "shekel", 1)
 	_select(transfer, "stone", 1)
@@ -94,6 +104,11 @@ func _run() -> void:
 	_expect(Inventory.items.is_empty() and CityStockManager.treasury_shekel == 103 and storage.items.get("stone", 0) == 2, "Repeated deposit transfers exactly the remaining selection.")
 	_expect(deposit_notifications == 2 and transfer.transfer_confirmed.get_connections().size() == 1, "Repeated refresh does not duplicate callbacks or commits.")
 	_expect(transfer.selected_summary_label.text == "No items to deposit." and transfer.confirm_button.disabled and transfer.grid_container.get_child_count() == 0, "Empty source shows its empty state and disables Deposit.")
+	var summary_text_width: float = transfer.selected_summary_label.get_theme_font("font").get_string_size(
+		transfer.selected_summary_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		transfer.selected_summary_label.get_theme_font_size("font_size")).x
+	_expect(summary_text_width <= transfer.selected_summary_label.size.x,
+		"The empty-state summary remains readable after moving Back.")
 	transfer.back_button.pressed.emit()
 	await get_tree().process_frame
 	_expect(panel.transfer_ui == null and panel.get_node("Root").visible and get_tree().paused, "Back returns to City Storage and keeps the owner pause.")
@@ -159,6 +174,12 @@ func _run() -> void:
 		"Hauling actions share 64x18 controls while preserving the Cancel Route label and Back icon.")
 	var haul_panel_rect: Rect2 = haul_panel.get_global_rect()
 	var haul_content_rect: Rect2 = haul_content.get_global_rect()
+	var haul_back_rect: Rect2 = haul_back.get_global_rect()
+	_expect(is_equal_approx(haul_back_rect.position.x - haul_panel_rect.position.x, 16.0)
+		and is_equal_approx(haul_panel_rect.end.y - haul_back_rect.end.y, 16.0)
+		and not haul_back_rect.intersects(start_button.get_global_rect())
+		and not haul_back_rect.intersects(cancel_route_button.get_global_rect()),
+		"Hauling places Back in the lower-left inset without overlapping other actions.")
 	_expect(is_equal_approx(haul_content_rect.position.x - haul_panel_rect.position.x, 16.0)
 		and is_equal_approx(haul_panel_rect.end.x - haul_content_rect.end.x, 16.0)
 		and is_equal_approx(haul_content_rect.position.y - haul_panel_rect.position.y, 16.0)

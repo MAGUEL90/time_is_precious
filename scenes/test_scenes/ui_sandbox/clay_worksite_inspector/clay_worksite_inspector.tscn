@@ -250,18 +250,25 @@ text = "9h"
 
 [node name="Footer" type="HBoxContainer" parent="Center/HourlySetup/Margin/Body"]
 layout_mode = 2
-alignment = 1
+size_flags_vertical = 3
 
 [node name="BackButton" type="Button" parent="Center/HourlySetup/Margin/Body/Footer"]
 custom_minimum_size = Vector2(36, 18)
 layout_mode = 2
+size_flags_vertical = 8
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
 
+[node name="Spacer" type="Control" parent="Center/HourlySetup/Margin/Body/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
 [node name="NextButton" type="Button" parent="Center/HourlySetup/Margin/Body/Footer"]
 custom_minimum_size = Vector2(36, 18)
 layout_mode = 2
+size_flags_vertical = 8
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Next"

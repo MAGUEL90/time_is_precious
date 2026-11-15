@@ -277,12 +277,13 @@ text = "Player"
 
 [node name="ChoiceFooter" type="HBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 4
-alignment = 1
 
 [node name="CancelChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceFooter"]
 custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
+size_flags_vertical = 8
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"

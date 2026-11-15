@@ -173,18 +173,14 @@ size_flags_vertical = 3
 layout_mode = 2
 columns = 6
 
-[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
-layout_mode = 2
-
-[node name="SelectedSummaryLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+[node name="SelectedSummaryLabel" type="Label" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"
 theme_override_font_sizes/font_size = 6
 text = "Selected: 0"
 
-[node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+[node name="Footer" type="HBoxContainer" parent="Root/Center/Window/MarginContainer/MainVBox"]
 layout_mode = 2
-size_flags_horizontal = 3
 
 [node name="BackButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
 custom_minimum_size = Vector2(44, 16)
@@ -192,6 +188,10 @@ layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
+
+[node name="Spacer" type="Control" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="ConfirmButton" type="Button" parent="Root/Center/Window/MarginContainer/MainVBox/Footer"]
 custom_minimum_size = Vector2(44, 16)
