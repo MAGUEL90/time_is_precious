@@ -3,6 +3,7 @@ extends Node
 ## Focused behavior and layout regression for the standalone building menu.
 const MENU_SCENE: PackedScene = preload("res://scenes/ui/building_selection_ui/building_selection_ui.tscn")
 const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
+const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
 const CATEGORY_ORDER: Array[String] = [
 	"residential", "production", "food_farming", "storage_logistic", "civic_services",
 ]
@@ -93,16 +94,11 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 			var text_height: float = caption.get_line_count() * font.get_height(caption.get_theme_font_size("font_size"))
 			_expect(text_height <= caption.size.y + 1.0, context + " caption for " + id + " fits vertically.")
 
-		_expect(button.icon != null, context + " button " + id + " has a placeholder icon.")
+		var expected_icon: Texture2D = LOCK_ICON if button.disabled else PLACEHOLDER_ICON
+		_expect(button.icon == expected_icon, context + " uses the lock inside the disabled panel and the placeholder otherwise for " + id + ".")
 		if button.icon != null:
-			_expect(button.icon.get_size().x <= 16 and button.icon.get_size().y <= 16, context + " placeholder for " + id + " fits inside the icon panel.")
-		var lock_badge: TextureRect = button.get_node_or_null("LockIcon") as TextureRect
-		_expect((lock_badge != null) == button.disabled, context + " shows a lock only for disabled " + id + ".")
-		if lock_badge != null:
-			_expect(lock_badge.texture == LOCK_ICON and lock_badge.size.is_equal_approx(Vector2(9, 10)), context + " uses the native lock icon for " + id + ".")
-			_expect(lock_badge.is_visible_in_tree() and lock_badge.mouse_filter == Control.MOUSE_FILTER_IGNORE, context + " lock icon is visible and ignores input.")
-			_expect(_rect_contains((button.get_parent() as Control).get_global_rect(), lock_badge.get_global_rect()), context + " lock icon stays inside its choice tile.")
-			_expect(not button_rect.intersects(lock_badge.get_global_rect()), context + " lock icon does not cover the building icon.")
+			_expect(button.icon.get_size().x <= 16 and button.icon.get_size().y <= 16 and not button.expand_icon, context + " icon for " + id + " fits at its native size inside the panel.")
+		_expect(button.get_node_or_null("LockIcon") == null, context + " does not add a separate lock beside " + id + ".")
 
 func _check_inventory_unchanged(before: Dictionary, max_load_before: float, bulk_before: bool, change_count: int) -> void:
 	_expect(Inventory.items == before, "The menu leaves in-memory Inventory items unchanged.")

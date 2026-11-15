@@ -71,7 +71,7 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.theme_type_variation = &"WorkshopSquareButton16"
 	button.add_theme_font_size_override("font_size", 6)
-	button.icon = PLACEHOLDER_ICON
+	button.icon = LOCK_ICON if locked else PLACEHOLDER_ICON
 	button.expand_icon = false
 	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -84,18 +84,11 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	focus_style.border_color = Color(1, 1, 1, 1)
 	focus_style.set_border_width_all(1)
 	button.add_theme_stylebox_override("focus", focus_style)
-	if not locked:
+	if locked:
+		button.add_theme_color_override("icon_disabled_color", Color.WHITE)
+	else:
 		button.pressed.connect(action)
 	tile.add_child(button)
-	if locked:
-		var lock_badge := TextureRect.new()
-		lock_badge.name = "LockIcon"
-		lock_badge.texture = LOCK_ICON
-		lock_badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		lock_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		lock_badge.position = Vector2(18, 3)
-		lock_badge.size = Vector2(9, 10)
-		button.add_child(lock_badge)
 
 	var caption := Label.new()
 	caption.name = "Caption"
