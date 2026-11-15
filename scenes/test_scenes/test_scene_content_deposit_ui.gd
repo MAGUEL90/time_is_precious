@@ -57,16 +57,16 @@ func _run() -> void:
 	var transfer: ItemTransferUI = panel.transfer_ui
 	_expect(Inventory.items.get("shekel", 0) == 3 and CityStockManager.treasury_shekel == 100 and storage.items.is_empty(), "Opening deposit changes no balances.")
 	_expect(not transfer.close_button.visible and transfer.back_button.visible, "Deposit offers Back without duplicate Close.")
-	_expect(transfer.back_button.text == "Back" and transfer.back_button.icon == BACK_ICON
+	_expect(transfer.back_button.text.is_empty() and transfer.back_button.accessibility_name == "Back" and transfer.back_button.icon == BACK_ICON
 		and transfer.back_button.icon.get_size() == Vector2(16, 16)
-		and transfer.confirm_button.text == "Deposit" and transfer.confirm_button.icon == DEPOSIT_ICON,
-		"The City Storage deposit dialog keeps labeled Back and Deposit actions with native icons.")
+		and transfer.confirm_button.text.is_empty() and transfer.confirm_button.accessibility_name == "Deposit" and transfer.confirm_button.icon == DEPOSIT_ICON,
+		"The City Storage deposit dialog uses native icon-only Back and Deposit actions.")
 	var transfer_window: Control = transfer.get_node("Root/Center/Window") as Control
 	_expect(panel.clear_button.custom_minimum_size == Vector2(64, 18)
-		and transfer.back_button.custom_minimum_size == Vector2(64, 18)
-		and transfer.confirm_button.custom_minimum_size == Vector2(64, 18)
+		and transfer.back_button.custom_minimum_size == Vector2(16, 16)
+		and transfer.confirm_button.custom_minimum_size == Vector2(16, 16)
 		and transfer_window.custom_minimum_size.x == 300.0,
-		"City Storage deposit actions share the same size in a locally widened transfer dialog.")
+		"City Storage deposit uses compact icon actions and retains the labeled Clear button.")
 	_expect(transfer.transfer_confirmed.get_connections().size() == 1, "Deposit has one commit callback.")
 	_select(transfer, "shekel", 1)
 	_select(transfer, "stone", 1)
@@ -124,13 +124,13 @@ func _run() -> void:
 	_expect(panel.deposit_button.disabled and panel.haul_button.disabled and not panel.context.visible,
 		"Remote storage keeps Deposit and Send disabled without a message below the title.")
 	var main_back: Button = panel.view.get_node("Margin/Content/Footer/Back") as Button
-	_expect(main_back.icon == BACK_ICON and main_back.text == "Back"
-		and panel.deposit_button.icon == DEPOSIT_ICON and panel.deposit_button.text == "Deposit"
-		and panel.haul_button.icon == SEND_ICON and panel.haul_button.text == "Send"
-		and main_back.custom_minimum_size == Vector2(64, 18)
-		and panel.deposit_button.custom_minimum_size == Vector2(64, 18)
-		and panel.haul_button.custom_minimum_size == Vector2(64, 18),
-		"City Storage Back, Deposit and Send use their native icons, labels and equal button widths.")
+	_expect(main_back.icon == BACK_ICON and main_back.text.is_empty() and main_back.accessibility_name == "Back"
+		and panel.deposit_button.icon == DEPOSIT_ICON and panel.deposit_button.text.is_empty() and panel.deposit_button.accessibility_name == "Deposit"
+		and panel.haul_button.icon == SEND_ICON and panel.haul_button.text.is_empty() and panel.haul_button.accessibility_name == "Send"
+		and main_back.custom_minimum_size == Vector2(16, 16)
+		and panel.deposit_button.custom_minimum_size == Vector2(16, 16)
+		and panel.haul_button.custom_minimum_size == Vector2(16, 16),
+		"City Storage Back, Deposit and Send use 16x16 icon-only controls with accessible names.")
 	panel._open_transfer("deposit")
 	panel._open_haul()
 	_expect(not is_instance_valid(panel.transfer_ui) and not is_instance_valid(panel.haul_ui)
@@ -154,9 +154,10 @@ func _run() -> void:
 	var cancel_route_button: Button = haul_footer.get_node("CancelRoute") as Button
 	_expect(start_button.custom_minimum_size == Vector2(64, 18)
 		and cancel_route_button.custom_minimum_size == Vector2(64, 18)
-		and haul_back.custom_minimum_size == Vector2(64, 18)
-		and cancel_route_button.text == "Cancel Route" and haul_back.icon == BACK_ICON,
-		"Hauling actions share 64x18 controls while preserving the Cancel Route label and Back icon.")
+		and haul_back.custom_minimum_size == Vector2(16, 16)
+		and cancel_route_button.text == "Cancel Route" and haul_back.text.is_empty()
+		and haul_back.accessibility_name == "Back" and haul_back.icon == BACK_ICON,
+		"Hauling keeps its labeled actions and a 16x16 icon-only Back control.")
 	var haul_panel_rect: Rect2 = haul_panel.get_global_rect()
 	var haul_content_rect: Rect2 = haul_content.get_global_rect()
 	_expect(is_equal_approx(haul_content_rect.position.x - haul_panel_rect.position.x, 16.0)
