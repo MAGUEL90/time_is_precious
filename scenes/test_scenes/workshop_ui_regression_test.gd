@@ -116,6 +116,10 @@ func _check_back_confirmation_layout() -> void:
 	await get_tree().process_frame
 	var panel_rect: Rect2 = choice.get_global_rect()
 	var back_rect: Rect2 = choice.secondary_button.get_global_rect()
+	_expect(choice.secondary_button.icon == load("res://assets/ui/ui_icon/back_button.png")
+		and choice.secondary_button.size == Vector2(64, 18)
+		and choice.primary_button.size == Vector2(64, 18),
+		"Dynamic Back uses the native icon and matches the paired action size.")
 	_expect(is_equal_approx(back_rect.position.x - panel_rect.position.x, 6.0)
 		and is_equal_approx(panel_rect.end.y - back_rect.end.y, 6.0)
 		and not back_rect.intersects(choice.primary_button.get_global_rect())
@@ -128,7 +132,9 @@ func _check_back_confirmation_layout() -> void:
 	await get_tree().process_frame
 	back_rect = choice.primary_button.get_global_rect()
 	_expect(is_equal_approx(back_rect.position.x - panel_rect.position.x, 6.0)
-		and is_equal_approx(panel_rect.end.y - back_rect.end.y, 6.0),
+		and is_equal_approx(panel_rect.end.y - back_rect.end.y, 6.0)
+		and choice.primary_button.icon == load("res://assets/ui/ui_icon/back_button.png")
+		and choice.secondary_button.icon == null,
 		"A primary Back also appears at the lower left.")
 	choice.primary_button.pressed.emit()
 	_expect(selected == [1, 1], "Moving Back preserves the primary action signal.")
@@ -137,8 +143,13 @@ func _check_back_confirmation_layout() -> void:
 	await get_tree().process_frame
 	_expect(choice.close_button.visible
 		and choice.primary_button.get_global_rect().position.x < choice.secondary_button.get_global_rect().position.x
-		and not choice.back_spacer.visible,
-		"Reusing the panel without Back restores its usual action order and Close.")
+		and not choice.back_spacer.visible
+		and choice.primary_button.icon == null and choice.secondary_button.icon == null
+		and choice.primary_button.custom_minimum_size == Vector2(44, 16)
+		and choice.secondary_button.custom_minimum_size == Vector2(44, 16)
+		and not choice.primary_button.has_theme_stylebox_override("normal")
+		and not choice.secondary_button.has_theme_stylebox_override("normal"),
+		"Reusing the panel without Back restores its original actions, styles and Close.")
 	choice.queue_free()
 
 func _check_storage_presentation() -> void:

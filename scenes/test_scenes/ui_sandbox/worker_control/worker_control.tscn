@@ -1,5 +1,6 @@
-[gd_scene load_steps=21 format=3 uid="uid://byn62k7nrayc7"]
+[gd_scene load_steps=22 format=3 uid="uid://byn62k7nrayc7"]
 
+[ext_resource type="Script" path="res://scenes/ui/back_button/back_button.gd" id="tip_back_style"]
 [ext_resource type="Script" uid="uid://cdia61myyxbw3" path="res://scenes/test_scenes/ui_sandbox/worker_control/worker_control.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="2_theme"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="3_window"]
@@ -346,12 +347,13 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 1
 
 [node name="PickerBack" type="Button" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane/ToolsPickerWindow/PickerMargin/PickerVBox"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
+script = ExtResource("tip_back_style")
 
 [node name="FeedbackArea" type="Control" parent="Root/Center/Window/Margin/MainVBox/PageStack/ToolsPage/ToolsBody/ToolsRightPane"]
 custom_minimum_size = Vector2(0, 8)

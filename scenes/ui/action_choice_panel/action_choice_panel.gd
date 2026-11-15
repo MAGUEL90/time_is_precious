@@ -1,5 +1,7 @@
 class_name ActionChoicePanel extends NinePatchRect
 
+const BackButtonPresentation = preload("res://scenes/ui/back_button/back_button.gd")
+
 signal primary_selected()
 signal secondary_selected()
 signal cancelled()
@@ -28,7 +30,14 @@ func setup(
 	secondary_button.text = secondary_text
 	var primary_is_back: bool = primary_text.strip_edges().to_lower() == "back"
 	var secondary_is_back: bool = secondary_text.strip_edges().to_lower() == "back"
+	BackButtonPresentation.set_back_presentation(primary_button, false)
+	BackButtonPresentation.set_back_presentation(secondary_button, false)
+	BackButtonPresentation.set_back_presentation(primary_button, primary_is_back)
+	BackButtonPresentation.set_back_presentation(secondary_button, secondary_is_back)
 	var has_back: bool = primary_is_back or secondary_is_back
+	if has_back:
+		var button_pair: Button = secondary_button if primary_is_back else primary_button
+		BackButtonPresentation.set_back_pair_size(button_pair)
 	close_button.visible = show_close and not has_back
 	back_spacer.visible = has_back
 	action_buttons.size_flags_vertical = Control.SIZE_EXPAND_FILL if has_back else Control.SIZE_FILL
