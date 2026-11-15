@@ -163,10 +163,27 @@ func _run() -> void:
 	_expect(menu.visible, "Opening the menu displays it in the test tree.")
 	_expect(not menu.subtitle.text.contains("Plot 1"), "The subtitle omits the plot label.")
 	_check_compact_frame(menu, Vector2(290, 105), "Category menu")
-	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu")
-	_expect((menu.buttons["residential"].get_parent().get_node("Caption") as Label).modulate.a == 1.0, "Category names remain visible.")
+	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu", true)
 	_expect(menu.buttons["residential"].has_focus(), "Keyboard focus starts on Residential.")
 	await _move_mouse(Vector2(1, 1))
+	_expect(not menu.hover_name.visible, "Category names are hidden without a hover.")
+	var category_frame: Rect2 = menu.window.get_global_rect()
+	for index: int in range(CATEGORY_ORDER.size()):
+		var category_button: Button = menu.buttons[CATEGORY_ORDER[index]] as Button
+		var pointer: Vector2 = category_button.get_global_rect().get_center()
+		await _move_mouse(pointer)
+		_expect(menu.hover_name.visible and menu.hover_name.text == CATEGORY_CAPTIONS[index], "Hover shows the category name " + CATEGORY_CAPTIONS[index] + ".")
+		_expect(menu.hover_name.position.x > pointer.x and menu.hover_name.position.y < pointer.y, "Category name appears above and to the right of the mouse.")
+		_expect(not menu.hover_name.get_global_rect().intersects(menu.subtitle.get_global_rect()), "Category name does not overlap the subtitle.")
+		_expect(_rect_contains(get_viewport().get_visible_rect(), menu.hover_name.get_global_rect()), "Category name stays on screen.")
+		var hover_font: Font = menu.hover_name.get_theme_font("font")
+		var text_width: float = hover_font.get_string_size(CATEGORY_CAPTIONS[index], HORIZONTAL_ALIGNMENT_LEFT, -1, menu.hover_name.get_theme_font_size("font_size")).x
+		_expect(text_width <= menu.hover_name.size.x + 1.0, "The complete category name fits in its hover label.")
+		for other_id: String in CATEGORY_ORDER:
+			_expect(not menu.hover_name.get_global_rect().intersects((menu.buttons[other_id] as Button).get_global_rect()), "Category name does not overlap any icon.")
+		_expect(menu.window.get_global_rect().is_equal_approx(category_frame), "The panel stays in place while hovering categories.")
+	await _move_mouse(Vector2(1, 1))
+	_expect(not menu.hover_name.visible, "Category names disappear after the pointer leaves.")
 	var residential_frame: NinePatchRect = menu.buttons["residential"].get_node("SelectionFrame") as NinePatchRect
 	var production_frame: NinePatchRect = menu.buttons["production"].get_node("SelectionFrame") as NinePatchRect
 	var civic_button: Button = menu.buttons["civic_services"] as Button
@@ -231,7 +248,7 @@ func _run() -> void:
 		house_button.emit_signal("pressed")
 	_expect(events["house"] == 1, "Choosing House emits house_requested exactly once.")
 	_expect(events["workshop"] == 0, "Choosing a residential item does not request a workshop.")
-	menu._add_button("qa_extra_building", "Extra", Callable(), true, true)
+	menu._add_button("qa_extra_building", "Extra", Callable(), true)
 	await _frames()
 	_check_button_row(menu, ["house", "courtyard_house", "qa_extra_building"], ["House", "Courtyard House", "Extra"], "Three building choices", true)
 	var expanded_ids: Array[String] = ["house", "courtyard_house", "qa_extra_building"]
@@ -239,7 +256,7 @@ func _run() -> void:
 	for index: int in range(2, 6):
 		var id: String = "qa_extra_%d" % index
 		var name_text: String = "Extra %d" % index
-		menu._add_button(id, name_text, Callable(), true, true)
+		menu._add_button(id, name_text, Callable(), true)
 		expanded_ids.append(id)
 		expanded_names.append(name_text)
 	await _frames()
@@ -249,7 +266,7 @@ func _run() -> void:
 	await _frames()
 	_expect(menu.current_category.is_empty(), "Back from residential returns to the category menu.")
 	_check_compact_frame(menu, Vector2(290, 105), "Category menu after Back")
-	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu after Back")
+	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu after Back", true)
 
 	menu.buttons["production"].emit_signal("pressed")
 	await _frames()

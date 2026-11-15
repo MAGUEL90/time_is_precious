@@ -69,10 +69,10 @@ func _clear_choices() -> void:
 	_choice_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	choices.add_child(_choice_row)
 
-func _add_button(id: String, text: String, action: Callable, locked: bool = false, hover_caption: bool = false) -> Button:
+func _add_button(id: String, text: String, action: Callable, locked: bool = false) -> Button:
 	var tile := VBoxContainer.new()
 	tile.name = "%sTile" % id
-	tile.custom_minimum_size = Vector2(16 if hover_caption else 48, 0)
+	tile.custom_minimum_size = Vector2(16, 0)
 	tile.add_theme_constant_override("separation", 2)
 	_choice_row.add_child(tile)
 
@@ -113,22 +113,8 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	button.focus_entered.connect(_refresh_choice_highlights)
 	button.focus_exited.connect(_refresh_choice_highlights)
 
-	if hover_caption:
-		button.mouse_entered.connect(_show_hover_name.bind(text, button))
-		button.mouse_exited.connect(_hide_hover_name)
-	else:
-		var caption := Label.new()
-		caption.name = "Caption"
-		caption.custom_minimum_size = Vector2(48, 0)
-		caption.theme_type_variation = &"HudLabelShortcut"
-		caption.add_theme_font_size_override("font_size", 6)
-		caption.add_theme_color_override("font_color", Color.WHITE)
-		caption.text = text
-		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		caption.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		tile.add_child(caption)
+	button.mouse_entered.connect(_show_hover_name.bind(text, button))
+	button.mouse_exited.connect(_hide_hover_name)
 	buttons[id] = button
 	return button
 
@@ -187,8 +173,18 @@ func _add_notice(text: String) -> void:
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	choices.add_child(label)
 
+func _prepare_icon_row() -> void:
+	_choice_row.add_theme_constant_override("separation", 8)
+	# Leave room above the icons for the name without covering the subtitle.
+	choices.remove_child(_choice_row)
+	var hover_space := MarginContainer.new()
+	hover_space.add_theme_constant_override("margin_top", 8)
+	choices.add_child(hover_space)
+	hover_space.add_child(_choice_row)
+
 func _show_categories(focus_id: String = "residential") -> void:
 	_clear_choices()
+	_prepare_icon_row()
 	current_category = ""
 	selected_building = ""
 	title_label.text = "BUILDING MENU"
@@ -202,14 +198,8 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	if not CATEGORIES.has(id):
 		return
 	_clear_choices()
-	_choice_row.add_theme_constant_override("separation", 8)
 	if id == "residential" or id == "production":
-		# Leave room above the icons for the name without covering the subtitle.
-		choices.remove_child(_choice_row)
-		var hover_space := MarginContainer.new()
-		hover_space.add_theme_constant_override("margin_top", 8)
-		choices.add_child(hover_space)
-		hover_space.add_child(_choice_row)
+		_prepare_icon_row()
 	current_category = id
 	selected_building = ""
 	title_label.text = CATEGORIES[id].to_upper()
@@ -217,15 +207,15 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	back_button.show()
 	match id:
 		"residential":
-			_add_button("house", "House", _show_building.bind("house"), false, true)
-			_add_button("courtyard_house", "Courtyard House", Callable(), true, true)
+			_add_button("house", "House", _show_building.bind("house"))
+			_add_button("courtyard_house", "Courtyard House", Callable(), true)
 			buttons["house"].grab_focus.call_deferred()
 		"production":
 			if not workshop_enabled:
-				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true, true)
+				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true)
 				back_button.grab_focus.call_deferred()
 				return
-			_add_button("mudbrick_workshop", "Mudbrick Workshop" if workshop_available else "Mudbrick Workshop (Limit: 1)", _show_building.bind("mudbrick_workshop"), not workshop_available, true)
+			_add_button("mudbrick_workshop", "Mudbrick Workshop" if workshop_available else "Mudbrick Workshop (Limit: 1)", _show_building.bind("mudbrick_workshop"), not workshop_available)
 			if workshop_available:
 				buttons["mudbrick_workshop"].grab_focus.call_deferred()
 			else:
