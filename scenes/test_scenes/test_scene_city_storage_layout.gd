@@ -75,7 +75,7 @@ func _run() -> void:
 	var back_button: Button = footer.get_node("Back") as Button
 	var content: Control = panel.view.get_node("Margin/Content")
 	var bag: Control = panel.view.get_node("Margin/Content/BagGrid")
-	_expect(panel.view.size == Vector2(234, 208) and panel.grid.columns == 7,
+	_expect(panel.view.size == Vector2(240, 208) and panel.grid.columns == 7,
 		"Storage keeps a fixed frame wide enough for seven native-size columns and the scrollbar.")
 	_expect(panel.grid.get_theme_constant("h_separation") == 4
 		and panel.grid.get_theme_constant("v_separation") == 2,
@@ -131,6 +131,10 @@ func _run() -> void:
 	_expect(shown == expected, "All available registered items appear exactly once with their actual quantities.")
 	var scrollbar: VScrollBar = scroll.get_v_scroll_bar()
 	_expect(scrollbar.visible and scrollbar.max_value > scrollbar.page, "Many items produce a real vertical scroll range.")
+	_expect(scroll.size.y == 102 and scrollbar.size == Vector2(8, 102)
+		and scrollbar.get_theme_stylebox("scroll") is StyleBoxEmpty
+		and scrollbar.get_theme_stylebox("scroll_focus") is StyleBoxEmpty,
+		"The native-width scrollbar has no dark track and aligns with four item rows.")
 	if panel.grid.get_child_count() >= 8:
 		var first: ItemSlot = panel.grid.get_child(0) as ItemSlot
 		var second: ItemSlot = panel.grid.get_child(1) as ItemSlot
@@ -140,8 +144,34 @@ func _run() -> void:
 			and is_equal_approx(seventh.global_position.y, first.global_position.y)
 			and is_equal_approx(eighth.global_position.y - first.get_global_rect().end.y, 2.0),
 			"Seven slots fit across with the Inventory spacing before the next row.")
-		_expect(seventh.get_global_rect().end.x <= scrollbar.get_global_rect().position.x,
-			"The seventh slot stays clear of the visible scrollbar.")
+		_expect(is_equal_approx(scrollbar.global_position.x - seventh.get_global_rect().end.x, 4.0),
+			"The seventh slot and scrollbar are separated by four pixels.")
+	panel._feedback_text = "Deposited."
+	panel._refresh_view()
+	await _frames()
+	_expect(panel.feedback.visible and scroll.size.y == 102 and scrollbar.size.y == 102
+		and panel.view.get_global_rect().encloses(panel.feedback.get_global_rect())
+		and not panel.feedback.get_global_rect().intersects(panel.stock_summary.get_global_rect())
+		and is_equal_approx(panel.view.get_global_rect().end.y - footer.get_global_rect().end.y, 16.0),
+		"Feedback keeps four complete scroll rows and the footer within the fixed frame.")
+	CityStockManager.treasury_shekel = 1234567
+	panel._feedback_text = "Inventory does not contain enough of this item."
+	panel._refresh_view()
+	await _frames()
+	var amount: Label = panel._currency_amounts[1]
+	var amount_width: float = amount.get_theme_font("font").get_string_size(
+		amount.text, HORIZONTAL_ALIGNMENT_LEFT, -1, amount.get_theme_font_size("font_size")
+	).x
+	_expect(panel.feedback.get_visible_line_count() == panel.feedback.get_line_count()
+		and amount.text == "1234567" and amount_width <= amount.size.x
+		and not panel.feedback.get_global_rect().intersects(panel.stock_summary.get_global_rect()),
+		"A long feedback message and the treasury remain readable beside one another.")
+	CityStockManager.treasury_shekel = treasury
+	panel._feedback_text = ""
+	panel._refresh_view()
+	await _frames()
+	_expect(not panel.feedback.visible and scroll.size.y == 102 and scrollbar.size.y == 102,
+		"Four scroll rows return when the feedback is cleared.")
 	var wheel := InputEventMouseButton.new()
 	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 	wheel.pressed = true
@@ -203,6 +233,18 @@ func _run() -> void:
 		and viewport_rect.encloses(panel.view.get_global_rect())
 		and panel.view.get_global_rect().encloses(panel.view.get_node("Margin/Content/Footer").get_global_rect()),
 		"The annex retains its existing context and actions within the viewport.")
+	var annex_scroll: ScrollContainer = panel.grid.get_parent() as ScrollContainer
+	var annex_footer: Control = panel.view.get_node("Margin/Content/Footer") as Control
+	_expect(annex_scroll.size.y == 76
+		and is_equal_approx(panel.view.get_global_rect().end.y - annex_footer.get_global_rect().end.y, 16.0),
+		"Annex context retains complete rows and the bottom inset.")
+	panel._feedback_text = "No available items."
+	panel._refresh_view()
+	await _frames()
+	_expect(annex_scroll.size.y == 50 and panel.feedback.visible
+		and not annex_scroll.get_global_rect().intersects(panel.feedback.get_global_rect())
+		and is_equal_approx(panel.view.get_global_rect().end.y - annex_footer.get_global_rect().end.y, 16.0),
+		"Annex context and feedback fit without covering slots or actions.")
 	await _capture("storage-annex.png")
 	panel.close()
 	await _frames()
@@ -230,6 +272,10 @@ func _run() -> void:
 	_expect(panel.grid.get_child_count() == 0 and panel.feedback.text == "No available items.",
 		"Empty storage has no fabricated cards and reports its empty state.")
 	_expect(panel.view.get_global_rect() == fixed_panel_rect, "Empty storage retains the fixed frame.")
+	_expect(panel.view.get_global_rect().encloses(panel.feedback.get_global_rect())
+		and panel.view.get_global_rect().encloses(panel.view.get_node("Margin/Content/Footer").get_global_rect())
+		and is_equal_approx(panel.view.get_global_rect().end.y - panel.view.get_node("Margin/Content/Footer").get_global_rect().end.y, 16.0),
+		"Empty-state feedback and the footer remain inside the frame with the bottom inset.")
 	await _capture("storage-empty.png")
 	panel.close()
 	await _frames()

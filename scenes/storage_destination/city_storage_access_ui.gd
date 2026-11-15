@@ -2,7 +2,14 @@ extends CanvasLayer
 
 signal closed
 
-const PANEL_SIZE := Vector2(234, 208)
+const PANEL_SIZE := Vector2(240, 208)
+const ITEM_SCROLLBAR_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const ITEM_VIEW_HEIGHT: float = 102.0 # Four 24px rows and three 2px gaps.
+const ITEM_VIEW_COMPACT_HEIGHT: float = 76.0 # Three rows for the Annex context.
+const ITEM_VIEW_TIGHT_HEIGHT: float = 50.0 # Two rows for Annex context with feedback.
+const ITEM_SCROLLBAR_WIDTH: float = 8.0
+const CURRENCY_WIDTH_WITH_FEEDBACK: float = 96.0
+const CURRENCY_PLACEHOLDER_WIDTH: float = 18.0
 const CURRENCY_ICONS: Array[Texture2D] = [
 	preload("res://resources/ui_icons/small_copper.tres"),
 	preload("res://resources/ui_icons/small_shekel.tres"),
@@ -14,6 +21,7 @@ const SEND_ICON: Texture2D = preload("res://assets/ui/ui_icon/send_forward_icon.
 
 @onready var view: Control = $Root/Center/CityStorage
 @onready var grid: GridContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll/Grid
+@onready var item_scroll: ScrollContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll
 @onready var categories: InventoryCategorySelector = $Root/Center/CityStorage/Margin/Content/Header/Categories
 @onready var feedback: Label = $Root/Center/CityStorage/Margin/Content/Feedback
 @onready var context: Label = $Root/Center/CityStorage/Margin/Content/ContextLabel
@@ -21,6 +29,7 @@ const SEND_ICON: Texture2D = preload("res://assets/ui/ui_icon/send_forward_icon.
 @onready var clothing_summary: Label = $Root/CitySupplyPanel/Margin/Content/ClothingSummary
 
 var stock_summary: HBoxContainer
+var _status_row: HBoxContainer
 var _currency_amounts: Array[Label] = []
 
 var storage: Node
@@ -67,7 +76,15 @@ func _ready() -> void:
 	categories.category_changed.connect(func(_category): _refresh_view())
 	# The shared ItemGrid supplies Inventory's slot spacing.
 	grid.columns = 7
-	grid.get_parent().vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	item_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	item_scroll.custom_minimum_size.y = ITEM_VIEW_HEIGHT
+	item_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var scrollbar: VScrollBar = item_scroll.get_v_scroll_bar()
+	scrollbar.theme = ITEM_SCROLLBAR_THEME
+	scrollbar.custom_minimum_size.x = ITEM_SCROLLBAR_WIDTH
+	scrollbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
+	scrollbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
 	_connect_refresh_signals()
 	_add_supply_icon(food_summary, preload("res://assets/items/butcher’s_cut.png"))
 	_add_supply_icon(clothing_summary, preload("res://assets/items/trimmed_robe.png"))
@@ -323,6 +340,21 @@ func _refresh_view() -> void:
 		else:
 			feedback.text = "No available items." if items.is_empty() else "No items in this category."
 	feedback.visible = not feedback.text.is_empty()
+	# Share the status row so the central storage keeps four complete item rows.
+	_status_row.visible = feedback.visible or stock_summary.visible
+	var content: VBoxContainer = context.get_parent() as VBoxContainer
+	content.add_theme_constant_override("separation", 3 if feedback.visible else 4)
+	item_scroll.custom_minimum_size.y = ITEM_VIEW_HEIGHT
+	if context.visible:
+		# The Annex has an extra title and context; keep its rows and footer unclipped.
+		item_scroll.custom_minimum_size.y = ITEM_VIEW_TIGHT_HEIGHT if feedback.visible else ITEM_VIEW_COMPACT_HEIGHT
+	stock_summary.custom_minimum_size.x = CURRENCY_WIDTH_WITH_FEEDBACK if feedback.visible else 0.0
+	stock_summary.size_flags_horizontal = Control.SIZE_SHRINK_END if feedback.visible else Control.SIZE_EXPAND_FILL
+	for index: int in range(stock_summary.get_child_count()):
+		var entry: Control = stock_summary.get_child(index) as Control
+		var placeholder: bool = feedback.visible and index != 1
+		entry.custom_minimum_size.x = CURRENCY_PLACEHOLDER_WIDTH if placeholder else 0.0
+		entry.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if placeholder else Control.SIZE_EXPAND_FILL
 	# The fixed grid viewport remains present for empty and short categories.
 	# ScrollContainer clips overflow; changing stock never changes the frame.
 	deposit_button.disabled = read_only or storage_id != "city" or not storage.has_method("get_depositable_items") or storage.call("get_depositable_items").is_empty()
@@ -334,8 +366,18 @@ func _build_currency_summary() -> void:
 	stock_summary.name = "StockSummary"
 	stock_summary.add_theme_constant_override("separation", 4)
 	stock_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	context.get_parent().add_child(stock_summary)
-	context.get_parent().move_child(stock_summary, view.get_node("Margin/Content/Footer").get_index())
+	var content: VBoxContainer = context.get_parent() as VBoxContainer
+	_status_row = HBoxContainer.new()
+	_status_row.name = "StatusRow"
+	_status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_row.add_theme_constant_override("separation", 4)
+	content.add_child(_status_row)
+	content.move_child(_status_row, feedback.get_index())
+	feedback.reparent(_status_row)
+	feedback.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stock_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stock_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_status_row.add_child(stock_summary)
 	for index: int in range(CURRENCY_ICONS.size()):
 		var row := HBoxContainer.new()
 		row.name = ["Copper", "Shekel", "Gold"][index]

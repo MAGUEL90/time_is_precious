@@ -51,7 +51,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="CityStorage" parent="Root/Center" instance=ExtResource("2_view")]
-custom_minimum_size = Vector2(234, 208)
+custom_minimum_size = Vector2(240, 208)
 layout_mode = 2
 
 [node name="CitySupplyPanel" type="PanelContainer" parent="Root"]

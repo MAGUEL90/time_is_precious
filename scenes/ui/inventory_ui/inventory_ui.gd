@@ -15,8 +15,12 @@ const DEFAULT_SLOT_ICON: Texture2D = preload("res://assets/ui/default_icon.png")
 const ITEM_ACTION_CONFIRM_PANEL_SCENE: PackedScene = preload("res://scenes/ui/item_action_confirm_panel/item_action_confirm_panel.tscn")
 const PICKUP_ITEM_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
+const ITEM_SCROLLBAR_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 const CATEGORY_ALL: int = -1
-const ITEMS_PER_PAGE: int = 15
+const MIN_VISIBLE_SLOTS: int = 15
+const ITEM_GRID_FRAME_WIDTH: float = 152.0 # Five slots, spacing, scrollbar and grid margins.
+const ITEM_VIEW_HEIGHT: float = 76.0 # Three 24px rows and two 2px gaps.
+const ITEM_SCROLLBAR_WIDTH: float = 8.0
 const OPTION_PANEL_GAP: float = 4.0
 const OPTION_PANEL_Y_OFFSET: float = -4.0
 const ACTION_FEEDBACK_DURATION: float = 3.0
@@ -25,9 +29,10 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 @onready var inventory_container: Control = $Root/Center
 @onready var inventory_window: Control = $Root/Center/Window
 @onready var grid: GridContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll/Grid
+@onready var item_scroll: ScrollContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid/Margin/MainVBox/Scroll
+@onready var bag_grid: Control = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/BagPanel/BagGrid
 @onready var worker_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/Body/RightPanel/WorkerPanel/MarginContainer/VBoxContainer/WorkerList
 @onready var category_selector: InventoryCategorySelector = $Root/Center/Window/Margin/MainVBox/HeaderRow/InventoryCategorySelector
-@onready var page_selector: InventoryPageSelector = $Root/Center/Window/Margin/MainVBox/InventoryPageSelector
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
 @onready var shekel_amount: Label = $Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow/ShekelAmount
 @onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
@@ -35,7 +40,6 @@ const INVENTORY_SCREEN_MARGIN: float = 4.0
 
 var player_ref: Player
 var current_category: int = CATEGORY_ALL
-var current_page: int = 0
 var active_option_item_id: String
 var active_option_slot: ItemSlot
 var active_option_panel: OptionPanel
@@ -53,12 +57,23 @@ func _ready() -> void:
 
 	visible = false
 	action_feedback_label.modulate.a = 0.0
+	# Reserve a stable four-pixel gap and the native-width scrollbar.
+	bag_grid.custom_minimum_size.x = ITEM_GRID_FRAME_WIDTH
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	item_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	item_scroll.custom_minimum_size.y = ITEM_VIEW_HEIGHT
+	item_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var scrollbar: VScrollBar = item_scroll.get_v_scroll_bar()
+	scrollbar.theme = ITEM_SCROLLBAR_THEME
+	scrollbar.custom_minimum_size.x = ITEM_SCROLLBAR_WIDTH
+	scrollbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
+	scrollbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
+	scrollbar.value_changed.connect(_on_item_scroll_changed)
 
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
 		Inventory.items_changed.connect(_on_inventory_items_changed)
 
 	category_selector.category_changed.connect(_on_category_changed)
-	page_selector.page_changed.connect(_on_page_changed)
 	close_button.pressed.connect(close_inventory)
 	current_category = category_selector.get_selected_category()
 	_refresh_inventory_grid()
@@ -160,6 +175,7 @@ func _refresh_inventory_grid() -> void:
 	_close_inventory_floating_panels()
 
 	for child in grid.get_children():
+		grid.remove_child(child)
 		child.queue_free()
 
 	var all_items: Dictionary = Inventory.items
@@ -178,16 +194,9 @@ func _refresh_inventory_grid() -> void:
 
 		filtered_items.append(item_id)
 
-	var total_pages: int = maxi(ceil(float(filtered_items.size()) / ITEMS_PER_PAGE), 1)
-	current_page = clampi(current_page, 0, total_pages - 1)
-	page_selector.set_page_data(current_page, total_pages)
-
-	var start_index: int = current_page * ITEMS_PER_PAGE
-	var end_index: int = mini(start_index + ITEMS_PER_PAGE, filtered_items.size())
 	var slot_scene: PackedScene = preload("res://scenes/ui/item_slot/item_slot.tscn")
 
-	for i in range(start_index, end_index):
-		var item_id: String = filtered_items[i]
+	for item_id: String in filtered_items:
 		var qty: int = int(all_items[item_id])
 
 		var slot: Node = slot_scene.instantiate()
@@ -208,8 +217,8 @@ func _refresh_inventory_grid() -> void:
 		if slot.has_signal("slot_drag_started"):
 			slot.slot_drag_started.connect(_on_slot_drag_started)
 
-	var visible_slot_count: int = end_index - start_index
-	var empty_slot_count: int = ITEMS_PER_PAGE - visible_slot_count
+	var slot_count: int = maxi(MIN_VISIBLE_SLOTS, ceili(float(filtered_items.size()) / grid.columns) * grid.columns)
+	var empty_slot_count: int = slot_count - filtered_items.size()
 
 	for _i in range(empty_slot_count):
 		var empty_slot: ItemSlot = slot_scene.instantiate() as ItemSlot
@@ -282,7 +291,7 @@ func _on_item_slot_hovered(item_id: String, _quantity: int, _slot_ref: ItemSlot)
 	if is_instance_valid(active_action_confirm_panel) or is_instance_valid(active_option_panel):
 		return
 	if item_info_panel.display_item(item_id):
-		item_info_panel.position_lower_center(page_selector.global_position.y)
+		item_info_panel.position_lower_center(action_feedback_label.get_global_rect().end.y)
 
 func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
 	item_info_panel.clear_item()
@@ -390,16 +399,17 @@ func _get_worker_work_status_text(worker_data: WorkerData) -> String:
 func _get_need_text(is_fulfilled: bool) -> String:
 	return "OK" if is_fulfilled else "NO"
 
-# Category and page navigation
+# Category and scroll navigation
 
 func _on_category_changed(category: int) -> void:
 	current_category = category
-	current_page = 0
+	item_scroll.scroll_vertical = 0
 	_refresh_inventory_grid()
 
-func _on_page_changed(page: int) -> void:
-	current_page = page
-	_refresh_inventory_grid()
+func _on_item_scroll_changed(_value: float) -> void:
+	item_info_panel.clear_item()
+	if is_instance_valid(active_option_panel) or is_instance_valid(active_action_confirm_panel):
+		_close_inventory_floating_panels()
 
 # Option panel
 
