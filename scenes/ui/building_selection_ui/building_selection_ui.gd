@@ -11,6 +11,7 @@ const CATEGORIES: Dictionary = {
 	"storage_logistic": "Storage & Logistic",
 	"civic_services": "Civic & Services",
 }
+const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
 
 @onready var title_label: Label = $Root/Center/Window/Margin/Content/Header/Title
 @onready var subtitle: Label = $Root/Center/Window/Margin/Content/Subtitle
@@ -21,7 +22,7 @@ const CATEGORIES: Dictionary = {
 var current_category: String = ""
 var selected_building: String = ""
 var buttons: Dictionary = {}
-var _plot_label: String = ""
+var _choice_row: HBoxContainer
 var _closing: bool = false
 var workshop_available: bool = true
 var workshop_enabled: bool = true
@@ -31,8 +32,7 @@ func _ready() -> void:
 	close_button.pressed.connect(close_menu)
 	close_button.texture_focused = close_button.texture_hover
 
-func open_menu(plot_label: String) -> void:
-	_plot_label = plot_label
+func open_menu(_plot_label: String) -> void:
 	_show_categories()
 	show()
 
@@ -41,18 +41,54 @@ func _clear_choices() -> void:
 	for child: Node in choices.get_children():
 		choices.remove_child(child)
 		child.queue_free()
+	_choice_row = HBoxContainer.new()
+	_choice_row.name = "ChoiceRow"
+	_choice_row.add_theme_constant_override("separation", 3)
+	_choice_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	choices.add_child(_choice_row)
 
 func _add_button(id: String, text: String, action: Callable, locked: bool = false) -> Button:
+	var tile := VBoxContainer.new()
+	tile.name = "%sTile" % id
+	tile.custom_minimum_size = Vector2(48, 0)
+	tile.add_theme_constant_override("separation", 2)
+	_choice_row.add_child(tile)
+
 	var button := Button.new()
 	button.name = id
-	button.text = text
-	button.custom_minimum_size = Vector2(0, 20)
-	button.theme_type_variation = &"HudShortcutButton"
+	button.custom_minimum_size = Vector2(16, 16)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.theme_type_variation = &"WorkshopSquareButton16"
 	button.add_theme_font_size_override("font_size", 6)
+	button.icon = PLACEHOLDER_ICON
+	button.expand_icon = false
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button.accessibility_name = text
 	button.disabled = locked
+	var focus_style := StyleBoxFlat.new()
+	focus_style.bg_color = Color(0, 0, 0, 0)
+	focus_style.draw_center = false
+	focus_style.border_color = Color(1, 1, 1, 1)
+	focus_style.set_border_width_all(1)
+	button.add_theme_stylebox_override("focus", focus_style)
 	if not locked:
 		button.pressed.connect(action)
-	choices.add_child(button)
+	tile.add_child(button)
+
+	var caption := Label.new()
+	caption.name = "Caption"
+	caption.custom_minimum_size = Vector2(48, 0)
+	caption.theme_type_variation = &"HudLabelShortcut"
+	caption.add_theme_font_size_override("font_size", 6)
+	caption.add_theme_color_override("font_color", Color.WHITE)
+	caption.text = text
+	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.add_child(caption)
 	buttons[id] = button
 	return button
 
@@ -73,7 +109,7 @@ func _show_categories(focus_id: String = "residential") -> void:
 	current_category = ""
 	selected_building = ""
 	title_label.text = "BUILDING MENU"
-	subtitle.text = _plot_label + " / Choose a category"
+	subtitle.text = "Choose a category"
 	back_button.hide()
 	for id: String in CATEGORIES:
 		_add_button(id, CATEGORIES[id], _show_category.bind(id))
@@ -86,7 +122,7 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	current_category = id
 	selected_building = ""
 	title_label.text = CATEGORIES[id].to_upper()
-	subtitle.text = _plot_label + " / Choose a building"
+	subtitle.text = "Choose a building"
 	back_button.show()
 	match id:
 		"residential":
