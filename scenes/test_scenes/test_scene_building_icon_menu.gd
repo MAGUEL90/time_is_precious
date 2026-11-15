@@ -2,6 +2,7 @@ extends Node
 
 ## Focused behavior and layout regression for the standalone building menu.
 const MENU_SCENE: PackedScene = preload("res://scenes/ui/building_selection_ui/building_selection_ui.tscn")
+const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
 const CATEGORY_ORDER: Array[String] = [
 	"residential", "production", "food_farming", "storage_logistic", "civic_services",
 ]
@@ -85,7 +86,7 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 		_expect(caption != null, context + " button " + id + " has a Caption label.")
 		if caption != null:
 			_expect(caption.is_visible_in_tree(), context + " caption for " + id + " is visible.")
-			_expect(caption.text.contains(captions[index]), context + " caption names " + captions[index] + ".")
+			_expect(caption.text == captions[index], context + " caption names " + captions[index] + " without a Locked suffix.")
 			_expect(caption.get_global_rect().position.y >= button_rect.end.y, context + " caption for " + id + " appears below its icon.")
 			_expect(_rect_contains(choices_rect, caption.get_global_rect()), context + " caption for " + id + " stays inside choices.")
 			var font: Font = caption.get_theme_font("font")
@@ -95,6 +96,13 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 		_expect(button.icon != null, context + " button " + id + " has a placeholder icon.")
 		if button.icon != null:
 			_expect(button.icon.get_size().x <= 16 and button.icon.get_size().y <= 16, context + " placeholder for " + id + " fits inside the icon panel.")
+		var lock_badge: TextureRect = button.get_node_or_null("LockIcon") as TextureRect
+		_expect((lock_badge != null) == button.disabled, context + " shows a lock only for disabled " + id + ".")
+		if lock_badge != null:
+			_expect(lock_badge.texture == LOCK_ICON and lock_badge.size.is_equal_approx(Vector2(9, 10)), context + " uses the native lock icon for " + id + ".")
+			_expect(lock_badge.is_visible_in_tree() and lock_badge.mouse_filter == Control.MOUSE_FILTER_IGNORE, context + " lock icon is visible and ignores input.")
+			_expect(_rect_contains((button.get_parent() as Control).get_global_rect(), lock_badge.get_global_rect()), context + " lock icon stays inside its choice tile.")
+			_expect(not button_rect.intersects(lock_badge.get_global_rect()), context + " lock icon does not cover the building icon.")
 
 func _check_inventory_unchanged(before: Dictionary, max_load_before: float, bulk_before: bool, change_count: int) -> void:
 	_expect(Inventory.items == before, "The menu leaves in-memory Inventory items unchanged.")
@@ -185,6 +193,7 @@ func _run() -> void:
 	menu.buttons["production"].emit_signal("pressed")
 	await _frames()
 	_check_compact_frame(menu, Vector2(200, 160), "Workshop limit menu")
+	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop (Limit: 1)"], "Workshop limit menu")
 	_expect(menu.buttons["mudbrick_workshop"].disabled, "A workshop at its limit remains disabled.")
 	menu.back_button.emit_signal("pressed")
 	await _frames()

@@ -12,6 +12,7 @@ const CATEGORIES: Dictionary = {
 	"civic_services": "Civic & Services",
 }
 const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
+const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
 const MIN_WINDOW_WIDTH: float = 180.0
 
 @onready var window: Control = $Root/Center/Window
@@ -86,6 +87,15 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	if not locked:
 		button.pressed.connect(action)
 	tile.add_child(button)
+	if locked:
+		var lock_badge := TextureRect.new()
+		lock_badge.name = "LockIcon"
+		lock_badge.texture = LOCK_ICON
+		lock_badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		lock_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lock_badge.position = Vector2(18, 3)
+		lock_badge.size = Vector2(9, 10)
+		button.add_child(lock_badge)
 
 	var caption := Label.new()
 	caption.name = "Caption"
@@ -137,11 +147,11 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	match id:
 		"residential":
 			_add_button("house", "House", _show_building.bind("house"))
-			_add_button("courtyard_house", "Courtyard House (Locked)", Callable(), true)
+			_add_button("courtyard_house", "Courtyard House", Callable(), true)
 			buttons["house"].grab_focus.call_deferred()
 		"production":
 			if not workshop_enabled:
-				_add_button("mudbrick_workshop", "Mudbrick Workshop (Locked)", Callable(), true)
+				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true)
 				_add_notice("Not available yet.")
 				back_button.grab_focus.call_deferred()
 				return
