@@ -22,11 +22,13 @@ const MIN_WINDOW_WIDTH: float = 180.0
 @onready var choices: VBoxContainer = $Root/Center/Window/Margin/Content/Choices
 @onready var back_button: Button = $Root/Center/Window/Margin/Content/Footer/Back
 @onready var close_button: TextureButton = $Root/Center/Window/Margin/Content/Header/CloseButton
+@onready var hover_name: Label = $Root/HoverName
 
 var current_category: String = ""
 var selected_building: String = ""
 var buttons: Dictionary = {}
 var _choice_row: HBoxContainer
+var _hovered_button: Button
 var _closing: bool = false
 var workshop_available: bool = true
 var workshop_enabled: bool = true
@@ -48,6 +50,7 @@ func open_menu(_plot_label: String) -> void:
 	show()
 
 func _clear_choices() -> void:
+	_hide_hover_name()
 	buttons.clear()
 	for child: Node in choices.get_children():
 		choices.remove_child(child)
@@ -61,7 +64,7 @@ func _clear_choices() -> void:
 func _add_button(id: String, text: String, action: Callable, locked: bool = false, hover_caption: bool = false) -> Button:
 	var tile := VBoxContainer.new()
 	tile.name = "%sTile" % id
-	tile.custom_minimum_size = Vector2(48, 0)
+	tile.custom_minimum_size = Vector2(16 if hover_caption else 48, 0)
 	tile.add_theme_constant_override("separation", 2)
 	_choice_row.add_child(tile)
 
@@ -90,25 +93,48 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 		button.pressed.connect(action)
 	tile.add_child(button)
 
-	var caption := Label.new()
-	caption.name = "Caption"
-	caption.custom_minimum_size = Vector2(48, 0)
-	caption.theme_type_variation = &"HudLabelShortcut"
-	caption.add_theme_font_size_override("font_size", 6)
-	caption.add_theme_color_override("font_color", Color.WHITE)
-	caption.text = text
-	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tile.add_child(caption)
 	if hover_caption:
-		# Keep the caption's space so the window stays still while the mouse moves.
-		caption.modulate.a = 0.0
-		button.mouse_entered.connect(func() -> void: caption.modulate.a = 1.0)
-		button.mouse_exited.connect(func() -> void: caption.modulate.a = 0.0)
+		button.mouse_entered.connect(_show_hover_name.bind(text, button))
+		button.mouse_exited.connect(_hide_hover_name)
+	else:
+		var caption := Label.new()
+		caption.name = "Caption"
+		caption.custom_minimum_size = Vector2(48, 0)
+		caption.theme_type_variation = &"HudLabelShortcut"
+		caption.add_theme_font_size_override("font_size", 6)
+		caption.add_theme_color_override("font_color", Color.WHITE)
+		caption.text = text
+		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caption.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.add_child(caption)
 	buttons[id] = button
 	return button
+
+func _show_hover_name(text: String, button: Button) -> void:
+	_hovered_button = button
+	hover_name.text = text
+	hover_name.reset_size()
+	_position_hover_name(get_viewport().get_mouse_position())
+	hover_name.show()
+
+func _hide_hover_name() -> void:
+	_hovered_button = null
+	hover_name.hide()
+
+func _position_hover_name(mouse_position: Vector2) -> void:
+	var bounds: Rect2 = get_viewport().get_visible_rect()
+	var pos := mouse_position + Vector2(6, -hover_name.size.y - 4)
+	if is_instance_valid(_hovered_button):
+		pos.y = minf(pos.y, _hovered_button.get_global_rect().position.y - hover_name.size.y - 2)
+	if pos.x + hover_name.size.x > bounds.end.x:
+		pos.x = mouse_position.x - hover_name.size.x - 6
+	if pos.y < bounds.position.y:
+		pos.y = mouse_position.y + 6
+	pos.x = clampf(pos.x, bounds.position.x, maxf(bounds.position.x, bounds.end.x - hover_name.size.x))
+	pos.y = clampf(pos.y, bounds.position.y, maxf(bounds.position.y, bounds.end.y - hover_name.size.y))
+	hover_name.position = pos
 
 func _add_notice(text: String) -> void:
 	var label := Label.new()
@@ -137,6 +163,14 @@ func _show_category(id: String, focus_id: String = "") -> void:
 	if not CATEGORIES.has(id):
 		return
 	_clear_choices()
+	_choice_row.add_theme_constant_override("separation", 8)
+	if id == "residential" or id == "production":
+		# Leave room above the icons for the name without covering the subtitle.
+		choices.remove_child(_choice_row)
+		var hover_space := MarginContainer.new()
+		hover_space.add_theme_constant_override("margin_top", 8)
+		choices.add_child(hover_space)
+		hover_space.add_child(_choice_row)
 	current_category = id
 	selected_building = ""
 	title_label.text = CATEGORIES[id].to_upper()
@@ -193,6 +227,8 @@ func close_menu() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible or _closing:
 		return
+	if event is InputEventMouseMotion and hover_name.visible:
+		_position_hover_name(event.position)
 	if event.is_action_pressed("ui_cancel"):
 		go_back()
 		get_viewport().set_input_as_handled()

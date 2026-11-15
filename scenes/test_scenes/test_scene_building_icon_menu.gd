@@ -64,7 +64,7 @@ func _check_compact_frame(menu: Variant, max_size: Vector2, context: String) -> 
 		_expect(_rect_contains(interior, notice.get_global_rect()), context + " keeps the notice inside its margins.")
 		_expect(notice.get_line_count() * notice.get_line_height() <= notice.size.y + 1.0, context + " notice fits vertically.")
 
-func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String], context: String) -> void:
+func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String], context: String, hover_caption: bool = false) -> void:
 	var row: HBoxContainer = menu.choices.find_child("ChoiceRow", true, false) as HBoxContainer
 	_expect(row != null, context + " uses the dynamic ChoiceRow HBox.")
 	if row == null:
@@ -88,10 +88,13 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 		if index > 0:
 			_expect(button_rect.position.x >= previous_rect.end.x, context + " icons appear left to right without overlapping.")
 			_expect(is_equal_approx(button_rect.position.y, previous_rect.position.y), context + " icons share one row.")
+			if hover_caption:
+				_expect(is_equal_approx(button_rect.position.x - previous_rect.end.x, 8.0), context + " icons have an 8px gap.")
 		previous_rect = button_rect
 
 		var caption: Label = button.get_parent().get_node_or_null("Caption") as Label
-		_expect(caption != null, context + " button " + id + " has a Caption label.")
+		_expect(button.accessibility_name == captions[index], context + " button " + id + " keeps its accessible name.")
+		_expect((caption == null) == hover_caption, context + " button " + id + " uses the expected name presentation.")
 		if caption != null:
 			_expect(caption.is_visible_in_tree(), context + " caption for " + id + " is visible.")
 			_expect(caption.text == captions[index], context + " caption names " + captions[index] + " without a Locked suffix.")
@@ -141,24 +144,41 @@ func _run() -> void:
 	await _frames()
 	_expect(menu.current_category == "residential", "Residential opens its building choices.")
 	_check_compact_frame(menu, Vector2(200, 135), "Residential menu")
-	_check_button_row(menu, ["house", "courtyard_house"], ["House", "Courtyard House"], "Residential menu")
+	_check_button_row(menu, ["house", "courtyard_house"], ["House", "Courtyard House"], "Residential menu", true)
 	var house_button: Button = menu.buttons.get("house") as Button
 	var courtyard_button: Button = menu.buttons.get("courtyard_house") as Button
 	_expect(house_button != null and not house_button.disabled, "House is enabled.")
 	_expect(courtyard_button != null and courtyard_button.disabled, "Courtyard House is locked.")
-	var house_caption: Label = house_button.get_parent().get_node("Caption") as Label
-	var courtyard_caption: Label = courtyard_button.get_parent().get_node("Caption") as Label
 	await _move_mouse(Vector2(1, 1))
 	var frame_before_hover: Rect2 = menu.window.get_global_rect()
-	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 0.0, "Building names are hidden without a hover.")
-	await _move_mouse(house_button.get_global_rect().get_center())
-	_expect(house_caption.modulate.a == 1.0 and courtyard_caption.modulate.a == 0.0, "Hovering House shows only its name.")
+	_expect(not menu.hover_name.visible, "Building names are hidden without a hover.")
+	var mouse_position: Vector2 = house_button.get_global_rect().get_center()
+	await _move_mouse(mouse_position)
+	_expect(menu.hover_name.visible and menu.hover_name.text == "House", "Hovering House shows its name.")
+	_expect(menu.hover_name.position.x > mouse_position.x and menu.hover_name.position.y < mouse_position.y, "The name appears above and to the right of the mouse.")
+	_expect(not menu.hover_name.get_global_rect().intersects(menu.subtitle.get_global_rect()), "The name does not overlap the subtitle.")
+	_expect(not menu.hover_name.get_global_rect().intersects(house_button.get_global_rect()) and not menu.hover_name.get_global_rect().intersects(courtyard_button.get_global_rect()), "The name does not overlap the building icons.")
+	_expect(menu.hover_name.mouse_filter == Control.MOUSE_FILTER_IGNORE, "The hover name does not intercept mouse input.")
 	_expect(menu.window.get_global_rect().is_equal_approx(frame_before_hover), "The panel stays in place while hovering House.")
-	await _move_mouse(courtyard_button.get_global_rect().get_center())
-	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 1.0, "Hovering locked Courtyard House shows only its name.")
+	var prior_name_position: Vector2 = menu.hover_name.position
+	await _move_mouse(mouse_position + Vector2(4, 0))
+	_expect(is_equal_approx(menu.hover_name.position.x - prior_name_position.x, 4.0), "The name follows the mouse within the icon.")
+	for pointer_y: float in [1.0, 15.0]:
+		await _move_mouse(house_button.get_global_rect().position + Vector2(8.0, pointer_y))
+		_expect(not menu.hover_name.get_global_rect().intersects(menu.subtitle.get_global_rect()), "The name clears the subtitle throughout the icon.")
+		_expect(not menu.hover_name.get_global_rect().intersects(courtyard_button.get_global_rect()), "The name clears the adjacent icon throughout the icon.")
+	mouse_position = courtyard_button.get_global_rect().get_center()
+	await _move_mouse(mouse_position)
+	_expect(menu.hover_name.visible and menu.hover_name.text == "Courtyard House", "Hovering locked Courtyard House shows its name.")
+	_expect(menu.hover_name.position.x > mouse_position.x and menu.hover_name.position.y < mouse_position.y, "The locked building name appears above and to the right of the mouse.")
+	_expect(not menu.hover_name.get_global_rect().intersects(menu.subtitle.get_global_rect()), "The locked building name does not overlap the subtitle.")
+	_expect(not menu.hover_name.get_global_rect().intersects(house_button.get_global_rect()) and not menu.hover_name.get_global_rect().intersects(courtyard_button.get_global_rect()), "The locked building name does not overlap the icons.")
 	_expect(menu.window.get_global_rect().is_equal_approx(frame_before_hover), "The panel stays in place while hovering a locked building.")
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
+	menu._position_hover_name(Vector2(viewport_rect.end.x - 1.0, viewport_rect.position.y + 1.0))
+	_expect(_rect_contains(viewport_rect, menu.hover_name.get_global_rect()), "A name near the screen edge stays within the viewport.")
 	await _move_mouse(Vector2(1, 1))
-	_expect(house_caption.modulate.a == 0.0 and courtyard_caption.modulate.a == 0.0, "Building names disappear after the pointer leaves.")
+	_expect(not menu.hover_name.visible, "Building names disappear after the pointer leaves.")
 	if house_button != null:
 		_expect(house_button.has_focus(), "Keyboard focus starts on House.")
 	if courtyard_button != null:
@@ -180,13 +200,12 @@ func _run() -> void:
 	var workshop_button: Button = menu.buttons.get("mudbrick_workshop") as Button
 	_expect(menu.current_category == "production", "Production opens its building choices.")
 	_check_compact_frame(menu, Vector2(200, 145), "Locked Production menu")
-	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop"], "Locked Production menu")
+	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop"], "Locked Production menu", true)
 	_expect(workshop_button != null and workshop_button.disabled, "Workshop is disabled when workshop_enabled is false.")
-	var workshop_caption: Label = workshop_button.get_parent().get_node("Caption") as Label
 	await _move_mouse(workshop_button.get_global_rect().get_center())
-	_expect(workshop_caption.modulate.a == 1.0, "Hovering locked Workshop shows its name.")
+	_expect(menu.hover_name.visible and menu.hover_name.text == "Mudbrick Workshop", "Hovering locked Workshop shows its name.")
 	await _move_mouse(Vector2(1, 1))
-	_expect(workshop_caption.modulate.a == 0.0, "Workshop name disappears after the pointer leaves.")
+	_expect(not menu.hover_name.visible, "Workshop name disappears after the pointer leaves.")
 	_expect(menu.choices.get_node_or_null("Notice") == null, "The locked Production choice has no extra notice.")
 	_expect(menu.back_button.visible, "Back remains visible in the Production menu.")
 	await _frames()
@@ -214,7 +233,7 @@ func _run() -> void:
 	menu.buttons["production"].emit_signal("pressed")
 	await _frames()
 	_check_compact_frame(menu, Vector2(200, 160), "Workshop limit menu")
-	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop (Limit: 1)"], "Workshop limit menu")
+	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop (Limit: 1)"], "Workshop limit menu", true)
 	_expect(menu.buttons["mudbrick_workshop"].disabled, "A workshop at its limit remains disabled.")
 	menu.back_button.emit_signal("pressed")
 	await _frames()
