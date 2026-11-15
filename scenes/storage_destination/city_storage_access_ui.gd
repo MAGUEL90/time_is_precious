@@ -2,12 +2,15 @@ extends CanvasLayer
 
 signal closed
 
-const PANEL_SIZE := Vector2(156, 208)
+const PANEL_SIZE := Vector2(230, 208)
 const CURRENCY_ICONS: Array[Texture2D] = [
 	preload("res://resources/ui_icons/small_copper.tres"),
 	preload("res://resources/ui_icons/small_shekel.tres"),
 	preload("res://resources/ui_icons/small_gold.tres"),
 ]
+const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
+const DEPOSIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/deposit_icon.png")
+const SEND_ICON: Texture2D = preload("res://assets/ui/ui_icon/send_forward_icon.png")
 
 @onready var view: Control = $Root/Center/CityStorage
 @onready var grid: GridContainer = $Root/Center/CityStorage/Margin/Content/BagGrid/Margin/MainVBox/Scroll/Grid
@@ -38,8 +41,13 @@ var _needs_manager: Node
 
 func _ready() -> void:
 	visible = false
-	# Keep one portrait frame for every category, including empty stock.
+	# Keep one fixed frame for every category, including empty stock.
 	view.custom_minimum_size = PANEL_SIZE
+	var content_margin: MarginContainer = view.get_node("Margin") as MarginContainer
+	content_margin.add_theme_constant_override("margin_left", 16)
+	content_margin.add_theme_constant_override("margin_top", 16)
+	content_margin.add_theme_constant_override("margin_right", 16)
+	content_margin.add_theme_constant_override("margin_bottom", 16)
 	context.custom_minimum_size.y = 0
 	var bag_grid: Control = view.get_node("Margin/Content/BagGrid")
 	bag_grid.custom_minimum_size = Vector2.ZERO
@@ -47,10 +55,14 @@ func _ready() -> void:
 	context.hide()
 	$Root/CitySupplyPanel.hide()
 	_build_currency_summary()
-	view.get_node("Margin/Content/Footer/Back").pressed.connect(close)
+	var back_button: Button = view.get_node("Margin/Content/Footer/Back") as Button
+	back_button.custom_minimum_size = Vector2(64, 18)
+	_set_action_icon(back_button, BACK_ICON)
+	back_button.pressed.connect(close)
 	view.get_node("Close").pressed.connect(close)
 	var footer: Node = view.get_node("Margin/Content/Footer")
-	deposit_button = _make_button("Deposit", footer)
+	deposit_button = _make_button("Deposit", footer, 64.0)
+	_set_action_icon(deposit_button, DEPOSIT_ICON)
 	deposit_button.pressed.connect(_open_transfer.bind("deposit"))
 	categories.category_changed.connect(func(_category): _refresh_view())
 	# Four native-size cards fit beside the scrollbar without shrinking artwork.
@@ -153,7 +165,8 @@ func _ensure_haul_button() -> void:
 		return
 	if is_instance_valid(haul_button):
 		return
-	haul_button = _make_button("Send", deposit_button.get_parent())
+	haul_button = _make_button("Send", deposit_button.get_parent(), 64.0)
+	_set_action_icon(haul_button, SEND_ICON)
 	haul_button.pressed.connect(_open_haul)
 
 func _open_haul() -> void:
@@ -427,10 +440,16 @@ func _open_transfer(mode: String) -> void:
 	transfer_ui = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn").instantiate()
 	add_child(transfer_ui)
 	transfer_ui.allowed_category = InventoryCategorySelector.CATEGORY_ALL
+	var transfer_window: Control = transfer_ui.get_node("Root/Center/Window") as Control
+	transfer_window.custom_minimum_size = Vector2(300, transfer_window.custom_minimum_size.y)
+	_set_action_icon(transfer_ui.back_button, BACK_ICON)
+	_set_action_icon(transfer_ui.confirm_button, DEPOSIT_ICON)
+	transfer_ui.back_button.custom_minimum_size = Vector2(64, 18)
+	transfer_ui.confirm_button.custom_minimum_size = Vector2(64, 18)
 	transfer_ui.transfer_confirmed.connect(_confirm_transfer.bind(transfer_ui))
 	transfer_ui.transfer_back_requested.connect(_return_from_transfer.bind(transfer_ui))
 	transfer_ui.transfer_cancelled.connect(_return_from_transfer.bind(transfer_ui))
-	clear_button = _make_button("Clear", transfer_ui.back_button.get_parent())
+	clear_button = _make_button("Clear", transfer_ui.back_button.get_parent(), 64.0)
 	clear_button.get_parent().move_child(clear_button, transfer_ui.back_button.get_index())
 	clear_button.pressed.connect(_clear_transfer.bind(transfer_ui))
 	_refresh_transfer()
@@ -479,12 +498,24 @@ func _return_from_transfer(source: ItemTransferUI) -> void:
 	$Root.show()
 	_refresh_view()
 
-func _make_button(text: String, parent: Node) -> Button:
+func _make_button(text: String, parent: Node, min_width: float = 36.0) -> Button:
 	var button := Button.new()
 	button.name = text + "Button"
 	button.text = text
-	button.custom_minimum_size = Vector2(36, 16)
+	button.custom_minimum_size = Vector2(min_width, 18)
 	button.theme_type_variation = &"HudShortcutButton"
 	button.add_theme_font_size_override("font_size", 6)
 	parent.add_child(button)
 	return button
+
+func _set_action_icon(button: Button, texture: Texture2D) -> void:
+	button.icon = texture
+	button.expand_icon = false
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Keep the 16px artwork at native size inside the shared 18px action height.
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = button.get_theme_stylebox(style_name).duplicate() as StyleBox
+		style.content_margin_top = 1.0
+		style.content_margin_bottom = 1.0
+		button.add_theme_stylebox_override(style_name, style)
+	button.custom_minimum_size = Vector2(button.custom_minimum_size.x, maxf(button.custom_minimum_size.y, 18.0))

@@ -3,6 +3,10 @@ extends Node
 ## Isolated fixture: exercise the production dialog and physical City Storage API.
 const CITY_UI: PackedScene = preload("res://scenes/storage_destination/city_storage_access_ui.tscn")
 const CITY_STORAGE: Script = preload("res://scenes/storage_destination/city_tool_storage.gd")
+const HAUL_UI: PackedScene = preload("res://scenes/storage_destination/city_storage_haul_ui.tscn")
+const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
+const DEPOSIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/deposit_icon.png")
+const SEND_ICON: Texture2D = preload("res://assets/ui/ui_icon/send_forward_icon.png")
 
 var failures: int = 0
 var access_allowed: bool = true
@@ -53,6 +57,16 @@ func _run() -> void:
 	var transfer: ItemTransferUI = panel.transfer_ui
 	_expect(Inventory.items.get("shekel", 0) == 3 and CityStockManager.treasury_shekel == 100 and storage.items.is_empty(), "Opening deposit changes no balances.")
 	_expect(not transfer.close_button.visible and transfer.back_button.visible, "Deposit offers Back without duplicate Close.")
+	_expect(transfer.back_button.text == "Back" and transfer.back_button.icon == BACK_ICON
+		and transfer.back_button.icon.get_size() == Vector2(16, 16)
+		and transfer.confirm_button.text == "Deposit" and transfer.confirm_button.icon == DEPOSIT_ICON,
+		"The City Storage deposit dialog keeps labeled Back and Deposit actions with native icons.")
+	var transfer_window: Control = transfer.get_node("Root/Center/Window") as Control
+	_expect(panel.clear_button.custom_minimum_size == Vector2(64, 18)
+		and transfer.back_button.custom_minimum_size == Vector2(64, 18)
+		and transfer.confirm_button.custom_minimum_size == Vector2(64, 18)
+		and transfer_window.custom_minimum_size.x == 300.0,
+		"City Storage deposit actions share the same size in a locally widened transfer dialog.")
 	_expect(transfer.transfer_confirmed.get_connections().size() == 1, "Deposit has one commit callback.")
 	_select(transfer, "shekel", 1)
 	_select(transfer, "stone", 1)
@@ -109,6 +123,14 @@ func _run() -> void:
 	panel.open(storage, func() -> bool: return access_allowed, "city", true)
 	_expect(panel.deposit_button.disabled and panel.haul_button.disabled and not panel.context.visible,
 		"Remote storage keeps Deposit and Send disabled without a message below the title.")
+	var main_back: Button = panel.view.get_node("Margin/Content/Footer/Back") as Button
+	_expect(main_back.icon == BACK_ICON and main_back.text == "Back"
+		and panel.deposit_button.icon == DEPOSIT_ICON and panel.deposit_button.text == "Deposit"
+		and panel.haul_button.icon == SEND_ICON and panel.haul_button.text == "Send"
+		and main_back.custom_minimum_size == Vector2(64, 18)
+		and panel.deposit_button.custom_minimum_size == Vector2(64, 18)
+		and panel.haul_button.custom_minimum_size == Vector2(64, 18),
+		"City Storage Back, Deposit and Send use their native icons, labels and equal button widths.")
 	panel._open_transfer("deposit")
 	panel._open_haul()
 	_expect(not is_instance_valid(panel.transfer_ui) and not is_instance_valid(panel.haul_ui)
@@ -119,5 +141,31 @@ func _run() -> void:
 	await get_tree().process_frame
 	_expect(not get_tree().paused, "Leaving remote storage releases its pause.")
 	storage.free()
+	var haul_view: Control = HAUL_UI.instantiate()
+	add_child(haul_view)
+	haul_view.show()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var haul_panel: Control = haul_view.get_node("Center/Panel") as Control
+	var haul_content: Control = haul_view.get_node("Center/Panel/Margin/Content") as Control
+	var haul_footer: Control = haul_view.get_node("Center/Panel/Margin/Content/Footer") as Control
+	var haul_back: Button = haul_footer.get_node("Back") as Button
+	var start_button: Button = haul_footer.get_node("Start") as Button
+	var cancel_route_button: Button = haul_footer.get_node("CancelRoute") as Button
+	_expect(start_button.custom_minimum_size == Vector2(64, 18)
+		and cancel_route_button.custom_minimum_size == Vector2(64, 18)
+		and haul_back.custom_minimum_size == Vector2(64, 18)
+		and cancel_route_button.text == "Cancel Route" and haul_back.icon == BACK_ICON,
+		"Hauling actions share 64x18 controls while preserving the Cancel Route label and Back icon.")
+	var haul_panel_rect: Rect2 = haul_panel.get_global_rect()
+	var haul_content_rect: Rect2 = haul_content.get_global_rect()
+	_expect(is_equal_approx(haul_content_rect.position.x - haul_panel_rect.position.x, 16.0)
+		and is_equal_approx(haul_panel_rect.end.x - haul_content_rect.end.x, 16.0)
+		and is_equal_approx(haul_content_rect.position.y - haul_panel_rect.position.y, 16.0)
+		and is_equal_approx(haul_panel_rect.end.y - haul_content_rect.end.y, 16.0)
+		and haul_panel_rect.encloses(haul_footer.get_global_rect()),
+		"The hauling panel retains 16-pixel insets and contains the footer controls.")
+	haul_view.queue_free()
+	await get_tree().process_frame
 	print("ContentDepositUITest %s" % ("PASSED" if failures == 0 else "FAILED"))
 	get_tree().quit(0 if failures == 0 else 1)

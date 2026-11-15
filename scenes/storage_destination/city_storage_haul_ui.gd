@@ -2,6 +2,8 @@ extends Control
 
 signal closed
 
+const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
+
 @onready var source_option: OptionButton = $Center/Panel/Margin/Content/SourceRow/Source
 @onready var destination_label: Label = $Center/Panel/Margin/Content/SourceRow/Destination
 @onready var worker_option: OptionButton = $Center/Panel/Margin/Content/WorkerRow/Worker
@@ -32,7 +34,16 @@ func _ready() -> void:
 	quantity_spin.value_changed.connect(_on_quantity_changed)
 	start_button.pressed.connect(_start_route)
 	cancel_button.pressed.connect(_cancel_route)
-	$Center/Panel/Margin/Content/Footer/Back.pressed.connect(close)
+	var back_button: Button = $Center/Panel/Margin/Content/Footer/Back as Button
+	back_button.icon = BACK_ICON
+	back_button.expand_icon = false
+	back_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	for style_name: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = back_button.get_theme_stylebox(style_name).duplicate() as StyleBox
+		style.content_margin_top = 1.0
+		style.content_margin_bottom = 1.0
+		back_button.add_theme_stylebox_override(style_name, style)
+	back_button.pressed.connect(close)
 	source_option.select(0)
 	quantity_spin.min_value = 1
 	quantity_spin.max_value = 3

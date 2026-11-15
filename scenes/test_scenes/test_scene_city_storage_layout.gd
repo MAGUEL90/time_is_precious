@@ -3,6 +3,8 @@ extends Node
 ## Explicit fixture stock; no player save is loaded or written.
 const CITY_UI: PackedScene = preload("res://scenes/storage_destination/city_storage_access_ui.tscn")
 const CITY_STORAGE: Script = preload("res://scenes/storage_destination/city_tool_storage.gd")
+const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
+const DEPOSIT_ICON: Texture2D = preload("res://assets/ui/ui_icon/deposit_icon.png")
 
 class TransportStub extends Node:
 	var provider: Node
@@ -70,11 +72,26 @@ func _run() -> void:
 	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
 	var scroll: ScrollContainer = panel.grid.get_parent() as ScrollContainer
 	var footer: Control = panel.view.get_node("Margin/Content/Footer")
+	var back_button: Button = footer.get_node("Back") as Button
+	var content: Control = panel.view.get_node("Margin/Content")
 	var bag: Control = panel.view.get_node("Margin/Content/BagGrid")
-	_expect(panel.view.size == Vector2(156, 208) and panel.grid.columns == 4,
-		"Storage keeps the requested fixed 3:4 portrait frame and four native-size columns.")
+	_expect(panel.view.size == Vector2(230, 208) and panel.grid.columns == 4,
+		"Storage keeps a fixed frame wide enough for native action icons and four native-size columns.")
 	var fixed_panel_rect: Rect2 = panel.view.get_global_rect()
 	_expect(panel.stock_summary.get_child_count() == 3, "All three currency entries use icons.")
+	_expect(back_button.text == "Back" and back_button.icon == BACK_ICON
+		and back_button.icon.get_size() == Vector2(16, 16),
+		"Back keeps its label and displays the native 16x16 icon.")
+	_expect(back_button.custom_minimum_size == Vector2(64, 18)
+		and panel.deposit_button.custom_minimum_size == Vector2(64, 18)
+		and panel.deposit_button.text == "Deposit" and panel.deposit_button.icon == DEPOSIT_ICON,
+		"Back and Deposit keep matching action widths, labels and native icon assets.")
+	var content_rect: Rect2 = content.get_global_rect()
+	_expect(is_equal_approx(content_rect.position.x - fixed_panel_rect.position.x, 16.0)
+		and is_equal_approx(fixed_panel_rect.end.x - content_rect.end.x, 16.0)
+		and is_equal_approx(content_rect.position.y - fixed_panel_rect.position.y, 16.0)
+		and is_equal_approx(fixed_panel_rect.end.y - content_rect.end.y, 16.0),
+		"Storage content retains a 16-pixel inset on all four sides.")
 	for index: int in range(3):
 		var entry: HBoxContainer = panel.stock_summary.get_child(index)
 		var icon: TextureRect = entry.get_node("Icon")
