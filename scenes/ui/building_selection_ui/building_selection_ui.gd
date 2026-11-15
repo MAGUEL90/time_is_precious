@@ -12,7 +12,10 @@ const CATEGORIES: Dictionary = {
 	"civic_services": "Civic & Services",
 }
 const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
+const MIN_WINDOW_WIDTH: float = 180.0
 
+@onready var window: Control = $Root/Center/Window
+@onready var window_margin: MarginContainer = $Root/Center/Window/Margin
 @onready var title_label: Label = $Root/Center/Window/Margin/Content/Header/Title
 @onready var subtitle: Label = $Root/Center/Window/Margin/Content/Subtitle
 @onready var choices: VBoxContainer = $Root/Center/Window/Margin/Content/Choices
@@ -31,6 +34,13 @@ func _ready() -> void:
 	back_button.pressed.connect(go_back)
 	close_button.pressed.connect(close_menu)
 	close_button.texture_focused = close_button.texture_hover
+	window_margin.minimum_size_changed.connect(_fit_window_to_content)
+	_fit_window_to_content.call_deferred()
+
+func _fit_window_to_content() -> void:
+	# NinePatchRect does not inherit the minimum size of its anchored content.
+	var content_size := window_margin.get_combined_minimum_size()
+	window.custom_minimum_size = Vector2(maxf(MIN_WINDOW_WIDTH, content_size.x), content_size.y)
 
 func open_menu(_plot_label: String) -> void:
 	_show_categories()

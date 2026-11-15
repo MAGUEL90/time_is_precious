@@ -31,6 +31,30 @@ func _rect_contains(outer: Rect2, inner: Rect2, tolerance: float = 1.0) -> bool:
 		and inner.end.y <= outer.end.y + tolerance
 	)
 
+func _check_compact_frame(menu: Variant, max_size: Vector2, context: String) -> void:
+	var frame: Control = menu.get_node("Root/Center/Window") as Control
+	var frame_rect: Rect2 = frame.get_global_rect()
+	var interior: Rect2 = frame_rect.grow(-16.0)
+	_expect(frame.size.x <= max_size.x and frame.size.y <= max_size.y, context + " panel remains compact.")
+	for path: String in ["Margin/Content/Header", "Margin/Content/Subtitle", "Margin/Content/Choices"]:
+		var control: Control = frame.get_node(path) as Control
+		_expect(_rect_contains(interior, control.get_global_rect()), context + " keeps " + path + " inside its margins.")
+	_expect(_rect_contains(interior, menu.close_button.get_global_rect()), context + " keeps X inside its margins.")
+	var title: Label = menu.title_label
+	var title_font: Font = title.get_theme_font("font")
+	var title_width: float = title_font.get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title.get_theme_font_size("font_size")).x
+	_expect(title_width <= title.size.x + 1.0, context + " title fits without clipping.")
+	if menu.back_button.visible:
+		var back_rect: Rect2 = menu.back_button.get_global_rect()
+		_expect(_rect_contains(interior, back_rect), context + " keeps Back inside its margins.")
+		_expect(is_equal_approx(back_rect.position.x, interior.position.x), context + " keeps Back at the lower left.")
+		_expect(is_equal_approx(back_rect.end.y, interior.end.y), context + " keeps the bottom margin below Back.")
+		_expect(not back_rect.intersects(menu.choices.get_global_rect()), context + " keeps Back separate from the choices.")
+	var notice: Label = menu.choices.get_node_or_null("Notice") as Label
+	if notice != null:
+		_expect(_rect_contains(interior, notice.get_global_rect()), context + " keeps the notice inside its margins.")
+		_expect(notice.get_line_count() * notice.get_line_height() <= notice.size.y + 1.0, context + " notice fits vertically.")
+
 func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String], context: String) -> void:
 	var row: HBoxContainer = menu.choices.find_child("ChoiceRow", true, false) as HBoxContainer
 	_expect(row != null, context + " uses the dynamic ChoiceRow HBox.")
@@ -97,12 +121,14 @@ func _run() -> void:
 
 	_expect(menu.visible, "Opening the menu displays it in the test tree.")
 	_expect(not menu.subtitle.text.contains("Plot 1"), "The subtitle omits the plot label.")
+	_check_compact_frame(menu, Vector2(290, 105), "Category menu")
 	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu")
 	_expect(menu.buttons["residential"].has_focus(), "Keyboard focus starts on Residential.")
 
 	menu.buttons["residential"].emit_signal("pressed")
 	await _frames()
 	_expect(menu.current_category == "residential", "Residential opens its building choices.")
+	_check_compact_frame(menu, Vector2(200, 135), "Residential menu")
 	_check_button_row(menu, ["house", "courtyard_house"], ["House", "Courtyard House"], "Residential menu")
 	var house_button: Button = menu.buttons.get("house") as Button
 	var courtyard_button: Button = menu.buttons.get("courtyard_house") as Button
@@ -121,12 +147,14 @@ func _run() -> void:
 	menu.back_button.emit_signal("pressed")
 	await _frames()
 	_expect(menu.current_category.is_empty(), "Back from residential returns to the category menu.")
+	_check_compact_frame(menu, Vector2(290, 105), "Category menu after Back")
 	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu after Back")
 
 	menu.buttons["production"].emit_signal("pressed")
 	await _frames()
 	var workshop_button: Button = menu.buttons.get("mudbrick_workshop") as Button
 	_expect(menu.current_category == "production", "Production opens its building choices.")
+	_check_compact_frame(menu, Vector2(200, 145), "Locked Production menu")
 	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop"], "Locked Production menu")
 	_expect(workshop_button != null and workshop_button.disabled, "Workshop is disabled when workshop_enabled is false.")
 	var notice: Label = menu.choices.find_child("Notice", true, false) as Label
@@ -141,6 +169,25 @@ func _run() -> void:
 	await _frames()
 	_expect(menu.current_category.is_empty(), "Back from locked Production returns to categories.")
 	_expect(menu.buttons.has("production"), "Production is available again after Back.")
+	for category: String in ["food_farming", "storage_logistic", "civic_services"]:
+		menu.buttons[category].emit_signal("pressed")
+		await _frames()
+		_expect(menu.buttons.is_empty(), category + " keeps its empty state.")
+		_check_compact_frame(menu, Vector2(230, 110), category + " menu")
+		menu.back_button.emit_signal("pressed")
+		await _frames()
+		_expect(menu.current_category.is_empty(), "Back from " + category + " returns to categories.")
+		_check_compact_frame(menu, Vector2(290, 105), "Category menu after " + category)
+
+	# A longer existing notice must also fit if a workshop has reached its limit.
+	menu.workshop_enabled = true
+	menu.workshop_available = false
+	menu.buttons["production"].emit_signal("pressed")
+	await _frames()
+	_check_compact_frame(menu, Vector2(200, 160), "Workshop limit menu")
+	_expect(menu.buttons["mudbrick_workshop"].disabled, "A workshop at its limit remains disabled.")
+	menu.back_button.emit_signal("pressed")
+	await _frames()
 
 	var close_button: TextureButton = menu.get_node("Root/Center/Window/Margin/Content/Header/CloseButton") as TextureButton
 	close_button.emit_signal("pressed")
