@@ -25,6 +25,7 @@ const OPTION_PANEL_GAP: float = 4.0
 const OPTION_PANEL_Y_OFFSET: float = -4.0
 const ACTION_FEEDBACK_DURATION: float = 3.0
 const INVENTORY_SCREEN_MARGIN: float = 4.0
+const INVENTORY_LEFT_MARGIN: float = 12.0
 
 @onready var inventory_container: Control = $Root/Center
 @onready var inventory_window: Control = $Root/Center/Window
@@ -139,7 +140,7 @@ func _position_inventory_near_player() -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var inventory_size: Vector2 = inventory_container.size * inventory_container.scale
 
-	var target_x: float = INVENTORY_SCREEN_MARGIN
+	var target_x: float = INVENTORY_LEFT_MARGIN
 	var target_y: float = (viewport_size.y - inventory_size.y) * 0.5
 
 	target_y = clampf(
@@ -512,6 +513,7 @@ func _open_item_action_confirm_panel(action: String) -> void:
 	active_action_confirm_panel.canceled.connect(_close_item_action_confirm_panel)
 	add_child(active_action_confirm_panel)
 
+	active_option_panel.hide()
 	active_action_confirm_panel.setup(action, active_option_item_id, item_data, item_quantity)
 	_position_action_confirm_panel(panel_position)
 	_set_slots_interaction_locked(true)
@@ -539,6 +541,7 @@ func _close_item_action_confirm_panel() -> void:
 	active_action_confirm_panel = null
 
 	if active_option_panel != null and is_instance_valid(active_option_panel):
+		active_option_panel.show()
 		_set_slots_interaction_locked(true, active_option_slot)
 	else:
 		_set_slots_interaction_locked(false)

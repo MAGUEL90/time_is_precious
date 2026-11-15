@@ -3,6 +3,7 @@ class_name ItemActionConfirmPanel extends Control
 signal confirmed(action: String, item_id: String, quantity: int)
 signal canceled()
 
+@onready var background_texture: NinePatchRect = $BackgroundTexture
 @onready var confirm_actions: ConfirmActionPanel = $MarginContainer/ConfirmActions
 @onready var item_icon: TextureRect = $MarginContainer/VBoxContainer/ItemPreviewRow/ItemIcon
 @onready var action_label: Label = $MarginContainer/VBoxContainer/ItemPreviewRow/InfoVBox/ActionLabel
@@ -62,6 +63,7 @@ func setup(
 	quantity_steps = _get_safe_quantity_steps(step_values)
 	quantity_step = quantity_steps[0]
 	requires_final_confirmation = require_final_confirmation
+	background_texture.show()
 	quantity_stepper.visible = true
 	step_selector.visible = true
 	initial_actions.visible = true
@@ -138,6 +140,7 @@ func _on_confirm_button_pressed() -> void:
 	quantity_stepper.visible = false
 	step_selector.visible = false
 	initial_actions.visible = false
+	background_texture.hide()
 	confirm_actions.visible = true
 
 func _on_cancel_button_pressed() -> void:
@@ -147,6 +150,7 @@ func _on_confirmed() -> void:
 	confirmed.emit(current_action, current_item_id, current_quantity)
 
 func _on_confirm_action_canceled() -> void:
+	background_texture.show()
 	quantity_stepper.visible = true
 	step_selector.visible = true
 	confirm_actions.visible = false
