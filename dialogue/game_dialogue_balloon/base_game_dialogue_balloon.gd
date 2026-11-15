@@ -65,6 +65,8 @@ var mutation_cooldown: Timer = Timer.new()
 @onready var balloon: Control = %Balloon
 
 @onready var chat_box_root: Control = $Balloon/BottomCornerContainer/ChatBoxRoot
+@onready var dialogue_panel: Control = $Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue
+@onready var name_panel: Control = $Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue/TemplateName
 
 ## The label showing the name of the currently speaking character
 @onready var character_label: RichTextLabel = %CharacterLabel
@@ -78,9 +80,14 @@ var mutation_cooldown: Timer = Timer.new()
 ## Indicator to show that player can progress dialogue.
 @onready var progress: CanvasItem = %Progress
 
+var _dialogue_text_area_size: Vector2
+var _dialogue_panel_scale: Vector2 = Vector2.ZERO
+
 
 func _ready() -> void:
 	balloon.hide()
+	_dialogue_text_area_size = dialogue_label.size
+	_update_dialogue_text_scale()
 	chat_box_root.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 	chat_box_root.size = chat_box_root.custom_minimum_size
 	Engine.get_singleton("DialogueManager").mutated.connect(_on_mutated)
@@ -100,6 +107,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(dialogue_line):
+		_update_dialogue_text_scale()
 		progress.visible = not dialogue_label.is_typing and (dialogue_line.responses.size() == 0 or is_waiting_to_show_responses) and not dialogue_line.has_tag("voice")
 		if chat_box_root.visible:
 			position_chat_box()
@@ -156,6 +164,7 @@ func apply_dialogue_line() -> void:
 
 	# Show our balloon
 	balloon.show()
+	_update_dialogue_text_scale()
 	position_chat_box()
 	will_hide_balloon = false
 
@@ -224,6 +233,18 @@ func position_chat_box() -> void:
 	chat_box_position.x = clampf(chat_box_position.x, screen_margin, max_position.x)
 	chat_box_position.y = clampf(chat_box_position.y, screen_margin, max_position.y)
 	chat_box_root.position = chat_box_position.round()
+
+
+func _update_dialogue_text_scale() -> void:
+	var panel_scale: Vector2 = dialogue_panel.get_global_transform_with_canvas().get_scale().abs()
+	if panel_scale.x <= 0.0 or panel_scale.y <= 0.0 or panel_scale.is_equal_approx(_dialogue_panel_scale):
+		return
+	_dialogue_panel_scale = panel_scale
+	# Counter the frame's scale so six-pixel text keeps its native screen size.
+	var inverse_scale: Vector2 = Vector2(1.0 / panel_scale.x, 1.0 / panel_scale.y)
+	dialogue_label.scale = inverse_scale
+	dialogue_label.size = _dialogue_text_area_size * panel_scale
+	name_panel.scale = inverse_scale
 
 
 func get_dialogue_viewport_size() -> Vector2:

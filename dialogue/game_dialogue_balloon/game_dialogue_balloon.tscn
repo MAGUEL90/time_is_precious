@@ -200,21 +200,22 @@ layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
 offset_left = 3.5
-offset_top = 3.5
-offset_right = 136.5
-offset_bottom = 34.5
+offset_top = 7.5
+offset_right = 128.5
+offset_bottom = 38.5
 grow_horizontal = 1
 size_flags_vertical = 3
 theme = ExtResource("5_0hdkk")
 theme_type_variation = &"DialogueBodyText"
+theme_override_constants/line_separation = 2
 text = "asdasd"
 
 [node name="TemplateName" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
 offset_left = 15.0
-offset_top = 45.0
+offset_top = 3.0
 offset_right = 61.0
-offset_bottom = 57.0
+offset_bottom = 15.0
 size_flags_horizontal = 4
 size_flags_vertical = 0
 texture = SubResource("AtlasTexture_sa7tv")

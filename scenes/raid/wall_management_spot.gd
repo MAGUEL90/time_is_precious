@@ -253,7 +253,7 @@ func _release_lock() -> void:
 			interactable_label_component.show()
 
 func _fit_dialogue() -> void:
-	# Match the merchant's 176x60 artwork, empty portrait and text/name positions.
+	# Match the merchant's 176x60 artwork and text/name positions.
 	# Reserve space below it for choices so Enter keeps the conversation visible.
 	greeting_balloon.keep_chat_with_responses = true
 	var root: Control = greeting_balloon.chat_box_root
@@ -266,7 +266,7 @@ func _fit_dialogue() -> void:
 	panel.size = Vector2(176, 60)
 	panel.scale = Vector2.ONE
 	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
-	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 1)
+	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
 	var previous: Control = greeting_balloon.responses_menu
 	var choice: Button = previous.get_node("ResponseExample")
 	previous.remove_child(choice)
