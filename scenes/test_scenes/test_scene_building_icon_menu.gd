@@ -161,8 +161,7 @@ func _run() -> void:
 	_check_compact_frame(menu, Vector2(200, 145), "Locked Production menu")
 	_check_button_row(menu, ["mudbrick_workshop"], ["Mudbrick Workshop"], "Locked Production menu")
 	_expect(workshop_button != null and workshop_button.disabled, "Workshop is disabled when workshop_enabled is false.")
-	var notice: Label = menu.choices.find_child("Notice", true, false) as Label
-	_expect(notice != null and notice.text.contains("Not available yet"), "The locked Production choice explains its availability.")
+	_expect(menu.choices.get_node_or_null("Notice") == null, "The locked Production choice has no extra notice.")
 	_expect(menu.back_button.visible, "Back remains visible in the Production menu.")
 	await _frames()
 	_expect(menu.back_button.has_focus(), "Back receives keyboard focus for the locked Production choice.")

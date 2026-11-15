@@ -145,7 +145,6 @@ func _show_category(id: String, focus_id: String = "") -> void:
 		"production":
 			if not workshop_enabled:
 				_add_button("mudbrick_workshop", "Mudbrick Workshop", Callable(), true)
-				_add_notice("Not available yet.")
 				back_button.grab_focus.call_deferred()
 				return
 			_add_button("mudbrick_workshop", "Mudbrick Workshop" if workshop_available else "Mudbrick Workshop (Limit: 1)", _show_building.bind("mudbrick_workshop"), not workshop_available)
