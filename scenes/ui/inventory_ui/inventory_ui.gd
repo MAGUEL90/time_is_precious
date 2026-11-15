@@ -429,25 +429,21 @@ func _position_option_panel_near_slot(slot_ref: ItemSlot) -> void:
 
 	var slot_rect: Rect2 = slot_ref.get_global_rect()
 	var window_rect: Rect2 = inventory_window.get_global_rect()
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
 	var panel_size: Vector2 = active_option_panel.get_combined_minimum_size() * active_option_panel.scale
 
-	var min_x: float = window_rect.position.x + OPTION_PANEL_GAP
-	var min_y: float = window_rect.position.y + OPTION_PANEL_GAP
-	var max_x: float = window_rect.position.x + window_rect.size.x - panel_size.x - OPTION_PANEL_GAP
-	var max_y: float = window_rect.position.y + window_rect.size.y - panel_size.y - OPTION_PANEL_GAP
-
-	max_x = max(max_x, min_x)
-	max_y = max(max_y, min_y)
-
+	var min_y: float = viewport_rect.position.y + INVENTORY_SCREEN_MARGIN
+	var max_y: float = maxf(min_y, viewport_rect.end.y - panel_size.y - INVENTORY_SCREEN_MARGIN)
 	var panel_position: Vector2 = Vector2(
-		slot_rect.position.x + slot_rect.size.x + OPTION_PANEL_GAP,
+		window_rect.end.x + OPTION_PANEL_GAP,
 		slot_rect.position.y + (slot_rect.size.y - panel_size.y) * 0.5 + OPTION_PANEL_Y_OFFSET
 	)
 
-	if panel_position.x > max_x:
-		panel_position.x = slot_rect.position.x - panel_size.x - OPTION_PANEL_GAP
+	var left_position: float = window_rect.position.x - panel_size.x - OPTION_PANEL_GAP
+	if (panel_position.x + panel_size.x > viewport_rect.end.x - INVENTORY_SCREEN_MARGIN
+			and left_position >= viewport_rect.position.x + INVENTORY_SCREEN_MARGIN):
+		panel_position.x = left_position
 
-	panel_position.x = clampf(panel_position.x, min_x, max_x)
 	panel_position.y = clampf(panel_position.y, min_y, max_y)
 
 	active_option_panel.global_position = panel_position.round()
