@@ -13,6 +13,7 @@ const WORKER_CARD_SIZE: Vector2 = Vector2(24, 24)
 const WORKER_PORTRAIT_SIZE: Vector2 = Vector2(11, 15)
 const ACTION_BUTTON_SIZE: Vector2 = Vector2(64, 18)
 const MISSING_MATERIAL_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
+const ASSIGNED_TEXT_COLOR: Color = Color(0.78, 1.0, 0.72, 1.0)
 const WORKER_ASSIGNMENT_UI: PackedScene = preload(
 	"res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.tscn"
 )
@@ -25,6 +26,7 @@ signal player_build_requested
 signal player_resume_requested
 
 @onready var requirements_page: VBoxContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage
+@onready var clearing_header_spacer: Control = $Root/Center/Window/Margin/MainVBox/ClearingHeaderSpacer
 @onready var window: NinePatchRect = $Root/Center/Window
 @onready var materials_list: VBoxContainer = $Root/Center/Window/Margin/MainVBox/RequirementsPage/MaterialsList
 @onready var assign_workers_button: Button = $Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader/AssignWorkersButton
@@ -392,6 +394,7 @@ func _refresh_view() -> void:
 	if phase != "uncleared" and not (_allows_player_construction() and phase == "empty"):
 		_use_player = false
 	var clearing: bool = phase in ["uncleared", "clearing"]
+	clearing_header_spacer.visible = phase == "uncleared"
 	var show_requirements: bool = phase in ["empty", "uncleared"]
 	var selected_workshop: bool = is_instance_valid(_construction) and _construction.is_selected_workshop()
 	var requirements_worker_available: bool = not selected_workshop
@@ -612,6 +615,8 @@ func _populate_worker_rows() -> void:
 
 	if _selected_worker_ids.is_empty():
 		var empty_label := _make_label("Player assigned." if _use_player else "No workers selected.", 16)
+		if _use_player:
+			empty_label.add_theme_color_override("font_color", ASSIGNED_TEXT_COLOR)
 		worker_list.add_child(empty_label)
 		return
 

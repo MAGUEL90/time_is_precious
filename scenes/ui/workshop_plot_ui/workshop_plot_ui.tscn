@@ -72,6 +72,11 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 1
 
+[node name="ClearingHeaderSpacer" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
+visible = false
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+
 [node name="TitleHeader" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
