@@ -13,6 +13,7 @@ const CATEGORIES: Dictionary = {
 }
 const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
 const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
+const SELECTOR_SHEET: Texture2D = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
 const MIN_WINDOW_WIDTH: float = 180.0
 
 @onready var window: Control = $Root/Center/Window
@@ -29,11 +30,17 @@ var selected_building: String = ""
 var buttons: Dictionary = {}
 var _choice_row: HBoxContainer
 var _hovered_button: Button
+var _hovered_choice: Button
+var _keyboard_navigation: bool = false
+var _selector_texture: AtlasTexture
 var _closing: bool = false
 var workshop_available: bool = true
 var workshop_enabled: bool = true
 
 func _ready() -> void:
+	_selector_texture = AtlasTexture.new()
+	_selector_texture.atlas = SELECTOR_SHEET
+	_selector_texture.region = Rect2(133, 101, 22, 22)
 	back_button.pressed.connect(go_back)
 	close_button.pressed.connect(close_menu)
 	close_button.texture_focused = close_button.texture_hover
@@ -51,6 +58,7 @@ func open_menu(_plot_label: String) -> void:
 
 func _clear_choices() -> void:
 	_hide_hover_name()
+	_hovered_choice = null
 	buttons.clear()
 	for child: Node in choices.get_children():
 		choices.remove_child(child)
@@ -58,7 +66,7 @@ func _clear_choices() -> void:
 	_choice_row = HBoxContainer.new()
 	_choice_row.name = "ChoiceRow"
 	_choice_row.add_theme_constant_override("separation", 3)
-	_choice_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_choice_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	choices.add_child(_choice_row)
 
 func _add_button(id: String, text: String, action: Callable, locked: bool = false, hover_caption: bool = false) -> Button:
@@ -81,17 +89,29 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	button.accessibility_name = text
 	button.disabled = locked
-	var focus_style := StyleBoxFlat.new()
-	focus_style.bg_color = Color(0, 0, 0, 0)
-	focus_style.draw_center = false
-	focus_style.border_color = Color(1, 1, 1, 1)
-	focus_style.set_border_width_all(1)
-	button.add_theme_stylebox_override("focus", focus_style)
 	if locked:
 		button.add_theme_color_override("icon_disabled_color", Color.WHITE)
 	else:
 		button.pressed.connect(action)
 	tile.add_child(button)
+	# Match the Inventory and Work Order selector instead of changing panel fill.
+	button.add_theme_stylebox_override("hover", button.get_theme_stylebox("normal"))
+	var selection_frame := NinePatchRect.new()
+	selection_frame.name = "SelectionFrame"
+	selection_frame.texture = _selector_texture
+	selection_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	selection_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	selection_frame.patch_margin_left = 5
+	selection_frame.patch_margin_top = 5
+	selection_frame.patch_margin_right = 5
+	selection_frame.patch_margin_bottom = 5
+	selection_frame.visible = false
+	button.add_child(selection_frame)
+	selection_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.mouse_entered.connect(_on_choice_mouse_entered.bind(button))
+	button.mouse_exited.connect(_on_choice_mouse_exited.bind(button))
+	button.focus_entered.connect(_refresh_choice_highlights)
+	button.focus_exited.connect(_refresh_choice_highlights)
 
 	if hover_caption:
 		button.mouse_entered.connect(_show_hover_name.bind(text, button))
@@ -111,6 +131,25 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 		tile.add_child(caption)
 	buttons[id] = button
 	return button
+
+func _on_choice_mouse_entered(button: Button) -> void:
+	_hovered_choice = button
+	_keyboard_navigation = false
+	_refresh_choice_highlights()
+
+func _on_choice_mouse_exited(button: Button) -> void:
+	if _hovered_choice == button:
+		_hovered_choice = null
+	_refresh_choice_highlights()
+
+func _refresh_choice_highlights() -> void:
+	var use_mouse: bool = not _keyboard_navigation and is_instance_valid(_hovered_choice)
+	for button: Button in buttons.values():
+		var frame: NinePatchRect = button.get_node("SelectionFrame") as NinePatchRect
+		frame.visible = (
+			not button.disabled
+			and (button == _hovered_choice if use_mouse else button.has_focus())
+		)
 
 func _show_hover_name(text: String, button: Button) -> void:
 	_hovered_button = button
@@ -227,8 +266,20 @@ func close_menu() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible or _closing:
 		return
-	if event is InputEventMouseMotion and hover_name.visible:
-		_position_hover_name(event.position)
+	if event is InputEventMouseMotion:
+		if _keyboard_navigation:
+			_keyboard_navigation = false
+			_refresh_choice_highlights()
+		if hover_name.visible:
+			_position_hover_name(event.position)
+	elif (
+		event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")
+		or event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down")
+		or event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev")
+	):
+		if not _keyboard_navigation:
+			_keyboard_navigation = true
+			_refresh_choice_highlights()
 	if event.is_action_pressed("ui_cancel"):
 		go_back()
 		get_viewport().set_input_as_handled()

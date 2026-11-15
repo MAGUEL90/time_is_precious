@@ -4,6 +4,7 @@ extends Node
 const MENU_SCENE: PackedScene = preload("res://scenes/ui/building_selection_ui/building_selection_ui.tscn")
 const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
 const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
+const SELECTOR_SHEET: Texture2D = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
 const CATEGORY_ORDER: Array[String] = [
 	"residential", "production", "food_farming", "storage_logistic", "civic_services",
 ]
@@ -30,6 +31,17 @@ func _move_mouse(position: Vector2) -> void:
 	motion.position = position
 	motion.global_position = position
 	get_viewport().push_input(motion, true)
+	await _frames()
+
+func _press_action(action: String) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	get_viewport().push_input(event)
+	await _frames()
+	event = InputEventAction.new()
+	event.action = action
+	get_viewport().push_input(event)
 	await _frames()
 
 func _rect_contains(outer: Rect2, inner: Rect2, tolerance: float = 1.0) -> bool:
@@ -72,8 +84,11 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 	var row_rect: Rect2 = row.get_global_rect()
 	var choices_rect: Rect2 = menu.choices.get_global_rect()
 	_expect(_rect_contains(choices_rect, row_rect), context + " row stays inside the choices area.")
+	_expect(absf(row_rect.get_center().x - menu.window.get_global_rect().get_center().x) <= 0.5, context + " row is centered in the panel.")
 
 	var previous_rect: Rect2 = Rect2()
+	var first_center_x: float = 0.0
+	var last_center_x: float = 0.0
 	for index: int in range(ids.size()):
 		var id: String = ids[index]
 		var button: Button = menu.buttons.get(id) as Button
@@ -82,6 +97,9 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 			continue
 		_expect(button.is_visible_in_tree(), context + " button " + id + " is visible.")
 		var button_rect: Rect2 = button.get_global_rect()
+		if index == 0:
+			first_center_x = button_rect.get_center().x
+		last_center_x = button_rect.get_center().x
 		_expect(button_rect.size.is_equal_approx(Vector2(16, 16)), context + " button " + id + " is 16x16.")
 		_expect(_rect_contains(row_rect, button_rect), context + " button " + id + " does not overflow its row.")
 		_expect(_rect_contains(choices_rect, button_rect), context + " button " + id + " stays inside choices.")
@@ -109,6 +127,15 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 		if button.icon != null:
 			_expect(button.icon.get_size().x <= 16 and button.icon.get_size().y <= 16 and not button.expand_icon, context + " icon for " + id + " fits at its native size inside the panel.")
 		_expect(button.get_node_or_null("LockIcon") == null, context + " does not add a separate lock beside " + id + ".")
+		var selection: NinePatchRect = button.get_node_or_null("SelectionFrame") as NinePatchRect
+		_expect(selection != null and selection.mouse_filter == Control.MOUSE_FILTER_IGNORE, context + " has a non-intercepting selection frame for " + id + ".")
+		if selection != null:
+			var atlas: AtlasTexture = selection.texture as AtlasTexture
+			_expect(atlas != null and atlas.atlas == SELECTOR_SHEET and atlas.region == Rect2(133, 101, 22, 22), context + " uses the Inventory/Work Order selector for " + id + ".")
+			_expect(selection.size.is_equal_approx(Vector2(16, 16)), context + " keeps the selector aligned to the icon panel.")
+			_expect(not button.has_theme_stylebox_override("focus"), context + " has no custom white focus border.")
+	if not ids.is_empty():
+		_expect(absf((first_center_x + last_center_x) * 0.5 - row_rect.get_center().x) <= 0.5, context + " icons are centered as a group.")
 
 func _check_inventory_unchanged(before: Dictionary, max_load_before: float, bulk_before: bool, change_count: int) -> void:
 	_expect(Inventory.items == before, "The menu leaves in-memory Inventory items unchanged.")
@@ -139,6 +166,21 @@ func _run() -> void:
 	_check_button_row(menu, CATEGORY_ORDER, CATEGORY_CAPTIONS, "Category menu")
 	_expect((menu.buttons["residential"].get_parent().get_node("Caption") as Label).modulate.a == 1.0, "Category names remain visible.")
 	_expect(menu.buttons["residential"].has_focus(), "Keyboard focus starts on Residential.")
+	await _move_mouse(Vector2(1, 1))
+	var residential_frame: NinePatchRect = menu.buttons["residential"].get_node("SelectionFrame") as NinePatchRect
+	var production_frame: NinePatchRect = menu.buttons["production"].get_node("SelectionFrame") as NinePatchRect
+	var civic_button: Button = menu.buttons["civic_services"] as Button
+	var civic_frame: NinePatchRect = civic_button.get_node("SelectionFrame") as NinePatchRect
+	_expect(residential_frame.visible, "Focused category uses the existing corner selector.")
+	await _move_mouse(civic_button.get_global_rect().get_center())
+	_expect(civic_frame.visible and not residential_frame.visible, "Mouse hover highlights only the hovered category.")
+	await _press_action("ui_right")
+	_expect(menu.buttons["production"].has_focus() and production_frame.visible and not civic_frame.visible, "Keyboard navigation highlights the focused category.")
+	await _move_mouse(civic_button.get_global_rect().get_center() + Vector2(1, 0))
+	_expect(civic_frame.visible and not production_frame.visible, "Moving the mouse restores the hovered highlight.")
+	await _move_mouse(Vector2(1, 1))
+	menu.buttons["residential"].grab_focus()
+	await _frames()
 
 	menu.buttons["residential"].emit_signal("pressed")
 	await _frames()
@@ -170,6 +212,7 @@ func _run() -> void:
 	mouse_position = courtyard_button.get_global_rect().get_center()
 	await _move_mouse(mouse_position)
 	_expect(menu.hover_name.visible and menu.hover_name.text == "Courtyard House", "Hovering locked Courtyard House shows its name.")
+	_expect(not (courtyard_button.get_node("SelectionFrame") as NinePatchRect).visible and not (house_button.get_node("SelectionFrame") as NinePatchRect).visible, "Locked hover does not show a selection frame.")
 	_expect(menu.hover_name.position.x > mouse_position.x and menu.hover_name.position.y < mouse_position.y, "The locked building name appears above and to the right of the mouse.")
 	_expect(not menu.hover_name.get_global_rect().intersects(menu.subtitle.get_global_rect()), "The locked building name does not overlap the subtitle.")
 	_expect(not menu.hover_name.get_global_rect().intersects(house_button.get_global_rect()) and not menu.hover_name.get_global_rect().intersects(courtyard_button.get_global_rect()), "The locked building name does not overlap the icons.")
@@ -188,6 +231,19 @@ func _run() -> void:
 		house_button.emit_signal("pressed")
 	_expect(events["house"] == 1, "Choosing House emits house_requested exactly once.")
 	_expect(events["workshop"] == 0, "Choosing a residential item does not request a workshop.")
+	menu._add_button("qa_extra_building", "Extra", Callable(), true, true)
+	await _frames()
+	_check_button_row(menu, ["house", "courtyard_house", "qa_extra_building"], ["House", "Courtyard House", "Extra"], "Three building choices", true)
+	var expanded_ids: Array[String] = ["house", "courtyard_house", "qa_extra_building"]
+	var expanded_names: Array[String] = ["House", "Courtyard House", "Extra"]
+	for index: int in range(2, 6):
+		var id: String = "qa_extra_%d" % index
+		var name_text: String = "Extra %d" % index
+		menu._add_button(id, name_text, Callable(), true, true)
+		expanded_ids.append(id)
+		expanded_names.append(name_text)
+	await _frames()
+	_check_button_row(menu, expanded_ids, expanded_names, "Seven building choices", true)
 
 	menu.back_button.emit_signal("pressed")
 	await _frames()
