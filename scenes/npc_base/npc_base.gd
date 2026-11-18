@@ -55,6 +55,10 @@ func _ready() -> void:
 	_sync_state_position(true) # pastikan state langsung sinkron dengan posisi awal saat spawn/load
 
 	interactable_label_component.hide()
+	var prompt_art: CanvasItem = get_node_or_null("GabbiVisual") as CanvasItem
+	if prompt_art == null:
+		prompt_art = animated_sprite_2d
+	interactable_label_component.call_deferred("place_above_art", prompt_art)
 
 	player_reff = get_tree().get_first_node_in_group("player") as Player
 
@@ -119,6 +123,7 @@ func start_dialogue() -> bool:
 
 	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
+	_configure_compact_dialogue(balloon)
 
 	var contract_founded: bool = false
 	var npc_states: Array = [self]
@@ -145,6 +150,34 @@ func start_dialogue() -> bool:
 			balloon.start(npc_unique_dialogue , title_list[0], npc_states)
 
 	return true
+
+func _configure_compact_dialogue(balloon: BaseGameDialogueBalloon) -> void:
+	var panel: TextureRect = balloon.chat_box_root.get_node("TemplateDialogue")
+	panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_KEEP_SIZE)
+	panel.scale = Vector2.ONE
+	panel.size = Vector2(176, 60)
+	panel.position = Vector2.ZERO
+	balloon.chat_box_root.custom_minimum_size = panel.size
+	balloon.chat_box_root.size = panel.size
+	balloon.name_panel.position.y = 0.0
+	# The existing arrow frames have transparent padding on their right side.
+	# Align the visible pixels with the lower-right inset of the text panel.
+	(balloon.progress as Node2D).position = Vector2(156.5, 44.0)
+	var chat_frame: Control = balloon.dialogue_label.get_parent() as Control
+	# Use the full inner frame with the same inset on each side.
+	balloon.dialogue_label.position.x = 3.0
+	balloon._dialogue_text_area_size.x = chat_frame.size.x - 2.0 * balloon.dialogue_label.position.x
+	balloon._dialogue_panel_scale = Vector2.ZERO
+	var response_template: Button = balloon.responses_menu.response_template as Button
+	response_template.custom_minimum_size = Vector2(120, 16)
+	response_template.add_theme_font_size_override("font_size", 6)
+	balloon.responses_menu.custom_minimum_size = Vector2(120, 0)
+	balloon.responses_menu.size = Vector2(120, 0)
+	balloon.responses_menu.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
+	var layout := preload("res://scenes/npc_base/npc_dialogue_layout.gd").new()
+	layout.balloon = balloon
+	balloon.add_child(layout)
 
 func _on_walk_cycle_duration_timeout() -> void:
 	if allow_random_walk == false:

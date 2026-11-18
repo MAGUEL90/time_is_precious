@@ -3,6 +3,7 @@ class_name Gabbi extends NPCBase
 @export var use_city_rebuilding_dialogue: bool = false
 
 func _ready() -> void:
+	_align_visual_sort_to_feet()
 	# The initial-scene guide uses her authored spawn, not the old template origin.
 	# Each visit owns this transient state without modifying the template resource.
 	if use_city_rebuilding_dialogue and npc_state != null:
@@ -13,6 +14,16 @@ func _ready() -> void:
 	if not allow_random_walk:
 		walk_cycle_duration.stop()
 		can_walk = false
+
+func _align_visual_sort_to_feet() -> void:
+	var visual: Node2D = $GabbiVisual
+	var feet_y: float = $CollisionShape2D.position.y
+	# Keep all layer paths and their drawn positions; only the sort anchor moves.
+	y_sort_enabled = true
+	visual.position.y += feet_y
+	for layer: Node in visual.get_children():
+		if layer is Node2D:
+			(layer as Node2D).position.y -= feet_y
 
 func can_start_dialogue() -> bool:
 	if use_city_rebuilding_dialogue:
@@ -27,14 +38,9 @@ func start_dialogue() -> bool:
 	# This existing title is a city conversation, not a hiring action.
 	var balloon: BaseGameDialogueBalloon = GAME_dialogue_BALLOON.instantiate()
 	get_tree().current_scene.add_child(balloon)
-	# Clamp using the actual scaled artwork so its border stays on screen.
+	# Use the same native-pixel frame as other NPC conversations.
+	_configure_compact_dialogue(balloon)
 	var panel: TextureRect = balloon.chat_box_root.get_node("TemplateDialogue")
-	panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_KEEP_SIZE)
-	panel.size = Vector2(176, 60)
-	panel.position = Vector2.ZERO
-	balloon.chat_box_root.custom_minimum_size = panel.size * panel.scale
-	balloon.chat_box_root.size = balloon.chat_box_root.custom_minimum_size
 	# The legacy response offsets fall below the 400x225 gameplay viewport.
 	# Center this conversation's choices without changing other dialogue layouts.
 	balloon.responses_menu.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)

@@ -143,6 +143,16 @@ func _exercise_real_dialogue_cycle(cycle: int) -> bool:
 		return false
 	_expect(balloon.dialogue_line.text.contains("this is TEST dialogue"),
 		"Cycle %d uses the existing test.dialogue fixture through the real balloon." % cycle)
+	var arrow: AnimatedSprite2D = balloon.progress as AnimatedSprite2D
+	var arrow_size: Vector2 = arrow.sprite_frames.get_frame_texture(arrow.animation, arrow.frame).get_size()
+	var arrow_rect: Rect2 = arrow.get_global_transform_with_canvas() * Rect2(-arrow_size * 0.5, arrow_size)
+	_expect(balloon.dialogue_panel.get_global_rect().encloses(balloon.name_panel.get_global_rect())
+		and balloon.dialogue_panel.get_global_rect().encloses(arrow_rect),
+		"Cycle %d keeps the name panel and continue arrow within the NPC dialogue frame." % cycle)
+	var chat_frame: Control = balloon.dialogue_label.get_parent() as Control
+	_expect(balloon.dialogue_label.size.x >= chat_frame.size.x * 0.9
+		and chat_frame.get_global_rect().encloses(balloon.dialogue_label.get_global_rect()),
+		"Cycle %d uses the available dialogue frame width while staying inside it." % cycle)
 	if cycle == 1:
 		await _capture_optional_screenshot()
 
@@ -173,6 +183,9 @@ func _exercise_real_dialogue_cycle(cycle: int) -> bool:
 	balloon.show_responses()
 	var end_button: Control
 	for item: Control in balloon.responses_menu.get_menu_items():
+		if item is Button:
+			_expect(item.get_theme_font_size("font_size") == 6 and item.size.y >= 16,
+				"Cycle %d keeps NPC response buttons at the 6-pixel font and compact height." % cycle)
 		if item.get_meta("response", null) == end_response:
 			end_button = item
 	_expect(is_instance_valid(end_button), "Cycle %d exposes the end response in the real response menu." % cycle)
