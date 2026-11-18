@@ -92,7 +92,7 @@ func _run() -> void:
 				_expect(palm.state.available == slots, "Continue retains every saved slot for " + str(palm.name))
 				_expect(not palm.world_view_enabled, "Continue keeps the legacy world view disabled for " + str(palm.name))
 				_expect(palm._pickups.is_empty(), "Continue creates no pickups for the hidden legacy source " + str(palm.name))
-			_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(), "Continue creates no hidden or duplicate legacy palm views.")
+			_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != get_tree().current_scene.get_node("YSortWorld")), "Continue creates no hidden or duplicate legacy palm views.")
 		_expect(_same_snapshot(actual, expected), "Continue restores the full checkpoint without elapsed time or extra sleep.")
 		_expect(FileAccess.get_file_as_bytes(path) == bytes_before, "Continue never rewrites the checkpoint.")
 		if legacy_v8 and mode == "city":

@@ -99,12 +99,22 @@ func _run() -> void:
 		var entry: HBoxContainer = panel.stock_summary.get_child(index)
 		var icon: TextureRect = entry.get_node("Icon")
 		var amount: Label = entry.get_node("Amount")
+		_expect(amount.get_theme_color("font_color") == Color.WHITE, "City Storage currency text is white.")
 		_expect(icon.texture == panel.CURRENCY_ICONS[index] and icon.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
 			"Currency artwork uses the existing native asset.")
-		_expect(amount.text == (str(treasury) if index == 1 else "--"),
-			"Currency values preserve the actual treasury and unavailable placeholders.")
+		_expect(amount.text == "0" and amount.get_theme_font_size("font_size") == 6
+			and amount.get_theme_font("font") == panel.view.theme.get_font("font", "HudLabelShortcut")
+			and amount.accessibility_name == "%s: 0, placeholder" % entry.name,
+			"Each currency uses the 6-pixel project font and a zero placeholder.")
 		_expect(entry.get_global_rect().encloses(icon.get_global_rect()) and panel.view.get_global_rect().encloses(entry.get_global_rect()),
 			"Currency icon and value remain inside the frame.")
+	var copper: Control = panel.stock_summary.get_child(0) as Control
+	var shekel: Control = panel.stock_summary.get_child(1) as Control
+	var gold: Control = panel.stock_summary.get_child(2) as Control
+	_expect(is_equal_approx(shekel.global_position.x - copper.get_global_rect().end.x, 12.0)
+		and is_equal_approx(gold.global_position.x - shekel.get_global_rect().end.x, 12.0)
+		and is_equal_approx(panel.stock_summary.get_global_rect().get_center().x, panel.view.get_global_rect().get_center().x),
+		"Currency entries have even gaps and are centered when no feedback is shown.")
 	_expect(viewport_rect.encloses(panel.view.get_global_rect()), "Entire storage panel fits in the logical viewport.")
 	_expect(panel.view.get_global_rect().encloses(footer.get_global_rect()) and footer.get_global_rect().end.y <= viewport_rect.end.y,
 		"All action buttons remain inside the panel and viewport.")
@@ -129,12 +139,49 @@ func _run() -> void:
 			and slot.get_global_rect().end.x <= scroll.get_global_rect().end.x,
 			"The 6-pixel quantity and card stay within the grid horizontally: " + slot._item_id)
 	_expect(shown == expected, "All available registered items appear exactly once with their actual quantities.")
+	var hovered_slot: ItemSlot = panel.grid.get_child(0) as ItemSlot
+	var move := InputEventMouseMotion.new()
+	move.position = hovered_slot.get_global_rect().get_center()
+	move.global_position = move.position
+	get_viewport().push_input(move, true)
+	await _frames(5)
+	_expect(panel.item_info_panel.visible and panel.item_info_panel.name_label.text.contains(ItemDatabase.get_item_data(hovered_slot._item_id).display_name),
+		"Hovering an actual storage item shows its own information.")
+	var info_rect: Rect2 = panel.item_info_panel.get_global_rect()
+	_expect(info_rect.size.x == 260 and info_rect.size.y >= 40, "City Storage uses the shared content-sized item panel.")
+	_expect(viewport_rect.encloses(info_rect) and absf(info_rect.get_center().x - viewport_rect.get_center().x) <= 1.0
+		and is_equal_approx(viewport_rect.end.y - info_rect.position.y, 68.0),
+		"Item information stays at the lower center of the viewport.")
+	_expect(panel.item_info_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE and panel.view.get_global_rect() == fixed_panel_rect,
+		"Information does not block input or resize City Storage.")
+	await _capture("storage-item-information.png")
+	var next_slot: ItemSlot = panel.grid.get_child(1) as ItemSlot
+	move = InputEventMouseMotion.new()
+	move.position = next_slot.get_global_rect().get_center()
+	move.global_position = move.position
+	get_viewport().push_input(move, true)
+	await _frames()
+	_expect(panel.item_info_panel.visible and panel.item_info_panel.name_label.text.contains(ItemDatabase.get_item_data(next_slot._item_id).display_name),
+		"Moving between items updates the information.")
+	_expect(panel.item_info_panel.get_global_rect().position == info_rect.position and panel.item_info_panel.size.x == info_rect.size.x, "City Storage item information retains its top position and width.")
+	move = InputEventMouseMotion.new()
+	move.position = Vector2(1, 1)
+	move.global_position = move.position
+	get_viewport().push_input(move, true)
+	await _frames()
+	_expect(not panel.item_info_panel.visible, "Moving away hides item information.")
+	_expect(storage.items == before_items and storage.units == before_units, "Inspecting an item does not change stock.")
 	var scrollbar: VScrollBar = scroll.get_v_scroll_bar()
 	_expect(scrollbar.visible and scrollbar.max_value > scrollbar.page, "Many items produce a real vertical scroll range.")
 	_expect(scroll.size.y == 102 and scrollbar.size == Vector2(8, 102)
-		and scrollbar.get_theme_stylebox("scroll") is StyleBoxEmpty
-		and scrollbar.get_theme_stylebox("scroll_focus") is StyleBoxEmpty,
-		"The native-width scrollbar has no dark track and aligns with four item rows.")
+		and scrollbar.get_theme_stylebox("scroll") is StyleBoxTexture
+		and scrollbar.get_theme_stylebox("scroll_focus") is StyleBoxTexture,
+		"The fixed scrollbar rail aligns with four item rows.")
+	var thumb: StyleBoxTexture = scrollbar.get_theme_stylebox("grabber") as StyleBoxTexture
+	var highlight: AtlasTexture = thumb.texture as AtlasTexture if is_instance_valid(thumb) else null
+	_expect(is_instance_valid(highlight) and highlight.atlas == panel.ITEM_SCROLLBAR_TEXTURE
+		and highlight.region == Rect2(3, 3, 2, 1),
+		"The moving highlight uses the existing scrollbar artwork.")
 	if panel.grid.get_child_count() >= 8:
 		var first: ItemSlot = panel.grid.get_child(0) as ItemSlot
 		var second: ItemSlot = panel.grid.get_child(1) as ItemSlot
@@ -146,40 +193,55 @@ func _run() -> void:
 			"Seven slots fit across with the Inventory spacing before the next row.")
 		_expect(is_equal_approx(scrollbar.global_position.x - seventh.get_global_rect().end.x, 4.0),
 			"The seventh slot and scrollbar are separated by four pixels.")
-	panel._feedback_text = "Deposited."
 	panel._refresh_view()
 	await _frames()
-	_expect(panel.feedback.visible and scroll.size.y == 102 and scrollbar.size.y == 102
-		and panel.view.get_global_rect().encloses(panel.feedback.get_global_rect())
-		and not panel.feedback.get_global_rect().intersects(panel.stock_summary.get_global_rect())
+	_expect(not panel.feedback.visible and scroll.size.y == 102 and scrollbar.size.y == 102
+		and panel.view.get_global_rect() == fixed_panel_rect
 		and is_equal_approx(panel.view.get_global_rect().end.y - footer.get_global_rect().end.y, 16.0),
-		"Feedback keeps four complete scroll rows and the footer within the fixed frame.")
-	CityStockManager.treasury_shekel = 1234567
-	panel._feedback_text = "Inventory does not contain enough of this item."
-	panel._refresh_view()
-	await _frames()
-	var amount: Label = panel._currency_amounts[1]
-	var amount_width: float = amount.get_theme_font("font").get_string_size(
-		amount.text, HORIZONTAL_ALIGNMENT_LEFT, -1, amount.get_theme_font_size("font_size")
-	).x
-	_expect(panel.feedback.get_visible_line_count() == panel.feedback.get_line_count()
-		and amount.text == "1234567" and amount_width <= amount.size.x
-		and not panel.feedback.get_global_rect().intersects(panel.stock_summary.get_global_rect()),
-		"A long feedback message and the treasury remain readable beside one another.")
-	CityStockManager.treasury_shekel = treasury
-	panel._feedback_text = ""
-	panel._refresh_view()
-	await _frames()
-	_expect(not panel.feedback.visible and scroll.size.y == 102 and scrollbar.size.y == 102,
-		"Four scroll rows return when the feedback is cleared.")
+		"Storage hides feedback and keeps four rows and the footer within its fixed frame.")
 	var wheel := InputEventMouseButton.new()
 	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 	wheel.pressed = true
 	wheel.position = scroll.get_global_rect().get_center()
 	wheel.global_position = wheel.position
 	get_viewport().push_input(wheel, true)
+	wheel = InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.position = scroll.get_global_rect().get_center()
+	wheel.global_position = wheel.position
+	get_viewport().push_input(wheel, true)
 	await _frames()
 	_expect(scroll.scroll_vertical > 0, "Mouse wheel scrolls the actual storage grid.")
+	scroll.scroll_vertical = 0
+	await _frames()
+	var start: Vector2 = scrollbar.get_global_rect().position + Vector2(scrollbar.size.x * 0.5, 5.0)
+	var finish: Vector2 = scrollbar.get_global_rect().position + Vector2(scrollbar.size.x * 0.5, scrollbar.size.y - 5.0)
+	var enter := InputEventMouseMotion.new()
+	enter.position = start
+	enter.global_position = start
+	get_viewport().push_input(enter, true)
+	await _frames()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = start
+	press.global_position = start
+	get_viewport().push_input(press, true)
+	await _frames()
+	var motion := InputEventMouseMotion.new()
+	motion.position = finish
+	motion.global_position = finish
+	motion.relative = finish - start
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	get_viewport().push_input(motion, true)
+	await _frames()
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.position = finish
+	release.global_position = finish
+	get_viewport().push_input(release, true)
+	await _frames()
+	_expect(scroll.scroll_vertical > 0, "The City Storage scrollbar can be dragged.")
 	scroll.scroll_vertical = int(scroll.get_v_scroll_bar().max_value)
 	await _frames()
 	await _capture("storage-many-bottom.png")
@@ -205,8 +267,8 @@ func _run() -> void:
 	panel._refresh_view()
 	await _frames()
 	_expect(panel.view.get_global_rect() == fixed_panel_rect, "A very large currency value cannot resize the panel.")
-	_expect(panel._currency_amounts[1].text == "9223372036854775807"
-		and panel._currency_amounts[1].accessibility_name == "Shekel: 9223372036854775807", "Large treasury remains exact and accessible.")
+	_expect(panel._currency_amounts[1].text == "0"
+		and panel._currency_amounts[1].accessibility_name == "Shekel: 0, placeholder", "Treasury changes do not alter the requested placeholder.")
 	CityStockManager.treasury_shekel = treasury
 	_expect(storage.items == before_items and storage.units == before_units and CityStockManager.treasury_shekel == treasury,
 		"Browsing, filtering and scrolling do not alter stock or treasury.")
@@ -238,13 +300,7 @@ func _run() -> void:
 	_expect(annex_scroll.size.y == 76
 		and is_equal_approx(panel.view.get_global_rect().end.y - annex_footer.get_global_rect().end.y, 16.0),
 		"Annex context retains complete rows and the bottom inset.")
-	panel._feedback_text = "No available items."
-	panel._refresh_view()
-	await _frames()
-	_expect(annex_scroll.size.y == 50 and panel.feedback.visible
-		and not annex_scroll.get_global_rect().intersects(panel.feedback.get_global_rect())
-		and is_equal_approx(panel.view.get_global_rect().end.y - annex_footer.get_global_rect().end.y, 16.0),
-		"Annex context and feedback fit without covering slots or actions.")
+	_expect(not panel.feedback.visible, "Annex storage also hides the feedback label.")
 	await _capture("storage-annex.png")
 	panel.close()
 	await _frames()
@@ -261,6 +317,13 @@ func _run() -> void:
 	panel.categories.next_button.pressed.emit()
 	await _frames()
 	_expect(panel.view.get_global_rect() == fixed_panel_rect, "A category with no matching stock retains the fixed frame.")
+	for i in range(6):
+		if panel.grid.get_child_count() == 0:
+			break
+		panel.categories.next_button.pressed.emit()
+		await _frames()
+	_expect(panel.grid.get_child_count() == 0 and not panel.feedback.visible and panel.feedback.text.is_empty(),
+		"An empty category does not show a feedback message.")
 	await _capture("storage-one-item.png")
 	panel.close()
 	await _frames()
@@ -269,13 +332,12 @@ func _run() -> void:
 	add_child(panel)
 	panel.open(storage, func() -> bool: return true)
 	await _frames()
-	_expect(panel.grid.get_child_count() == 0 and panel.feedback.text == "No available items.",
-		"Empty storage has no fabricated cards and reports its empty state.")
+	_expect(panel.grid.get_child_count() == 0 and not panel.feedback.visible,
+		"Empty storage has no fabricated cards or feedback message.")
 	_expect(panel.view.get_global_rect() == fixed_panel_rect, "Empty storage retains the fixed frame.")
-	_expect(panel.view.get_global_rect().encloses(panel.feedback.get_global_rect())
-		and panel.view.get_global_rect().encloses(panel.view.get_node("Margin/Content/Footer").get_global_rect())
+	_expect(panel.view.get_global_rect().encloses(panel.view.get_node("Margin/Content/Footer").get_global_rect())
 		and is_equal_approx(panel.view.get_global_rect().end.y - panel.view.get_node("Margin/Content/Footer").get_global_rect().end.y, 16.0),
-		"Empty-state feedback and the footer remain inside the frame with the bottom inset.")
+		"The footer remains inside the empty frame with the bottom inset.")
 	await _capture("storage-empty.png")
 	panel.close()
 	await _frames()

@@ -41,21 +41,26 @@ func _run() -> void:
 	var old_wallet: int = int(Inventory.items.get("shekel", 0))
 	# Fixture-only reconstruction of the previous version, before Belum existed.
 	CitizenManager.citizens_by_id.erase(STARTERS.CITY_HAULER_APPLICANT_ID)
+	# Keep the synthetic roster and all per-person ledgers consistent.
+	CitizenNeedsManager.food_coverage_until.erase(STARTERS.CITY_HAULER_APPLICANT_ID)
+	CitizenNeedsManager.satisfaction_last_minute.erase(STARTERS.CITY_HAULER_APPLICANT_ID)
+	CitizenNeedsManager.satisfaction_accumulators.erase(STARTERS.CITY_HAULER_APPLICANT_ID)
 	var store: Node = WorkStateRuntime.get_node("CitySave")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://hauler_migration"))
 	store.disk.path = "user://hauler_migration/checkpoint.json"
-	_check(store.save_checkpoint(), "The prior hired-Laborer state saves: " + store.last_error)
+	var saved: bool = store.save_checkpoint()
+	_check(saved, "The prior hired-Laborer state saves: " + store.last_error)
+	if not saved:
+		get_tree().quit(1)
+		return
 	var original: PackedByteArray = FileAccess.get_file_as_bytes(store.disk.path)
 	# An otherwise valid old document can be just below the existing 8 MiB
 	# limit. Adding Belum must not make that checkpoint unloadable.
 	var almost_full: Dictionary = store.snapshot.capture(city)
 	var codec := CitySaveValues.new()
 	var raw: Dictionary = codec.decode(almost_full.state)
-	raw.worksites.schema_version = 4
-	for added: String in ["ClaySiteB", "ReedSiteB", "WoodSiteB", "WoodSiteC"]:
-		raw.worksites.sites.erase(added)
-	for site_id: String in raw.worksites.sites:
-		raw.worksites.sites[site_id].erase("offset")
+	# Roster migration is independent of Worksite schema history. Keep this
+	# fixture on the complete current registry instead of deleting arbitrary IDs.
 	var old_person: CitizenData = raw.citizens.citizens_by_id[STARTERS.HAULER_APPLICANT_ID]
 	old_person.display_name = ""
 	almost_full.state = codec.encode(raw)
@@ -87,15 +92,12 @@ func _run() -> void:
 	_check(hauler != null and hauler.profession == WorkerData.Profession.HAULER and CitizenManager.get_all_applicants().has(hauler), "The old roster receives a distinct Hauler applicant.")
 	_check(int(Inventory.items.get("shekel", 0)) == old_wallet, "Migration itself makes no wallet debit or grant.")
 	var board: JobBoard = city.get_node("YSortWorld/InitialWorksites/JobBoard")
-	board.on_player_interact(city.get_node("YSortWorld/Player"))
-	var ui: JobBoardUI = board.job_board_ui
-	_check(ui != null and not ui.applicants.is_empty() and ui.applicants[0].citizen_id == STARTERS.CITY_HAULER_APPLICANT_ID, "The new Hauler is visible without scrolling.")
-	if ui != null and not ui.applicants.is_empty():
-		ui.applicant_list.select(0)
-		ui.hire_button.pressed.emit()
-		ui.confirm_hire_button.pressed.emit()
-		ui.close()
-	_check(WorkerDatabase.get_worker_data(STARTERS.CITY_HAULER_APPLICANT_ID) != null, "The new Hauler can be hired through the real board.")
+	_check(not board.world_access_enabled, "The initial scene keeps its legacy board disabled.")
+	var hired: WorkerData = WorkerDatabase.hire_applicant(STARTERS.CITY_HAULER_APPLICANT_ID)
+	_check(hired != null and hired.profession == WorkerData.Profession.HAULER, "The migrated applicant can take a normal paid Hauler contract.")
+	if hired == null:
+		get_tree().quit(1)
+		return
 	_check(store.save_checkpoint() and store.load_checkpoint() and store.load_checkpoint(), "The two roles survive repeated save and Continue: " + store.last_error)
 	_check(WorkerDatabase.get_worker_data(STARTERS.HAULER_APPLICANT_ID).profession == WorkerData.Profession.LABORER
 		and WorkerDatabase.get_worker_data(STARTERS.CITY_HAULER_APPLICANT_ID).profession == WorkerData.Profession.HAULER

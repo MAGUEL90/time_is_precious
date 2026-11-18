@@ -179,6 +179,10 @@ func _test_reassignment_keeps_daily_cap() -> void:
 
 func _test_midshift_hauler_only_carries_new_output() -> void:
 	_set_case_time(base_day + 4, 12, 0)
+	# Earlier cases advance several days; isolate this exact-unit hauling case
+	# from their accumulated needs decay without changing production rules.
+	WorkerDatabase.get_worker_data(PRE_SHIFT_ID).satisfaction = 0.5
+	_expect(is_equal_approx(WorkerDatabase.get_worker_data(PRE_SHIFT_ID).get_satisfaction_work_multiplier(), 1.0), "Hauling fixture starts with neutral production speed.")
 	var site = fixture.sites[HAUL_SITE]
 	var site_marker: Marker2D = fixture.get_node("WorksiteMarkers/ClaySiteB") as Marker2D
 	site.minutes_per_unit = 1.0

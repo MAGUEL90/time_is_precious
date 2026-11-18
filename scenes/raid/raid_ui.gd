@@ -8,6 +8,9 @@ const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_displ
 const WORK_PROGRESS: PackedScene = preload("res://scenes/raid/defense_work_progress.tscn")
 const CITY_HUB_SIZE: Vector2 = Vector2(300, 196)
 const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
+const TAB_SELECTOR_SHEET: Texture2D = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
+const CITY_BAR_EMPTY: Texture2D = preload("res://assets/ui/ui_icon/empty_bar.png")
+const CITY_BAR_FILLED: Texture2D = preload("res://assets/ui/ui_icon/filled_bar.png")
 
 @onready var raid_notice: Label = $Root/RaidNotice
 @onready var notification_button: Button = $Root/NotificationsButton
@@ -89,7 +92,7 @@ var city_event_label: Label
 var city_progression: Node
 var city_progression_row: HBoxContainer
 var city_level_label: Label
-var city_progress_bar: ProgressBar
+var city_progress_bar: TextureProgressBar
 var city_progress_value_label: Label
 var city_level_up_button: Button
 var footer_spacer: Control
@@ -880,6 +883,20 @@ func _create_hub_tabs() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
 		hub_tabs.add_child(button)
+		var frame := NinePatchRect.new()
+		frame.name = "SelectionFrame"
+		var selector := AtlasTexture.new()
+		selector.atlas = TAB_SELECTOR_SHEET
+		selector.region = Rect2(133, 101, 22, 22)
+		frame.texture = selector
+		frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		frame.patch_margin_left = 5
+		frame.patch_margin_top = 5
+		frame.patch_margin_right = 5
+		frame.patch_margin_bottom = 5
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(frame)
+		frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	city_storage_button = Button.new()
 	city_storage_button.name = "CityStorageButton"
 	city_storage_button.text = "City Storage"
@@ -889,9 +906,14 @@ func _create_hub_tabs() -> void:
 	city_storage_button.focus_mode = Control.FOCUS_NONE
 	city_storage_button.pressed.connect(_open_city_storage)
 	hub_tabs.add_child(city_storage_button)
-	treasury_summary = _small_label(contents, "")
+	var footer: HBoxContainer = contents.get_node("FooterRow")
+	treasury_summary = _small_label(footer, "")
 	treasury_summary.name = "TreasurySummary"
-	contents.move_child(treasury_summary, 2)
+	treasury_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	treasury_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	treasury_summary.clip_text = true
+	treasury_summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	footer.move_child(treasury_summary, 0)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
 	supply_view.add_theme_constant_override("separation", 2)
@@ -926,19 +948,20 @@ func _create_city_progression() -> void:
 
 	city_level_label = _small_label(city_progression_row, "City Lv.—")
 	city_level_label.custom_minimum_size = Vector2(46, 0)
-	city_progress_bar = ProgressBar.new()
-	city_progress_bar.custom_minimum_size = Vector2(80, 6)
+	city_progress_bar = TextureProgressBar.new()
+	city_progress_bar.custom_minimum_size = Vector2(80, 7)
 	city_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	city_progress_bar.show_percentage = false
 	city_progress_bar.max_value = 100.0
 	city_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	city_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.23, 0.17, 0.11)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.48, 0.66, 0.38)
-	city_progress_bar.add_theme_stylebox_override("background", background)
-	city_progress_bar.add_theme_stylebox_override("fill", fill)
+	city_progress_bar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	city_progress_bar.texture_under = CITY_BAR_EMPTY
+	city_progress_bar.texture_progress = CITY_BAR_FILLED
+	city_progress_bar.nine_patch_stretch = true
+	city_progress_bar.stretch_margin_left = 3
+	city_progress_bar.stretch_margin_top = 3
+	city_progress_bar.stretch_margin_right = 3
+	city_progress_bar.stretch_margin_bottom = 3
 	city_progression_row.add_child(city_progress_bar)
 
 	city_progress_value_label = _small_label(city_progression_row, "0 / 100")
@@ -1044,6 +1067,8 @@ func _render_hub() -> void:
 		_supply_selected = false
 	hub_tabs.get_child(0).set_pressed_no_signal(not _supply_selected)
 	hub_tabs.get_child(1).set_pressed_no_signal(_supply_selected)
+	hub_tabs.get_child(0).get_node("SelectionFrame").visible = not _supply_selected
+	hub_tabs.get_child(1).get_node("SelectionFrame").visible = _supply_selected
 	city_storage_button.disabled = not is_instance_valid(WorkStateRuntime.get_node_or_null("CityToolStorage"))
 	treasury_summary.text = "City cash: %d Shekel" % CityStockManager.treasury_shekel
 	supply_view.visible = _supply_selected
@@ -1232,7 +1257,9 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	_refresh_city_progression()
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY HUB"
+	var details_title: Label = $Root/Center/DetailsPanel/Margin/Contents/TitleLabel
+	details_title.text = "LAST RAID" if viewing_report else "CITY HUB"
+	details_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if viewing_report else HORIZONTAL_ALIGNMENT_CENTER
 	details_panel.custom_minimum_size = CITY_HUB_SIZE
 	details_panel.size = CITY_HUB_SIZE
 	if not viewing_report:

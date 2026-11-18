@@ -4,12 +4,10 @@ signal closed
 
 const PANEL_SIZE := Vector2(240, 208)
 const ITEM_SCROLLBAR_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const ITEM_SCROLLBAR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/vertical_scrollbar.png")
 const ITEM_VIEW_HEIGHT: float = 102.0 # Four 24px rows and three 2px gaps.
 const ITEM_VIEW_COMPACT_HEIGHT: float = 76.0 # Three rows for the Annex context.
-const ITEM_VIEW_TIGHT_HEIGHT: float = 50.0 # Two rows for Annex context with feedback.
 const ITEM_SCROLLBAR_WIDTH: float = 8.0
-const CURRENCY_WIDTH_WITH_FEEDBACK: float = 96.0
-const CURRENCY_PLACEHOLDER_WIDTH: float = 18.0
 const CURRENCY_ICONS: Array[Texture2D] = [
 	preload("res://resources/ui_icons/small_copper.tres"),
 	preload("res://resources/ui_icons/small_shekel.tres"),
@@ -44,9 +42,12 @@ var clear_button: Button
 var _transfer_mode: String = ""
 var _previous_tree_paused: bool = false
 var _owns_pause: bool = false
-var _feedback_text: String = ""
 var _citizen_manager: Node
 var _needs_manager: Node
+var item_info_panel: ItemInfoPanel
+var _hovered_item_slot: ItemSlot
+var _transaction_feedback_tween: Tween
+var _transaction_feedback_font_size: int = 6
 
 func _ready() -> void:
 	visible = false
@@ -64,6 +65,24 @@ func _ready() -> void:
 	context.hide()
 	$Root/CitySupplyPanel.hide()
 	_build_currency_summary()
+	feedback.reparent(view)
+	feedback.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	feedback.theme = preload("res://resources/ui_inventory_theme/ui_inventory_theme.tres")
+	feedback.theme_type_variation = &"InventoryTextSmall"
+	feedback.add_theme_font_size_override("font_size", _transaction_feedback_font_size)
+	feedback.add_theme_color_override("font_shadow_color", Color(0.12, 0.08, 0.05, 0.85))
+	feedback.add_theme_constant_override("shadow_offset_x", 1)
+	feedback.add_theme_constant_override("shadow_offset_y", 1)
+	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	feedback.autowrap_mode = TextServer.AUTOWRAP_OFF
+	feedback.max_lines_visible = 1
+	feedback.clip_text = true
+	feedback.z_index = 20
+	feedback.hide()
+	item_info_panel = preload("res://scenes/ui/item_info_panel_root/item_info_panel.tscn").instantiate() as ItemInfoPanel
+	$Root.add_child(item_info_panel)
 	var back_button: Button = view.get_node("Margin/Content/Footer/Back") as Button
 	back_button.custom_minimum_size = Vector2(64, 18)
 	_set_action_icon(back_button, BACK_ICON)
@@ -83,11 +102,37 @@ func _ready() -> void:
 	var scrollbar: VScrollBar = item_scroll.get_v_scroll_bar()
 	scrollbar.theme = ITEM_SCROLLBAR_THEME
 	scrollbar.custom_minimum_size.x = ITEM_SCROLLBAR_WIDTH
-	scrollbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
-	scrollbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
+	_configure_item_scrollbar(scrollbar)
 	_connect_refresh_signals()
 	_add_supply_icon(food_summary, preload("res://assets/items/butcher’s_cut.png"))
 	_add_supply_icon(clothing_summary, preload("res://assets/items/trimmed_robe.png"))
+
+func _configure_item_scrollbar(scrollbar: VScrollBar) -> void:
+	# Match Inventory: the existing artwork is a fixed rail with a moving highlight.
+	var rail_image: Image = ITEM_SCROLLBAR_TEXTURE.get_image()
+	var rail_color: Color = rail_image.get_pixel(3, 7)
+	for y in range(3, 7):
+		for x in range(3, 5):
+			rail_image.set_pixel(x, y, rail_color)
+	var rail := StyleBoxTexture.new()
+	rail.texture = ImageTexture.create_from_image(rail_image)
+	rail.texture_margin_left = 2.0
+	rail.texture_margin_right = 2.0
+	rail.texture_margin_top = 3.0
+	rail.texture_margin_bottom = 3.0
+	scrollbar.add_theme_stylebox_override("scroll", rail)
+	scrollbar.add_theme_stylebox_override("scroll_focus", rail)
+	var highlight := AtlasTexture.new()
+	highlight.atlas = ITEM_SCROLLBAR_TEXTURE
+	highlight.region = Rect2(3, 3, 2, 1)
+	var thumb := StyleBoxTexture.new()
+	thumb.texture = highlight
+	thumb.expand_margin_left = -3.0
+	thumb.expand_margin_right = -3.0
+	thumb.expand_margin_top = -3.0
+	thumb.expand_margin_bottom = -3.0
+	for state in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		scrollbar.add_theme_stylebox_override(state, thumb)
 
 func _add_supply_icon(summary: Label, texture: Texture2D) -> void:
 	var parent: Node = summary.get_parent()
@@ -194,15 +239,21 @@ func _open_haul() -> void:
 	var manager: Node = _get_transport_manager()
 	if not is_instance_valid(manager):
 		return
+	_clear_item_info()
 	$Root.hide()
 	haul_ui = preload("res://scenes/storage_destination/city_storage_haul_ui.tscn").instantiate()
 	add_child(haul_ui)
+	_cancel_transaction_feedback()
+	feedback.reparent(haul_ui.get_node("Center/Panel"))
+	haul_ui.connect("action_feedback", Callable(self, "_show_transaction_feedback"))
 	haul_ui.connect("closed", Callable(self, "_on_haul_ui_closed").bind(haul_ui))
 	haul_ui.call("open", manager, storage_id)
 
 func _on_haul_ui_closed(source: Control) -> void:
 	if haul_ui != source:
 		return
+	_cancel_transaction_feedback()
+	feedback.reparent(view)
 	haul_ui = null
 	if not _has_access():
 		close()
@@ -234,6 +285,8 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func close() -> void:
+	_clear_item_info()
+	_cancel_transaction_feedback()
 	visible = false
 	if is_instance_valid(transfer_ui):
 		transfer_ui.hide()
@@ -303,9 +356,9 @@ func _on_stock_changed() -> void:
 func _refresh_view() -> void:
 	if not is_instance_valid(storage):
 		return
-	var food_supply_summary: Dictionary = {}
+	_clear_item_info()
 	if storage_id == "city":
-		food_supply_summary = _refresh_food_summary()
+		_refresh_food_summary()
 		_refresh_clothing_summary()
 	else:
 		food_summary.text = "Citizens use Central Storage."
@@ -324,47 +377,53 @@ func _refresh_view() -> void:
 		grid.add_child(slot)
 		slot.set_item(item_id, int(items[item_id]), item.icon)
 		# Large counts must not spill into neighboring cards; keep the exact
-		# value available to accessibility clients without adding hover tooltips.
+		# value available to accessibility clients.
 		slot.asset_qty.clip_text = true
 		slot.asset_qty.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		slot.accessibility_name = "%s: %d" % [item.display_name, int(items[item_id])]
 		slot.asset_qty.accessibility_name = str(int(items[item_id]))
 		slot.interaction_locked = true
+		slot.slot_hovered.connect(_on_item_slot_hovered)
+		slot.slot_unhovered.connect(_on_item_slot_unhovered)
 	stock_summary.visible = storage_id == "city"
-	_currency_amounts[1].text = str(CityStockManager.treasury_shekel)
-	_currency_amounts[1].accessibility_name = "Shekel: %d" % CityStockManager.treasury_shekel
-	feedback.text = _feedback_text
-	if feedback.text.is_empty() and grid.get_child_count() == 0:
-		if items.is_empty() and int(food_supply_summary.get("portion_points", 0)) > 0:
-			feedback.text = "Prepared food remains."
-		else:
-			feedback.text = "No available items." if items.is_empty() else "No items in this category."
-	feedback.visible = not feedback.text.is_empty()
-	# Share the status row so the central storage keeps four complete item rows.
-	_status_row.visible = feedback.visible or stock_summary.visible
+	_status_row.visible = stock_summary.visible
+	_status_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var content: VBoxContainer = context.get_parent() as VBoxContainer
-	content.add_theme_constant_override("separation", 3 if feedback.visible else 4)
+	content.add_theme_constant_override("separation", 4)
 	item_scroll.custom_minimum_size.y = ITEM_VIEW_HEIGHT
 	if context.visible:
-		# The Annex has an extra title and context; keep its rows and footer unclipped.
-		item_scroll.custom_minimum_size.y = ITEM_VIEW_TIGHT_HEIGHT if feedback.visible else ITEM_VIEW_COMPACT_HEIGHT
-	stock_summary.custom_minimum_size.x = CURRENCY_WIDTH_WITH_FEEDBACK if feedback.visible else 0.0
-	stock_summary.size_flags_horizontal = Control.SIZE_SHRINK_END if feedback.visible else Control.SIZE_EXPAND_FILL
+		item_scroll.custom_minimum_size.y = ITEM_VIEW_COMPACT_HEIGHT
+	stock_summary.custom_minimum_size.x = 0.0
+	stock_summary.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	for index: int in range(stock_summary.get_child_count()):
 		var entry: Control = stock_summary.get_child(index) as Control
-		var placeholder: bool = feedback.visible and index != 1
-		entry.custom_minimum_size.x = CURRENCY_PLACEHOLDER_WIDTH if placeholder else 0.0
-		entry.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if placeholder else Control.SIZE_EXPAND_FILL
+		entry.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	# The fixed grid viewport remains present for empty and short categories.
 	# ScrollContainer clips overflow; changing stock never changes the frame.
 	deposit_button.disabled = read_only or storage_id != "city" or not storage.has_method("get_depositable_items") or storage.call("get_depositable_items").is_empty()
 	if is_instance_valid(haul_button):
 		haul_button.disabled = read_only or not _has_access()
 
+func _on_item_slot_hovered(item_id: String, _quantity: int, slot: ItemSlot) -> void:
+	if not visible or not view.is_visible_in_tree():
+		return
+	_hovered_item_slot = slot
+	if item_info_panel.display_item(item_id):
+		item_info_panel.position_lower_center(get_viewport().get_visible_rect().end.y)
+
+func _on_item_slot_unhovered(slot: ItemSlot) -> void:
+	if _hovered_item_slot == slot:
+		_clear_item_info()
+
+func _clear_item_info() -> void:
+	_hovered_item_slot = null
+	if is_instance_valid(item_info_panel):
+		item_info_panel.clear_item()
+
 func _build_currency_summary() -> void:
 	stock_summary = HBoxContainer.new()
 	stock_summary.name = "StockSummary"
-	stock_summary.add_theme_constant_override("separation", 4)
+	stock_summary.add_theme_constant_override("separation", 12)
 	stock_summary.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var content: VBoxContainer = context.get_parent() as VBoxContainer
 	_status_row = HBoxContainer.new()
@@ -395,13 +454,16 @@ func _build_currency_summary() -> void:
 		row.add_child(icon)
 		var amount := Label.new()
 		amount.name = "Amount"
-		amount.text = "--"
-		amount.accessibility_name = "%s: unavailable" % row.name
+		amount.text = "0"
+		amount.accessibility_name = "%s: 0, placeholder" % row.name
+		amount.theme_type_variation = &"HudLabelShortcut"
+		amount.custom_minimum_size.x = 6.0
 		amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		amount.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		amount.clip_text = true
 		amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		amount.add_theme_font_size_override("font_size", 6)
+		amount.add_theme_color_override("font_color", Color.WHITE)
 		amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(amount)
 		_currency_amounts.append(amount)
@@ -476,17 +538,38 @@ func _open_transfer(mode: String) -> void:
 		close()
 		return
 	_transfer_mode = mode
-	_feedback_text = ""
+	_clear_item_info()
 	$Root.hide()
 	transfer_ui = preload("res://scenes/ui/item_transfer_ui/item_transfer_ui.tscn").instantiate()
 	add_child(transfer_ui)
 	transfer_ui.allowed_category = InventoryCategorySelector.CATEGORY_ALL
 	var transfer_window: Control = transfer_ui.get_node("Root/Center/Window") as Control
-	transfer_window.custom_minimum_size = Vector2(300, transfer_window.custom_minimum_size.y)
+	transfer_window.custom_minimum_size = Vector2(240, 156)
+	transfer_ui.title_label.add_theme_font_size_override("font_size", 12)
+	var title_margin: MarginContainer = transfer_ui.title_label.get_parent() as MarginContainer
+	title_margin.add_theme_constant_override("margin_left", 0)
+	title_margin.add_theme_constant_override("margin_right", 0)
+	transfer_ui.grid_container.columns = 6
+	transfer_ui.grid_container.add_theme_constant_override("h_separation", 4)
+	transfer_ui.grid_container.add_theme_constant_override("v_separation", 2)
+	transfer_ui.item_scroll.custom_minimum_size = Vector2(176, ITEM_VIEW_COMPACT_HEIGHT)
+	transfer_ui.item_scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	transfer_ui.item_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	transfer_ui.item_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var transfer_scrollbar: VScrollBar = transfer_ui.item_scroll.get_v_scroll_bar()
+	transfer_scrollbar.theme = ITEM_SCROLLBAR_THEME
+	transfer_scrollbar.custom_minimum_size.x = ITEM_SCROLLBAR_WIDTH
+	_configure_item_scrollbar(transfer_scrollbar)
+	_cancel_transaction_feedback()
+	feedback.reparent(transfer_window)
 	_set_action_icon(transfer_ui.back_button, BACK_ICON)
 	_set_action_icon(transfer_ui.confirm_button, DEPOSIT_ICON)
 	transfer_ui.back_button.custom_minimum_size = Vector2(64, 18)
 	transfer_ui.confirm_button.custom_minimum_size = Vector2(64, 18)
+	var transfer_footer: HBoxContainer = transfer_ui.back_button.get_parent() as HBoxContainer
+	transfer_footer.get_node("Spacer").hide()
+	transfer_footer.alignment = BoxContainer.ALIGNMENT_CENTER
+	transfer_footer.add_theme_constant_override("separation", 8)
 	transfer_ui.transfer_confirmed.connect(_confirm_transfer.bind(transfer_ui))
 	transfer_ui.transfer_back_requested.connect(_return_from_transfer.bind(transfer_ui))
 	transfer_ui.transfer_cancelled.connect(_return_from_transfer.bind(transfer_ui))
@@ -520,9 +603,10 @@ func _confirm_transfer(items: Dictionary, source: ItemTransferUI) -> void:
 		close()
 		return
 	var result: Dictionary = storage.deposit_items_from_inventory(items, true)
-	_feedback_text = "Deposited." if result.ok else str(result.message)
 	_refresh_view()
-	_refresh_transfer("" if bool(result.get("ok", false)) else _feedback_text)
+	_refresh_transfer()
+	var succeeded: bool = bool(result.get("ok", false))
+	_show_transaction_feedback("Deposited." if succeeded else str(result.get("message", "")), not succeeded)
 
 func _return_from_transfer(source: ItemTransferUI) -> void:
 	# The quantity dialog releases its own pause before emitting.
@@ -530,6 +614,8 @@ func _return_from_transfer(source: ItemTransferUI) -> void:
 		get_tree().paused = true
 	if not visible or not is_instance_valid(transfer_ui) or transfer_ui != source:
 		return
+	_cancel_transaction_feedback()
+	feedback.reparent(view)
 	transfer_ui = null
 	clear_button = null
 	_transfer_mode = ""
@@ -538,6 +624,91 @@ func _return_from_transfer(source: ItemTransferUI) -> void:
 		return
 	$Root.show()
 	_refresh_view()
+
+func _cancel_transaction_feedback() -> void:
+	if _transaction_feedback_tween != null and _transaction_feedback_tween.is_valid():
+		_transaction_feedback_tween.kill()
+	_transaction_feedback_tween = null
+	feedback.hide()
+
+func _show_transaction_feedback(message: String, is_error: bool) -> void:
+	_cancel_transaction_feedback()
+	if message.is_empty():
+		return
+	var parent: Control = feedback.get_parent() as Control
+	feedback.size = Vector2(maxf(1.0, parent.size.x - 32.0), 16.0)
+	feedback.position = ((parent.size - feedback.size) * 0.5).round()
+	if is_instance_valid(haul_ui) and parent == haul_ui.get_node("Center/Panel"):
+		# Centered vertically would cover the quantity controls. Use the clear
+		# gap between the route summary and actions without reserving layout space.
+		var route: Control = haul_ui.get_node("Center/Panel/Margin/Content/Route") as Control
+		var start_button: Control = haul_ui.get_node("Center/Panel/Margin/Content/Footer/Start") as Control
+		var gap_start: float = route.get_global_rect().end.y - parent.global_position.y
+		var gap_end: float = start_button.global_position.y - parent.global_position.y
+		if gap_end - gap_start >= feedback.size.y:
+			feedback.position.y = roundf((gap_start + gap_end - feedback.size.y) * 0.5)
+	var origin: Vector2 = feedback.position
+	var pages: Array[String] = _split_transaction_feedback(message)
+	_set_transaction_feedback_page(pages[0])
+	feedback.add_theme_color_override("font_color", Color(0.90, 0.38, 0.32) if is_error else Color(0.28, 0.68, 0.31))
+	feedback.modulate = Color(1, 1, 1, 0)
+	feedback.show()
+	_transaction_feedback_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_transaction_feedback_tween.tween_property(feedback, "modulate:a", 1.0, 0.10)
+	if is_error:
+		for offset: float in [2.0, -2.0, 1.0, 0.0]:
+			_transaction_feedback_tween.tween_property(feedback, "position:x", origin.x + offset, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		_transaction_feedback_tween.tween_property(feedback, "position:y", origin.y - 3.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		_transaction_feedback_tween.tween_property(feedback, "position:y", origin.y, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	for index in range(pages.size()):
+		if index > 0:
+			_transaction_feedback_tween.tween_callback(_set_transaction_feedback_page.bind(pages[index]))
+		_transaction_feedback_tween.tween_interval(1.5)
+	_transaction_feedback_tween.tween_property(feedback, "modulate:a", 0.0, 0.20)
+	_transaction_feedback_tween.tween_callback(feedback.hide)
+
+func _split_transaction_feedback(message: String) -> Array[String]:
+	var pages: Array[String] = []
+	var remaining: String = message.strip_edges()
+	var font: Font = feedback.get_theme_font("font")
+	var width: float = maxf(feedback.size.x, 1.0)
+	while not remaining.is_empty():
+		var count: int = 0
+		while count < remaining.length() and remaining[count] != "\n":
+			if font.get_string_size(remaining.left(count + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, _transaction_feedback_font_size).x > width:
+				break
+			count += 1
+		if count == remaining.length():
+			pages.append(remaining)
+			break
+		if count < remaining.length() and remaining[count] != "\n" and remaining[count] != " ":
+			var last_space: int = remaining.left(count).rfind(" ")
+			if last_space > 0:
+				count = last_space
+			else:
+				var next_space: int = remaining.find(" ", count)
+				var next_line: int = remaining.find("\n", count)
+				count = remaining.length()
+				if next_space >= 0:
+					count = mini(count, next_space)
+				if next_line >= 0:
+					count = mini(count, next_line)
+		if count == 0:
+			count = 1
+		pages.append(remaining.left(count).strip_edges())
+		remaining = remaining.substr(count).strip_edges()
+	if pages.is_empty():
+		pages.append("")
+	return pages
+
+func _set_transaction_feedback_page(page: String) -> void:
+	var font: Font = feedback.get_theme_font("font")
+	var font_size: int = _transaction_feedback_font_size
+	while font_size > 1 and font.get_string_size(page, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > feedback.size.x:
+		font_size -= 1
+	feedback.add_theme_font_size_override("font_size", font_size)
+	feedback.text = page
 
 func _make_button(text: String, parent: Node, min_width: float = 36.0) -> Button:
 	var button := Button.new()

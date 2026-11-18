@@ -1,6 +1,6 @@
 extends "res://scenes/test_scenes/mvp_first_playthrough.gd"
 
-## Two fresh processes exercise the real menu, storage UI, paid worker, route,
+## Isolated system fixture: two processes exercise the menu, storage UI, paid worker, route,
 ## checkpoint boundary and reverse/cancel/overflow recovery. The initial stock
 ## and wallet are explicit isolated test grants, not changes to New Game.
 const SAVE_PATH: String = "user://city_transport_flow/checkpoint.json"
@@ -28,6 +28,8 @@ func _run() -> void:
 		return
 	_expect(FileAccess.file_exists(SAVE_PATH) == (phase == "read"), "Use an isolated profile in write/read order.")
 	var before_bytes: PackedByteArray = FileAccess.get_file_as_bytes(SAVE_PATH) if phase == "read" else PackedByteArray()
+	# Install a value-only navigation fixture before Continue validates the city.
+	get_tree().node_added.connect(_watch_fixture_runtime)
 	get_tree().current_scene = null
 	TimeComponentManager.set_process(false)
 	var menu = MENU.instantiate()
@@ -70,28 +72,7 @@ func _write_flow() -> void:
 	Inventory.add_item("shekel", 10) # Explicit fixture funding for a normal contract.
 	Inventory.add_item(ITEM_ID, 4) # A separate player-owned stock sentinel.
 	var courier: WorkerData
-	if hauler_mode:
-		var job_board: JobBoard = content.get_node("YSortWorld/InitialWorksites/JobBoard")
-		await walk(job_board.get_node("InteractableComponent").global_position + Vector2(0, 8))
-		await interact(job_board)
-		_expect(is_instance_valid(job_board.job_board_ui), "Open the real Job Board for the Hauler.")
-		if stopped:
-			return
-		var candidate_index: int = -1
-		for index: int in range(job_board.job_board_ui.applicants.size()):
-			if job_board.job_board_ui.applicants[index].citizen_id == worker_id:
-				candidate_index = index
-		_expect(candidate_index >= 0, "The real Job Board offers the authored Hauler.")
-		if stopped:
-			return
-		job_board.job_board_ui.applicant_list.select(candidate_index)
-		job_board.job_board_ui.hire_button.pressed.emit()
-		job_board.job_board_ui.confirm_hire_button.pressed.emit()
-		courier = WorkerDatabase.get_worker_data(worker_id)
-		job_board.job_board_ui.close_button.pressed.emit()
-		await _frames()
-	else:
-		courier = WorkerDatabase.hire_applicant(worker_id, 3)
+	courier = WorkerDatabase.hire_applicant(worker_id, 3)
 	_expect(courier != null and not courier.is_payroll_blocked() and (not hauler_mode or courier.profession == WorkerData.Profession.HAULER), "Hire the authored worker using a paid contract.")
 	_expect(central.allocate("initial_worksite_cart", worker_id), "Equip the existing city Cart.")
 	_expect(central.try_add_worksite_output(ITEM_ID, 6), "Seed six city-owned logs through the city receipt API.")
@@ -106,6 +87,9 @@ func _write_flow() -> void:
 	var values = VALUES.new()
 	var old_raw: Dictionary = values.decode(before_start.state)
 	LEGACY.strip_v16_owners(old_raw)
+	# Version 15 predates the selectable building field introduced in v19.
+	for legacy_plot: Dictionary in old_raw.plots.values():
+		legacy_plot.erase("building_kind")
 	# A v15 fixture cannot retain the v17 per-person timing ledgers.
 	old_raw.needs.erase("food_coverage_until")
 	old_raw.needs.erase("satisfaction_last_minute")
@@ -116,14 +100,11 @@ func _write_flow() -> void:
 	if stopped:
 		return
 	_expect(store.snapshot.prepared.annex_storage.items.is_empty() and store.snapshot.prepared.transport.route.is_empty(), "Legacy staging invents no goods or cargo.")
-	var board: Node2D = runtime.get_node("CityStorageArea/Board")
-	var area: Node = runtime.get_node("CityStorageArea")
-	await walk(board.global_position + Vector2(0, 13))
-	await interact(area)
+	_assert_initial_storage_disabled()
 	if stopped:
 		return
-	var access: Node = area.menu
-	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button) and access.haul_button.text == "Send", "The real city storage board offers Send.")
+	var access: Node = _open_fixture_storage("city")
+	_expect(is_instance_valid(access) and is_instance_valid(access.haul_button) and access.haul_button.text == "Send", "The isolated city storage UI offers Send.")
 	if stopped:
 		return
 	await press(access.haul_button)
@@ -153,6 +134,13 @@ func _write_flow() -> void:
 	_expect(found_worker and found_item, "The panel lists the cart-equipped worker and city-owned logs.")
 	dialog.quantity_spin.value = 3
 	await _capture_haul_ui("ready")
+	annex.items[ITEM_ID] = MAX_COUNT
+	await press(dialog.start_button)
+	_expect(transport.route.is_empty() and int(central.items.get(ITEM_ID, 0)) == 6,
+		"A rejected Send leaves the route and source stock unchanged.")
+	_expect(access.feedback.visible and access.feedback.get_theme_color("font_color") == Color(0.90, 0.38, 0.32) and not dialog.feedback_label.visible,
+		"A rejected Send shows red overlay feedback.")
+	annex.items.erase(ITEM_ID)
 	var probe: Dictionary = {"calls": 0, "conserved": true, "reentered": false}
 	var observe_pickup := func():
 		probe.calls += 1
@@ -160,6 +148,8 @@ func _write_flow() -> void:
 		probe.reentered = bool(probe.reentered) or transport.cancel() or TimeComponentManager.advance_minutes(1)
 	central.changed.connect(observe_pickup)
 	await press(dialog.start_button)
+	_expect(access.feedback.visible and access.feedback.get_theme_color("font_color") == Color(0.28, 0.68, 0.31) and not dialog.feedback_label.visible,
+		"A successful Send shows green overlay feedback.")
 	central.changed.disconnect(observe_pickup)
 	_expect(int(probe.calls) > 0 and bool(probe.conserved) and not bool(probe.reentered), "Pickup observers see exactly one stock owner and cannot reenter the route or advance time.")
 	_expect(not transport.route.is_empty() and transport.route.worker_id == worker_id and int(transport.route.quantity) == 3, "The real Start button creates an outbound three-log cargo.")
@@ -212,15 +202,9 @@ func _read_flow() -> void:
 	await _finish_route()
 	print("Transport flow: first delivery completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 3 and int(annex.items.get(ITEM_ID, 0)) == 3 and int(Inventory.items.get(ITEM_ID, 0)) == 4, "The resumed shipment arrives once and releases the worker.")
-	# Reach and use the actual annex board, then start a reverse shipment.
-	var area: Node = runtime.get_node("CityStorageAnnex")
-	await walk(area.get_node("Board").global_position + Vector2(0, 8))
-	await interact(area)
-	print("Transport flow: reached annex board")
-	if stopped:
-		return
-	var access: Node = area.menu
-	_expect(is_instance_valid(access) and access.storage_id == "annex" and access.deposit_button.disabled, "The reachable annex shows city-owned stock and disallows player deposits.")
+	_assert_initial_storage_disabled()
+	var access: Node = _open_fixture_storage("annex")
+	_expect(is_instance_valid(access) and access.storage_id == "annex" and access.deposit_button.disabled, "The isolated annex UI shows city-owned stock and disallows player deposits.")
 	await press(access.haul_button)
 	var dialog: Node = access.haul_ui
 	_expect(_select_metadata(dialog.worker_option, worker_id) and _select_metadata(dialog.item_option, ITEM_ID), "The annex offers the same worker and delivered city stock.")
@@ -233,9 +217,8 @@ func _read_flow() -> void:
 	print("Transport flow: reverse delivery completed")
 	_expect(int(central.items.get(ITEM_ID, 0)) == 5 and int(annex.items.get(ITEM_ID, 0)) == 1, "A second trip moves two logs back to Central Storage.")
 	_expect(transport.start(worker_id, "annex", ITEM_ID, 1), "A third shipment can be scheduled.")
-	await interact(area)
-	access = area.menu
-	_expect(is_instance_valid(access), "The annex board reopens while cargo is in transit.")
+	access = _open_fixture_storage("annex")
+	_expect(is_instance_valid(access), "The isolated annex UI reopens while cargo is in transit.")
 	if stopped:
 		return
 	await press(access.haul_button)
@@ -314,3 +297,29 @@ func _finish_route() -> void:
 		if _minute % 10 == 0:
 			await _frames(1)
 	_expect(transport.route.is_empty(), "The route finishes within a bounded number of game minutes.")
+
+## The initial map deliberately disables both boards. Keep that policy tested,
+## and test the transport system separately without altering authored geometry.
+func _assert_initial_storage_disabled() -> void:
+	for path: String in ["CityStorageArea", "CityStorageAnnex"]:
+		var area: Node = runtime.get_node(path)
+		_expect(not area.world_access_enabled and not area.visible and not area.has_player_access(), "Initial map keeps " + path + " inaccessible.")
+
+func _watch_fixture_runtime(node: Node) -> void:
+	if node.name == "WorkerRuntime":
+		node.ready.connect(func():
+			# Fresh value-only geometry for the transport system test, not the map.
+			# Production is_clear/segment_clear still evaluate this fixture geometry.
+			node.worksite_navigation = TransportFixtureNavigation.new())
+
+func _open_fixture_storage(id: String) -> Node:
+	var access = preload("res://scenes/storage_destination/city_storage_access_ui.tscn").instantiate()
+	add_child(access)
+	access.open(transport.get_storage(id), func() -> bool: return true, id)
+	return access
+
+class TransportFixtureNavigation extends "res://scenes/content_scene/worksites/worksite_navigation.gd":
+	# Production map refreshes may occur after the runtime becomes ready.
+	# This isolated transport fixture owns its geometry throughout the test.
+	func configure(_map: Node, _reed_source_position: Vector2 = Vector2.INF) -> void:
+		revision += 1

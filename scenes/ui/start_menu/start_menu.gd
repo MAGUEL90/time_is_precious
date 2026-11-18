@@ -11,6 +11,7 @@ const ARCHIVE = preload("res://scenes/ui/start_menu/checkpoint_archive.gd")
 @onready var new_game_button: Button = $Root/Center/Frame/Margin/Contents/Actions/NewGame
 @onready var confirmation: VBoxContainer = $Root/Center/Frame/Margin/Contents/Confirmation
 @onready var message: Label = $Root/Center/Frame/Margin/Contents/Message
+@onready var frame: Control = $Root/Center/Frame
 
 # Tests inject an isolated checkpoint path before adding the menu to the tree.
 var checkpoint_file = SAVE_FILE.new()
@@ -50,11 +51,16 @@ func _refresh_buttons() -> void:
 	new_game_button.disabled = _busy
 	actions.get_node("Quit").disabled = _busy
 
+func _set_message(text: String) -> void:
+	message.text = text
+	message.visible = not text.is_empty()
+	frame.custom_minimum_size.y = 148.0 if message.visible else 112.0
+
 func _set_busy(text: String) -> void:
 	_busy = true
 	confirmation.hide()
 	actions.show()
-	message.text = text
+	_set_message(text)
 	_refresh_buttons()
 
 func _request_new_game() -> void:
@@ -62,12 +68,12 @@ func _request_new_game() -> void:
 		return
 	_confirmed_files = archive.observe(checkpoint_file.path)
 	if not archive.error.is_empty():
-		message.text = archive.error
+		_set_message(archive.error)
 		return
 	if _confirmed_files.is_empty():
 		_start_new_game()
 		return
-	message.text = ""
+	_set_message("")
 	actions.hide()
 	confirmation.show()
 	confirmation.get_node("Buttons/Cancel").grab_focus()
@@ -142,7 +148,7 @@ func _open_city() -> bool:
 func _fail(text: String) -> void:
 	get_tree().paused = true
 	_busy = false
-	message.text = text
+	_set_message(text)
 	_refresh_buttons()
 
 func _finish(continued: bool) -> void:

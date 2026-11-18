@@ -104,6 +104,10 @@ func _refresh_satisfaction(summary: Dictionary) -> void:
 	else:
 		_satisfaction_label.text = "Actual satisfaction: %s" % UNKNOWN_TEXT
 		_satisfaction_bar.value = 0.0
+	var font: Font = _satisfaction_label.get_theme_font("font")
+	var font_size: int = _satisfaction_label.get_theme_font_size("font_size")
+	var text_width: float = ceilf(font.get_string_size(_satisfaction_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	_satisfaction_bar.custom_minimum_size.x = text_width
 
 func _safe_name(value: Variant) -> String:
 	var person_name: String = str(value).strip_edges()

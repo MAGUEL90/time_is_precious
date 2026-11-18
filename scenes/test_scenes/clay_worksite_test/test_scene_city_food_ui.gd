@@ -85,8 +85,8 @@ func _run() -> void:
 			continue
 		slot.mouse_entered.emit()
 		await _frames(2)
+		_expect(menu.item_info_panel.is_visible_in_tree() and menu.item_info_panel.name_label.text.contains(ItemDatabase.get_item_data(slot._item_id).display_name), "Hovering city stock shows the correct item description.")
 		for control: Control in menu.find_children("*", "Control", true, false):
-			_expect(not (control is ItemInfoPanel and control.is_visible_in_tree()), "Hovering city stock does not open item descriptions.")
 			_expect(control.get_tooltip().is_empty(), "City stock controls have no native tooltip.")
 		slot.mouse_exited.emit()
 	area.close_menu()
@@ -150,8 +150,8 @@ func _run() -> void:
 	_expect(storage.items.is_empty() and storage.get_food_portion_points() == 1 and resident.food_fulfilled,
 		"At midnight one point is eaten and one city-owned portion remains.")
 	await _open_menu()
-	_expect(is_instance_valid(menu) and menu.feedback.text == "Prepared food remains.",
-		"An empty whole-item grid must not hide the remaining prepared food portion.")
+	_expect(is_instance_valid(menu) and not menu.feedback.visible,
+		"The storage panel keeps its feedback hidden when only prepared portions remain.")
 	if is_instance_valid(menu):
 		area.close_menu()
 	await _frames(3)

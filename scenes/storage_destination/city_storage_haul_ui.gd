@@ -1,6 +1,7 @@
 extends Control
 
 signal closed
+signal action_feedback(message: String, is_error: bool)
 
 const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
 
@@ -18,12 +19,12 @@ var manager: Node
 var initial_source_id: String = "city"
 var workers: Array = []
 var available_items: Dictionary = {}
-var _feedback_override: String = ""
 var _closing: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	feedback_label.hide()
 	source_option.add_item("Central City Storage")
 	source_option.set_item_metadata(0, "city")
 	source_option.add_item("City-Owned Annex")
@@ -52,7 +53,6 @@ func _ready() -> void:
 func open(transport_manager: Node, source_id: String) -> void:
 	manager = transport_manager
 	initial_source_id = "annex" if source_id == "annex" else "city"
-	_feedback_override = ""
 	visible = true
 	if is_instance_valid(manager) and manager.has_signal("changed") and not manager.is_connected("changed", _on_manager_changed):
 		manager.connect("changed", _on_manager_changed, CONNECT_DEFERRED)
@@ -92,7 +92,6 @@ func _destination_id() -> String:
 	return "annex" if _source_id() == "city" else "city"
 
 func _on_source_selected(_index: int) -> void:
-	_feedback_override = ""
 	_refresh_all()
 
 func _on_manager_changed() -> void:
@@ -104,7 +103,7 @@ func _refresh_all() -> void:
 		available_items.clear()
 		_refresh_worker_options()
 		_refresh_item_options()
-		_refresh_state("Transport service is unavailable.")
+		_refresh_state()
 		return
 	destination_label.text = "To: Annex" if _destination_id() == "annex" else "To: Central"
 	_refresh_worker_options()
@@ -177,7 +176,7 @@ func _refresh_route() -> void:
 	route_label.text = first_line + "\n" + second_line
 	cancel_button.disabled = false
 
-func _refresh_state(custom_message: String = "") -> void:
+func _refresh_state() -> void:
 	var route_active: bool = not _current_route().is_empty()
 	var stock: int = _selected_stock()
 	var has_worker: bool = not _selected_worker_id().is_empty()
@@ -188,18 +187,6 @@ func _refresh_state(custom_message: String = "") -> void:
 	source_option.disabled = route_active
 	quantity_spin.editable = not route_active and stock > 0
 	cancel_button.disabled = not route_active
-	if not custom_message.is_empty():
-		feedback_label.text = custom_message
-	elif not _feedback_override.is_empty():
-		feedback_label.text = _feedback_override
-	elif route_active:
-		feedback_label.text = "Cancel Route returns the load to its source."
-	elif workers.is_empty():
-		feedback_label.text = "No worker is ready. Check shift and cart."
-	elif stock <= 0:
-		feedback_label.text = "No counted stock is available here."
-	else:
-		feedback_label.text = "Choose a worker, item and quantity (up to 3)."
 
 func _update_quantity_bounds() -> void:
 	var stock: int = _selected_stock()
@@ -209,58 +196,47 @@ func _update_quantity_bounds() -> void:
 	quantity_spin.editable = stock > 0 and _current_route().is_empty()
 
 func _on_item_selected(_index: int) -> void:
-	_feedback_override = ""
 	_update_quantity_bounds()
 	_refresh_state()
 
 func _on_worker_selected(_index: int) -> void:
-	_feedback_override = ""
 	_refresh_state()
 
 func _on_quantity_changed(_value: float) -> void:
-	_feedback_override = ""
 	_refresh_state()
 
 func _start_route() -> void:
 	if not is_instance_valid(manager) or not manager.has_method("start"):
-		_refresh_state("Transport service is unavailable.")
+		action_feedback.emit("Transport service is unavailable.", true)
 		return
 	var worker_id: String = _selected_worker_id()
 	if worker_id.is_empty():
-		_refresh_state("No eligible worker. Check shift and cart.")
+		action_feedback.emit("No eligible worker. Check shift and cart.", true)
 		return
 	var item_id: String = _selected_item_id()
 	var quantity: int = int(quantity_spin.value)
 	var stock: int = _selected_stock()
 	if item_id.is_empty() or stock <= 0:
-		_refresh_state("No counted stock is available at this source.")
+		action_feedback.emit("No counted stock is available at this source.", true)
 		return
 	if quantity < 1 or quantity > 3 or quantity > stock:
-		_refresh_state("Choose a quantity from 1 to 3 within available stock.")
+		action_feedback.emit("Choose a quantity from 1 to 3 within available stock.", true)
 		return
 	var source: String = _source_id()
-	if bool(manager.call("start", worker_id, source, item_id, quantity)):
-		_feedback_override = "Route started."
-		_refresh_all()
+	var succeeded: bool = bool(manager.call("start", worker_id, source, item_id, quantity))
+	_refresh_all()
+	if succeeded:
+		action_feedback.emit("Route started.", false)
+	elif _find_option_metadata(worker_option, worker_id) < 0:
+		action_feedback.emit("Worker is unavailable. Check shift and cart.", true)
 	else:
-		_refresh_all()
-		if _find_option_metadata(worker_option, worker_id) < 0:
-			_feedback_override = "Worker is unavailable. Check shift and cart."
-		else:
-			_feedback_override = "Could not start. Check stock, destination space and route."
-		_refresh_state()
+		action_feedback.emit("Could not start. Check stock, destination space and route.", true)
 
 func _cancel_route() -> void:
 	if not is_instance_valid(manager) or not manager.has_method("cancel"):
-		_refresh_state("No active route can be cancelled.")
 		return
-	if bool(manager.call("cancel")):
-		_feedback_override = "Route cancelled safely; cargo is returning to its source."
-		_refresh_all()
-	else:
-		_refresh_all()
-		_feedback_override = "The active route could not be cancelled."
-		_refresh_state()
+	manager.call("cancel")
+	_refresh_all()
 
 func _current_route() -> Dictionary:
 	if not is_instance_valid(manager):

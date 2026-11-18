@@ -38,7 +38,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="Frame" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(240, 176)
+custom_minimum_size = Vector2(180, 112)
 layout_mode = 2
 texture = SubResource("FrameTexture")
 patch_margin_left = 16
@@ -52,13 +52,13 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_bottom = 12
 
 [node name="Contents" type="VBoxContainer" parent="Root/Center/Frame/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Title" type="Label" parent="Root/Center/Frame/Margin/Contents"]
 layout_mode = 2
@@ -79,7 +79,7 @@ layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="Continue" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
-custom_minimum_size = Vector2(104, 16)
+custom_minimum_size = Vector2(64, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"HudShortcutButton"
@@ -87,7 +87,7 @@ theme_override_font_sizes/font_size = 6
 text = "Continue"
 
 [node name="NewGame" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
-custom_minimum_size = Vector2(104, 16)
+custom_minimum_size = Vector2(64, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"HudShortcutButton"
@@ -95,7 +95,7 @@ theme_override_font_sizes/font_size = 6
 text = "New Game"
 
 [node name="Quit" type="Button" parent="Root/Center/Frame/Margin/Contents/Actions"]
-custom_minimum_size = Vector2(104, 16)
+custom_minimum_size = Vector2(64, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"HudShortcutButton"
@@ -135,6 +135,7 @@ theme_override_font_sizes/font_size = 6
 text = "Not now"
 
 [node name="Message" type="Label" parent="Root/Center/Frame/Margin/Contents"]
+visible = false
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 theme_type_variation = &"HudLabelShortcut"

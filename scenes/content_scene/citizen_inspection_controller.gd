@@ -3,6 +3,7 @@ extends Node
 ## The existing resident/worker visual owner maps a person ID to one moving
 ## actor. Hit-test its visible sprite area without adding physics bodies.
 const PANEL: PackedScene = preload("res://scenes/ui/citizen_inspection/citizen_inspection_panel.tscn")
+const VISUAL_BOUNDS = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd")
 const ACTOR_HIT_RECT: Rect2 = Rect2(-10, -16, 20, 32)
 
 ## One reusable, non-interactive world-space marker; it does not participate in
@@ -10,17 +11,29 @@ const ACTOR_HIT_RECT: Rect2 = Rect2(-10, -16, 20, 32)
 class HoverIndicator extends Node2D:
 	const BRACKET_COLOR: Color = Color(1.0, 0.88, 0.43)
 	const BORDER_COLOR: Color = Color(0.20, 0.12, 0.06)
-	const BRACKETS: Array[Rect2] = [
-		Rect2(-12, -18, 5, 1), Rect2(-12, -18, 1, 5),
-		Rect2(8, -18, 5, 1), Rect2(12, -18, 1, 5),
-		Rect2(-12, 18, 5, 1), Rect2(-12, 14, 1, 5),
-		Rect2(8, 18, 5, 1), Rect2(12, 14, 1, 5),
-	]
+	var top: float = -18.0
+	var bottom: float = 18.0
+
+	func fit_height(actor: Node2D, bounds: Rect2) -> void:
+		if not bounds.has_area():
+			return
+		var next_top: float = floorf(bounds.position.y - actor.global_position.y) - 2.0
+		var next_bottom: float = ceilf(bounds.end.y - actor.global_position.y) + 2.0
+		if top != next_top or bottom != next_bottom:
+			top = next_top
+			bottom = next_bottom
+			queue_redraw()
 
 	func _draw() -> void:
-		for bracket: Rect2 in BRACKETS:
+		var brackets: Array[Rect2] = [
+			Rect2(-12, top, 5, 1), Rect2(-12, top, 1, 5),
+			Rect2(8, top, 5, 1), Rect2(12, top, 1, 5),
+			Rect2(-12, bottom, 5, 1), Rect2(-12, bottom - 4, 1, 5),
+			Rect2(8, bottom, 5, 1), Rect2(12, bottom - 4, 1, 5),
+		]
+		for bracket: Rect2 in brackets:
 			draw_rect(bracket.grow(1), BORDER_COLOR)
-		for bracket: Rect2 in BRACKETS:
+		for bracket: Rect2 in brackets:
 			draw_rect(bracket, BRACKET_COLOR)
 
 var runtime: Node
@@ -122,6 +135,7 @@ func _update_hover_at(mouse_position: Vector2, mouse_in_window: bool, gui_blocke
 		return
 	hovered_person_id = person_id
 	hover_indicator.global_position = actor.global_position
+	(hover_indicator as HoverIndicator).fit_height(actor, VISUAL_BOUNDS.measure(actor))
 	hover_indicator.show()
 
 func _clear_hover() -> void:

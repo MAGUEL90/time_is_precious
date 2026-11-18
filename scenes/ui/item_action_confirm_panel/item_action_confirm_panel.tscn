@@ -206,7 +206,7 @@ theme_override_constants/separation = 4
 alignment = 1
 
 [node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
-custom_minimum_size = Vector2(64, 18)
+custom_minimum_size = Vector2(40, 14)
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("5_gameplay")
@@ -214,7 +214,7 @@ theme_type_variation = &"HudShortcutButton"
 text = "Confirm"
 
 [node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
-custom_minimum_size = Vector2(64, 18)
+custom_minimum_size = Vector2(40, 14)
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("5_gameplay")

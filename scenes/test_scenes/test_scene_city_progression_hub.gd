@@ -40,6 +40,10 @@ func _run() -> void:
 	for _frame: int in range(3):
 		await get_tree().process_frame
 	var management_rect: Rect2 = ui.details_panel.get_global_rect()
+	var hub_title: Label = ui.details_panel.get_node("Margin/Contents/TitleLabel")
+	_expect(hub_title.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER
+		and is_equal_approx(hub_title.get_global_rect().get_center().x, management_rect.get_center().x),
+		"City Hub title is centered in the panel.")
 	_assert_hub_tab_layout("Management")
 	_expect(not ui.storage_summary.visible and not ui.watchtower_status_label.visible, "Management omits the requested storage/watchtower feedback.")
 	_expect(ui.city_storage_button.is_visible_in_tree() and not ui.city_storage_button.disabled,
@@ -47,9 +51,20 @@ func _run() -> void:
 	await capture_defense("city-hub-storage-button.png")
 	var management_button: Button = ui.hub_tabs.get_child(0)
 	var supply_button: Button = ui.hub_tabs.get_child(1)
+	_expect(management_button.get_node("SelectionFrame").visible and not supply_button.get_node("SelectionFrame").visible,
+		"Management shows the existing selection frame while selected.")
+	_expect(ui.city_progress_bar.texture_under == ui.CITY_BAR_EMPTY
+		and ui.city_progress_bar.texture_progress == ui.CITY_BAR_FILLED
+		and ui.city_progress_bar.nine_patch_stretch,
+		"City progress uses the existing stretchable pixel bar assets.")
+	_expect(ui.treasury_summary.get_global_rect().position.x == ui.details_panel.get_node("Margin/Contents").get_global_rect().position.x
+		and ui.treasury_summary.get_global_rect().position.y > ui.city_progression_row.get_global_rect().end.y,
+		"City cash is placed at the lower left of the hub.")
 	await _click_hub_button(supply_button)
 	_expect(ui._supply_selected and supply_button.button_pressed and ui.supply_view.visible,
 		"A mouse click selects Supply after centering the tabs.")
+	_expect(supply_button.get_node("SelectionFrame").visible and not management_button.get_node("SelectionFrame").visible,
+		"The selection frame follows the Supply tab.")
 	_assert_hub_tab_layout("Supply")
 	await _click_hub_button(management_button)
 	_expect(not ui._supply_selected and management_button.button_pressed and not ui.supply_view.visible,

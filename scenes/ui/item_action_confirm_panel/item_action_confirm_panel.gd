@@ -73,6 +73,10 @@ func setup(
 	action_label.text = action.capitalize()
 	item_icon.texture = item_data.icon if item_data.icon != null else null
 	_refresh_display()
+	if action in ["drop", "use"]:
+		# Keep the compact default, while allowing unusually large quantities to fit.
+		var preview_width: float = item_icon.get_parent().get_combined_minimum_size().x
+		size = Vector2(maxf(104.0, preview_width + 8.0), 80.0)
 
 # Quantity controls
 

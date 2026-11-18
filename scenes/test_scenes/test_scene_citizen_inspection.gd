@@ -331,6 +331,11 @@ func _test_hover_feedback() -> void:
 	_expect(indicator.visible and str(controller.get("hovered_person_id")) == primary_id
 		and indicator.global_position.is_equal_approx(primary_actor.global_position),
 		"Hovering a visible resident shows the marker at that actor without a click.")
+	var art_bounds: Rect2 = preload("res://scenes/workshop_plot/keeper/workshop_visual_bounds.gd").measure(primary_actor)
+	_expect(art_bounds.has_area()
+		and is_equal_approx(float(indicator.get("top")), floorf(art_bounds.position.y - primary_actor.global_position.y) - 2.0)
+		and is_equal_approx(float(indicator.get("bottom")), ceilf(art_bounds.end.y - primary_actor.global_position.y) + 2.0),
+		"The resident selector fits the current visible sprite height with a two-pixel gap.")
 	await _capture("citizen-hover")
 	await _click_actor(primary_actor)
 	_expect(panel.visible and str(panel.get("selected_id")) == primary_id,
@@ -523,6 +528,13 @@ func _test_needs_and_storage() -> void:
 		and panel.find_child("DailyChangeLabel", true, false) == null
 		and panel.find_child("ConditionLabel", true, false) == null,
 		"Current satisfaction stays visible while lower daily details remain omitted.")
+	var satisfaction_label: Label = _daily_label("SatisfactionLabel")
+	var satisfaction_bar: TextureProgressBar = panel.find_child("SatisfactionBar", true, false) as TextureProgressBar
+	var text_width: float = ceilf(satisfaction_label.get_theme_font("font").get_string_size(
+		satisfaction_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, satisfaction_label.get_theme_font_size("font_size")).x)
+	_expect(is_instance_valid(satisfaction_bar) and is_equal_approx(satisfaction_bar.size.x, text_width)
+		and absf(satisfaction_bar.get_global_rect().get_center().x - satisfaction_label.get_global_rect().get_center().x) <= 0.5,
+		"The satisfaction bar is centered and matches the visible label width.")
 	await _capture("citizen-evaluated-ledger")
 	# Simulate an outside change such as a raid without rewriting the daily
 	# ledger: the open card must update the actual value and keep its target.
@@ -786,10 +798,15 @@ func _test_home_transition() -> void:
 	var save_status_before: String = str(store.get("status"))
 	var parked_runtime: Node = runtime
 
-	# Calling the real Area2D body callback is the same interaction entry used
-	# after physics reports the player overlap; SceneTransition performs the fade
-	# and scene swap asynchronously.
-	home_door.call("_on_body_entered", content.get_node("YSortWorld/Player"))
+	# Stage a collision-free approach, then cross the real Area2D.
+	# A callback without an actual overlap is not a valid door interaction.
+	var entering_player: Player = content.get_node("YSortWorld/Player")
+	entering_player.global_position = home_door.global_position + Vector2(0, 25)
+	for frame: int in range(8): await get_tree().physics_frame
+	for frame: int in range(30):
+		if not is_instance_valid(entering_player) or SceneTransition.is_transitioning: break
+		entering_player.move_and_collide(Vector2(0, -1))
+		await get_tree().physics_frame
 	var home_path: String = store.snapshot.HOME_PATH
 	if not await _wait_for_scene(home_path):
 		return

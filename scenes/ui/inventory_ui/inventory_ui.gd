@@ -16,16 +16,18 @@ const ITEM_ACTION_CONFIRM_PANEL_SCENE: PackedScene = preload("res://scenes/ui/it
 const PICKUP_ITEM_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const ITEM_SCROLLBAR_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const ITEM_SCROLLBAR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/vertical_scrollbar.png")
 const CATEGORY_ALL: int = -1
-const MIN_VISIBLE_SLOTS: int = 15
-const ITEM_GRID_FRAME_WIDTH: float = 152.0 # Five slots, spacing, scrollbar and grid margins.
+const MIN_VISIBLE_SLOTS: int = 12
+const ITEM_GRID_FRAME_WIDTH: float = 124.0 # Four slots, spacing, scrollbar and grid margins.
 const ITEM_VIEW_HEIGHT: float = 76.0 # Three 24px rows and two 2px gaps.
 const ITEM_SCROLLBAR_WIDTH: float = 8.0
 const OPTION_PANEL_GAP: float = 4.0
 const OPTION_PANEL_Y_OFFSET: float = -4.0
-const ACTION_FEEDBACK_DURATION: float = 3.0
+const ACTION_FEEDBACK_DURATION: float = 1.5
 const INVENTORY_SCREEN_MARGIN: float = 4.0
 const INVENTORY_LEFT_MARGIN: float = 12.0
+const INVENTORY_PLAYER_CLEARANCE: float = 12.0
 
 @onready var inventory_container: Control = $Root/Center
 @onready var inventory_window: Control = $Root/Center/Window
@@ -36,7 +38,7 @@ const INVENTORY_LEFT_MARGIN: float = 12.0
 @onready var category_selector: InventoryCategorySelector = $Root/Center/Window/Margin/MainVBox/HeaderRow/InventoryCategorySelector
 @onready var close_button: Button = $Root/Center/Window/Margin/MainVBox/HeaderRow/HeaderRightActions/MarginContainer/CloseButton
 @onready var shekel_amount: Label = $Root/Center/Window/Margin/MainVBox/WalletMargin/WalletRow/ShekelAmount
-@onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/ActionFeedbackLabel
+@onready var action_feedback_label: Label = $Root/Center/Window/Margin/MainVBox/FeedbackArea/ActionFeedbackLabel
 @onready var item_info_panel: ItemInfoPanel = $Root/ItemInfoPanelRoot
 
 var player_ref: Player
@@ -46,6 +48,7 @@ var active_option_slot: ItemSlot
 var active_option_panel: OptionPanel
 var active_action_confirm_panel: ItemActionConfirmPanel
 var action_feedback_tween: Tween
+var feedback_base_font_size: int
 var is_inventory_action_busy: bool = false
 var active_drag_data: Dictionary = {}
 var _tree_paused_before_open: bool = false
@@ -57,9 +60,13 @@ func _ready() -> void:
 	player_ref = get_tree().get_first_node_in_group("player")
 
 	visible = false
+	_configure_currency_and_feedback()
 	action_feedback_label.modulate.a = 0.0
+	feedback_base_font_size = action_feedback_label.get_theme_font_size("font_size")
 	# Reserve a stable four-pixel gap and the native-width scrollbar.
 	bag_grid.custom_minimum_size.x = ITEM_GRID_FRAME_WIDTH
+	bag_grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	grid.columns = 4
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	item_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	item_scroll.custom_minimum_size.y = ITEM_VIEW_HEIGHT
@@ -67,8 +74,7 @@ func _ready() -> void:
 	var scrollbar: VScrollBar = item_scroll.get_v_scroll_bar()
 	scrollbar.theme = ITEM_SCROLLBAR_THEME
 	scrollbar.custom_minimum_size.x = ITEM_SCROLLBAR_WIDTH
-	scrollbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
-	scrollbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
+	_configure_inventory_scrollbar(scrollbar)
 	scrollbar.value_changed.connect(_on_item_scroll_changed)
 
 	if Inventory != null and Inventory.has_signal("items_changed") and not Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -78,6 +84,89 @@ func _ready() -> void:
 	close_button.pressed.connect(close_inventory)
 	current_category = category_selector.get_selected_category()
 	_refresh_inventory_grid()
+
+func _configure_currency_and_feedback() -> void:
+	var contents: VBoxContainer = $Root/Center/Window/Margin/MainVBox
+	var wallet: MarginContainer = contents.get_node("WalletMargin") as MarginContainer
+	contents.move_child(wallet, contents.get_node("Body").get_index() + 1)
+	var row: HBoxContainer = wallet.get_node("WalletRow") as HBoxContainer
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	var shekel_icon: TextureRect = row.get_node("ShekelIcon") as TextureRect
+	var shekel_entry := HBoxContainer.new()
+	shekel_entry.name = "Shekel"
+	shekel_entry.add_theme_constant_override("separation", 2)
+	shekel_entry.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shekel_entry.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_child(shekel_entry)
+	shekel_icon.reparent(shekel_entry)
+	shekel_amount.reparent(shekel_entry)
+	shekel_amount.custom_minimum_size.x = 6.0
+	shekel_amount.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	shekel_amount.clip_text = true
+	shekel_amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	shekel_amount.add_theme_color_override("font_color", Color.WHITE)
+	for entry_data: Array in [
+		["Copper", preload("res://resources/ui_icons/small_copper.tres")],
+		["Gold", preload("res://resources/ui_icons/small_gold.tres")],
+	]:
+		var entry := HBoxContainer.new()
+		entry.name = entry_data[0]
+		entry.add_theme_constant_override("separation", 2)
+		entry.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(entry)
+		var icon := TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = entry_data[1]
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		entry.add_child(icon)
+		var amount := Label.new()
+		amount.name = "Amount"
+		amount.text = "0"
+		amount.accessibility_name = "%s: 0, placeholder" % entry.name
+		amount.theme_type_variation = &"InventoryTextSmall"
+		amount.add_theme_font_size_override("font_size", 6)
+		amount.add_theme_color_override("font_color", Color.WHITE)
+		amount.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		entry.add_child(amount)
+	row.move_child(row.get_node("Copper"), 0)
+	var feedback_area: Control = contents.get_node("FeedbackArea") as Control
+	action_feedback_label.reparent($Root)
+	action_feedback_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	action_feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	action_feedback_label.z_index = 20
+	action_feedback_label.add_theme_color_override("font_shadow_color", Color(0.12, 0.08, 0.05, 0.85))
+	action_feedback_label.add_theme_constant_override("shadow_offset_x", 1)
+	action_feedback_label.add_theme_constant_override("shadow_offset_y", 1)
+	feedback_area.hide()
+
+func _configure_inventory_scrollbar(scrollbar: VScrollBar) -> void:
+	# Keep the existing artwork fixed as the rail; its bright section becomes the moving thumb.
+	var rail_image: Image = ITEM_SCROLLBAR_TEXTURE.get_image()
+	var rail_color: Color = rail_image.get_pixel(3, 7)
+	for y in range(3, 7):
+		for x in range(3, 5):
+			rail_image.set_pixel(x, y, rail_color)
+	var rail := StyleBoxTexture.new()
+	rail.texture = ImageTexture.create_from_image(rail_image)
+	rail.texture_margin_left = 2.0
+	rail.texture_margin_right = 2.0
+	rail.texture_margin_top = 3.0
+	rail.texture_margin_bottom = 3.0
+	scrollbar.add_theme_stylebox_override("scroll", rail)
+	scrollbar.add_theme_stylebox_override("scroll_focus", rail)
+	var highlight := AtlasTexture.new()
+	highlight.atlas = ITEM_SCROLLBAR_TEXTURE
+	highlight.region = Rect2(3, 3, 2, 1)
+	var thumb := StyleBoxTexture.new()
+	thumb.texture = highlight
+	thumb.expand_margin_left = -3.0
+	thumb.expand_margin_right = -3.0
+	thumb.expand_margin_top = -3.0
+	thumb.expand_margin_bottom = -3.0
+	for state in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		scrollbar.add_theme_stylebox_override(state, thumb)
 
 func _exit_tree() -> void:
 	if Inventory != null and Inventory.has_signal("items_changed") and Inventory.items_changed.is_connected(_on_inventory_items_changed):
@@ -137,10 +226,32 @@ func _position_inventory_near_player() -> void:
 	if inventory_container == null:
 		return
 
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
+	var viewport_size: Vector2 = viewport_rect.size
 	var inventory_size: Vector2 = inventory_container.size * inventory_container.scale
-
-	var target_x: float = INVENTORY_LEFT_MARGIN
+	if not is_instance_valid(player_ref):
+		player_ref = get_tree().get_first_node_in_group("player") as Player
+	var screen_bounds: Rect2 = viewport_rect
+	if is_instance_valid(player_ref):
+		var scene_root: Node = player_ref.get_parent().get_parent()
+		var boundary: Node = scene_root.get_node_or_null("MapBoundary")
+		if boundary != null and boundary.has_method("get_world_rect") and not bool(boundary.get("_nightmare_active")):
+			# Include the authored outer wall; the surrounding black is not play area.
+			var world_bounds: Rect2 = boundary.call("get_world_rect")
+			var scene_bounds: Rect2 = get_viewport().get_canvas_transform() * world_bounds.grow(16.0)
+			var intersection: Rect2 = viewport_rect.intersection(scene_bounds)
+			if intersection.size.x >= inventory_size.x and intersection.size.y >= inventory_size.y:
+				screen_bounds = intersection
+	var left_edge: float = screen_bounds.position.x + INVENTORY_SCREEN_MARGIN
+	var right_edge: float = maxf(left_edge, screen_bounds.end.x - inventory_size.x - INVENTORY_SCREEN_MARGIN)
+	var target_x: float = minf(screen_bounds.position.x + INVENTORY_LEFT_MARGIN, right_edge)
+	if is_instance_valid(player_ref):
+		# Canvas transform accounts for camera position and its viewport limits.
+		var player_screen_x: float = player_ref.get_global_transform_with_canvas().origin.x
+		if player_screen_x < screen_bounds.get_center().x:
+			target_x = clampf(maxf(screen_bounds.end.x - INVENTORY_LEFT_MARGIN - inventory_size.x, player_screen_x + INVENTORY_PLAYER_CLEARANCE), left_edge, right_edge)
+		else:
+			target_x = clampf(minf(screen_bounds.position.x + INVENTORY_LEFT_MARGIN, player_screen_x - INVENTORY_PLAYER_CLEARANCE - inventory_size.x), left_edge, right_edge)
 	var target_y: float = (viewport_size.y - inventory_size.y) * 0.5
 
 	target_y = clampf(
@@ -153,6 +264,7 @@ func _position_inventory_near_player() -> void:
 
 func close_inventory() -> void:
 	_close_inventory_floating_panels()
+	_clear_inventory_feedback()
 
 	visible = false
 	_restore_tree_pause_state()
@@ -168,6 +280,8 @@ func _restore_tree_pause_state() -> void:
 
 func _refresh_inventory_grid() -> void:
 	shekel_amount.text = str(int(Inventory.items.get("shekel", 0)))
+	shekel_amount.accessibility_name = "Shekel: " + shekel_amount.text
+	shekel_amount.custom_minimum_size.x = clampf(shekel_amount.get_theme_font("font").get_string_size(shekel_amount.text, HORIZONTAL_ALIGNMENT_LEFT, -1, shekel_amount.get_theme_font_size("font_size")).x, 6.0, 40.0)
 	var filtered_items: Array[String] = []
 
 	if grid == null:
@@ -292,7 +406,7 @@ func _on_item_slot_hovered(item_id: String, _quantity: int, _slot_ref: ItemSlot)
 	if is_instance_valid(active_action_confirm_panel) or is_instance_valid(active_option_panel):
 		return
 	if item_info_panel.display_item(item_id):
-		item_info_panel.position_lower_center(action_feedback_label.get_global_rect().end.y)
+		item_info_panel.position_lower_center(get_viewport().get_visible_rect().end.y)
 
 func _on_item_slot_unhovered(_slot_ref: ItemSlot) -> void:
 	item_info_panel.clear_item()
@@ -530,10 +644,24 @@ func _position_action_confirm_panel(requested_position: Vector2) -> void:
 	max_position.x = maxf(min_position.x, max_position.x)
 	max_position.y = maxf(min_position.y, max_position.y)
 
-	active_action_confirm_panel.global_position = Vector2(
+	var target: Vector2 = Vector2(
 		clampf(requested_position.x, min_position.x, max_position.x),
 		clampf(requested_position.y, min_position.y, max_position.y)
 	).round()
+	var inventory_rect: Rect2 = inventory_window.get_global_rect()
+	if Rect2(target, panel_size).intersects(inventory_rect):
+		var left_x: float = inventory_rect.position.x - OPTION_PANEL_GAP - panel_size.x
+		var right_x: float = inventory_rect.end.x + OPTION_PANEL_GAP
+		var prefer_left: bool = requested_position.x < inventory_rect.get_center().x
+		if prefer_left and left_x >= min_position.x:
+			target.x = left_x
+		elif not prefer_left and right_x <= max_position.x:
+			target.x = right_x
+		elif left_x >= min_position.x:
+			target.x = left_x
+		elif right_x <= max_position.x:
+			target.x = right_x
+	active_action_confirm_panel.global_position = target.round()
 
 func _close_item_action_confirm_panel() -> void:
 	if active_action_confirm_panel != null and is_instance_valid(active_action_confirm_panel):
@@ -598,7 +726,7 @@ func _execute_drop_item(item_id: String, quantity: int) -> void:
 			_show_inventory_feedback("Dropped %s x%d" % [item_data.display_name, drop_quantity])
 			_refresh_inventory_grid()
 		else:
-			_show_inventory_feedback("Could not drop %s" % item_data.display_name)
+			_show_inventory_feedback("Could not drop %s" % item_data.display_name, true)
 
 func _spawn_dropped_pickup_item(item_id: String, quantity: int) -> bool:
 	if player_ref == null:
@@ -726,20 +854,78 @@ func _execute_use_item(item_id: String, quantity: int) -> void:
 
 func _show_inventory_feedback(message: String, is_error: bool = false) -> void:
 	_cancel_inventory_feedback_timer()
-
-	action_feedback_label.text = message
+	var panel_rect: Rect2 = inventory_window.get_global_rect()
+	action_feedback_label.size = Vector2(maxf(1.0, panel_rect.size.x - 32.0), 16.0)
+	action_feedback_label.global_position = (panel_rect.get_center() - action_feedback_label.size * 0.5).round()
+	var origin: Vector2 = action_feedback_label.position
+	var pages: Array[String] = _split_feedback_pages(message)
+	_set_feedback_page(pages[0])
 
 	if is_error:
-		action_feedback_label.add_theme_color_override("font_color", Color(0.75, 0.22, 0.18, 1.0))
+		action_feedback_label.add_theme_color_override("font_color", Color(0.90, 0.38, 0.32, 1.0))
 	else:
-		action_feedback_label.add_theme_color_override("font_color", Color(0.33, 0.23, 0.15, 1.0))
+		action_feedback_label.add_theme_color_override("font_color", Color(0.28, 0.68, 0.31, 1.0))
 
-	action_feedback_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	action_feedback_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
 
 	# Bound to this UI: scene changes or replacement messages cancel the pending hide.
 	action_feedback_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	action_feedback_tween.tween_interval(ACTION_FEEDBACK_DURATION)
-	action_feedback_tween.tween_property(action_feedback_label, "modulate:a", 0.0, 0.0)
+	action_feedback_tween.tween_property(action_feedback_label, "modulate:a", 1.0, 0.10)
+	if is_error:
+		for offset: float in [2.0, -2.0, 1.0, 0.0]:
+			action_feedback_tween.tween_property(action_feedback_label, "position:x", origin.x + offset, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		action_feedback_tween.tween_property(action_feedback_label, "position:y", origin.y - 3.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		action_feedback_tween.tween_property(action_feedback_label, "position:y", origin.y, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	for index in range(pages.size()):
+		if index > 0:
+			action_feedback_tween.tween_callback(_set_feedback_page.bind(pages[index]))
+		action_feedback_tween.tween_interval(ACTION_FEEDBACK_DURATION)
+	action_feedback_tween.tween_property(action_feedback_label, "modulate:a", 0.0, 0.20)
+
+func _split_feedback_pages(message: String) -> Array[String]:
+	var pages: Array[String] = []
+	var remaining: String = message.strip_edges()
+	var font: Font = action_feedback_label.get_theme_font("font")
+	var font_size: int = feedback_base_font_size
+	var width: float = maxf(action_feedback_label.size.x, 1.0)
+	while not remaining.is_empty():
+		var count: int = 0
+		while count < remaining.length() and remaining[count] != "\n":
+			if font.get_string_size(remaining.left(count + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
+				break
+			count += 1
+		if count == remaining.length():
+			pages.append(remaining)
+			break
+		if count < remaining.length() and remaining[count] != "\n" and remaining[count] != " ":
+			var last_space: int = remaining.left(count).rfind(" ")
+			if last_space > 0:
+				count = last_space
+			else:
+				# Keep an unusually long word intact and fit it on its own page.
+				var next_space: int = remaining.find(" ", count)
+				var next_line: int = remaining.find("\n", count)
+				count = remaining.length()
+				if next_space >= 0:
+					count = mini(count, next_space)
+				if next_line >= 0:
+					count = mini(count, next_line)
+		if count == 0:
+			count = 1
+		pages.append(remaining.left(count).strip_edges())
+		remaining = remaining.substr(count).strip_edges()
+	if pages.is_empty():
+		pages.append("")
+	return pages
+
+func _set_feedback_page(page: String) -> void:
+	var font: Font = action_feedback_label.get_theme_font("font")
+	var font_size: int = feedback_base_font_size
+	while font_size > 1 and font.get_string_size(page, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > action_feedback_label.size.x:
+		font_size -= 1
+	action_feedback_label.add_theme_font_size_override("font_size", font_size)
+	action_feedback_label.text = page
 
 func _cancel_inventory_feedback_timer() -> void:
 	if action_feedback_tween != null and action_feedback_tween.is_valid():
