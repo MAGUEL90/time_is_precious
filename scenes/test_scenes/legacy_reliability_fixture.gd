@@ -16,6 +16,9 @@ static func strip_v16_owners(raw: Dictionary) -> void:
 	if raw.get("raid") is Dictionary:
 		raw.raid.erase("_work_paid_source")
 		raw.raid.erase("_refund_pending")
+	if raw.get("plots") is Dictionary:
+		for plot: Dictionary in raw.plots.values():
+			plot.erase("building_kind") # Added in v19, absent from every pre-v16 fixture.
 	if raw.get("facilities") is Dictionary:
 		raw.facilities.erase("facility_contributions")
 	if raw.get("merchant") is Dictionary:
@@ -52,7 +55,7 @@ static func encode_v10(codec: RefCounted, raw: Dictionary, retained_stockpiles: 
 	var legacy: Dictionary = raw.duplicate(true)
 	strip_v16_owners(legacy)
 	# Versions through 11 predate the authored citizen-house plot.
-	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
+	_retain_pre_v12_plots(legacy)
 	for plot: Dictionary in legacy.plots.values():
 		plot.erase("worker_capacity")
 		plot.erase("work_total_units")
@@ -77,7 +80,7 @@ static func encode_v10(codec: RefCounted, raw: Dictionary, retained_stockpiles: 
 static func encode_v11(codec: RefCounted, raw: Dictionary) -> Variant:
 	var legacy: Dictionary = raw.duplicate(true)
 	strip_v16_owners(legacy)
-	legacy.plots.erase("WorkshopConstruction_" + "citizen_house_1".sha256_text())
+	_retain_pre_v12_plots(legacy)
 	legacy.worksites.schema_version = 2
 	_strip_new_resource_sites(legacy.worksites)
 	for site: Dictionary in legacy.worksites.sites.values():
@@ -121,3 +124,12 @@ static func city_objects(value: Variant, class_name_value: String) -> Array:
 		for child: Variant in value:
 			found.append_array(city_objects(child, class_name_value))
 	return found
+
+## Historical v9-v11 fixtures contained only the two original workshops.
+## Refuse to discard progressed modern plots while constructing a synthetic save.
+static func _retain_pre_v12_plots(raw: Dictionary) -> void:
+	var original_ids: Array[String] = ["MainWorkshopConstruction", "WorkshopConstruction_" + "workshop_2".sha256_text()]
+	for id: String in raw.plots.keys():
+		if original_ids.has(id): continue
+		assert(raw.plots[id].phase == "uncleared" and raw.plots[id].worker_ids.is_empty(), "Legacy fixture cannot discard progressed modern plots")
+		raw.plots.erase(id)

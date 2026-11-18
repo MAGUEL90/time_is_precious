@@ -3,6 +3,7 @@ extends Node
 ## One authored workshop plot. Hosted by WorkStateRuntime so scene changes do not reset it.
 ## Building is not a production order: it has no item output, escrow, or fee.
 signal changed()
+signal clearing_completed()
 
 const REQUIREMENTS: Dictionary = {"wood_log": 6, "clay_lump": 12, "reed_bundle": 8}
 const SOLO_MINUTES: int = 3 * 24 * 60
@@ -407,7 +408,8 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		var owns_transaction: bool = house_completed and not _starting
 		if owns_transaction:
 			_starting = true
-		phase = "empty" if phase == "clearing" else "built"
+		var finished_clearing: bool = phase == "clearing"
+		phase = "empty" if finished_clearing else "built"
 		if house_completed:
 			# The room check above prevents CityStockManager's clamping from ever
 			# applying a partial bonus. The phase changes before callbacks can see it.
@@ -418,6 +420,8 @@ func _on_time_changed(day: int, hour: int, minute: int, _weather: String) -> voi
 		player_building = false
 		_release_workers(worker_ids)
 		changed.emit()
+		if finished_clearing:
+			clearing_completed.emit()
 		if owns_transaction:
 			_finish_transaction()
 		return

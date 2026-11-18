@@ -3,6 +3,9 @@ extends StaticBody2D
 ## Exterior feet area only. Local walls never clamp the player in Nightmare.
 @export var walkable_rect := Rect2(24, -232, 336, 208)
 const WALL_THICKNESS: float = 16.0
+const CAMERA_TOP_PADDING: float = 64.0
+const CAMERA_BOTTOM_PADDING: float = 48.0
+const FRAME_COLOR: Color = Color8(196, 164, 116)
 
 var _camera: Camera2D
 var _camera_defaults: Dictionary = {}
@@ -67,6 +70,8 @@ func _update_camera_bounds() -> void:
 	else:
 		# Include the existing outer wall, not the large background tile layers.
 		var bounds: Rect2 = global_transform * walkable_rect.grow(WALL_THICKNESS)
+		bounds.position.y -= CAMERA_TOP_PADDING
+		bounds.size.y += CAMERA_TOP_PADDING + CAMERA_BOTTOM_PADDING
 		var viewport_size: Vector2 = get_viewport_rect().size
 		# Keep one source pixel per logical viewport pixel. A smaller map is
 		# centered with blank margins instead of stretched by a fractional zoom.
@@ -87,9 +92,11 @@ func _draw() -> void:
 	if _nightmare_active:
 		return
 	var bounds: Rect2 = walkable_rect.grow(WALL_THICKNESS)
+	bounds.position.y -= CAMERA_TOP_PADDING
+	bounds.size.y += CAMERA_TOP_PADDING
 	var margin: Vector2 = get_viewport_rect().size.ceil()
 	var left_top: Vector2 = bounds.position - margin
-	draw_rect(Rect2(left_top, Vector2(margin.x, bounds.size.y + 2 * margin.y)), Color.BLACK)
-	draw_rect(Rect2(Vector2(bounds.end.x, left_top.y), Vector2(margin.x, bounds.size.y + 2 * margin.y)), Color.BLACK)
-	draw_rect(Rect2(Vector2(bounds.position.x, left_top.y), Vector2(bounds.size.x, margin.y)), Color.BLACK)
-	draw_rect(Rect2(Vector2(bounds.position.x, bounds.end.y), Vector2(bounds.size.x, margin.y)), Color.BLACK)
+	draw_rect(Rect2(left_top, Vector2(margin.x, bounds.size.y + 2 * margin.y)), FRAME_COLOR)
+	draw_rect(Rect2(Vector2(bounds.end.x, left_top.y), Vector2(margin.x, bounds.size.y + 2 * margin.y)), FRAME_COLOR)
+	draw_rect(Rect2(Vector2(bounds.position.x, left_top.y), Vector2(bounds.size.x, margin.y)), FRAME_COLOR)
+	draw_rect(Rect2(Vector2(bounds.position.x, bounds.end.y), Vector2(bounds.size.x, margin.y)), FRAME_COLOR)

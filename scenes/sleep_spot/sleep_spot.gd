@@ -12,6 +12,7 @@ var _feedback_tween: Tween
 # Setup and signal bindings
 
 func _ready() -> void:
+	interactable_label_component.place_above_art($Sprite2D)
 	_save_feedback = Label.new()
 	_save_feedback.name = "SaveFeedback"
 	_save_feedback.theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")

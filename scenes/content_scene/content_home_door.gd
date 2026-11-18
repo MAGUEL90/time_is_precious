@@ -43,6 +43,13 @@ func _on_checkpoint_changed() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if _restored_inside != null and _restored_inside.get_ref() == body:
 		return
+	# Authoring bindings can reposition the door and fresh-start player during
+	# scene setup. Ignore a queued overlap from their pre-binding transforms.
+	if body is Player:
+		var door_shape := get_node("CollisionShape2D") as CollisionShape2D
+		var player_shape := body.get_node("CollisionShape2D") as CollisionShape2D
+		if not door_shape.shape.collide(door_shape.global_transform, player_shape.shape, player_shape.global_transform):
+			return
 	super._on_body_entered(body)
 
 func _on_body_exited(body: Node2D) -> void:

@@ -21,6 +21,7 @@ const PERSISTED_SITE_ITEMS: Dictionary = {
 	"ReedSite": "reed_bundle", "ReedSiteB": "reed_bundle",
 	"StrawSite": "straw_bundle", "WaterSite": "water_jar",
 }
+const CLAY_GEOMETRY = preload("res://scenes/map_authoring/clay_authoring_geometry.gd")
 const WORKSITE_SESSION: Script = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_session.gd")
 
 
@@ -49,7 +50,15 @@ static func bind(worksites: Node2D, authored_resource_paths: Dictionary) -> Dict
 		if RESOURCE_PROFILES.has(str(session.item_id)):
 			catalog[site_id] = RESOURCE_PROFILES[str(session.item_id)]
 	if authored_resource_paths.size() != catalog.size():
-		return _failure("The authored resource map must bind every configured wood, clay, and reed site exactly once.")
+		var missing: Array[String] = []
+		var unexpected: Array[String] = []
+		for id: String in catalog:
+			if not authored_resource_paths.has(id):
+				missing.append(id)
+		for id: Variant in authored_resource_paths:
+			if not catalog.has(str(id)):
+				unexpected.append(str(id))
+		return _failure("The authored resource map must bind every configured wood, clay, and reed site exactly once. Missing IDs: %s; unexpected IDs: %s." % [missing, unexpected])
 
 	var mapped_sites: Dictionary = {}
 	var path_keys: Dictionary = {}
@@ -68,17 +77,17 @@ static func bind(worksites: Node2D, authored_resource_paths: Dictionary) -> Dict
 		var path_text: String = str(raw_path)
 		var source_path := NodePath(path_text)
 		if source_path.is_empty() or source_path.is_absolute() or source_path.get_subname_count() != 0 or path_keys.has(path_text):
-			return _failure("The authored path is invalid or duplicated for " + site_id)
+			return _failure("The authored path is invalid or duplicated for " + site_id + " at " + path_text)
 		path_keys[path_text] = true
 		var authored: Node = worksites.get_node_or_null(source_path)
 		if not authored is Sprite2D:
-			return _failure("The authored target is not a Sprite2D: " + site_id)
+			return _failure("The authored target is not a Sprite2D: " + site_id + " at " + path_text)
 		var source: Sprite2D = authored as Sprite2D
 		var spec: Dictionary = catalog[site_id]
 		if not authored_world.is_ancestor_of(source) or not _shares_world_canvas(source, authored_world):
 			return _failure("The resource sprite must remain within the authored YSortWorld canvas: " + site_id)
 		if node_ids.has(source.get_instance_id()):
-			return _failure("An authored Sprite2D is mapped more than once.")
+			return _failure("An authored Sprite2D is mapped more than once: " + site_id + " at " + path_text)
 		node_ids[source.get_instance_id()] = true
 
 		var site: Node2D = markers.get_node_or_null(NodePath(site_id)) as Node2D
@@ -119,7 +128,12 @@ static func bind(worksites: Node2D, authored_resource_paths: Dictionary) -> Dict
 			var icon_center := Vector2(icon_bounds.position) + Vector2(icon_bounds.size) * 0.5
 			var icon_global: Vector2 = _pixel_to_global(icon, icon_center)
 			marker_global = site.global_position + target_global - icon_global
-		plan.append({"site_id": site_id, "site_ref": weakref(site), "source_ref": weakref(source),
+		var clay: Dictionary = {"ok": true, "configured": false}
+		if str(spec.source_texture) == str(RESOURCE_PROFILES.clay_lump.source_texture):
+			clay = CLAY_GEOMETRY.read(source)
+			if not clay.ok:
+				return _failure(site_id + ": " + str(clay.error))
+		plan.append({"clay_geometry": clay, "site_id": site_id, "site_ref": weakref(site), "source_ref": weakref(source),
 			"original_visible": source.visible, "target_global": marker_global})
 
 	# No state is changed until every entry is valid.
@@ -127,8 +141,31 @@ static func bind(worksites: Node2D, authored_resource_paths: Dictionary) -> Dict
 		var site_node: Node2D = record.site_ref.get_ref() as Node2D
 		var source_node: Sprite2D = record.source_ref.get_ref() as Sprite2D
 		site_node.global_position = record.target_global
+		if record.clay_geometry.configured:
+			var geometry: Dictionary = record.clay_geometry
+			var polygon := PackedVector2Array()
+			var slots := PackedVector2Array()
+			for point: Vector2 in geometry.collision:
+				polygon.append(site_node.to_local(point))
+			for point: Vector2 in geometry.slots:
+				slots.append(site_node.to_local(point))
+			site_node.set_meta("authored_clay_geometry", {"collision": polygon, "slots": slots})
+		elif site_node.has_meta("authored_clay_geometry"):
+			site_node.remove_meta("authored_clay_geometry")
 		source_node.hide()
 	return {"ok": true, "bindings": plan, "world_ref": weakref(authored_world), "map_ref": weakref(map_root)}
+
+
+## Resolve auxiliary geometry through the same validated identity binding.
+## Called on navigation rebuilds, never polled for editor/runtime movement.
+static func source_position(binding: Dictionary, site_id: String) -> Vector2:
+	if not bool(binding.get("ok", false)):
+		return Vector2.INF
+	for record: Dictionary in binding.get("bindings", []):
+		if str(record.site_id) == site_id:
+			var source: Node2D = record.source_ref.get_ref() as Node2D
+			return source.global_position if is_instance_valid(source) else Vector2.INF
+	return Vector2.INF
 
 
 ## Re-hide only if this binding still belongs to the exact authored world passed

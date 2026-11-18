@@ -129,6 +129,9 @@ func _can_run() -> bool:
 	return true
 
 func _failed(reason: String) -> bool:
+	# Preserve the actionable authoring incompatibility without changing the file.
+	if reason == "unsupported" and snapshot.error in ["Worker physical approach differs from its authored site.", "Worker physical approach is blocked by authored Clay collision."]:
+		reason += ": " + snapshot.error
 	_busy = false
 	last_error = reason
 	if reason == "missing":

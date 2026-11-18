@@ -144,6 +144,14 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	cover.add_child(shade)
 	add_child(cover)
+	var presentation_started := Time.get_ticks_msec()
+	if was_clearing and is_instance_valid(session_player.player_visual):
+		var pose: Node2D = preload("res://scenes/player_visual/player_busy_pose.gd").new()
+		pose.name = "PlayerBusyPose"
+		shade.add_child(pose)
+		pose.position = (get_viewport_rect().size * 0.5).round()
+		pose.scale = Vector2(2, 2)
+		pose.configure(session_player.player_visual)
 	await session_tree.create_timer(0.15, true).timeout
 	if not is_instance_valid(self):
 		return
@@ -154,7 +162,10 @@ func _run_player_house_work(resuming: bool, starting_clearing: bool = false, ids
 	if is_instance_valid(session_construction) and session_construction.is_player_work_active():
 		session_construction.interrupt_player_work()
 	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(session_scene) and get_tree().current_scene == session_scene:
-		await session_tree.create_timer(0.5, true).timeout
+		var presentation_wait := 0.5
+		if was_clearing and is_instance_valid(session_construction) and session_construction.phase == "empty":
+			presentation_wait = maxf(presentation_wait, 3.0 - float(Time.get_ticks_msec() - presentation_started) / 1000.0)
+		await session_tree.create_timer(presentation_wait, true).timeout
 		if not is_instance_valid(self):
 			return
 	if is_instance_valid(cover):

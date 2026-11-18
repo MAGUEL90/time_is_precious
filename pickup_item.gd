@@ -42,6 +42,7 @@ func _ready() -> void:
 		push_error("ItemData does not have icon.")
 
 	icon.texture = world_texture if world_texture != null else item_data.icon
+	interactable_label_component.place_above_art(icon)
 	icon_default_position = icon.position
 	icon_default_scale = icon.scale
 	icon_default_modulate = icon.modulate

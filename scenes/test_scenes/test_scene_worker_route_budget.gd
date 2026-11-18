@@ -136,6 +136,8 @@ func _run() -> void:
 	state.phase = "empty" # Cleaning is covered by the full house integration test.
 	state.changed.emit()
 	Inventory.add_bulk_item({"wood_log": 4, "clay_lump": 8, "reed_bundle": 6})
+	if state.supports_building_selection():
+		_expect(state.begin_building_preview("house"), "Select House before starting the selectable plot")
 	_expect(bool(state.start_build(ids).get("success", false)), "Five paid workers can start the fixture house")
 	for frame: int in range(5):
 		await get_tree().process_frame

@@ -34,16 +34,20 @@ const TEMP_RELOCATION_POINTS: Array[Vector2] = [
 ]
 const RESOURCE_ROUTE_BUDGET_USEC: int = 15000
 var _site_origins: Dictionary = {}
+var _wood_slot_cache: Dictionary = {}
 var _relocation_queued: bool = false
 var _last_relocation_attempt: Dictionary = {}
 var _resource_art_visibility: Dictionary = {}
 var _resource_label_visibility: Dictionary = {}
 var _depleted_presentation: Dictionary = {}
 var authored_resource_binding: Dictionary = {}
+var authoring_slot_issues: Array[String] = []
 var _runtime_base_initialized: bool = false
 var checkpoint_handoff: bool = false
 var worksite_navigation = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
 const RESOURCE_PRESENTATION = preload("res://scenes/content_scene/worksites/resource_site_presentation.gd")
+const ROAD_ROUTER = preload("res://scenes/content_scene/worksites/worksite_road_router.gd")
+var road_router = ROAD_ROUTER.new()
 const AUTHORED_RESOURCE_LAYOUT = preload("res://scenes/content_scene/worksites/authored_resource_layout.gd")
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const LEGACY_PICKUP = preload("res://scenes/content_scene/worksites/legacy_stockpile_pickup.gd")
@@ -99,6 +103,7 @@ func _ready() -> void:
 			authored_resource_binding.clear()
 			_disable_runtime_after_binding_failure()
 			return
+	road_router.configure(get_node_or_null("../../AuthoredMap") as Node2D)
 	daily.site_available = is_world_site_available
 	daily.physical_arrival = _physical_site_arrival
 	daily.assignment_started = _begin_site_assignments
@@ -544,8 +549,17 @@ func _bounded_resource_route(origin: Vector2, target: Vector2) -> PackedVector2A
 
 ## Route around real collision geometry. The old village wall is no longer
 ## shown, so there is no visual gate that workers need to pass through.
-func site_approach_route(origin: Vector2, target: Vector2) -> PackedVector2Array:
-	return _site_route(origin, target, false)
+func site_navigation(site_id: StringName) -> RefCounted:
+	return worksite_navigation.for_reed_site() if site_id == &"ReedSite" else worksite_navigation
+
+func site_approach_route(origin: Vector2, target: Vector2, site_id: StringName = &"") -> PackedVector2Array:
+	return road_router.route(origin, target, worksite_navigation, site_navigation(site_id))
+
+func begin_site_approach_route(origin: Vector2, target: Vector2, site_id: StringName) -> RefCounted:
+	return road_router.begin_route(origin, target, worksite_navigation, site_navigation(site_id))
+
+func step_site_approach_route(request: RefCounted) -> void:
+	road_router.step_route(request)
 
 func _site_route(origin: Vector2, target: Vector2, bounded: bool) -> PackedVector2Array:
 	return _bounded_direct_resource_route(origin, target) if bounded else worksite_navigation.route(origin, target)
@@ -582,7 +596,7 @@ func _refresh_navigation() -> void:
 	# A parked runtime keeps its value geometry through the home handoff.
 	if map == null or (map != self and not map.is_ancestor_of(self)):
 		return
-	worksite_navigation.configure(map)
+	worksite_navigation.configure(map, AUTHORED_RESOURCE_LAYOUT.source_position(authored_resource_binding, "ReedSite"))
 	navigation_geometry_phases.clear()
 	navigation_plot_templates.clear()
 	_watch_navigation_changes(map)
@@ -664,7 +678,36 @@ func _queue_navigation_refresh(state_id: int, plot_id: int) -> void:
 	_queue_navigation_after_colliders.call_deferred()
 
 func _queue_navigation_after_colliders() -> void:
-	_refresh_navigation.call_deferred()
+	_refresh_navigation_and_report.call_deferred()
+
+func _refresh_navigation_and_report() -> void:
+	_refresh_navigation()
+	var issues: Array[String] = validate_authoring_slots()
+	for issue: String in issues:
+		if not authoring_slot_issues.has(issue):
+			push_warning("Worksite authoring: " + issue)
+	authoring_slot_issues = issues
+
+## Diagnostics only: retain the existing automatic slot algorithm and never
+## move scene objects, reset saves, or change assignment/production policy.
+func validate_authoring_slots() -> Array[String]:
+	var issues: Array[String] = []
+	if not _runtime_base_initialized or authored_resource_paths.is_empty():
+		return issues
+	for site_id: Variant in authored_resource_paths:
+		var id := StringName(str(site_id))
+		if not is_world_site_available(id):
+			continue
+		var navigation = site_navigation(id)
+		var first: Vector2 = site_slot_destination(id, 0)
+		var second: Vector2 = site_slot_destination(id, 1)
+		for slot: int in range(2):
+			var point: Vector2 = first if slot == 0 else second
+			if not navigation.is_clear(point):
+				issues.append("%s: work slot %d at %s is blocked or outside the authored area; check the scene placement." % [id, slot + 1, point])
+		if first.distance_to(second) < 10.0:
+			issues.append("%s: work slots overlap; check the scene placement." % id)
+	return issues
 
 func _plot_navigation_template(plot: Node) -> Dictionary:
 	if not plot is Node2D or not plot.has_method("is_citizen_house_plot"):
@@ -860,10 +903,48 @@ func _site_entry_index(worker: WorkerData, site_id: StringName, entries: Array[V
 
 # Snapshot validation can resolve authored slots before live jobs are restored.
 func site_slot_destination(site_id: StringName, slot: int) -> Vector2:
-	var destination: Vector2 = get_node("WorksiteMarkers/" + str(site_id)).global_position + Vector2(-10 + slot * 20, 8)
+	var marker: Node2D = get_node("WorksiteMarkers/" + str(site_id))
+	if marker.has_meta("authored_clay_geometry") and slot in [0, 1]:
+		return marker.to_global(marker.get_meta("authored_clay_geometry").slots[slot])
+	var destination: Vector2 = marker.global_position + Vector2(-10 + slot * 20, 8)
 	if worksite_navigation.resource_bottoms.has(str(site_id)):
 		destination.y = maxf(destination.y, float(worksite_navigation.resource_bottoms[str(site_id)]) + worksite_navigation.CLEARANCE + 1.0)
-	return destination
+	if not finite_resource_sites or authored_resource_paths.is_empty() or marker.get("item_id") != "wood_log" or slot not in [0, 1] or worksite_navigation.revision == 0:
+		return destination
+	var cached: Dictionary = _wood_slot_cache.get(site_id, {})
+	if cached.get("revision", -1) == worksite_navigation.revision and cached.get("origin", Vector2.INF) == marker.global_position:
+		return cached.points[slot]
+	var base_y: float = marker.global_position.y + 8.0
+	if worksite_navigation.resource_bottoms.has(str(site_id)):
+		base_y = maxf(base_y, float(worksite_navigation.resource_bottoms[str(site_id)]) + worksite_navigation.CLEARANCE + 1.0)
+	var defaults: Array[Vector2] = [Vector2(marker.global_position.x - 10.0, base_y), Vector2(marker.global_position.x + 10.0, base_y)]
+	var points: Array[Vector2] = [Vector2.INF, Vector2.INF]
+	for index: int in range(2):
+		if worksite_navigation.is_clear(defaults[index]):
+			points[index] = defaults[index]
+	if points[0] != Vector2.INF and points[1] != Vector2.INF:
+		_wood_slot_cache[site_id] = {"revision": worksite_navigation.revision, "origin": marker.global_position, "points": points}
+		return points[slot]
+	var offsets: Array[Vector2] = []
+	for y: int in range(-48, 49, 2):
+		for x: int in range(-48, 49, 2):
+			if x * x + y * y <= 48 * 48:
+				offsets.append(Vector2(x, y))
+	offsets.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.length_squared() < b.length_squared())
+	for index: int in range(2):
+		if points[index] != Vector2.INF:
+			continue
+		for offset: Vector2 in offsets:
+			var candidate: Vector2 = defaults[index] + offset
+			if points[1 - index] != Vector2.INF and candidate.distance_to(points[1 - index]) < 10.0:
+				continue
+			if worksite_navigation.is_clear(candidate):
+				points[index] = candidate
+				break
+		if points[index] == Vector2.INF:
+			points[index] = defaults[index]
+	_wood_slot_cache[site_id] = {"revision": worksite_navigation.revision, "origin": marker.global_position, "points": points}
+	return points[slot]
 
 ## Validation must compare a saved approach with the saved deposit position,
 ## not with whichever location happens to be live before the load commits.
@@ -1033,3 +1114,19 @@ func _restore_resource_stock() -> void:
 		var site_id := StringName(saved_id)
 		if sites.has(site_id):
 			daily.pending_progress[site_id] = snapshot.pending_progress[saved_id].duplicate()
+
+
+func authored_clay_pose_clear(point: Vector2, saved_sites: Dictionary) -> bool:
+	var geometry = preload("res://scenes/content_scene/worksites/worksite_navigation.gd").new()
+	for marker: Node2D in $WorksiteMarkers.get_children():
+		if not marker.has_meta("authored_clay_geometry") or not is_world_site_available(marker.name):
+			continue
+		if finite_resource_sites and int(saved_sites.get(str(marker.name), {}).get("stock", sites[marker.name].stock)) <= 0:
+			continue
+		var offset: Vector2 = saved_sites.get(str(marker.name), {}).get("offset", Vector2.ZERO)
+		var movement: Vector2 = marker.get_parent().global_transform.basis_xform(offset - resource_site_offset(marker.name))
+		var polygon := PackedVector2Array()
+		for vertex: Vector2 in marker.get_meta("authored_clay_geometry").collision:
+			polygon.append(marker.to_global(vertex) + movement)
+		geometry.polygons.append(polygon)
+	return geometry.is_clear(point)

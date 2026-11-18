@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=4 uid="uid://cjv8ulk47168m"]
+[gd_scene load_steps=17 format=4 uid="uid://cjv8ulk47168m"]
 
 [ext_resource type="TileSet" uid="uid://bqjt5tuwqj8fs" path="res://resources/tile_map_resources/map_authoring_tileset_02_11_2026.tres" id="1_tiles"]
 [ext_resource type="Texture2D" uid="uid://yutg1ax64b0w" path="res://assets/ui/building/to_be_clean_1.png" id="2_bgb48"]
@@ -11,8 +11,11 @@
 [ext_resource type="Texture2D" uid="uid://bbvjpaonfvtp4" path="res://assets/objects/nature/stone/small_stone.png" id="9_jsfyh"]
 [ext_resource type="Texture2D" uid="uid://cpqkibgpx517m" path="res://assets/objects/nature/trees/date_palm_tree.png" id="11_300sm"]
 [ext_resource type="Texture2D" uid="uid://07j1wwvi65y8" path="res://assets/objects/worksites/reed_site.png" id="11_kfg7a"]
-[ext_resource type="Script" path="res://scenes/pickup_item/date_palm_spawner.gd" id="12_palm_spawner"]
-[ext_resource type="Texture2D" path="res://assets/objects/dates_pickup.png" id="13_dates_pickup"]
+[ext_resource type="Script" uid="uid://bcecyl1onrw5c" path="res://scenes/pickup_item/date_palm_spawner.gd" id="12_palm_spawner"]
+[ext_resource type="Texture2D" uid="uid://dx07s233vny6e" path="res://assets/objects/dates_pickup.png" id="13_dates_pickup"]
+[ext_resource type="Texture2D" uid="uid://d23w7vrcrysw7" path="res://assets/objects/ground_torch.png" id="14_1jn4d"]
+[ext_resource type="Script" uid="uid://cfhgitgo0318e" path="res://scenes/map_authoring/clay_authoring_preview.gd" id="15_clay_preview"]
+[ext_resource type="Script" path="res://scenes/map_authoring/clay_authoring_handle.gd" id="16_clay_handle"]
 
 [node name="NewMapAuthoring" type="Node2D"]
 
@@ -63,29 +66,129 @@ texture = ExtResource("2_bgb48")
 [node name="ClaySite" type="Sprite2D" parent="YSortWorld"]
 position = Vector2(282, -184)
 texture = ExtResource("3_hhxux")
+script = ExtResource("15_clay_preview")
+
+[node name="ClayControls" type="Node2D" parent="YSortWorld/ClaySite"]
+editor_description = "Edit the collision polygon or move WorkPoint1 and WorkPoint2. Runtime reads these once on load."
+
+[node name="Collision" type="StaticBody2D" parent="YSortWorld/ClaySite/ClayControls"]
+collision_layer = 0
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="YSortWorld/ClaySite/ClayControls/Collision"]
+polygon = PackedVector2Array(-12, 7, 12, 7, 12, 13, -12, 13)
+script = ExtResource("16_clay_handle")
+
+[node name="WorkPoint1" type="Marker2D" parent="YSortWorld/ClaySite/ClayControls"]
+position = Vector2(20, -12)
+script = ExtResource("16_clay_handle")
+
+[node name="WorkPoint2" type="Marker2D" parent="YSortWorld/ClaySite/ClayControls"]
+position = Vector2(0, -25)
+script = ExtResource("16_clay_handle")
 
 [node name="ClaySite2" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(204, -104)
+position = Vector2(203, -105)
 texture = ExtResource("3_hhxux")
+script = ExtResource("15_clay_preview")
+
+[node name="ClayControls" type="Node2D" parent="YSortWorld/ClaySite2"]
+editor_description = "Edit the collision polygon or move WorkPoint1 and WorkPoint2. Runtime reads these once on load."
+
+[node name="Collision" type="StaticBody2D" parent="YSortWorld/ClaySite2/ClayControls"]
+collision_layer = 0
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="YSortWorld/ClaySite2/ClayControls/Collision"]
+polygon = PackedVector2Array(-12, 7, 12, 7, 12, 13, -12, 13)
+script = ExtResource("16_clay_handle")
+
+[node name="WorkPoint1" type="Marker2D" parent="YSortWorld/ClaySite2/ClayControls"]
+position = Vector2(10, 21)
+script = ExtResource("16_clay_handle")
+
+[node name="WorkPoint2" type="Marker2D" parent="YSortWorld/ClaySite2/ClayControls"]
+position = Vector2(5, -22)
+script = ExtResource("16_clay_handle")
 
 [node name="Poplar" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(91, -236)
-texture = ExtResource("3_rwbfr")
-
-[node name="Poplar2" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(50, -66)
+position = Vector2(85, -243)
 texture = ExtResource("3_rwbfr")
 
 [node name="Poplar3" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(320, -240)
+position = Vector2(295, -249)
 texture = ExtResource("3_rwbfr")
 
-[node name="Poplar4" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(253, -72)
+[node name="Poplar6" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(47, -100)
 texture = ExtResource("3_rwbfr")
 
-[node name="Poplar5" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(194, -238)
+[node name="Poplar12" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(65, -70)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar13" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(82, -177)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar14" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(170, -65)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar15" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(286, -143)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar16" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(243, -82)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar17" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(254, -142)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar18" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(280, -73)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar19" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(236, -115)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar21" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(232, -250)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar22" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(203, -250)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar23" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(117, -240)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar27" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(262, -250)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar29" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(344, -242)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar30" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(324, -249)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar31" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(173, -243)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar35" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(192, -219)
+texture = ExtResource("3_rwbfr")
+
+[node name="Poplar8" type="Sprite2D" parent="YSortWorld"]
+position = Vector2(57, -137)
 texture = ExtResource("3_rwbfr")
 
 [node name="BlockedStone" type="Sprite2D" parent="YSortWorld"]
@@ -145,7 +248,11 @@ position = Vector2(230, -183)
 texture = ExtResource("11_kfg7a")
 
 [node name="DatePalmTree" type="Sprite2D" parent="YSortWorld"]
-position = Vector2(114, -187)
+position = Vector2(113, -202)
 texture = ExtResource("11_300sm")
 script = ExtResource("12_palm_spawner")
 pickup_texture = ExtResource("13_dates_pickup")
+
+[node name="GroundTorch" type="Sprite2D" parent="."]
+position = Vector2(198, -155)
+texture = ExtResource("14_1jn4d")

@@ -9,14 +9,25 @@ var polygons: Array[PackedVector2Array] = []
 var resource_bottoms: Dictionary = {}
 var revision: int = 0
 var walkable_rect: Rect2 = Rect2()
+var _reed_pond: PackedVector2Array = PackedVector2Array()
+var _reed_marker_position: Vector2 = Vector2.INF
+var _reed_navigation: RefCounted
+var _reed_navigation_revision: int = -1
 
-func configure(map: Node) -> void:
+func configure(map: Node, reed_source_position: Vector2 = Vector2.INF) -> void:
 	revision += 1
 	polygons.clear()
 	resource_bottoms.clear()
 	walkable_rect = Rect2()
+	_reed_pond = PackedVector2Array()
+	_reed_marker_position = Vector2.INF
+	_reed_navigation = null
+	_reed_navigation_revision = -1
 	if not is_instance_valid(map):
 		return
+	# The content owner supplies the source from its validated worksite binding.
+	# No second authored path or position table to maintain here.
+	_reed_marker_position = reed_source_position
 	var boundary: Node = map.get_node_or_null("MapBoundary")
 	if boundary != null and boundary.has_method("get_world_rect"):
 		walkable_rect = boundary.get_world_rect()
@@ -51,6 +62,10 @@ func _collect(node: Node) -> void:
 		var body: Node = node.get_parent()
 		if body is StaticBody2D and body.collision_layer != 0:
 			_add_shape(node.shape, node.global_transform)
+			if str(body.name).begins_with("PondWaterBody_") and _reed_marker_position != Vector2.INF and not polygons.is_empty():
+				var candidate: PackedVector2Array = polygons[-1]
+				if candidate.size() > 2 and Geometry2D.is_point_in_polygon(_reed_marker_position, candidate):
+					_reed_pond = candidate
 	elif node is CollisionPolygon2D and not node.disabled:
 		var body: Node = node.get_parent()
 		if body is StaticBody2D and body.collision_layer != 0:
@@ -137,6 +152,41 @@ func _add_polygon(points: PackedVector2Array, transform: Transform2D) -> void:
 	if world.size() >= 2:
 		polygons.append(world)
 
+## Only the Reed Site commute may use this copy. All other solid geometry,
+## and the original physics body used by the player, remain unchanged.
+func for_reed_site() -> RefCounted:
+	if _reed_pond.is_empty() or not polygons.has(_reed_pond):
+		return self
+	if _reed_navigation != null and _reed_navigation_revision == revision:
+		return _reed_navigation
+	var copy: RefCounted = get_script().new()
+	copy.walkable_rect = walkable_rect
+	copy.revision = revision
+	copy.resource_bottoms = resource_bottoms.duplicate()
+	for polygon: PackedVector2Array in polygons:
+		if polygon != _reed_pond:
+			copy.polygons.append(polygon)
+	_reed_navigation = copy
+	_reed_navigation_revision = revision
+	return copy
+
+func reed_exit_target(origin: Vector2) -> Vector2:
+	if _reed_pond.is_empty():
+		return Vector2.INF
+	var bounds := Rect2(_reed_pond[0], Vector2.ZERO)
+	for point: Vector2 in _reed_pond:
+		bounds = bounds.expand(point)
+	var padding: float = CLEARANCE + 2.0
+	var choices: Array[Vector2] = [
+		Vector2(origin.x, bounds.position.y - padding), Vector2(origin.x, bounds.end.y + padding),
+		Vector2(bounds.position.x - padding, origin.y), Vector2(bounds.end.x + padding, origin.y),
+	]
+	choices.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.distance_squared_to(origin) < b.distance_squared_to(origin))
+	var allowed: RefCounted = for_reed_site()
+	for point: Vector2 in choices:
+		if is_clear(point) and not allowed.route(origin, point).is_empty():
+			return point
+	return Vector2.INF
 func is_in_region(point: Vector2) -> bool:
 	return not walkable_rect.has_area() or walkable_rect.has_point(point)
 

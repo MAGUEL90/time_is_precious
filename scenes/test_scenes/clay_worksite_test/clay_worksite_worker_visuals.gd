@@ -8,6 +8,7 @@ var fraction: float = 0.0
 var work_cycles: Dictionary = {}
 var roaming: Dictionary = {}
 var site_paths: Dictionary = {}
+var reed_exit_paths: Dictionary = {}
 var reed_inside: Dictionary = {}
 var reed_splash: CPUParticles2D
 const FEET_OFFSET := Vector2(0, 16)
@@ -296,6 +297,7 @@ func _retire_unhired_actors() -> void:
 		_clear_worker_presentation(id)
 
 func _clear_worker_presentation(id: String) -> void:
+	reed_exit_paths.erase(id)
 	work_cycles.erase(id)
 	roaming.erase(id)
 	site_paths.erase(id)
@@ -324,6 +326,9 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	var state: Dictionary = worker.physical_approach
 	actor.global_position = Vector2(state.position) - FEET_OFFSET
 	actor.show()
+	if site_id != &"ReedSite" and _exit_reed_pond(id, actor, delta):
+		state.position = actor.global_position + FEET_OFFSET
+		return true
 	if state.arrived:
 		if schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta, fixture.sites[site_id].item_id == "wood_log")
@@ -339,14 +344,28 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 		return true
 	var feet: Vector2 = state.position
 	var target: Vector2 = state.target
-	var navigation = fixture.worksite_navigation
+	var navigation = fixture.site_navigation(site_id) if fixture.has_method("site_navigation") else fixture.worksite_navigation
 	var path: Dictionary = site_paths.get(id, {})
-	if path.get("task", "") != task or path.get("target", Vector2.INF) != target or int(path.get("revision", -1)) != navigation.revision:
+	if path.get("task", "") != task or path.get("target", Vector2.INF) != target or int(path.get("revision", -1)) != navigation.revision or int(path.get("navigation_id", -1)) != navigation.get_instance_id():
 		# Cache failed searches too, but retry whenever authored geometry changes.
 		# A blocked route is never treated as an arrival or retried every frame.
-		var route_points: PackedVector2Array = fixture.site_approach_route(feet, target) if fixture.has_method("site_approach_route") else navigation.route(feet, target)
-		path = {"task": task, "target": target, "revision": navigation.revision, "points": route_points, "next": 1}
+		path = {"task": task, "target": target, "revision": navigation.revision, "navigation_id": navigation.get_instance_id(), "points": PackedVector2Array(), "next": 1}
+		if fixture.has_method("begin_site_approach_route"):
+			path["request"] = fixture.begin_site_approach_route(feet, target, site_id)
+		else:
+			path.points = fixture.site_approach_route(feet, target, site_id) if fixture.has_method("site_approach_route") else navigation.route(feet, target)
 		site_paths[id] = path
+	if path.has("request"):
+		var request: RefCounted = path.request
+		fixture.step_site_approach_route(request)
+		if request.status == "pending":
+			_play(actor, "idle", "right")
+			return true
+		if request.status == "invalidated":
+			site_paths.erase(id)
+			return true
+		path.points = request.path if request.status == "found" else PackedVector2Array()
+		path.erase("request")
 	var remaining: float = APPROACH_SPEED * delta
 	var points: PackedVector2Array = path.points
 	while int(path.next) < points.size() and remaining > 0.0001:
@@ -363,6 +382,8 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 		feet = step
 	state.position = feet
 	actor.global_position = feet - FEET_OFFSET
+	if site_id == &"ReedSite" and navigation != fixture.worksite_navigation and not fixture.worksite_navigation.is_clear(feet):
+		actor.set_meta("reed_pond_exit", true)
 	if feet.distance_to(target) < 0.1 and navigation.is_clear(feet):
 		if worker.mark_physical_arrival(task):
 			site_paths.erase(id)
@@ -391,6 +412,13 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	add_child(actor)
 	actor.set_satisfaction_source(citizen if citizen != null else worker)
 	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if worker != null and not worker.physical_approach.is_empty() else spawn_position
+	if worker != null and not worker.physical_approach.is_empty():
+		var normal = get_parent().worksite_navigation
+		var feet: Vector2 = actor.global_position + FEET_OFFSET
+		var reed_nav = normal.for_reed_site()
+		# This also restores a worker reassigned while leaving the reed pond.
+		if reed_nav != normal and not normal.is_clear(feet) and reed_nav.is_clear(feet):
+			actor.set_meta("reed_pond_exit", true)
 	var foot := Node2D.new()
 	foot.name = "FootSort"
 	foot.position = FEET_OFFSET
@@ -407,6 +435,8 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	return actor
 
 func _roam(id: String, actor: Node2D, delta: float) -> void:
+	if _exit_reed_pond(id, actor, delta):
+		return
 	if not roaming.has(id):
 		roaming[id] = {"target": _roam_target(actor, true), "idle": 0.0, "direction": "right"}
 	var state: Dictionary = roaming[id]
@@ -430,6 +460,50 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 	actor.global_position = step
 	_play(actor, "walk", state.direction)
 
+# After Reed work, leave that one pond before returning to ordinary roaming.
+# The flag is presentation-only and can also be reconstructed from a saved
+# in-flight Reed approach when its visual actor is recreated.
+func _exit_reed_pond(id: String, actor: Node2D, delta: float) -> bool:
+	if not actor.has_meta("reed_pond_exit"):
+		return false
+	var fixture: Node = get_parent()
+	var normal = fixture.worksite_navigation
+	var feet: Vector2 = actor.global_position + FEET_OFFSET
+	if normal.is_clear(feet):
+		actor.remove_meta("reed_pond_exit")
+		reed_exit_paths.erase(id)
+		return false
+	var allowed = normal.for_reed_site()
+	if allowed == normal or not allowed.is_clear(feet):
+		_play(actor, "idle", "right")
+		return true
+	var path: Dictionary = reed_exit_paths.get(id, {})
+	if int(path.get("revision", -1)) != normal.revision or int(path.get("actor_id", -1)) != actor.get_instance_id():
+		var destination: Vector2 = normal.reed_exit_target(feet)
+		var points: PackedVector2Array = allowed.route(feet, destination) if destination != Vector2.INF else PackedVector2Array()
+		path = {"revision": normal.revision, "actor_id": actor.get_instance_id(), "points": points, "next": 1}
+		reed_exit_paths[id] = path
+	var points: PackedVector2Array = path.points
+	var remaining: float = APPROACH_SPEED * delta
+	while int(path.next) < points.size() and remaining > 0.0001:
+		var next: Vector2 = points[int(path.next)]
+		if feet.distance_to(next) < 0.01:
+			path.next += 1
+			continue
+		var step: Vector2 = feet.move_toward(next, remaining)
+		if not allowed.segment_clear(feet, step):
+			reed_exit_paths.erase(id)
+			break
+		remaining -= feet.distance_to(step)
+		_play(actor, "walk", "left" if step.x < feet.x else "right")
+		feet = step
+	actor.global_position = feet - FEET_OFFSET
+	if normal.is_clear(feet):
+		actor.remove_meta("reed_pond_exit")
+		reed_exit_paths.erase(id)
+	elif points.is_empty():
+		_play(actor, "idle", "right")
+	return true
 func _roam_target(actor: Node2D, initial: bool) -> Vector2:
 	# Scope the idle stroll only. Assignment/hauling owners keep their routes.
 	if is_instance_valid(resident_spawn) and resident_roam_rect.has_area():

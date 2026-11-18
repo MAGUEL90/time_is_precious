@@ -6,7 +6,7 @@ const ASSETS: Array[Dictionary] = [
 	{"path": "res://assets/ui/ui_icon/checklist_icon.png", "uid": "uid://dvf6iiypuilwu", "sha256": "4e5b4df71a5297f4c6c116a1a7fd4c63767b3bc4d29142a9df7a95c27c217644", "size": Vector2i(16, 16)},
 	{"path": "res://assets/objects/worksites/clay_site.png", "uid": "uid://b650c5xjes0rl", "sha256": "a6d86339ac876b40669dcfd890ce0586a620314e66fa64fda075830a9c522abf", "size": Vector2i(32, 32)},
 	{"path": "res://assets/ui/ui_icon/hauler_icon.png", "uid": "uid://70r5ceud5uop", "sha256": "32657f8c396c0fdc9abb9978b4c5a2d64440e2bdff163892004bd37efef0c35c", "size": Vector2i(32, 32)},
-	{"path": "res://assets/objects/buildings/house_level_0.png", "uid": "uid://fthba18nxxwn", "sha256": "296a012f5ae691b96ce82c880adae4515446834375fae077fa19c9e4ae916a31", "size": Vector2i(48, 64)},
+	{"path": "res://assets/objects/buildings/house_level_0.png", "uid": "uid://fthba18nxxwn", "sha256": "4a7190dbfbd7e625cf1ce959e22b887efca24e356b6f02fe6131dd732371a3c7", "size": Vector2i(48, 64)},
 	{"path": "res://assets/objects/buildings/house_construction_site.png", "uid": "uid://8muqwvsycp66", "sha256": "6cf4a1fb554663faf8d3018907fb99f37a28dc4c7cbdf08db40fd08f2cfc925b", "size": Vector2i(64, 64)},
 	{"path": "res://assets/objects/buildings/clay_workshop_0.png", "uid": "uid://nuopirs7g4li", "sha256": "a5e0871383698d9efd7e0d4aa451ca3584c38a1a79a6146e169aeec8a114c6b1", "size": Vector2i(48, 64)},
 	{"path": "res://assets/objects/job_board.png", "uid": "uid://b760kxx2baat3", "sha256": "443632fa545c9d7ea46aecfe4d3b201195212af9a5b80153b30e2d7c03e9c43e", "size": Vector2i(34, 24)},

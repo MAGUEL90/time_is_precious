@@ -89,6 +89,7 @@ func _run() -> void:
 		and _clock_minute() < deadline:
 		# Output begins only after the authored walk marks physical arrival.
 		for _frame: int in range(20):
+			await get_tree().process_frame
 			visuals._process(0.05)
 		TimeComponentManager.advance_minutes(1)
 	var approaching_laborer: WorkerData = WorkerDatabase.get_worker_data(LABORER_ID)

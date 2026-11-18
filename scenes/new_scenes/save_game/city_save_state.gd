@@ -315,7 +315,7 @@ func prepare(document: Dictionary, map: Node) -> bool:
 		# can still be skipped in favor of a valid older backup.
 		error = LEGACY_TIME_ERROR_PREFIX + " " + error
 		return false
-	var migrated_worksites: bool = int(raw.worksites.schema_version) < _sites.SCHEMA_VERSION
+	var migrated_worksites: bool = int(raw.worksites.schema_version) < _sites.SCHEMA_VERSION or _sites.needs_registry_migration(raw.worksites, worksite(map))
 	if migrated_worksites:
 		if not _sites.migrate_legacy(raw.worksites, worksite(map), checkpoint_minute) or not _sites.validate(raw.worksites, worksite(map), raw.workers.workers_by_id, raw.workers.dismissed_workers, checkpoint_minute):
 			return fail(_sites.error)
@@ -1052,6 +1052,8 @@ func _validate_approaches(raw: Dictionary, map: Node) -> bool:
 				continue
 			if not raw.workers.workers_by_id.has(id) or worker.current_order_id.is_empty() or (approach.arrived and approach.arrival_minute > now):
 				return fail("Worker physical approach has no active owner.")
+			if worksite(map).has_method("authored_clay_pose_clear") and (not worksite(map).authored_clay_pose_clear(approach.position, raw.worksites.sites) or (approach.kind == "site" and not worksite(map).authored_clay_pose_clear(approach.target, raw.worksites.sites))):
+				return fail("Worker physical approach is blocked by authored Clay collision.")
 			if approach.kind == "site":
 				var job: Dictionary = raw.worksites.jobs.get(approach.owner, {})
 				if job.is_empty() or not job.ids.has(id) or worker.current_order_id != job.order or not job.starts.has(id):

@@ -167,9 +167,9 @@ func _test_player_and_worker_routes() -> void:
 	_expect(_now() - start == CLEARING_WORK and construction.phase == "empty",
 		"Player cleans for exactly 180 minutes at night without a worker shift.")
 	_expect(not marker.visible and not house.get_node("ToBeClean").visible
-		and house.get_node("SiteHouse").visible == (not has_authored_footprint)
+		and not house.get_node("SiteHouse").visible
 		and _authored_footprint_cell_count(footprint, marker.global_position) == authored_footprint_cells,
-		"After cleaning, the house shows its complete authored footprint or the local SiteHouse fallback.")
+		"After cleaning, the unselected plot preserves authored tiles without premature House site art.")
 	await _capture("house-player-cleaning-complete")
 	_expect(_needs_drained_once(start_hunger, start_fatigue, CLEARING_WORK)
 		and Inventory.items == initial_inventory and not player_worker.is_reserved(),
@@ -330,6 +330,8 @@ func _test_critical_interruption() -> void:
 	# Start an independent cleared-house case after the complete takeover journey.
 	# Reset this authored fixture's state directly; this is not a gameplay action.
 	construction.phase = "empty"
+	construction.building_kind = ""
+	construction.clear_building_preview()
 	construction.worker_ids.clear()
 	construction.worker_capacity = 0
 	construction.work_total_units = 0

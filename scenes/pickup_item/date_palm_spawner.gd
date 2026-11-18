@@ -30,6 +30,7 @@ func _pickup_name() -> String:
 func _tag_pickup(pickup: Node) -> void:
 	pickup.add_to_group("date_palm_pickups")
 	pickup.gather_handler = _gather_from_palm
+	pickup.add_child(preload("res://scenes/pickup_item/date_pickup_sort_visual.gd").new())
 
 
 func _gather_from_palm(player: Player, chosen: PickUpItem) -> void:

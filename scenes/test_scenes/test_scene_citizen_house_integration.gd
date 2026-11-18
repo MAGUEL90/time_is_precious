@@ -76,8 +76,8 @@ func _run() -> void:
 
 func _exercise_house() -> void:
 	_expect(str(construction.order_id) == HOUSE_ID and construction.phase == "uncleared"
-		and construction.get_requirements() == HOUSE_REQUIREMENTS,
-		"The real house starts uncleared with its own identity and four/eight/six material costs.")
+		and construction.supports_building_selection() and construction.building_kind.is_empty(),
+		"The plot starts uncleared with its stable identity and no committed building choice.")
 	_expect(workshop_construction.phase == "uncleared"
 		and workshop_construction.get_requirements() == WORKSHOP_REQUIREMENTS,
 		"The separate workshop retains its original starting phase and costs.")
@@ -106,10 +106,12 @@ func _exercise_house() -> void:
 		return
 	var menu: WorkshopPlotUI = house.get("menu") as WorkshopPlotUI
 	var title: Label = menu.get_node("Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel") as Label
-	_expect(title.text == "CLEAR HOUSE SITE" and menu.assign_workers_button.visible
+	_expect(title.text == "CLEAR SITE" and menu.assign_workers_button.visible
 		and not menu.player_button.visible
-		and menu.build_button.text == "Start Cleaning" and not player.can_move and get_tree().paused,
+		and menu.build_button.text == "Start" and not player.can_move and get_tree().paused,
 		"Physical E opens the house-cleaning menu with one Assign action.")
+	_expect(menu.assign_workers_button.size == Vector2(40, 14) and menu.build_button.size == Vector2(40, 14),
+		"Clear Site Assign and Start match the City Hub Close button dimensions.")
 	menu.assign_workers_button.pressed.emit()
 	await get_tree().process_frame
 	_expect(menu._assignment_choice_open and not menu.worker_choice_button.disabled
@@ -129,7 +131,7 @@ func _exercise_house() -> void:
 	_prepare_departure_actor(FIRST_ID)
 	menu._on_worker_assignment_next_requested([FIRST_ID] as Array[String])
 	_expect(not menu.build_button.disabled, "The hired worker is selectable for house cleaning.")
-	_expect(menu.duration_label.text == "3h 0m work, 1 worker", "The cleaning quote identifies working hours rather than elapsed days.")
+	_expect(menu.duration_label.text == "3h, 1 builder", "The cleaning quote identifies working hours rather than elapsed days.")
 	menu.build_button.pressed.emit()
 	_expect(construction.phase == "clearing" and first.current_order_id == HOUSE_ID
 		and first.get_linked_citizen().employment_status == CitizenData.EmploymentStatus.ASSIGNED
@@ -180,11 +182,12 @@ func _exercise_house() -> void:
 
 	Inventory.add_bulk_item({"wood_log": 6, "clay_lump": 10, "reed_bundle": 8})
 	var material_stock: Dictionary = Inventory.items.duplicate(true)
+	if not await _open_house_menu("house-cleared"):
+		return
 	var quote: Dictionary = construction.get_preview([FIRST_ID] as Array[String])
 	_expect(bool(quote.get("can_start", false)) and int(quote.get("duration_minutes", 0)) == HOUSE_WORK,
 		"One paid builder is quoted the full 2,880 worker-minute house build.")
-	if not await _open_house_menu("house-cleared"):
-		return
+	_expect(construction.get_requirements() == HOUSE_REQUIREMENTS, "Selecting House quotes exactly four wood, eight clay and six reed.")
 	menu = house.get("menu") as WorkshopPlotUI
 	title = menu.get_node("Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel") as Label
 	_expect(title.text == "BUILD HOUSE" and menu.build_button.text == "Build House",
@@ -301,18 +304,31 @@ func _open_house_menu(capture_name: String) -> bool:
 	if access == null:
 		_expect(false, "The house has its authored physical interaction area.")
 		return false
+	player.global_position = access.global_position + Vector2(0, 80)
+	for _frame: int in range(4):
+		await get_tree().physics_frame
 	player.global_position = access.global_position + Vector2(0, 4)
 	for _frame: int in range(4):
 		await get_tree().physics_frame
 	await get_tree().process_frame
 	await _capture(capture_name)
 	_expect(house.has_player_access() and player.current_interactable == house,
-		"Standing beside the house makes its real rubble interaction available.")
+		"House access at %s: phase=%s can_move=%s paused=%s access=%s interactable=%s" % [capture_name, construction.phase, player.can_move, get_tree().paused, house.has_player_access(), player.current_interactable])
 	if not house.has_player_access() or player.current_interactable != house:
 		return false
 	await _press_interact()
+	# Cleared selectable plots first offer a building choice. Exercise the real
+	# buttons before checking the construction panel; do not preselect saved state.
+	var choice: Node = house.get("menu")
+	if is_instance_valid(choice) and choice.scene_file_path == "res://scenes/ui/building_selection_ui/building_selection_ui.tscn":
+		_expect(construction.phase == "empty" and construction.building_kind.is_empty(), "A cleared plot has no committed building before selection.")
+		choice.buttons["residential"].pressed.emit()
+		await get_tree().process_frame
+		choice.buttons["house"].pressed.emit()
+		await get_tree().process_frame
+		_expect(construction.is_citizen_house() and construction.building_kind.is_empty(), "House preview does not commit or charge the building choice.")
 	var opened: bool = is_instance_valid(house.get("menu")) and house.get("menu") is WorkshopPlotUI
-	_expect(opened, "Pressing E opens the house menu directly without NPC dialogue.")
+	_expect(opened, "Physical interaction and any required House selection open the construction menu without NPC dialogue.")
 	return opened
 
 
@@ -379,7 +395,7 @@ func _authored_cleared_footprint_visible() -> bool:
 	if not bool(binding.get("_bound")) or _snapshot_authored_house_layer(layer) != authored_layer_source:
 		return false
 	if authored_cells.is_empty():
-		return not uses_authored_footprint and layer.get_used_cells().is_empty() and house_view.get_node("SiteHouse").visible \
+		return not uses_authored_footprint and layer.get_used_cells().is_empty() and (house_view.get_node("SiteHouse").visible == (construction.phase == "building" and construction.building_kind == "house")) \
 			and not house_view.get_node("ToBeClean").visible
 	if authored_cells.size() != 9 or not uses_authored_footprint:
 		return false

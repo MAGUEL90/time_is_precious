@@ -13,6 +13,7 @@ const BACK_ICON: Texture2D = preload("res://assets/ui/ui_icon/back_button.png")
 const WORKER_CARD_SIZE: Vector2 = Vector2(24, 24)
 const WORKER_PORTRAIT_SIZE: Vector2 = Vector2(11, 15)
 const ACTION_BUTTON_SIZE: Vector2 = Vector2(64, 18)
+const SHORT_ACTION_BUTTON_SIZE: Vector2 = Vector2(40, 14)
 const MISSING_MATERIAL_COLOR: Color = Color(1.0, 0.82, 0.78, 1.0)
 const ASSIGNED_TEXT_COLOR: Color = Color(0.78, 1.0, 0.72, 1.0)
 const WORKER_ASSIGNMENT_UI: PackedScene = preload(
@@ -429,7 +430,13 @@ func _refresh_view() -> void:
 	requirements_page.get_node("MaterialsTitle").visible = not clearing
 	player_button.visible = false
 	player_button.set_pressed_no_signal(_use_player)
-	build_button.text = "Start Cleaning" if clearing else ("Build House" if is_house else "Build")
+	build_button.text = "Start" if clearing else ("Build House" if is_house else "Build")
+	assign_workers_button.custom_minimum_size = SHORT_ACTION_BUTTON_SIZE if clearing else ACTION_BUTTON_SIZE
+	build_button.custom_minimum_size = SHORT_ACTION_BUTTON_SIZE if clearing else ACTION_BUTTON_SIZE
+	replacement_button.custom_minimum_size = SHORT_ACTION_BUTTON_SIZE if clearing else ACTION_BUTTON_SIZE
+	assign_workers_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER if clearing else Control.SIZE_FILL
+	build_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER if clearing else Control.SIZE_FILL
+	replacement_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER if clearing else Control.SIZE_FILL
 	if is_house:
 		$Root/Center/Window/Margin/MainVBox/TitleHeader/TitleLabel.text = "CLEAR HOUSE SITE" if clearing else "BUILD HOUSE"
 	else:

@@ -7,10 +7,13 @@ extends Node
 @export_node_path("Node2D") var house_path: NodePath
 
 const HOUSE_FOOTPRINT_CELL_COUNT: int = 9
+const CLEARING_EFFECT: Script = preload("res://scenes/map_authoring/clearing_complete_effect.gd")
+const READY_PLOT_TEXTURE: Texture2D = preload("res://assets/objects/buildings/to_be_build.png")
 
 var _footprint: TileMapLayer
 var _house: Node2D
 var _marker: Node2D
+var _ready_plot: Sprite2D
 var _construction: Node
 var _cells: Array[Dictionary] = []
 var _displayed: Variant = null
@@ -68,10 +71,18 @@ func _bind() -> void:
 
 	_uses_authored_footprint = _cells.size() == HOUSE_FOOTPRINT_CELL_COUNT
 	_marker_was_visible = _marker.visible
+	_ready_plot = Sprite2D.new()
+	_ready_plot.name = "ReadyToBuild"
+	_ready_plot.texture = READY_PLOT_TEXTURE
+	_ready_plot.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_footprint.add_child(_ready_plot)
+	_ready_plot.position = _footprint.to_local(_marker.global_position)
 	_house.call("use_authored_site_marker", true)
 	_house.call("use_authored_site_footprint", _uses_authored_footprint)
 	if not _construction.is_connected("changed", _sync_footprint):
 		_construction.connect("changed", _sync_footprint)
+	if not _construction.is_connected("clearing_completed", _on_clearing_completed):
+		_construction.connect("clearing_completed", _on_clearing_completed)
 	_bound = true
 	_sync_footprint()
 
@@ -81,6 +92,7 @@ func _sync_footprint() -> void:
 		return
 	var phase: String = str(_construction.get("phase"))
 	_marker.visible = _marker_was_visible and phase in ["uncleared", "clearing"]
+	_ready_plot.visible = _marker_was_visible and phase == "empty"
 	if not _uses_authored_footprint:
 		return
 	# The artist's source already shows this footprint beneath the rubble. Keep
@@ -95,6 +107,17 @@ func _sync_footprint() -> void:
 			_footprint.erase_cell(entry.cell)
 	_displayed = show_site
 
+func _on_clearing_completed() -> void:
+	if not _bound or not _marker_was_visible or not _house.is_visible_in_tree() or str(_construction.get("phase")) != "empty":
+		return
+	var sprite: Sprite2D = _marker as Sprite2D
+	if sprite == null or sprite.texture == null:
+		return
+	var effect: Node2D = CLEARING_EFFECT.new()
+	effect.name = "ClearingCompleteEffect"
+	effect.configure(sprite)
+	sprite.get_parent().add_child(effect)
+
 
 func _exit_tree() -> void:
 	_unbind()
@@ -105,6 +128,8 @@ func _unbind() -> void:
 		return
 	if is_instance_valid(_construction) and _construction.is_connected("changed", _sync_footprint):
 		_construction.disconnect("changed", _sync_footprint)
+	if is_instance_valid(_construction) and _construction.is_connected("clearing_completed", _on_clearing_completed):
+		_construction.disconnect("clearing_completed", _on_clearing_completed)
 	if is_instance_valid(_house):
 		_house.call("use_authored_site_marker", false)
 		_house.call("use_authored_site_footprint", false)
@@ -113,6 +138,9 @@ func _unbind() -> void:
 	if is_instance_valid(_footprint):
 		for entry: Dictionary in _cells:
 			_footprint.set_cell(entry.cell, entry.source, entry.atlas, entry.alternative)
+	if is_instance_valid(_ready_plot):
+		_ready_plot.queue_free()
+	_ready_plot = null
 	_cells.clear()
 	_displayed = null
 	_uses_authored_footprint = false

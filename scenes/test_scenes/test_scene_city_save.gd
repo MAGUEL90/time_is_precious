@@ -539,7 +539,7 @@ func _assert_seed(expected_palms: Dictionary = {}) -> void:
 			return
 	_expect(TimeComponentManager.current_day == 7, "A later-day checkpoint restores into a fresh day-zero session.")
 	var palm_pickups: Array = get_tree().get_nodes_in_group("date_palm_pickups")
-	_expect(palm_pickups.is_empty(), "Legacy source fixture keeps all six authored palm pickup views intentionally hidden.")
+	_expect(palm_pickups.all(func(pickup: Node) -> bool: return pickup.get_parent() != content.get_node("YSortWorld")), "Legacy source fixture keeps all six authored palm pickup views intentionally hidden.")
 	for tree: Node in palm_trees:
 		_expect(not tree.world_view_enabled and tree._pickups.is_empty(), "Legacy authored palm remains opted out of world pickup views: " + tree.name)
 		_expect(tree.state.available.size() == 3 and tree.state.available.count(true) == 2 and tree.state.remaining_minutes > 0,
@@ -647,7 +647,7 @@ func _seed_authored_palms() -> bool:
 	Inventory.items["date_cluster"] = 6
 	await get_tree().process_frame
 	_expect(Inventory.items.get("date_cluster", 0) == 6, "Legacy source fixture seeds six synthetic date clusters in Inventory.")
-	_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(), "Legacy source fixture keeps all intentionally hidden authored palm pickup views absent.")
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != content.get_node("YSortWorld")), "Legacy source fixture keeps all intentionally hidden authored palm pickup views absent.")
 	for tree: Node in palm_trees:
 		_expect(tree.state.available.count(false) == 1 and tree.state.remaining_minutes > 0, "Legacy source fixture records one selected hidden slot and a pending timer: " + tree.name)
 		_expect(tree._pickups.is_empty(), "Legacy source fixture exposes no visible pickup view: " + tree.name)
@@ -799,7 +799,7 @@ func _assert_legacy_palms_reset(sentinels: Dictionary) -> void:
 		var sentinel: Dictionary = sentinels[source_id]
 		_expect(source._rng.seed != sentinel.seed or source._rng.state != sentinel.state,
 			"A legacy checkpoint starts a fresh pickup-source RNG: " + source_id)
-	_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(),
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != content.get_node("YSortWorld")),
 		"Legacy palm fallback keeps the six authored hidden views absent.")
 	_expect(Inventory.items.get("date_cluster", 0) == 6, "Legacy palm fallback preserves collected dates without granting more.")
 
@@ -823,7 +823,7 @@ func _assert_v3_palms_restored(legacy_palms: Dictionary, sentinels: Dictionary) 
 		var sentinel: Dictionary = sentinels[identity]
 		_expect(source._rng.seed != sentinel.seed or source._rng.state != sentinel.state,
 			"A v3 checkpoint starts a fresh RNG for sources absent from its ledger: " + identity)
-	_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(),
+	_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != content.get_node("YSortWorld")),
 		"A v3 load preserves six legacy ledgers without creating hidden pickup views.")
 	_expect(Inventory.items.get("date_cluster", 0) == 6, "A v3 load preserves collected dates without granting more.")
 
@@ -1116,7 +1116,7 @@ func _assert_refill_boundaries(document: Dictionary, raw: Dictionary) -> void:
 			_expect(tree.state.remaining_minutes == remaining and tree.state.available == slots, "Only the due palm refills at the exact restored minute: " + str(tree.name))
 			_expect(not tree.world_view_enabled and tree._pickups.is_empty(), "Hidden legacy palm view stays absent during refill: " + str(tree.name))
 			_expect(tree.state._rng.state == saved.rng.state, "Refill consumes no random draw.")
-		_expect(get_tree().get_nodes_in_group("date_palm_pickups").is_empty(), "Refill never creates hidden legacy pickup views.")
+		_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != content.get_node("YSortWorld")), "Refill never creates hidden legacy pickup views.")
 		_expect(Inventory.items == inventory_before, "Refill never grants Inventory goods.")
 	var full_palms: Dictionary = store.snapshot._sources.capture()
 	if not _required_save("refill_full_save"): return

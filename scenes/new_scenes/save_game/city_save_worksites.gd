@@ -4,6 +4,7 @@ extends RefCounted
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
 const SCHEMA_VERSION: int = 6
+const SITE_HISTORY = preload("res://scenes/new_scenes/save_game/city_worksite_history.gd")
 const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
@@ -186,7 +187,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 			legacy_site_ids[site_id] = true
 		if not _same_keys(data.sites, legacy_site_ids):
 			return _fail("Legacy worksite registry differs from the saved city.")
-	elif not _same_keys(data.sites, site_ids):
+	elif not SITE_HISTORY.plan(data.sites, site_ids).ok:
 		return _fail("Worksite registry differs from the saved city.")
 	for site_id: String in data.sites:
 		if not data.sites[site_id] is Dictionary:
@@ -235,6 +236,8 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 	if not _validate_storages(data.storages, worksite, endpoints):
 		return false
 
+	# References must belong to the source snapshot, not sites added later.
+	var saved_site_ids: Dictionary = data.sites
 	var all_workers: Dictionary = {}
 	if not _merge_worker_rosters(all_workers, workers):
 		return false
@@ -244,21 +247,21 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		return false
 	if int(data.journey_cache_day) > int(data.ledger.stock_day):
 		return _fail("Commute cache day is newer than the worksite ledger.")
-	if not _validate_jobs(data.jobs, worksite, workers, data.routes, site_ids, int(data.ledger.stock_day)):
+	if not _validate_jobs(data.jobs, worksite, workers, data.routes, saved_site_ids, int(data.ledger.stock_day)):
 		return false
-	if not _validate_pending_output(data.get("pending_output", {}), site_ids):
+	if not _validate_pending_output(data.get("pending_output", {}), saved_site_ids):
 		return false
-	if not _validate_pending_progress(data.get("pending_progress", {}), site_ids, worksite):
+	if not _validate_pending_progress(data.get("pending_progress", {}), saved_site_ids, worksite):
 		return false
 	if not _validate_worker_history(data.contributions, data.productive_days, all_workers, int(data.ledger.stock_day)):
 		return false
-	if not _validate_routes(data.routes, data.jobs, workers, worksite, endpoints, site_ids, int(data.ledger.last_tick), int(data.schema_version)):
+	if not _validate_routes(data.routes, data.jobs, workers, worksite, endpoints, saved_site_ids, int(data.ledger.last_tick), int(data.schema_version)):
 		return false
-	if not _validate_ground(data.ground, worksite, site_ids, false):
+	if not _validate_ground(data.ground, worksite, saved_site_ids, false):
 		return false
-	if int(data.schema_version) >= 3 and not _validate_ground(data.legacy_ground, worksite, site_ids, true):
+	if int(data.schema_version) >= 3 and not _validate_ground(data.legacy_ground, worksite, saved_site_ids, true):
 		return false
-	if not _validate_journeys(data.worker_journeys, all_workers, site_ids, int(data.journey_cache_day)):
+	if not _validate_journeys(data.worker_journeys, all_workers, saved_site_ids, int(data.journey_cache_day)):
 		return false
 	return true
 
@@ -267,7 +270,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 ## The original file stays untouched until the player's next successful save.
 func migrate_legacy(data: Dictionary, worksite: Node, checkpoint_minute: int = -1) -> bool:
 	if int(data.schema_version) >= SCHEMA_VERSION:
-		return true
+		return _add_registered_sites(data, worksite)
 	var previous_version: int = int(data.schema_version)
 	if not data.has("pending_output"):
 		data["pending_output"] = {}
@@ -329,6 +332,8 @@ func migrate_legacy(data: Dictionary, worksite: Node, checkpoint_minute: int = -
 		# Missing from the old file means the new authored origin, even if the
 		# currently running city previously moved this site somewhere else.
 		data.sites[site_id] = {"stock": int(capacity)}
+	if not _add_registered_sites(data, worksite):
+		return false
 	# Older deposits had no persistent location. An omitted offset means the
 	# authored marker, so their stock and serialized size are preserved.
 	data.schema_version = SCHEMA_VERSION
@@ -340,6 +345,30 @@ func migrate_legacy(data: Dictionary, worksite: Node, checkpoint_minute: int = -
 		ordered[key] = data[key]
 	data.clear()
 	data.merge(ordered)
+	return true
+
+
+## Historical recognition is explicit and independent of the current scene.
+func needs_registry_migration(data: Dictionary, worksite: Node) -> bool:
+	if int(data.get("schema_version", 0)) < SCHEMA_VERSION:
+		return false
+	var plan: Dictionary = SITE_HISTORY.plan(data.get("sites", {}), _site_registry(worksite))
+	return plan.ok and not plan.additions.is_empty()
+
+func _add_registered_sites(data: Dictionary, worksite: Node) -> bool:
+	var plan: Dictionary = SITE_HISTORY.plan(data.sites, _site_registry(worksite))
+	if not plan.ok:
+		return _fail("No registered migration matches the saved worksite registry.")
+	var additions: Dictionary = {}
+	for site_id: String in plan.additions:
+		var session = worksite.sites.get(StringName(site_id))
+		# All additions in the published history are wood deposits. Never
+		# reinterpret a historical ID as a different resource or invent stock.
+		if session == null or str(session.item_id) != "wood_log" or typeof(session.get("deposit_capacity")) != TYPE_INT or int(session.get("deposit_capacity")) <= 0:
+			return _fail("A registered new worksite has an invalid resource or deposit capacity.")
+		additions[site_id] = {"stock": int(session.get("deposit_capacity"))}
+	# Commit additions together only after every new session is checked.
+	data.sites.merge(additions)
 	return true
 
 

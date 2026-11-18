@@ -37,11 +37,11 @@ func _sample(stage: String) -> void:
 		saw_reed = true
 	if is_instance_valid(site):
 		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
-		var icon: Sprite2D = site.get_node("ResourceIcon")
+		var icon: Sprite2D = site.get_node("WoodGrove/Tree0" if site.get("item_id") == "wood_log" else "ResourceIcon")
 		var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
 		var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
 		var player_art: Rect2 = VISIBLE_BOUNDS.measure(player.get_node("PlayerVisual"))
-		_check(prompt.visible and is_equal_approx(box.get_center().x, art.get_center().x) and is_equal_approx(art.position.y - box.end.y, 2.0), stage + ": E remains above the selected resource")
+		_check(prompt.visible and is_equal_approx(box.get_center().x, art.get_center().x) and is_equal_approx(art.position.y - box.end.y, 4.0), stage + ": E remains above the selected resource")
 		_check(not box.intersects(art), stage + ": E does not cover the resource")
 		_check(not box.intersects(player_art), stage + ": E does not cover the moving player")
 		for neighbor: Marker2D in runtime.get_node("WorksiteMarkers").get_children():
@@ -111,8 +111,8 @@ func _run() -> void:
 		"Front City Storage board owns E at night")
 	var board_art: Rect2 = VISIBLE_BOUNDS.measure(storage.get_node("Board"))
 	var board_box: Rect2 = storage.interactable_label_component.get_global_transform() * Rect2(Vector2.ZERO, storage.interactable_label_component.size)
-	_check(is_equal_approx(board_box.get_center().x, board_art.get_center().x) and is_equal_approx(board_art.position.y - board_box.end.y, 2.0),
-		"City Storage E is centered two pixels above its front board at night")
+	_check(is_equal_approx(board_box.get_center().x, board_art.get_center().x) and is_equal_approx(board_art.position.y - board_box.end.y, 4.0),
+		"City Storage E is centered four pixels above its front board at night")
 	await _capture("board-front")
 	var storage_event := InputEventAction.new()
 	storage_event.action = &"interact"
