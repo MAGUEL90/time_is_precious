@@ -11,6 +11,13 @@ const CATEGORY_ORDER: Array[String] = [
 const CATEGORY_CAPTIONS: Array[String] = [
 	"Residential", "Production", "Food & Farming", "Storage & Logistic", "Civic & Services",
 ]
+const EXPECTED_CATEGORY_ICONS: Dictionary = {
+	"residential": "category_residential_icon.png",
+	"production": "category_production_icon.png",
+	"food_farming": "category_farm_food_icon.png",
+	"storage_logistic": "category_store_icon.png",
+	"civic_services": "category_civic_icon.png",
+}
 
 var failures: int = 0
 
@@ -122,8 +129,17 @@ func _check_button_row(menu: Variant, ids: Array[String], captions: Array[String
 			var text_height: float = caption.get_line_count() * font.get_height(caption.get_theme_font_size("font_size"))
 			_expect(text_height <= caption.size.y + 1.0, context + " caption for " + id + " fits vertically.")
 
-		var expected_icon: Texture2D = LOCK_ICON if button.disabled else PLACEHOLDER_ICON
-		_expect(button.icon == expected_icon, context + " uses the lock inside the disabled panel and the placeholder otherwise for " + id + ".")
+		if EXPECTED_CATEGORY_ICONS.has(id):
+			var art: TextureRect = button.get_node_or_null("CategoryIcon") as TextureRect
+			_expect(art != null and art.texture != null and art.texture.resource_path.get_file() == EXPECTED_CATEGORY_ICONS[id] and art.texture.get_size() == Vector2(16, 16) and art.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+				context + " matches the native artwork to " + id + " without blocking input.")
+		elif id == "house" and not button.disabled:
+			var house_art: TextureRect = button.get_node_or_null("CategoryIcon") as TextureRect
+			_expect(house_art != null and house_art.texture != null and house_art.texture.resource_path == "res://assets/ui/ui_icon/small_house_icon.png" and house_art.texture.get_size() == Vector2(16, 16) and house_art.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+				context + " uses the native House icon without blocking input.")
+		else:
+			var expected_icon: Texture2D = LOCK_ICON if button.disabled else PLACEHOLDER_ICON
+			_expect(button.icon == expected_icon, context + " uses the lock or building placeholder for " + id + ".")
 		if button.icon != null:
 			_expect(button.icon.get_size().x <= 16 and button.icon.get_size().y <= 16 and not button.expand_icon, context + " icon for " + id + " fits at its native size inside the panel.")
 		_expect(button.get_node_or_null("LockIcon") == null, context + " does not add a separate lock beside " + id + ".")

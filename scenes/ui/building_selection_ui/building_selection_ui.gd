@@ -12,6 +12,14 @@ const CATEGORIES: Dictionary = {
 	"civic_services": "Civic & Services",
 }
 const PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/ui_icon/plus_icon_2.png")
+const HOUSE_ICON: Texture2D = preload("res://assets/ui/ui_icon/small_house_icon.png")
+const CATEGORY_ICONS: Dictionary = {
+	"residential": preload("res://assets/ui/ui_icon/category_residential_icon.png"),
+	"production": preload("res://assets/ui/ui_icon/category_production_icon.png"),
+	"food_farming": preload("res://assets/ui/ui_icon/category_farm_food_icon.png"),
+	"storage_logistic": preload("res://assets/ui/ui_icon/category_store_icon.png"),
+	"civic_services": preload("res://assets/ui/ui_icon/category_civic_icon.png"),
+}
 const LOCK_ICON: Texture2D = preload("res://assets/ui/ui_icon/lock_icon.png")
 const SELECTOR_SHEET: Texture2D = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
 const MIN_WINDOW_WIDTH: float = 180.0
@@ -82,7 +90,7 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.theme_type_variation = &"WorkshopSquareButton16"
 	button.add_theme_font_size_override("font_size", 6)
-	button.icon = LOCK_ICON if locked else PLACEHOLDER_ICON
+	button.icon = LOCK_ICON if locked else (null if CATEGORY_ICONS.has(id) or id == "house" else PLACEHOLDER_ICON)
 	button.expand_icon = false
 	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -94,6 +102,16 @@ func _add_button(id: String, text: String, action: Callable, locked: bool = fals
 	else:
 		button.pressed.connect(action)
 	tile.add_child(button)
+	if not locked and (CATEGORY_ICONS.has(id) or id == "house"):
+		var category_icon := TextureRect.new()
+		category_icon.name = "CategoryIcon"
+		category_icon.texture = CATEGORY_ICONS.get(id, HOUSE_ICON)
+		category_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		category_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		category_icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+		category_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(category_icon)
+		category_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Match the Inventory and Work Order selector instead of changing panel fill.
 	button.add_theme_stylebox_override("hover", button.get_theme_stylebox("normal"))
 	var selection_frame := NinePatchRect.new()
