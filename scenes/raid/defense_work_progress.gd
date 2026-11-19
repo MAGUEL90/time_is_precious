@@ -14,7 +14,7 @@ var paused: bool = false
 
 func show_work(status: Dictionary) -> void:
 	work_kind = str(status.get("work_kind", ""))
-	visible = not work_kind.is_empty()
+	visible = not work_kind.is_empty() and not bool(status.get("refund_pending", false))
 	if not visible:
 		return
 	var total: int = maxi(int(status.get("work_total", 0)), 1)

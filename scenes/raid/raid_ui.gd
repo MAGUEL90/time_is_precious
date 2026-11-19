@@ -4,9 +4,13 @@ signal build_requested
 signal repair_requested
 
 const GAMEPLAY_THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const WORK_PROGRESS: PackedScene = preload("res://scenes/raid/defense_work_progress.tscn")
 const CITY_HUB_SIZE: Vector2 = Vector2(300, 196)
 const THREAT_COLOR: Color = Color(0.96, 0.24, 0.18, 1.0)
+const TAB_SELECTOR_SHEET: Texture2D = preload("res://assets/ui/ui_icon/icon_24.06.2026.png")
+const CITY_BAR_EMPTY: Texture2D = preload("res://assets/ui/ui_icon/empty_bar.png")
+const CITY_BAR_FILLED: Texture2D = preload("res://assets/ui/ui_icon/filled_bar.png")
 
 @onready var raid_notice: Label = $Root/RaidNotice
 @onready var notification_button: Button = $Root/NotificationsButton
@@ -45,6 +49,7 @@ var construction_progress: Control
 
 var raid_state: Node
 var merchant_state: Node
+var merchant_notifications_enabled: bool = true
 var report_text: String = ""
 var _status_data: Dictionary = {}
 var _last_report: Dictionary = {}
@@ -75,6 +80,8 @@ var result_note: Label
 var report_toggle: Button
 var _loot_display_key: String = ""
 var hub_tabs: HBoxContainer
+var city_storage_button: Button
+var city_storage_view: CanvasLayer
 var treasury_summary: Label
 var supply_view: VBoxContainer
 var supply_food: Label
@@ -85,7 +92,7 @@ var city_event_label: Label
 var city_progression: Node
 var city_progression_row: HBoxContainer
 var city_level_label: Label
-var city_progress_bar: ProgressBar
+var city_progress_bar: TextureProgressBar
 var city_progress_value_label: Label
 var city_level_up_button: Button
 var footer_spacer: Control
@@ -118,7 +125,9 @@ func _ready() -> void:
 		WorkerDatabase.payroll_changed.connect(_on_workers_payroll_changed)
 	CitizenManager.citizen_added.connect(_on_residents_changed)
 	CitizenManager.citizen_left.connect(_on_residents_changed)
-	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"))
+	var merchant_view: Node = get_tree().get_first_node_in_group("traveling_merchants")
+	bind_merchant_state(WorkStateRuntime.get_node_or_null("CommonTravelingMerchant"),
+		not is_instance_valid(merchant_view) or merchant_view.get("world_access_enabled") != false)
 	refresh()
 
 func _process(delta: float) -> void:
@@ -223,6 +232,8 @@ func open_details() -> void:
 	details_panel.visible = true
 
 func close_details() -> void:
+	if is_instance_valid(city_storage_view):
+		city_storage_view.call("close")
 	details_panel.visible = false
 	inspection_panel.visible = false
 	_clear_inspected_raiders(false)
@@ -239,7 +250,8 @@ func set_city_management_available(available: bool) -> void:
 	if available:
 		refresh()
 
-func bind_merchant_state(next_state: Node) -> void:
+func bind_merchant_state(next_state: Node, notifications_enabled: bool = true) -> void:
+	merchant_notifications_enabled = notifications_enabled
 	if merchant_state == next_state:
 		_refresh_merchant_notice()
 		_refresh_notification_events()
@@ -530,6 +542,9 @@ func _can_use_city_ui() -> bool:
 	return is_instance_valid(player) and player.can_move and not player.is_sleeping and not player.is_collapsing
 
 func _refresh_merchant_notice() -> void:
+	merchant_notice_label.visible = merchant_notifications_enabled
+	if not merchant_notifications_enabled:
+		return
 	if not is_instance_valid(merchant_state):
 		merchant_notice_label.text = "- Merchant unavailable"
 		return
@@ -687,6 +702,8 @@ func _refresh_notification_events() -> void:
 	_set_notice_emergency(_city_management_available and (threat_active or _unread_notification))
 
 func _get_merchant_event_fingerprint() -> String:
+	if not merchant_notifications_enabled:
+		return ""
 	if not is_instance_valid(merchant_state) or not merchant_state.has_method("is_present"):
 		return ""
 	var visit_day: int = _get_optional_int_property(merchant_state, "_visit_day", -1)
@@ -785,6 +802,8 @@ func _render_status() -> void:
 	if bool(_status_data.get("raids_enabled", true)) and phase in ["attacking", "looting"]:
 		var seconds_left: float = maxf(0.0, float(_status_data.get("seconds_left", 0.0)))
 		time_left_label.text = ("Looting: %ds" if phase == "looting" else "Raid: %ds") % int(ceil(seconds_left))
+	elif bool(_status_data.get("refund_pending", false)):
+		time_left_label.text = "Refund pending"
 	elif not str(_status_data.get("work_kind", "")).is_empty():
 		time_left_label.text = "Work: %dm" % int(_status_data.get("work_remaining", 0))
 	elif level <= 0:
@@ -850,6 +869,7 @@ func _create_hub_tabs() -> void:
 	var contents: VBoxContainer = $Root/Center/DetailsPanel/Margin/Contents
 	hub_tabs = HBoxContainer.new()
 	hub_tabs.name = "HubTabs"
+	hub_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
 	hub_tabs.add_theme_constant_override("separation", 6)
 	contents.add_child(hub_tabs)
 	contents.move_child(hub_tabs, 1)
@@ -863,9 +883,37 @@ func _create_hub_tabs() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_hub_tab.bind(tab == "Supply"))
 		hub_tabs.add_child(button)
-	treasury_summary = _small_label(contents, "")
+		var frame := NinePatchRect.new()
+		frame.name = "SelectionFrame"
+		var selector := AtlasTexture.new()
+		selector.atlas = TAB_SELECTOR_SHEET
+		selector.region = Rect2(133, 101, 22, 22)
+		frame.texture = selector
+		frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		frame.patch_margin_left = 5
+		frame.patch_margin_top = 5
+		frame.patch_margin_right = 5
+		frame.patch_margin_bottom = 5
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(frame)
+		frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	city_storage_button = Button.new()
+	city_storage_button.name = "CityStorageButton"
+	city_storage_button.text = "City Storage"
+	city_storage_button.theme_type_variation = &"HudShortcutButton"
+	city_storage_button.add_theme_font_size_override("font_size", 6)
+	city_storage_button.custom_minimum_size = Vector2(70, 12)
+	city_storage_button.focus_mode = Control.FOCUS_NONE
+	city_storage_button.pressed.connect(_open_city_storage)
+	hub_tabs.add_child(city_storage_button)
+	var footer: HBoxContainer = contents.get_node("FooterRow")
+	treasury_summary = _small_label(footer, "")
 	treasury_summary.name = "TreasurySummary"
-	contents.move_child(treasury_summary, 2)
+	treasury_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	treasury_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	treasury_summary.clip_text = true
+	treasury_summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	footer.move_child(treasury_summary, 0)
 	supply_view = VBoxContainer.new()
 	supply_view.name = "SupplyView"
 	supply_view.add_theme_constant_override("separation", 2)
@@ -879,7 +927,6 @@ func _create_hub_tabs() -> void:
 	city_event_label = _small_label(supply_view, "")
 	city_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	city_event_label.hide()
-	_small_label(supply_view, "Deposit goods at City Storage.")
 	supply_view.hide()
 	CitizenNeedsManager.needs_changed.connect(_on_supply_changed)
 	Inventory.items_changed.connect(_on_supply_changed)
@@ -900,19 +947,20 @@ func _create_city_progression() -> void:
 
 	city_level_label = _small_label(city_progression_row, "City Lv.—")
 	city_level_label.custom_minimum_size = Vector2(46, 0)
-	city_progress_bar = ProgressBar.new()
-	city_progress_bar.custom_minimum_size = Vector2(80, 6)
+	city_progress_bar = TextureProgressBar.new()
+	city_progress_bar.custom_minimum_size = Vector2(80, 7)
 	city_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	city_progress_bar.show_percentage = false
 	city_progress_bar.max_value = 100.0
 	city_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	city_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.23, 0.17, 0.11)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.48, 0.66, 0.38)
-	city_progress_bar.add_theme_stylebox_override("background", background)
-	city_progress_bar.add_theme_stylebox_override("fill", fill)
+	city_progress_bar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	city_progress_bar.texture_under = CITY_BAR_EMPTY
+	city_progress_bar.texture_progress = CITY_BAR_FILLED
+	city_progress_bar.nine_patch_stretch = true
+	city_progress_bar.stretch_margin_left = 3
+	city_progress_bar.stretch_margin_top = 3
+	city_progress_bar.stretch_margin_right = 3
+	city_progress_bar.stretch_margin_bottom = 3
 	city_progression_row.add_child(city_progress_bar)
 
 	city_progress_value_label = _small_label(city_progression_row, "0 / 100")
@@ -975,6 +1023,32 @@ func _select_hub_tab(supply: bool) -> void:
 	show_last_raid = false
 	_render_details()
 
+func _open_city_storage() -> void:
+	if not details_panel.visible or is_instance_valid(city_storage_view) or not _can_use_city_ui():
+		return
+	var provider: Node = WorkStateRuntime.get_node_or_null("CityToolStorage")
+	if not is_instance_valid(provider):
+		return
+	details_panel.hide()
+	city_storage_view = preload("res://scenes/storage_destination/city_storage_access_ui.tscn").instantiate()
+	add_child(city_storage_view)
+	city_storage_view.connect("closed", Callable(self, "_on_city_storage_closed").bind(city_storage_view))
+	city_storage_view.call("open", provider, Callable(self, "_can_browse_city_storage"), "city", true)
+
+func _can_browse_city_storage() -> bool:
+	if not is_inside_tree() or not _city_management_available or SceneTransition.is_transitioning:
+		return false
+	var player: Player = get_tree().get_first_node_in_group("player") as Player
+	return is_instance_valid(player) and player.is_inside_tree() and not player.is_sleeping and not player.is_collapsing
+
+func _on_city_storage_closed(source: CanvasLayer) -> void:
+	if city_storage_view != source:
+		return
+	city_storage_view = null
+	if _can_browse_city_storage() and is_instance_valid(raid_state):
+		_render_details()
+		details_panel.show()
+
 func _on_supply_changed() -> void:
 	if details_panel.visible:
 		_render_details()
@@ -992,6 +1066,9 @@ func _render_hub() -> void:
 		_supply_selected = false
 	hub_tabs.get_child(0).set_pressed_no_signal(not _supply_selected)
 	hub_tabs.get_child(1).set_pressed_no_signal(_supply_selected)
+	hub_tabs.get_child(0).get_node("SelectionFrame").visible = not _supply_selected
+	hub_tabs.get_child(1).get_node("SelectionFrame").visible = _supply_selected
+	city_storage_button.disabled = not is_instance_valid(WorkStateRuntime.get_node_or_null("CityToolStorage"))
 	treasury_summary.text = "City cash: %d Shekel" % CityStockManager.treasury_shekel
 	supply_view.visible = _supply_selected
 	if not _supply_selected:
@@ -1155,7 +1232,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 		satisfaction += citizen.satisfaction
 	if not residents.is_empty():
 		satisfaction /= residents.size()
-	satisfaction_value.text = "Satisfaction  %d%%" % roundi(satisfaction * 100.0) if not residents.is_empty() else "Satisfaction  --"
+	satisfaction_value.text = "Resident avg.  %d%%" % SATISFACTION_DISPLAY.to_percent(satisfaction) if not residents.is_empty() else "Resident avg.  --"
 	satisfaction_meter.value = satisfaction * 100.0
 	satisfaction_meter.modulate.a = 1.0 if not residents.is_empty() else 0.4
 	wall_value.text = "%d/%d  Lv.%d" % [hp, max_hp, level]
@@ -1167,7 +1244,7 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	construction_progress.show_work(_status_data)
 	if not work_kind.is_empty():
 		var remaining: int = maxi(0, int(_status_data.get("work_remaining", 0)))
-		construction_label.text = "Paused" if construction_progress.paused else _format_travel_time(remaining)
+		construction_label.text = "Refund pending" if bool(_status_data.get("refund_pending", false)) else ("Paused" if construction_progress.paused else _format_travel_time(remaining))
 	status_detail_label.text = {"attacking": "Wall under attack", "looting": "City Storage under attack"}.get(phase, "")
 	status_detail_label.visible = phase in ["attacking", "looting"] and not viewing_report
 	travel_progress.visible = detected and not viewing_report
@@ -1179,7 +1256,9 @@ func _render_dashboard(phase: String, hp: int, max_hp: int, level: int, detected
 	_refresh_city_progression()
 	report_toggle.visible = not _last_report.is_empty()
 	report_toggle.text = "Current city" if viewing_report else "Last raid"
-	$Root/Center/DetailsPanel/Margin/Contents/TitleLabel.text = "LAST RAID" if viewing_report else "CITY HUB"
+	var details_title: Label = $Root/Center/DetailsPanel/Margin/Contents/TitleLabel
+	details_title.text = "LAST RAID" if viewing_report else "CITY HUB"
+	details_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if viewing_report else HORIZONTAL_ALIGNMENT_CENTER
 	details_panel.custom_minimum_size = CITY_HUB_SIZE
 	details_panel.size = CITY_HUB_SIZE
 	if not viewing_report:

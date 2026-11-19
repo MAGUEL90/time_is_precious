@@ -11,6 +11,8 @@ var status: String = ""
 var last_error: String = ""
 var _observed_path: String = ""
 var _busy: bool = false
+var _unsafe_legacy_time_error: String = ""
+var _checkpoint_read_error: String = ""
 var parked_worksite: Node
 var city_plots: Dictionary = {}
 var city_drops: Array = []
@@ -43,10 +45,11 @@ func save_checkpoint() -> bool:
 	_busy = true
 	# Observe an existing slot before the first replacement, without applying it.
 	if _observed_path != disk.path:
-		disk.read_snapshot(_validate)
+		_read_checkpoint_slot()
+		if not _checkpoint_read_error.is_empty() and _checkpoint_read_error != "missing":
+			_observed_path = ""
+			return _failed(_checkpoint_read_error)
 		_observed_path = disk.path
-		if not disk.error.is_empty() and disk.error != "missing":
-			return _failed(disk.error)
 	var document: Dictionary = snapshot.capture(map)
 	if document.is_empty():
 		return _failed(snapshot.error)
@@ -64,7 +67,10 @@ func load_checkpoint() -> bool:
 	if not _can_run():
 		return false
 	_busy = true
-	var document: Dictionary = disk.read_snapshot(_validate)
+	var document: Dictionary = _read_checkpoint_slot()
+	if not _checkpoint_read_error.is_empty():
+		_observed_path = ""
+		return _failed(_checkpoint_read_error)
 	_observed_path = disk.path
 	if document.is_empty():
 		return _failed(disk.error)
@@ -91,8 +97,28 @@ func load_checkpoint() -> bool:
 	changed.emit()
 	return true
 
+func _read_checkpoint_slot() -> Dictionary:
+	_unsafe_legacy_time_error = ""
+	var document: Dictionary = disk.read_snapshot(_validate)
+	# A later save rotates every managed file, including candidates that the
+	# ordinary reader did not select. Do not overwrite a still-ambiguous v10
+	# recovery candidate merely because another file was usable.
+	var inspection_error: String = disk.inspect_recovery_candidates(_validate)
+	if not disk.observation_is_current():
+		_checkpoint_read_error = "changed"
+	elif not inspection_error.is_empty():
+		_checkpoint_read_error = inspection_error
+	elif not _unsafe_legacy_time_error.is_empty():
+		_checkpoint_read_error = _unsafe_legacy_time_error
+	else:
+		_checkpoint_read_error = disk.error
+	return document
+
 func _validate(document: Dictionary) -> bool:
-	return snapshot.prepare(document, map)
+	var valid: bool = snapshot.prepare(document, map)
+	if not valid and snapshot.error.begins_with(SNAPSHOT.LEGACY_TIME_ERROR_PREFIX) and _unsafe_legacy_time_error.is_empty():
+		_unsafe_legacy_time_error = snapshot.error
+	return valid
 
 func _can_run() -> bool:
 	if _busy:
@@ -103,6 +129,9 @@ func _can_run() -> bool:
 	return true
 
 func _failed(reason: String) -> bool:
+	# Preserve the actionable authoring incompatibility without changing the file.
+	if reason == "unsupported" and snapshot.error in ["Worker physical approach differs from its authored site.", "Worker physical approach is blocked by authored Clay collision."]:
+		reason += ": " + snapshot.error
 	_busy = false
 	last_error = reason
 	if reason == "missing":
@@ -136,6 +165,11 @@ func prepare_home_departure(scene: Node, target_path: String) -> bool:
 	var runtime: Node = map.get_node_or_null("YSortWorld/WorkerRuntime")
 	if runtime == null or runtime._working:
 		return _failed("Finish gathering first.")
+	# A plot collider may still be waiting for its deferred physics update.
+	# Do not park a stale city snapshot that cannot be refreshed after the view
+	# is freed; the same existing message already covers short transactions.
+	if runtime.has_method("can_simulate_plot_travel") and runtime.navigation_refresh_pending:
+		return _failed("Wait for the current transaction.")
 	var check: Dictionary = snapshot._sites.capture(runtime)
 	if check.is_empty():
 		return _failed(snapshot._sites.error)
@@ -191,6 +225,7 @@ func _restore_parked_worksite(city_map: Node) -> void:
 	snapshot._restore_city_drops(city_drops, city_map)
 	city_drops.clear()
 	_departing_map = null
+	snapshot._sites.emit_restored_notifications()
 
 func _on_scene_changed() -> void:
 	var scene: Node = get_tree().current_scene

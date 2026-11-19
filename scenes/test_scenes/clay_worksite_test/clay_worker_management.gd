@@ -170,6 +170,8 @@ func rows() -> Array[Dictionary]:
 			"tools_text": ", ".join(names) if not names.is_empty() else "None",
 			"can_remove": not site_id.is_empty() and not finishing, "tools_locked": not reason.is_empty(), "lock_reason": reason,
 			"assigned": worker.is_reserved(), "needs": _get_worker_needs_summary(worker)})
+		if not site_id.is_empty() and not schedule.is_site_available(site_id):
+			result[-1].activity = "Site disabled; assignment retained"
 		result[-1].merge({"working": working, "can_fire": not working and not workshop_assigned,
 			"fire_block_reason": fire_reason,
 			"visual_profile": {"skin_tone": profile.skin_tone, "clothes_id": profile.clothes_id,

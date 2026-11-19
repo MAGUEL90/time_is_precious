@@ -203,7 +203,7 @@ func _run() -> void:
 	_expect(state.config.instant_repair_enabled, "The wall playtest profile enables the requested free repair action.")
 	var config_before: Resource = state.config.duplicate(true)
 	var inventory_before: Dictionary = Inventory.items.duplicate(true)
-	debug.set_speed(60)
+	debug.set_speed(25)
 	debug.panel.hide()
 	state.start_debug_raid(false)
 	_expect(state.phase == "attacking" and not debug.panel.visible and not ui.details_panel.visible, "Starting the real debug action focuses the live HP bar.")
@@ -242,13 +242,13 @@ func _run() -> void:
 	debug.step_minutes(1440)
 	debug.set_speed(10)
 	var clock_after: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
-	_expect(clock_after == clock_before and debug.get_effective_speed() == 1 and debug.speed_multiplier == 60,
+	_expect(clock_after == clock_before and debug.get_effective_speed() == 1 and debug.speed_multiplier == 25,
 		"Active raids block debug acceleration, jumps and speed changes while preserving the previous selection.")
 	_expect(debug.speed_buttons[0].button_pressed and debug.speed_buttons[2].disabled and debug.step_buttons[2].disabled,
 		"Debug displays the enforced x1 and disables time controls during combat.")
 	_expect(state._elapsed == elapsed, "Debug time controls never accelerate real raid seconds.")
 	state.advance_attack(55.0)
-	_expect(debug.get_effective_speed() == 60, "The selected x60 returns after a surviving raid.")
+	_expect(debug.get_effective_speed() == 25, "The selected x25 returns after a surviving raid.")
 	debug.set_speed(1)
 	_expect(state.phase == "recovery" and state.wall_hp == 14, "The light test survives twelve hits with persistent damage.")
 	_expect(ui.details_panel.visible and not ui.repair_button.visible, "The real result report stays read-only until Player reaches the wall.")

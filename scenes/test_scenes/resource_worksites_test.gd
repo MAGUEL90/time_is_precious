@@ -19,6 +19,13 @@ func _run() -> void:
 	worksites.seed_playtest_hauler = false
 	worksites.enable_worker_commute = false
 	add_child(content)
+	# This preserved map tests the retired stockpile implementation in isolation.
+	# Current content rejects new worksite Haulers; explicitly opt the fixture
+	# into the older behavior after asserting the production guard.
+	_expect(not worksites.daily.allow_haulers, "Current content rejects new worksite Haulers.")
+	worksites.daily.allow_haulers = true
+	worksites.daily.physical_arrival = Callable()
+	worksites.daily.assignment_started = Callable()
 	var destinations: Dictionary = {}
 	for site_id: StringName in [&"WoodSite", &"ReedSite", &"StrawSite", &"WaterSite"]:
 		var session = worksites.sites[site_id]
@@ -42,7 +49,7 @@ func _run() -> void:
 		var city_reason: String = worksites._hauler_storage_reason(worksites.get_node("CityStorageArea/DeliveryPoint"), site_id)
 		_expect(city_reason.is_empty() == (session.item_id == "wood_log"),
 			"City Storage permits the Wood wall-material exception but rejects Reed, Straw, and Water: " + str(site_id))
-	var deadline: int = 1440 + 420 + 180
+	var deadline: int = 420 + 180
 	TimeComponentManager.advance_minutes(deadline - worksites.daily.now())
 	for site_id: StringName in destinations:
 		var session = worksites.sites[site_id]

@@ -1,0 +1,135 @@
+TIME IS PRECIOUS - HAULING/CART DAN COLLIDER RESPAWN
+Tanggal: 2026-11-10
+Hasil: satu bug produksi pada kondisi batas berhasil direproduksi dan diperbaiki.
+Validasi akhir: 103 pemeriksaan MCP dalam tiga proses, ditambah tiga tes regresi
+headless PASS. Tidak ada error pada stderr keenam proses validasi akhir.
+
+TARGET DAN PERLINDUNGAN
+Branch kerja: test/time-world/laptop-baseline-20261109.
+Snapshot lengkap: b32cc505b89c0a0b06d288b1b6ab48fcb9feccce.
+Project:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+MCP server lokal selalu memakai -p ke salinan kerja. res://, user:// dan PID
+pemilik port 9877 diverifikasi sebelum begin. Godot 4.5.1 stable, Compatibility.
+Tidak memakai computer use, editor lama, atau mengambil ulang proyek GitHub.
+
+Profil repro pertama dan kedua: blocked-multi-cart-cart-01 serta
+blocked-multi-cart-cartrepeat-01. Profil final: blocked-multi-cart-cartfixed-01.
+Semuanya di outputs/citysave_suite_qa, dengan APPDATA/LOCALAPPDATA/XDG/temp
+terisolasi dan user:// diverifikasi oleh engine probe. Save personal tidak
+dibuka atau digunakan. Seluruh proses Godot QA sudah ditutup setelah pengujian.
+
+CAKUPAN HAULING DAN FIXTURE
+Mekanisme yang aktif adalah City Storage ke Annex dengan Hauler dan Cart asli.
+Assignment Hauler baru ke worksite dinonaktifkan oleh kebijakan snapshot dan
+tidak diaktifkan untuk tes ini. initial_city_storage_hauler direkrut melalui
+API kontrak berbayar, memakai initial_worksite_cart, membawa tiga wood_log.
+Enam log kota disediakan lewat receipt API; empat log Player menjadi sentinel
+terpisah. Dana perekrutan dan makanan untuk tidur merupakan grant QA eksplisit.
+Kebutuhan Player dan kapasitas tas 100 tetap aktif pada playtest MCP.
+
+Jalur storage bawaan tidak melintasi sumber. Karena itu, kondisi benturan dibuat
+dengan menempatkan marker WoodSite sementara pada jalur cart HANYA dalam runtime
+QA. Posisi authored dikembalikan dan offset nol diverifikasi sebelum checkpoint.
+Tidak ada file scene authored atau posisi storage yang diubah. Ini reproduksi
+bug logika pada kondisi batas, bukan klaim bahwa layout New Game saat ini sudah
+memicu benturan tersebut tanpa fixture. Timer dan stok awal juga fixture batas;
+durasi respawn normal 2-3 hari tidak diubah atau diuji ulang di tahap ini.
+
+BUG TERBUKTI
+CityStorageTransport menyimpan leg_origin sebagai posisi terakhir yang sudah
+dikomit pada tick menit. Visual cart menginterpolasi sampai hampir 10 piksel
+di depannya sebelum tick berikutnya. Pemeriksaan _site_regrowth_clear sebelumnya
+melihat actor visual dan physical_approach worker worksite, tetapi tidak melihat
+leg_origin transport kota.
+
+Repro pertama pada menit 600:
+- Anchor cart (-120, -80); actor sudah maju ke sekitar (-110.44, -80).
+- WoodSite kosong, collider nonaktif, muatan tiga, total barang kota enam.
+- Setelah deadline: WoodSite terisi 24 dan collider aktif di anchor.
+- Navigasi menolak segmen dari anchor yang sekarang tertutup. Visual jatuh
+  kembali ke (-120, -80), berada di collider aktif dan route menjadi blocked.
+- Cargo tidak hilang, tetapi cart terjebak oleh respawn tersebut.
+Repro kedua menghasilkan kondisi yang sama dengan actor awal sekitar -110.14.
+Kedua repro menggunakan proses dan profil MCP berbeda, gerakan/proyeksi native,
+tanpa memindahkan actor secara paksa di tengah antrean deferred.
+
+PERBAIKAN
+scenes/content_scene/worksites/content_worksites.gd mendapat delapan baris dalam
+_site_regrowth_clear. Untuk setiap transport kota aktif, pemeriksaan lokasi juga
+melindungi leg_origin + offset kaki. Proteksi tetap berlaku saat actor belum
+tersedia/tersembunyi dan saat cart kembali kosong. Begitu posisi yang dikomit
+berjalan keluar, respawn kembali diizinkan.
+Tidak mengubah kecepatan, kapasitas, rute pengiriman, aturan penerimaan, jumlah
+barang, timer, schema save, format checkpoint, plugin, autoload, atau toolbar.
+
+TES REGRESI BARU DAN RED/GREEN
+Ditambahkan:
+scenes/test_scenes/test_scene_respawn_cart_anchor.gd
+scenes/test_scenes/test_scene_respawn_cart_anchor.tscn
+Tes menjalankan cart native bermuatan dan perjalanan pulang kosong. Untuk kedua
+leg, visual maju di depan anchor; respawn harus menunggu anchor, tetap terhalang
+tanpa actor visual, kemudian pulih setelah tick mengomit posisi baru yang aman.
+Marker dipulihkan dan pengiriman selesai tanpa perubahan total muatan.
+- Kode lama: exit 1 pada assertion perlindungan anchor outbound (9,10 detik).
+- Setelah fix: PASS, exit 0, 10,23 detik, stderr kosong.
+Ini tes bermakna yang gagal pada kode lama, bukan hanya pemeriksaan struktur fix.
+
+PLAYTEST MCP SETELAH FIX
+Writer - 37 pemeriksaan:
+- Repro identik kini mempertahankan WoodSite nol/collider nonaktif dan anchor
+  tetap navigable; actor tidak kembali ke dalam collider.
+- Sumber kosong di depan cart boleh respawn. Cart tidak melewati segmen yang
+  tertutup; muatan tiga dan total enam tetap utuh pada setiap tick uji.
+- Cancel melalui API transport mengembalikan tiga log ke sumber tepat sekali,
+  tidak ada receipt di Annex. Cart tetap dapat dipakai untuk pengiriman baru.
+- Marker dipulihkan ke posisi authored, lalu pengiriman tiga log baru dimulai
+  dan checkpoint CITY disimpan saat masih bermuatan.
+Reader - 54 pemeriksaan:
+- Continue proses baru memulihkan snapshot lengkap, satu pemilik cargo dan
+  alokasi Cart. Total source + cargo + destination selalu enam; tas Player empat.
+- Pengiriman diterima sekali: Central tiga, Annex tiga. Cart pulang kosong.
+- Tick berulang tidak menggandakan barang atau XP. Player pulang dan tidur asli.
+Verifier - 12 pemeriksaan:
+- Continue proses baru dari checkpoint HOME mempertahankan route selesai,
+  Central tiga dan Annex tiga. Tidak mengulang receipt.
+Total 103; ketiga stderr kosong. Nama, rambut dan skin tone civil sesuai melalui
+snapshot dan Continue. Cart aktif tidak bisa dilepas dari worker saat bermuatan.
+
+HASH CHECKPOINT
+CITY bermuatan:
+48cdc6458d3171a39e020fe8908eace2be7d4178a711cf2b072a69e5b4118afc
+HOME setelah tidur:
+1a354ee1eb7fd8ead90114fcfa43ff9049d7d573a86de7b6854f65cecaf02fcf
+Writer -> Reader dan Reader -> Verifier cocok; Continue tidak menulis ulang bytes.
+Checkpoint memakai geometri authored yang sudah dipulihkan. Persistensi posisi
+penghalang buatan di jalur cart tidak diklaim diuji.
+
+REGRESI BERDEKATAN
+- FiniteResourceSitesTest: PASS, exit 0, 63,93 detik, stderr kosong. Mencakup
+  refill, collider, worker/saved pose, save/load dan alur sumber finite existing.
+- CityStorageTransportInterruptionTest: PASS, exit 0, 11,35 detik, stderr kosong.
+  Mencakup penghentian/resume rute, kontrak, cargo, pembatalan dan recovery existing.
+Tes headless merupakan fixture terpisah dari playtest MCP dan memakai profil QA
+tersendiri; beberapa helper existing menonaktifkan kebutuhan Player pada fixture.
+Satu percobaan awal harness mengalami kesalahan inferensi tipe sebelum game flow
+dimulai. Sudah diperbaiki dan diarsipkan; tidak dihitung sebagai bug produksi atau
+tes lulus. Dua repro MCP dan tes red yang gagal adalah bukti bug sebelum fix.
+
+AUDIT DAN BATAS
+3.377 file manifest snapshot asli tetap cocok; source Git bersih. Salinan kerja
+mengubah satu controller produksi di atas serta menambah dua berkas tes dan
+laporan ini. Perubahan test_scene_start_menu.gd dari baseline lama dipertahankan.
+Toolbar, scene authored, civil identity, project.godot dan addons tidak diubah.
+git diff --check lulus. Tidak commit, push atau merge.
+Belum diuji: hauling worksite legacy, semua variasi FPS/lag, beberapa cart/rute
+bersamaan, dan save di tengah flush collider. Kebijakan cart berhenti ketika
+jalur tertutup tidak diganti menjadi pathfinding baru oleh fix ini.
+
+BUKTI DI outputs/qa-evidence
+cart-summary.json; cart-{cart,cartrepeat,cartfixed}-probe.json;
+moving-cartfixed-{write,read,verify}.result.json;
+edge-{cart,cartrepeat,cartfixed}-*.launch.json/profile.log/stdout.log/stderr.log;
+cart-anchor-{red,green}.*, finite-after-cart-fix.*, transport-after-cart-fix.*;
+mcp-retarget-transcript.jsonl, cart-harness-hashes.json, final-source-audit.json.
+Harness eksternal: work/cart_edge.gd, launch-cart.ps1, summarize-cart.ps1.

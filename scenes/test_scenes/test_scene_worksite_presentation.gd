@@ -69,6 +69,7 @@ func _run() -> void:
 	for _frame: int in range(2400):
 		if worker.physical_approach.arrived:
 			break
+		await get_tree().process_frame
 		visuals._process(0.05)
 	_check(worker.physical_approach.arrived, "Reed worker reaches authored target physically")
 	TimeComponentManager.advance_minutes(1)
@@ -105,16 +106,22 @@ func _run() -> void:
 	get_tree().quit(0 if failures == 0 else 1)
 
 func _test_cosmetic_views() -> void:
+	_check(runtime.disabled_world_sites.has(&"StrawSite") and runtime.disabled_world_sites.has(&"WaterSite"), "The initial scene keeps Straw and Water sites disabled")
 	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
 		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
 		var label: Label = site.get_node("Label")
 		var prompt: InteractableLabelComponent = site.get_node("InteractPrompt")
 		_check(prompt.label.text == "E", site_id + ": prompt keeps the native E action")
+		if not runtime.is_world_site_available(site.name):
+			_check(not runtime.daily.is_site_available(site.name), site_id + ": disabled site remains unavailable for interaction")
+			continue
 		if site_id in ["ClaySiteA", "ReedSite"]:
 			_check(not label.visible and not label.text.is_empty(), site_id + ": world name is hidden and its menu text retained")
 			runtime._open_site_panel(site)
 			_check(runtime.inspector.visible and runtime.inspector.title.text == label.text, site_id + ": native menu retains its title from the hidden world label")
 			runtime._close_inspector()
+		elif site_id == "WoodSite":
+			_check(not label.visible, "WoodSite: the tree uses its interaction prompt instead of a world label")
 		else:
 			_check(label.visible, site_id + ": other world label remains visible")
 	for item_id: String in ["clay_lump", "wood_log", "reed_bundle", "straw_bundle", "water_jar"]:
@@ -140,11 +147,25 @@ func _test_active_prompt_positions() -> void:
 	var previous: Vector2 = player.global_position
 	for site_id: String in ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]:
 		var site: Marker2D = runtime.get_node("WorksiteMarkers/" + site_id)
+		if not runtime.is_world_site_available(site.name):
+			_check(not runtime.daily.is_site_available(site.name), site_id + ": disabled site cannot receive focus")
+			continue
 		var fixed_box: Rect2 = site.get_node("InteractPrompt").get_global_transform() * Rect2(Vector2.ZERO, Vector2(16, 16))
-		var side: float = -1.0 # East-column palms own E when approached from the outside.
-		for pose: Vector2 in [Vector2(side * 18.0, 10.0), Vector2(side * 20.0, -10.0)]:
+		# Approach Clay from the east so Reed is not the closer site. Wood's
+		# smaller interaction area needs positions near its actual trunk.
+		var poses: Array[Vector2] = [Vector2(-18, 10), Vector2(-20, -10)]
+		if site_id == "ClaySiteA":
+			poses = [Vector2(18, 10), Vector2(20, -10)]
+		elif site_id == "WoodSite":
+			poses = [Vector2(-10, 8), Vector2(8, -8)]
+		elif site_id == "ReedSite":
+			poses = [Vector2(-18, 10), Vector2(-16, -12)]
+		for pose: Vector2 in poses:
 			player._set_current_interactable(null)
 			player.global_position = site.global_position + pose
+			# Area2D overlap state is updated by physics after teleporting.
+			for _frame in range(5):
+				await get_tree().physics_frame
 			if capture_camera != null:
 				capture_camera.global_position = player.global_position
 				await get_tree().process_frame
@@ -156,7 +177,7 @@ func _test_active_prompt_positions() -> void:
 				_check(not site.get_node("Label").visible, site_id + suffix + ": its world label yields to the E above the art")
 			await _capture("active-E-" + site_id + suffix, player.global_position)
 			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": worksite still owns E after rendering")
-			_check_target_prompt(prompt, site.get_node("ResourceIcon"), fixed_box, site_id + suffix)
+			_check_target_prompt(prompt, site.get_node("WoodGrove/Tree0" if site_id == "WoodSite" else "ResourceIcon"), fixed_box, site_id + suffix)
 			var before_walk: Vector2 = player.global_position
 			Input.action_press(&"move_down")
 			for _step: int in range(6):
@@ -165,11 +186,18 @@ func _test_active_prompt_positions() -> void:
 			await get_tree().process_frame
 			_check(player.global_position.distance_to(before_walk) >= 2.0, site_id + suffix + ": native movement advances the player")
 			_check(runtime._highlighted_site == site and prompt.visible, site_id + suffix + ": E remains focused through native movement")
-			_check_target_prompt(prompt, site.get_node("ResourceIcon"), fixed_box, site_id + suffix + "-walked")
+			_check_target_prompt(prompt, site.get_node("WoodGrove/Tree0" if site_id == "WoodSite" else "ResourceIcon"), fixed_box, site_id + suffix + "-walked")
 			if suffix.is_empty():
 				await _capture("active-E-" + site_id + "-walked", player.global_position)
 	var storage: Node = runtime.get_node("CityStorageArea")
 	player._set_current_interactable(null)
+	if not storage.world_access_enabled:
+		_check(not storage.has_player_access() and not storage.visible, "Disabled world City Storage cannot be accessed")
+		storage.on_player_interact(player)
+		_check(not is_instance_valid(storage.menu), "Disabled world City Storage does not open a menu")
+		player.global_position = previous
+		player._set_current_interactable(null)
+		return
 	player.global_position = storage.get_node("Board").global_position + Vector2(-17, 13)
 	for _frame: int in range(3):
 		await get_tree().physics_frame
@@ -198,18 +226,18 @@ func _test_active_prompt_positions() -> void:
 func _check_board_prompt(prompt: InteractableLabelComponent, board: Node) -> void:
 	var art: Rect2 = VISIBLE_BOUNDS.measure(board)
 	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(_above_with_gap(box, art), "City Storage E sits centered two world pixels above its front board")
+	_check(_above_with_gap(box, art), "City Storage E sits centered four world pixels above its front board")
 	var canvas: Transform2D = get_viewport().get_canvas_transform()
 	var art_screen: Rect2 = canvas * art
 	var box_screen: Rect2 = prompt.get_global_transform_with_canvas() * Rect2(Vector2.ZERO, prompt.size)
-	_check(is_equal_approx(art_screen.position.y - box_screen.end.y, 2.0 * canvas.get_scale().y), "City Storage board and E retain their gap through the camera")
+	_check(is_equal_approx(art_screen.position.y - box_screen.end.y, 4.0 * canvas.get_scale().y), "City Storage board and E retain their gap through the camera")
 	print("ActivePrompt ", JSON.stringify({"owner": "CityStorageBoard", "world_box": str(box), "canvas_box": str(box_screen)}))
 
 func _check_target_prompt(prompt: InteractableLabelComponent, icon: Node, initial_box: Rect2, label: String) -> void:
 	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
 	var box: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
 	_check(box.is_equal_approx(initial_box), label + ": E remains fixed on the selected site while the player changes sides")
-	_check(_above_with_gap(box, art), label + ": E stays centered two world pixels above its resource icon")
+	_check(_above_with_gap(box, art), label + ": E stays centered four world pixels above its resource art")
 	for neighbor: Marker2D in runtime.get_node("WorksiteMarkers").get_children():
 		if neighbor.get_node("ResourceIcon") != icon:
 			_check(not box.intersects(VISIBLE_BOUNDS.measure(neighbor.get_node("ResourceIcon"))), label + ": E avoids " + str(neighbor.name) + " artwork")
@@ -224,7 +252,7 @@ func _check_target_prompt(prompt: InteractableLabelComponent, icon: Node, initia
 	print("ActivePrompt ", JSON.stringify({"owner": label, "world_box": str(box), "canvas_box": str(canvas_box), "prompt_canvas_box": str(prompt_canvas_box)}))
 
 func _above_with_gap(box: Rect2, art: Rect2) -> bool:
-	return is_equal_approx(box.get_center().x, art.get_center().x) and is_equal_approx(art.position.y - box.end.y, 2.0)
+	return is_equal_approx(box.get_center().x, art.get_center().x) and is_equal_approx(art.position.y - box.end.y, 4.0)
 
 func _test_transformed_prompt() -> void:
 	var site := Marker2D.new()
@@ -256,7 +284,7 @@ func _test_transformed_prompt() -> void:
 	var art: Rect2 = VISIBLE_BOUNDS.measure(icon)
 	_check(art.is_equal_approx(Rect2(66, -40, 21, 30)), "Prompt bounds use the actual flipped region frame, alpha margins, offset and inherited scale")
 	var bounds: Rect2 = prompt.get_global_transform() * Rect2(Vector2.ZERO, prompt.size)
-	_check(_above_with_gap(bounds, art), "Transformed art retains a centered E above and two logical pixel gap")
+	_check(_above_with_gap(bounds, art), "Transformed art retains a centered E above and four logical pixel gap")
 	var position_before: Vector2 = prompt.position
 	icon.frame_coords = Vector2i(0, 1)
 	icon.flip_h = false
@@ -315,6 +343,7 @@ func _capture_clay_depth(actor: Node2D) -> void:
 	for _frame: int in range(2400):
 		if worker.physical_approach.arrived:
 			break
+		await get_tree().process_frame
 		visuals._process(0.05)
 	visuals._process(0.05)
 	await _capture("clay-arrived-working", site.global_position)
@@ -395,8 +424,17 @@ func _test_player_contacts() -> void:
 		# Player collision center is four pixels above its root, as authored.
 		player.global_position = bottom + Vector2(0, 16)
 		var hit: KinematicCollision2D = player.move_and_collide(Vector2(0, -24), true)
-		_check(hit != null and hit.get_collider() == body, site_id + ": actual player circle stops at resource contact")
-		_check(is_equal_approx(runtime.site_slot_destination(StringName(site_id), 0).y, site.global_position.y + 11.5), site_id + ": larger art preserves the existing schema8 feet target")
+		if site_id == "ReedSite":
+			_check(hit != null and str(hit.get_collider().name).begins_with("PondWaterBody_"), "ReedSite: player stops at the pond before the reed resource")
+		else:
+			_check(hit != null and hit.get_collider() == body, site_id + ": actual player circle stops at resource contact")
+		# Clay follows the authored marker; Reed retains its automatic feet offset.
+		# Compare against scene data independently of the runtime target calculation.
+		if site_id.begins_with("Clay"):
+			var source = runtime.get_node(runtime.authored_resource_paths[site_id])
+			_check(runtime.site_slot_destination(StringName(site_id), 0).is_equal_approx(source.get_node("ClayControls/WorkPoint1").global_position), site_id + ": uses the editor work point exactly")
+		else:
+			_check(is_equal_approx(runtime.site_slot_destination(StringName(site_id), 0).y, site.global_position.y + 9.5), site_id + ": preserves the Reed feet target")
 	player.global_position = original
 	player.can_move = true
 

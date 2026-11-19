@@ -46,6 +46,8 @@ func get_keeper_footprint() -> Rect2:
 func _sync_construction() -> void:
 	super._sync_construction()
 	var built: bool = construction.phase == "built"
+	# The keeper scene has its own ground-sorted finished-building container.
+	$FinishedClayWorkshop.hide()
 	$FinishedBuilding.visible = built
 	for path: String in ["Plot", "LeftWall", "LeftWallTop", "RightWall", "RightWallTop", "Table", "TableLegs", "TableResources"]:
 		get_node(path).visible = not built and path != "TableResources"

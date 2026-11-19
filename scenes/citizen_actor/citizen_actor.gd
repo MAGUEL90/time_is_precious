@@ -71,6 +71,8 @@ func _initialize_actor() -> void:
 		return
 
 	_initialized = true
+	if citizen_data != null:
+		base_worker_visual.set_satisfaction_source(citizen_data)
 	_last_visual_direction = initial_direction
 	_precise_position = global_position
 	_play_visual("idle")
@@ -103,6 +105,8 @@ func setup(data: CitizenData) -> void:
 		return
 
 	citizen_data = data
+	if is_node_ready():
+		base_worker_visual.set_satisfaction_source(citizen_data)
 	var citizen_profile: VisualProfile = citizen_data.visual_profile
 
 	if citizen_profile == null:

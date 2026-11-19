@@ -10,7 +10,7 @@ signal cancelled()
 
 const WORK_ORDER_CARD_SCENE: PackedScene = preload("res://scenes/ui/work_order_card/work_order_card.tscn")
 
-@onready var work_order_grid: GridContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/WorkOrderGrid
+@onready var work_order_grid: GridContainer = $Root/Center/TextureWindow/Margin/MainVBox/Body/WorkScroll/WorkOrderGrid
 @onready var requirement_label: Label = $Root/Center/TextureWindow/Margin/MainVBox/RequirementLabel
 @onready var back_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/BackButton
 @onready var next_button: Button = $Root/Center/TextureWindow/Margin/MainVBox/Footer/NextButton
@@ -26,6 +26,7 @@ var selected_card: WorkOrderCard = null
 var selected_process_availability: Dictionary = {}
 var current_workshop: WorkShop = null
 var awaiting_process_confirmation: bool = false
+var _resume_order_id: String = ""
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -64,6 +65,22 @@ func _on_card_pressed(card: WorkOrderCard) -> void:
 
 	selected_process_availability.clear()
 	production_info_panel.clear_details()
+	next_button.text = "Next"
+	if card.has_meta("paused_order_id"):
+		var order: WorkOrder = WorkManager.active_orders.get(str(card.get_meta("paused_order_id")))
+		if order == null:
+			requirement_label.text = "This work is no longer waiting."
+			next_button.disabled = true
+			return
+		var duration: int = maxi(order.end_time_total_minutes - order.start_time_total_minutes, 1)
+		var done: int = clampi(WorkManager._last_total_minutes - order.start_time_total_minutes, 0, duration)
+		if str(order.get_meta("visual_plot_id", "")).is_empty():
+			requirement_label.text = "Paused %d%%. Assign at this workshop." % roundi(100.0 * done / duration)
+		else:
+			requirement_label.text = "Paused %d%%. Assign a replacement." % roundi(100.0 * done / duration)
+		next_button.text = "Assign"
+		next_button.disabled = false
+		return
 
 	if card.work_order_type == WorkOrderCard.WorkOrderType.JOB:
 		requirement_label.text = ""
@@ -78,7 +95,8 @@ func _on_card_pressed(card: WorkOrderCard) -> void:
 
 func _on_card_details_requested(card: WorkOrderCard) -> void:
 	if card.work_order_type == WorkOrderCard.WorkOrderType.JOB:
-		production_info_panel.display_job(card.card_title)
+		var job: JobData = current_workshop.get_job_data(str(card.get_meta("paused_job_id", card.work_order_id))) if current_workshop != null else null
+		production_info_panel.display_job(job.short_name if job != null and not job.short_name.is_empty() else card.card_title)
 	else:
 		production_info_panel.display_process(
 			ProcessManager.get_process_availability(card.work_order_id)
@@ -134,6 +152,9 @@ func _get_item_display_name(item_id) -> String:
 func _on_next_pressed() -> void:
 	if selected_card == null:
 		return
+	if selected_card.has_meta("paused_order_id"):
+		_open_replacement_assignment(str(selected_card.get_meta("paused_order_id")))
+		return
 
 	if selected_card.work_order_type == WorkOrderCard.WorkOrderType.PROCESS:
 		var availability: Dictionary = (
@@ -150,6 +171,39 @@ func _on_next_pressed() -> void:
 		return
 
 	_emit_selected_work_order()
+
+func _open_replacement_assignment(order_id: String) -> void:
+	if not is_instance_valid(current_workshop):
+		return
+	var order: WorkOrder = WorkManager.active_orders.get(order_id)
+	var job: JobData = current_workshop.get_job_data(order.job_id) if order != null else null
+	if order == null or job == null or not current_workshop.get_paused_orders().has(order):
+		requirement_label.text = "This work is no longer available."
+		return
+	_resume_order_id = order_id
+	var assignment: WorkshopWorkerAssignmentUI = preload("res://scenes/ui/workshop_worker_assignment_ui/workshop_worker_assignment_ui.tscn").instantiate()
+	get_tree().current_scene.add_child(assignment)
+	assignment.assignment_next_requested.connect(_on_replacement_selected)
+	assignment.assignment_back_requested.connect(_on_replacement_cancelled)
+	assignment.assignment_cancelled.connect(_on_replacement_cancelled)
+	visible = false
+	assignment.open_assignment([] as Array[String], 1, job.requirement_profession, current_workshop.get_replacement_options(order_id))
+
+func _on_replacement_selected(worker_ids: Array[String]) -> void:
+	var success: bool = is_instance_valid(current_workshop) and not worker_ids.is_empty() and current_workshop.resume_paused_job(_resume_order_id, worker_ids[0])
+	var message: String = "Work resumed." if success else (current_workshop.get_last_start_job_error() if is_instance_valid(current_workshop) else "Workshop unavailable.")
+	_restore_after_replacement(message)
+
+func _on_replacement_cancelled() -> void:
+	_restore_after_replacement("")
+
+func _restore_after_replacement(message: String) -> void:
+	_resume_order_id = ""
+	_rebuild_work_order_cards()
+	_clear_selection()
+	requirement_label.text = message
+	visible = true
+	get_tree().paused = true
 
 func _emit_selected_work_order() -> void:
 	if selected_card == null:
@@ -240,6 +294,7 @@ func _clear_selection() -> void:
 	production_info_panel.clear_details()
 	selected_card = null
 	next_button.disabled = true
+	next_button.text = "Next"
 	requirement_label.text = ""
 	awaiting_process_confirmation = false
 	process_confirm_overlay.hide()
@@ -282,8 +337,16 @@ func _rebuild_work_order_cards() -> void:
 		work_order_grid.remove_child(child)
 		child.queue_free()
 
-	if current_workshop == null:
+	if not is_instance_valid(current_workshop):
 		return
+
+	for order: WorkOrder in current_workshop.get_paused_orders():
+		var job: JobData = current_workshop.get_job_data(order.job_id)
+		var title: String = job.short_name if job != null and not job.short_name.is_empty() else order.job_display_name
+		var card: WorkOrderCard = _add_work_order_card(order.order_id, WorkOrderCard.WorkOrderType.JOB, "Paused\n" + title, order.job_icon, job == null)
+		if card != null:
+			card.set_meta("paused_order_id", order.order_id)
+			card.set_meta("paused_job_id", order.job_id)
 
 	for job_data in current_workshop.available_jobs:
 		if job_data == null:
@@ -323,12 +386,12 @@ func _add_work_order_card(
 	card_icon: Texture2D,
 	progression_locked: bool = false,
 	_locked_reason: String = ""
-) -> void:
+) -> WorkOrderCard:
 	var card: WorkOrderCard = (
 		WORK_ORDER_CARD_SCENE.instantiate() as WorkOrderCard
 	)
 	if card == null:
-		return
+		return null
 
 	card.work_order_id = work_order_id
 	card.work_order_type = work_order_type
@@ -346,6 +409,7 @@ func _add_work_order_card(
 		work_order_grid.move_child(card, locked_card.get_index())
 	card.pressed.connect(_on_card_pressed.bind(card))
 	card.details_requested.connect(_on_card_details_requested.bind(card))
+	return card
 
 func _is_process_progression_locked(process_data: ProcessData) -> bool:
 	var station_id: String = process_data.required_station_id

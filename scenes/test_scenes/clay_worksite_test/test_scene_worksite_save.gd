@@ -153,7 +153,7 @@ func _pickup_checkpoint(original: Dictionary) -> void:
 func _invalid_files(original: Dictionary) -> void:
 	_expect(store.codec.restore(original, fixture, registry), "Reset for validation tests.")
 	var invalids: Array = ["{broken", "[]", '{"schema_version": [], "scenario": "clay_worksite_mvp"}', '{"schema_version": 1, "scenario": {}}']
-	for version: int in [0, 2]:
+	for version: int in [0, 3]:
 		var altered: Dictionary = original.duplicate(true)
 		altered.schema_version = version
 		invalids.append(JSON.stringify(altered))

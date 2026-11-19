@@ -172,6 +172,7 @@ texture = SubResource("AtlasTexture_au81w")
 expand_mode = 3
 
 [node name="TexturePhoto" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+visible = false
 layout_mode = 0
 offset_left = 18.0
 offset_top = 10.0
@@ -180,14 +181,18 @@ offset_bottom = 50.0
 texture = SubResource("AtlasTexture_yqayt")
 expand_mode = 1
 
-[node name="TemplateChat" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
+[node name="TemplateChat" type="NinePatchRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
-offset_left = 59.0
+mouse_filter = 1
+offset_left = 18.0
 offset_top = 10.0
 offset_right = 158.0
 offset_bottom = 50.0
 texture = SubResource("AtlasTexture_uxx4e")
-expand_mode = 1
+patch_margin_left = 1
+patch_margin_top = 1
+patch_margin_right = 1
+patch_margin_bottom = 1
 
 [node name="DialogueLabel" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue/TemplateChat" instance=ExtResource("2_a8ve6")]
 unique_name_in_owner = true
@@ -195,21 +200,22 @@ layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
 offset_left = 3.5
-offset_top = 3.5
-offset_right = 95.5
-offset_bottom = 36.5
+offset_top = 7.5
+offset_right = 128.5
+offset_bottom = 38.5
 grow_horizontal = 1
 size_flags_vertical = 3
 theme = ExtResource("5_0hdkk")
 theme_type_variation = &"DialogueBodyText"
+theme_override_constants/line_separation = 2
 text = "asdasd"
 
 [node name="TemplateName" type="TextureRect" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 layout_mode = 0
 offset_left = 15.0
-offset_top = 45.0
+offset_top = 3.0
 offset_right = 61.0
-offset_bottom = 57.0
+offset_bottom = 15.0
 size_flags_horizontal = 4
 size_flags_vertical = 0
 texture = SubResource("AtlasTexture_sa7tv")
@@ -240,7 +246,7 @@ horizontal_alignment = 1
 
 [node name="Progress" type="AnimatedSprite2D" parent="Balloon/BottomCornerContainer/ChatBoxRoot/TemplateDialogue"]
 unique_name_in_owner = true
-position = Vector2(155.5, 41.5)
+position = Vector2(155.5, 51.5)
 sprite_frames = SubResource("SpriteFrames_au81w")
 animation = &"button_pressed"
 

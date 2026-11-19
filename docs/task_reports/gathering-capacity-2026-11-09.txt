@@ -1,0 +1,121 @@
+TIME IS PRECIOUS - GATHERING DAN KAPASITAS TAS
+Tanggal: 2026-11-09
+Hasil akhir: PASS, 8 proses game, 447 pemeriksaan.
+
+CAKUPAN DAN TARGET
+Salinan kerja lengkap snapshot b32cc505b89c0a0b06d288b1b6ab48fcb9feccce:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Branch: test/time-world/laptop-baseline-20261109.
+Empat jenis sumber aktif diuji melalui WoodSite, ClaySiteA, ReedSite, WaterSite.
+Untuk masing-masing jenis: tas kosong, ruang tepat satu unit, dan tas penuh.
+Setiap sumber memakai profil QA sendiri dan proses Continue baru.
+
+MCP Godot memakai server lokal @yanhuifair/godot-mcp 1.12.2 melalui sesi stdio
+baru dengan -p secara eksplisit ke salinan kerja. Status runtime memastikan
+res:// dan user:// sesuai sebelum begin(). Pemilik port runtime9877 diverifikasi
+terhadap PID peluncuran masing-masing. Tidak memakai koneksi editor lama atau
+computer use. Config persisten tetap seperti hasil retarget tahap sebelumnya.
+
+Profil QA terpisah, relatif terhadap outputs:
+citysave_suite_qa/gather-matrix-WoodSite-02/
+citysave_suite_qa/gather-matrix-ClaySiteA-02/
+citysave_suite_qa/gather-matrix-ReedSite-02/
+citysave_suite_qa/gather-matrix-WaterSite-02/
+Di tiap profil, checkpoint berada di:
+data/Godot/app_userdata/time_is_precious/gather_matrix/checkpoint.json
+Save QA gather-sleep-01 dari tahap sebelumnya tetap utuh, SHA256:
+03269289c942bd9e0693d46de689495fb261426ac2e2fe7c03b361f41bec70db
+
+METODE
+Godot4.5.1 stable, renderer Compatibility/OpenGL. Harness QA berada di luar repo,
+di work/gather_matrix.gd, memakai helper walker yang sudah ada. Pergerakan normal
+dan input E melewati gameplay; tidak teleport. Tombol Hourly, Next, dan Start
+diaktifkan lewat signal tombol inspector asli. Start ditekan dua kali untuk
+memeriksa pencegahan eksekusi ganda. Ini integrasi runtime terotomasi, bukan
+pengujian keyboard/mouse fisik atau penilaian kemudahan menemukan fitur.
+
+Tas kosong dimulai dari New Game asli. Dua kondisi kapasitas berikutnya memakai
+fixture inventori eksplisit: barang tas dibersihkan lewat API Inventory, kemudian
+diisi reed_bundle berbobot1 sampai menyisakan ruang satu unit target atau penuh.
+Filler itu bukan barang hasil bermain. max_load tetap100; kebutuhan pemain,
+kecepatan jalan50, dan clock1 detik/menit tidak diubah. Tidak ada perubahan stok
+alam, aturan hasil, civil, atau format save. Tiap sesi gathering meminta180 menit.
+Hasil berkurang antar sesi mengikuti kondisi pemain; angka di bawah adalah
+observasi run ini, bukan perubahan balancing atau klaim hasil tetap.
+
+HASIL 12 SKENARIO GATHERING
+Jenis / lokasi       Tas kosong       Ruang satu unit    Tas penuh
+                     tas / tanah      tas / tanah        tas / tanah
+Kayu / WoodSite       4 / 0             1 / 2              0 / 2
+Tanah liat / ClayA    8 / 0             1 / 5              0 / 4
+Reed / ReedSite      10 / 0             1 / 7              0 / 6
+Air / WaterSite      16 / 0             1 /12              0 / 9
+
+Semua sesi selesai180 menit tanpa interupsi. Pengurangan stok alam sama dengan
+jumlah hasil; stok kota tidak berubah. Berat tas tidak melampaui100. Tombol Start
+ganda tidak menggandakan biaya waktu; modal ditutup dan gerak pemain dipulihkan.
+Tumpukan hasil di tanah dapat didekati melalui collision/navigation normal.
+Saat kapasitas tidak cukup, prompt E merah tetap terlihat; E berulang tidak
+mengubah inventori, menghapus tumpukan, atau menggandakan hasil.
+Setelah kapasitas dibebaskan, tumpukan dari kondisi hampir penuh diambil sekali.
+
+SAVE DAN CONTINUE
+Checkpoint dibuat lewat CitySave.save_checkpoint() di kota ketika tas penuh dan
+hasil masih di tanah. Ini checkpoint QA eksplisit; tidur sudah diuji pada tahap
+sebelumnya dan tidak diulang dalam matriks ini.
+Continue dijalankan melalui menu dalam proses game baru untuk masing-masing
+jenis. Snapshot lengkap cocok (toleransi nilai numerik1e-9, string float64 hex
+tetap dibandingkan persis); byte checkpoint tidak ditulis ulang oleh Continue.
+Nama, rambut, dan warna badan ketiga civil juga dibandingkan secara eksplisit.
+
+Setelah Continue:
+- Tas berbobot100 dan tumpukan hasil yang benar kembali tersedia.
+- E pada tas penuh tidak kehilangan/menggandakan barang.
+- Ruang sebesar kebutuhan seluruh tumpukan dikurangi1 satuan berat masih menolak
+  pengambilan secara utuh, sesuai perilaku pickup biasa saat ini.
+- Setelah dibebaskan1 satuan berat tambahan, tumpukan masuk tepat sekali meski
+  E diulang. Tas kembali tepat100 dan tidak ada hasil tersisa di tanah.
+Hasil writer/reader: WoodSite77/35, ClaySiteA77/35, ReedSite76/35, WaterSite77/35.
+Total447 pemeriksaan. Delapan stderr final kosong. Screenshot semua jenis telah
+dilihat. Semua proses QA ditutup setelah selesai.
+
+PERCOBAAN AWAL YANG TIDAK LULUS
+Percobaan WoodSite pertama berhenti pada asumsi harness bahwa prompt harus
+bertuliskan Inventory Full. Inspeksi menemukan InteractableLabelComponent.set_text
+mempertahankan E, sedangkan pickup memberi warna merah untuk kapasitas tidak cukup.
+Tidak ada bukti cukup untuk menyebut tampilan itu bug atau mengubahnya. Pemeriksaan
+harness diganti menjadi E merah yang terlihat, lalu dijalankan ulang dari profil
+baru. Log percobaan awal, termasuk warning teardown setelah assertion gagal,
+dipertahankan di qa-evidence/matrix-attempt1. Tidak disamarkan sebagai run lulus.
+
+PERUBAHAN DAN BATAS
+Tidak ditemukan bug produksi pada cakupan ini. Tidak ada patch gameplay/toolbar,
+scene, addons, project.godot, save schema, identitas, atau balancing.
+File baru di repo hanya laporan ini. Perubahan test start-menu dan laporan tahap
+sebelumnya tetap dipertahankan; tidak ada merge/push/commit baru.
+Audit SHA256: seluruh3377 file snapshot asli masih cocok. Satu-satunya perubahan
+file existing pada salinan kerja tetap test start-menu dari tahap baseline.
+git diff --check PASS. Proyek snapshot sumber tetap clean.
+
+Batas yang belum diuji atau tidak tersedia:
+- StrawSite memang dinonaktifkan di main map; pemeriksaan memastikan tetap tidak
+  tersedia, tanpa mengaktifkannya. Gathering jerami tidak diklaim lulus.
+- Kurma belum masuk alur runtime peta ini; integrasi authored palm tetap terpisah.
+- Satu lokasi per jenis diuji, bukan seluruh replika pohon/clay di peta.
+- Durasi6/9 jam, kehabisan total deposit/respawn, kerja Daily oleh civil, produksi,
+  perjalanan multi-hari, Android, dan input perangkat fisik belum diuji di sini.
+- Save pribadi tidak dibaca/dimigrasikan; hash save pribadi tetap tidak tersedia.
+  Bukti perlindungan adalah isolasi environment dan jalur user:// setiap proses.
+
+BUKTI
+Relatif terhadap outputs/qa-evidence:
+matrix-summary.json: delapan hasil lengkap, total checks, dan empat hash save.
+matrix-{Site}-{write|read}.result.json: hasil dan pembagian output setiap kasus.
+matrix-{Site}-{write|read}.launch.json, profile.log, stdout.log, stderr.log,
+engine.log: PID, jalur, probe isolasi, dan log eksekusi.
+mcp-retarget-transcript.jsonl: verifikasi target, begin, status, screenshot, quit.
+matrix-wood-full.png dan matrix-{ClaySiteA|ReedSite|WaterSite}-write.png: viewport.
+matrix-attempt1/: log kegagalan asumsi harness awal.
+final-source-audit.json / final-file-hashes.json: audit3377 file sumber snapshot.
+Harness lokal: work/gather_matrix.gd, work/gather_driver.gd, work/gather_runner.gd,
+work/launch-matrix.ps1, work/run-matrix-remaining.ps1, work/mcp-call.mjs.

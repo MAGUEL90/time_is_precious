@@ -305,7 +305,6 @@ Regular workers are defined by:
 - profession experience
 - profession star level
 - efficiency
-- reliability
 - wages
 - tools
 - satisfaction
@@ -358,10 +357,9 @@ This creates a strong design message:
 
 ### 9.5 Worker and Worksite MVP Decisions — 2026-09-13
 
-These are the approved rules for the current worker/worksite MVP. The wider needs,
-satisfaction, reliability, profession-star and team-synergy direction remains future work
-for this loop. This section records design decisions; implementation and integration status
-belong in the project roadmap and task reports.
+These are the approved rules for the current worker/worksite MVP. Further profession-star
+and team-synergy development remains future work. This section records design decisions;
+implementation and integration status belong in the project roadmap and task reports.
 
 #### Daily assignment and completed work
 
@@ -426,7 +424,7 @@ belong in the project roadmap and task reports.
 - Productive days counts distinct days with at least one completed contribution. It is a
   display statistic, not assignment duration and not an XP multiplier.
 - The MVP accumulates XP without automatic level/star increases. Thresholds, balancing and
-  satisfaction/reliability challenges require later decisions; no new penalties or multipliers
+  additional satisfaction challenges require later decisions; no new penalties or multipliers
   are implied by this contribution rule.
 
 ## 10. Worker Parameters
@@ -437,7 +435,6 @@ Current minimum direction for regular workers:
 - `profession_xp`
 - `profession_star`
 - `efficiency`
-- `reliability`
 - `assigned_workplace`
 - `wage`
 - `food_fulfilled`
@@ -482,16 +479,20 @@ Recommended escalation:
 
 1. satisfaction falls
 2. output drops
-3. reliability falls
-4. workers reject assignments more often
-5. absence / skipping work
-6. theft
-7. leaving the city
-8. unrest
-9. riot
+3. workers reject assignments more often
+4. absence / skipping work
+5. theft
+6. leaving the city
+7. unrest
+8. riot
 
-For MVP, satisfaction and light output or reliability impact are enough.
+For MVP, Satisfaction is the condition-based modifier for worker output; Reliability is
+not an active worker or citizen stat.
 Riot can come later after the basic worker loop is stable.
+
+The existing output multipliers are 0.85 below 40% Satisfaction, 1.0 from 40% to below
+75%, and 1.05 from 75% onward. Workshop batches round their result; daily gathering
+applies the multiplier to productive time and grants only completed items.
 
 ## 13. Work Output Rules
 
@@ -560,7 +561,6 @@ The player controls:
 Wages should mainly affect:
 
 - willingness to work
-- reliability
 - retention
 - satisfaction over time
 
@@ -623,17 +623,22 @@ of rebuilding the city through smarter leadership.
 
 ## 18. Player Condition and Sleep Direction
 
+**MVP decision, 2026-11-01:** The player has Hunger and Energy (displayed from
+Fatigue), with no Focus condition. Critical Energy triggers collapse. Existing
+food, sleep recovery and manual work relationships remain in place. Negotiation
+is temporarily unavailable during the MVP. Earlier Focus and negotiation
+descriptions in this document are historical direction, not current MVP rules.
+Regular citizens and workers keep their existing needs; workers have no Energy
+system.
+
 The player has a personal condition layer that reinforces the time economy and the risk of
-relying too heavily on manual work. The current MVP establishes the core relationship between
-Fatigue, Hunger / Body Fuel, Focus, Sleep, Collapse, and the Nightmare consequence. Exact balance
-and final presentation remain provisional.
+relying too heavily on manual work. Exact balance and final presentation remain provisional.
 
 The current design direction is intentionally simple:
 
 ```text
 Hunger / Body Fuel = body fuel
-Fatigue = physical tiredness
-Focus = mental sharpness
+Energy = remaining capacity, displayed as the inverse of Fatigue
 Sleep = main recovery action
 ```
 
@@ -648,10 +653,6 @@ There is no separate short-rest system for the early MVP. Sleep is the single re
   hungry, so a higher internal value means a worse condition. The HUD may display the inverse as
   remaining nourishment, keeping a full bar consistent with a healthy state. The final
   public-facing term still needs to be chosen.
-- **Focus:** mental sharpness and high-performance capacity. Focus is not only a punishment meter.
-  It is a semi-resource / condition stat that supports better output, special dialogue choices,
-  negotiation, strategy, and precision work. High Focus is good, while high Fatigue and poor
-  nourishment make it harder to maintain.
 - **Sleep:** the main recovery action. It advances the world clock, so recovery always costs time.
 
 ### 18.2 Sleep Rules
@@ -662,9 +663,9 @@ There is no separate short-rest system for the early MVP. Sleep is the single re
 - A full sleep advances world time; seven in-game hours remains an initial tuning direction, not a
   locked final value.
 - Hunger or food pressure continues while time passes during sleep.
-- Sleep restores Fatigue and Focus, but it does **not** restore Hunger / Body Fuel.
+- Sleep restores Energy by reducing Fatigue, but it does **not** restore Hunger / Body Fuel.
 - Sleep quality depends on the player's nourishment. Sleeping while well fed restores more
-  Fatigue and Focus than sleeping while starving.
+  Energy than sleeping while starving.
 - Sleep should restore the player without completely erasing the consequences of poor planning.
 - A bed or another valid SleepSpot provides the interaction. The player cannot sleep from an
   arbitrary location during normal gameplay.
@@ -679,9 +680,10 @@ sleep -> eat -> perform high-value action -> sleep again -> repeat
 The player may plan around the daily sleep, but cannot farm recovery repeatedly within the same
 calendar day.
 
-### 18.3 Focus Usage
+### 18.3 Historical Focus Direction — Not Active in MVP
 
-Focus should create better performance rather than only punishing the player.
+The following prior direction is retained for history and is superseded by the
+2026-11-01 MVP decision. Negotiation is unavailable during the MVP.
 
 High Focus can improve:
 
@@ -724,13 +726,9 @@ by making Focus harder to maintain. Negotiation should primarily cost time and F
 
 ### 18.4 Worker Relationship
 
-Player Focus should not make workers irrelevant.
-
-- Player Focus improves player-led decisions, negotiation, and special / precision actions.
 - Workers provide stable production volume and protect the player's limited time.
 - Worker work speed should not be directly reduced because the player is tired.
-- Low player Focus may affect management quality later, but it should not unfairly punish worker
-  output before the worker management loop is readable.
+- Worker needs remain Food, Clothing and Shelter; workers do not have Energy.
 
 The design rule is:
 
@@ -741,8 +739,7 @@ Workers = stable volume and scalable production
 
 ### 18.5 Collapse and Nightmare Consequence
 
-Critical Fatigue or critical low Focus can trigger collapse. Hunger is not a direct collapse
-trigger: poor nourishment increases Focus drain and can therefore lead to collapse indirectly.
+Critical Fatigue (low Energy) triggers collapse. Hunger is not a direct collapse trigger.
 Exact thresholds remain balancing values. Collapse is a penalty rather than a substitute for
 healthy sleep.
 
@@ -755,7 +752,7 @@ When Collapse happens:
 - escaping quickly reduces the time loss, while a timeout adds an additional penalty
 - later Collapse tiers increase pressure through stronger penalties, reduced vision, and
   progressively harder or longer challenges
-- Hunger becomes worse, while Fatigue and Focus recover only partially
+- Hunger becomes worse, while Fatigue recovers only partially
 - the normal sleep opportunity is consumed for the day on which the player returns
 
 When the Nightmare ends, the transition should clearly report time spent, tier penalties,
@@ -764,21 +761,20 @@ not be strategically equal to solving the challenge.
 
 Collapse should have visible warnings and feel like the result of ignored conditions, not a
 sudden random punishment. Collapse must never become free sleep. It costs time, worsens Hunger,
-only partially restores Fatigue and Focus, and consumes the player's daily sleep opportunity.
+only partially restores Energy, and consumes the player's daily sleep opportunity.
 
-Fatigue does not need to reduce movement speed in the first version. Time loss, poorer Focus,
-lower action quality, and collapse risk are enough initial pressure.
+Fatigue does not need to reduce movement speed in the first version. Existing manual-work
+output, time loss and collapse risk provide the current pressure.
 
 ### 18.6 Design Purpose
 
 The condition layer should strengthen the game's central message:
 
 - manual work has a personal cost beyond the minutes spent performing it
-- food, sleep, and Focus compete with production and travel for limited time
+- food and sleep compete with production and travel for limited time
 - good recovery creates better output and better decisions
-- poor recovery creates weaker negotiation, less optimal output, and collapse risk
+- poor recovery creates less optimal manual output and collapse risk
 - delegation becomes valuable because it protects the player's time and condition
-- Focus connects physical self-management to negotiation and managerial decision-making
 
 Sleep must not become a free healing button. It is another strategic use of the player's most
 important resource: time.
@@ -788,13 +784,12 @@ important resource: time.
 The MVP is functional, but these decisions remain open for balancing and later iterations:
 
 - whether the public-facing term is Hunger, Body Fuel, or Satiety
-- exact drain, recovery, Focus cost, and collapse values
+- exact drain, recovery and collapse values
 - exact full sleep duration
 - how the once-per-day sleep limit resets across midnight and after Collapse
 - which additional locations can act as valid SleepSpots
 - final warning sprites, animation, audio, and presentation before Collapse
-- which actions spend Focus and how clearly those costs are communicated
-- how production bonus progress from Focus is stored and displayed
+- negotiation design after the MVP
 - how Nightmare maze difficulty, time limits, and penalties scale across tiers
 - which condition and Nightmare values must persist across save and load
 
@@ -917,6 +912,28 @@ enters personal inventory; workshop production continues to follow its own stora
 
 ### 20.2 Approved Storage Structure and City Ownership
 
+**2026-11-04 implementation clarification.** Daily worker output goes directly
+to Central City Storage; new worksite-to-storage Hauler assignments are disabled.
+The player can order a paid, idle Laborer or legacy Hauler equipped with a city
+Cart to carry up to three counted city-owned items between Central Storage and a
+city-owned Annex. The Annex does not supply citizen needs until goods return to
+Central Storage. The temporary assignment does not change a Laborer's profession.
+Manual Hourly gathering still goes to the player's Inventory (with the existing
+ground overflow) so the player can obtain personal construction materials; the
+broader interpretation of “worksite output” for that player-only mode remains
+open for review. Existing pre-change output is not silently converted to city
+property.
+
+Workshop and house plots, timed wall work, Watchtower work, and Drying Yard
+construction/upgrades use the player's Inventory. The Drying Yard accepts
+explicit, refundable personal contributions over multiple visits; this allows its
+level-three material kit to exceed normal bag capacity without changing that
+capacity. As a provisional way to obtain defense materials, the traveling
+merchant offers 12 Stone at 2 Shekels each per visit; existing offers, wages and
+material quantities are unchanged. Earlier city-funded wall work retains its
+original refund owner. See the [task report](task_reports/city-transport-and-player-construction-2026-11-04.md)
+for implementation details and save-migration limits.
+
 Approved by the Game Director on 2026-09-20 from Canva slide 2, **Storage Flow - Rekomendasi**,
 with one explicit amendment: items in City Storage cannot be taken back by the player.
 This replaces the earlier withdrawable-city-stock direction. Design approval is distinct
@@ -1029,7 +1046,7 @@ These are still intentionally open:
 - how exactly food supply values should be balanced per item
 - how clothing quality and durability should affect clothing supply
 - how shelter quality is represented in early prototype
-- what exact formula connects wages to reliability and retention
+- what exact formula connects wages to retention
 - tool durability, repair, combined equipment effects, and additional role/worksite requirement lists
 - which unique NPCs should become advisors, merchants, or quest anchors
 - whether the Oracle is mystical, analytical, mechanical, or a blend of all three
@@ -1114,7 +1131,7 @@ The player becomes remembered as someone who rebuilt the city for its people.
 #### Collapse Ending
 
 The player repeatedly fails to maintain food, clothing, shelter, wages, or stability.
-Satisfaction falls, reliability drops, workers leave, theft rises, unrest grows, and the city eventually collapses.
+Satisfaction falls, workers leave, theft rises, unrest grows, and the city eventually collapses.
 
 This ending should feel earned through ignored warnings, not sudden punishment.
 The city should collapse gradually because the player failed to respond to visible signals.

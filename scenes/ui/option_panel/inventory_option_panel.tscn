@@ -1,0 +1,72 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/option_panel/option_panel.tscn" id="1_option"]
+[ext_resource type="Texture2D" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="2_base"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_background"]
+atlas = ExtResource("2_base")
+region = Rect2(61, 1, 53, 46)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_background"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+texture = SubResource("AtlasTexture_background")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
+
+[node name="OptionPanel" instance=ExtResource("1_option")]
+custom_minimum_size = Vector2(50, 40)
+offset_right = 50.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("StyleBoxTexture_background")
+
+[node name="OptionBackgroundTexture" parent="." index="0"]
+self_modulate = Color(1, 1, 1, 0)
+expand_mode = 1
+
+[node name="OptionContainer" parent="OptionBackgroundTexture" index="1"]
+offset_left = -20.0
+offset_top = -15.0
+offset_right = 20.0
+offset_bottom = 15.0
+
+[node name="UseButtonTexture" parent="OptionBackgroundTexture/OptionContainer" index="0"]
+custom_minimum_size = Vector2(40, 14)
+self_modulate = Color(1, 1, 1, 0)
+expand_mode = 1
+
+[node name="UseButton" parent="OptionBackgroundTexture/OptionContainer/UseButtonTexture" index="0"]
+custom_minimum_size = Vector2(40, 14)
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme = ExtResource("3_theme")
+theme_type_variation = &"HudShortcutButton"
+
+[node name="DropButtonTexture" parent="OptionBackgroundTexture/OptionContainer" index="2"]
+custom_minimum_size = Vector2(40, 14)
+self_modulate = Color(1, 1, 1, 0)
+expand_mode = 1
+
+[node name="DropButton" parent="OptionBackgroundTexture/OptionContainer/DropButtonTexture" index="0"]
+custom_minimum_size = Vector2(40, 14)
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme = ExtResource("3_theme")
+theme_type_variation = &"HudShortcutButton"

@@ -95,7 +95,9 @@ func _test_immigration_acceptance() -> void:
 		CitizenNeedsManager.get_citizen_count() == 1,
 		"Accepted residents must count toward resident needs.")
 
-	immigrant.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	_expect(
+		CitizenManager.register_applicant(immigrant.citizen_id, WorkerData.Profession.LABORER),
+		"An eligible resident can register with a profession.")
 	_expect(
 		CitizenManager.get_all_applicants().has(immigrant),
 		"Resident applicants must appear in the applicant query.")
@@ -535,22 +537,20 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 
 	var resident: CitizenData = CitizenData.new()
 	resident.citizen_id = "linked_worker_test"
-	resident.display_name = "Linked Worker"
+	resident.display_name = "Naram"
 	resident.satisfaction = 0.80
-	resident.reliability = 0.90
 	resident.population_status = CitizenData.PopulationStatus.RESIDENT
 	resident.employment_status = CitizenData.EmploymentStatus.HIRED
 	CitizenManager.add_citizen(resident)
 
 	var linked_worker: WorkerData = WorkerData.new()
 	linked_worker.worker_id = resident.citizen_id
-	linked_worker.display_name = "Legacy Worker"
+	linked_worker.display_name = "Lugal"
 	linked_worker.satisfaction = 0.10
-	linked_worker.reliability = 0.20
 	WorkerDatabase.workers_by_id[linked_worker.worker_id] = linked_worker
 
 	_expect(
-		linked_worker.get_resolved_display_name() == "Linked Worker",
+		linked_worker.get_resolved_display_name() == "Naram",
 		"Linked workers must resolve their display name from CitizenData."
 	)
 	_expect(
@@ -558,23 +558,14 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 		"Linked workers must resolve satisfaction from CitizenData."
 	)
 	_expect(
-		is_equal_approx(linked_worker.get_resolved_reliability(), 0.90),
-		"Linked workers must resolve reliability from CitizenData."
-	)
-	_expect(
 		is_equal_approx(linked_worker.get_satisfaction_work_multiplier(), 1.05),
 		"Linked worker satisfaction must affect the work multiplier."
-	)
-	_expect(
-		is_equal_approx(linked_worker.get_reliability_success_chance(), 0.95),
-		"Linked worker reliability must affect success chance."
 	)
 
 	var legacy_worker: WorkerData = WorkerData.new()
 	legacy_worker.worker_id = "legacy_worker_test"
-	legacy_worker.display_name = "Legacy Worker"
+	legacy_worker.display_name = "Lugal"
 	legacy_worker.satisfaction = 0.30
-	legacy_worker.reliability = 0.60
 	legacy_worker.food_fulfilled = true
 	legacy_worker.clothing_fulfilled = true
 	legacy_worker.shelter_fulfilled = true
@@ -584,16 +575,12 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 		"Legacy workers must remain unlinked when no matching CitizenData exists."
 	)
 	_expect(
-		legacy_worker.get_resolved_display_name() == "Legacy Worker",
+		legacy_worker.get_resolved_display_name() == "Lugal",
 		"Unlinked workers must retain their WorkerData display name."
 	)
 	_expect(
 		is_equal_approx(legacy_worker.get_resolved_satisfaction(), 0.30),
 		"Unlinked workers must retain their WorkerData satisfaction."
-	)
-	_expect(
-		is_equal_approx(legacy_worker.get_resolved_reliability(), 0.60),
-		"Unlinked workers must retain their WorkerData reliability."
 	)
 	_expect(
 		legacy_worker.are_basic_needs_fulfilled(),
@@ -602,10 +589,6 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 	_expect(
 		is_equal_approx(legacy_worker.get_satisfaction_work_multiplier(), 0.85),
 		"Unlinked worker satisfaction must retain its work multiplier."
-	)
-	_expect(
-		is_equal_approx(legacy_worker.get_reliability_success_chance(), 0.85),
-		"Unlinked worker reliability must retain its success chance."
 	)
 
 	# City food and clothing are physical stock held by CityToolStorage. Keep the
@@ -635,10 +618,6 @@ func _test_worker_data_linking_and_needs_integration() -> void:
 	_expect(
 		is_equal_approx(linked_worker.satisfaction, 0.10),
 		"Linked workers must not update legacy WorkerData satisfaction during daily needs."
-	)
-	_expect(
-		is_equal_approx(linked_worker.reliability, 0.20),
-		"Linked workers must not update legacy WorkerData reliability during daily needs."
 	)
 	_expect(
 		linked_worker.has_linked_citizen(),

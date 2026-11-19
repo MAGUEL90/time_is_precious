@@ -1,0 +1,178 @@
+TIME IS PRECIOUS — LAPTOP BASELINE / PLAYTEST
+Tanggal: 2026-11-09 (Asia/Jakarta)
+Status: PASSED — NEEDS HUMAN REVIEW untuk pemeriksaan terpilih; penerimaan seluruh game tetap PARTIAL.
+
+1. TUJUAN DAN BATAS TAHAP
+Verifikasi snapshot lengkap, siapkan salinan dan branch terpisah, playtest baseline,
+serta perbaiki bug yang terbukti. Risiko LEVEL 1. Gameplay, scene authored, identitas
+civil, save implementation, settings, dan addon pada repo kerja tidak diubah.
+PERHATIAN: fallback otomatis MCP editor membuka proyek lama dan menulis metadata
+import. Insiden serta batas auditnya dijelaskan di bagian 6; proyek lama tidak
+boleh dianggap byte-identik berdasarkan tahap ini.
+Pengguna kemudian meminta MCP Godot saja dan mempertahankan toolbar sebagai
+pekerjaan berikutnya. Computer-use dihentikan; pemeriksaan selanjutnya memakai MCP.
+
+2. BASELINE DAN LOKASI
+Sumber: C:\Users\Hendro\Downloads\laptop_transfer_b32cc50
+Commit: b32cc505b89c0a0b06d288b1b6ab48fcb9feccce
+Branch sumber: chore/time-world/cloud-handover-20261109
+Branch kerja: test/time-world/laptop-baseline-20261109
+Repo kerja: folder Time-is-Precious-project yang memuat laporan ini.
+Repo bersih saat disalin; riwayat shallow mulai 84d63c6; remote tidak disetel.
+Seluruh folder repo, termasuk .git dan berkas non-Git, disalin dari snapshot lokal.
+Tidak mengambil baseline dari GitHub dan tidak menerapkan patch handover ulang.
+Tidak ada commit, push, merge, migrasi save pribadi, atau integrasi source ke proyek lama.
+Perubahan tahap ini masih ada di working tree branch kerja agar dapat ditinjau.
+
+Manifest transport SHA256SUMS.txt memuat 3.377 berkas. Seluruh hash sumber dan
+salinan awal cocok. Audit akhir: sumber tetap cocok 3.377/3.377; satu berkas lama
+pada salinan kerja berubah, yaitu test_scene_start_menu.gd. Laporan ini berkas baru.
+Authored map: scenes/map_authoring/new_map_authoring.tscn
+SHA256: a74a797b18b5e0932dcc3fc4454688df165b06525357f575d45e94a34d153067
+Hash tersebut cocok dengan handover. Ini tidak memverifikasi scene lain yang sedang
+dikerjakan pengguna di luar snapshot.
+
+3. KONDISI PROYEK
+Menurut handover, snapshot membawa resource binding fleksibel, konfigurasi tiga
+warga awal, ekonomi/kontrak, storage transport, kebutuhan/lifecycle, sleep/Continue,
+persistensi identitas civil, serta schema18 untuk presisi binary64 Satisfaction.
+Implementasi writer VERSION=18 diverifikasi langsung pada city_save_state.gd.
+Perbaikan resource cart, renderer empat skin tone/24 gaya rambut, dan resolver
+pakaian berdasarkan ID valid sudah terdapat pada baseline.
+work_2 tersedia sebagai aset, tetapi pemetaan aksi gameplay belum diputuskan.
+
+Catatan cloud mencatat 78 eksekusi headless memenuhi hasil harapan; itu bukti
+historis, bukan hasil laptop ini. Beberapa manifest/harness cloud yang dirujuk
+tidak disertakan dalam paket. Transport manifest lokal adalah acuan integritas
+yang tersedia. ROADMAP/ARCHITECTURE/control pack masih memuat sebagian status
+historis (termasuk schema lama/persistence pending); tidak dipakai untuk meniadakan
+implementasi terbaru dan tidak diperbarui tanpa perluasan lingkup.
+
+4. BUG YANG DIPERBAIKI
+File: scenes/test_scenes/test_scene_start_menu.gd
+Reproduksi: CitySave write/read berhasil, tetapi StartMenuTest city gagal dengan
+12 pemeriksaan slot dan satu pemeriksaan jumlah pickup.
+Penyebab: tes mengharapkan tampilan buah dari enam pohon legacy. content_scene.tscn
+secara eksplisit menetapkan world_view_enabled=false untuk keenamnya; tes CitySave
+dan LegacyDatePalmViewOptOutTest juga sudah menguji kontrak ledger tersembunyi ini.
+
+Perbaikan hanya pada tes: Continue harus mempertahankan slot tersimpan, flag world
+view yang dinonaktifkan, pickup kosong, dan tidak menciptakan pickup legacy/duplikat.
+Pemeriksaan seluruh snapshot, seluruh source ledger, serta byte checkpoint tetap ada.
+Tidak mengubah validator produksi, save schema, scene, layout, atau aturan permainan.
+Hasil ulang: StartMenuTest city PASS; home PASS; LegacyDatePalmViewOptOutTest PASS,
+termasuk positive control bahwa sumber aktif masih memunculkan tiga buah.
+
+5. QA WINDOWS
+Engine: Godot 4.5.1.stable.official.f62fdbde1 (sama versi dengan QA cloud).
+Salinan QA: sibling workspace work/project, terpisah dari repo kerja dan sumber.
+APPDATA, LOCALAPPDATA, XDG_DATA_HOME/CONFIG_HOME/CACHE_HOME diarahkan ke profil QA.
+Sebelum setiap proses, probe terpisah memverifikasi user:// berada di data QA.
+Engine dijalankan berurutan, dengan profil baru per skenario; writer/read tertentu
+berbagi profil yang secara eksplisit diperlukan untuk uji lintas proses.
+Import menghasilkan cache/UID hanya di salinan QA. Seluruh berkas baseline yang
+diimpor cocok dengan repo kerja setelah satu patch tes disalin ke QA.
+
+Hasil: import editor PASS, 26 eksekusi tes headless PASS (termasuk pengulangan
+terarah sesudah perbaikan). Dua percobaan non-passing disimpan terpisah:
+- cart-animation: scene demo dijalankan tanpa TIP_TEST_CART_ANIMATION=1, lalu
+  dihentikan. Ini kesalahan pemanggilan harness, bukan hasil tes cart.
+  cart-animation-verified dengan flag yang benar PASS.
+- menu-city: kegagalan baseline yang direproduksi dan diperbaiki di bagian 4.
+
+Cakupan tes yang lolos:
+- CartProfileOwner: 188 pemeriksaan; rambut kerja: 1.865 pemeriksaan.
+- Cart animation, work clothing, work animation.
+- CitySaveValues codec dan CitySaveFile storage.
+- CivilIdentityPersistence writer 33 dan reader 91 pemeriksaan: nama, rambut,
+  skin tone, ID/counter, pending migrant, repeated load, dan source bytes.
+- CitySave core, write/read pada proses berbeda.
+- StartMenu empty, corrupt, city, home; city/home diulang setelah patch.
+- HousePlayerSave; sleep write/read lintas proses.
+- StarterRecruitment; FlexibleResourceBinding 91 pemeriksaan.
+- SatisfactionBoundary full: batas binary64 dan penolakan data rusak.
+- LegacyDatePalmViewOptOutTest.
+- InventoryModalPauseTest; StatusTabTest.
+
+Warning tentang plain_worn_wrap yang belum memiliki aset work, checkpoint invalid/
+unsupported, serta penolakan save ketika clearing/building berasal dari negative
+test yang disengaja. Log awal yang gagal tidak dihapus atau dihitung sebagai PASS.
+
+6. MCP GODOT DAN VISUAL
+Runtime MCP diverifikasi reachable. netstat mengikat port 9877 ke PID 11164 milik
+peluncuran QA mcp-playtest; launch.json dan profile.log mencatat project/user root.
+MCP editor tidak terhubung. Panggilan editor_get_project_directory yang tampak
+read-only ternyata memiliki fallback membuka editor dari konfigurasi server lama.
+MCP runtime sendiri cukup untuk pemeriksaan QA yang dicatat di atas.
+
+Teramati melalui MCP: StartMenu, New Game melalui signal tombol yang sebenarnya,
+InventoryUI visible false -> true -> false melalui metode existing, serta Worker Hub
+yang tampil dengan empty state. Screenshot viewport disimpan dan diperiksa:
+mcp-start-menu.png, mcp-inventory.png, mcp-worker-hub.png.
+Viewport hasil screenshot 400x225; project tetap menggunakan override 1200x675.
+Ini pemeriksaan rendering dan metode/signal, bukan bukti input mouse/keyboard fisik.
+MCP runtime_input keycode I tidak membuka inventori. Bridge yang ada hanya mengisi
+keycode sedangkan InputMap memakai physical_keycode; jalur keyboard fisik belum
+terverifikasi. Tidak mengubah addon untuk mengatasi keterbatasan alat tersebut.
+
+Temuan toolbar: StatusButton2 (ikon tas) memiliki get_signal_connection_list('pressed')
+kosong. Pengguna memilih mempertahankan toolbar; koneksi tombol menjadi backlog,
+bukan perubahan diam-diam pada rancangan terbaru. Tombol lainnya tidak dipetakan.
+
+Percobaan visual awal: proses sandbox tidak terlihat di desktop, kemudian satu
+percobaan desktop mengalami tabrakan port addon karena proses sandbox belum berhenti.
+Keduanya bukan kelulusan final; proses milik QA ditutup dan peluncuran terpisah
+berikutnya tidak mencatat error runtime. Computer-use sempat digunakan untuk menu/
+New Game lalu dihentikan oleh pengguna. Tidak digunakan lagi setelah instruksi itu.
+Screenshot mcp-city.png masih menampilkan Worker Hub; tidak dipakai sebagai bukti
+penutupan panel atau tampilan kota sesudahnya.
+
+INSIDEN FALLBACK EDITOR MCP — penting untuk handoff:
+Server node PID7476 dikonfigurasi dengan -p ke
+C:/Users/Hendro/OneDrive/Documents/Project/Github/time_is_precious.
+Panggilan editor_get_project_directory memicu editor lama (PID1336/10288). Setelah
+ditutup, server memunculkan editor lagi (PID19760/6896). Proses server tersebut
+beserta editor miliknya akhirnya dihentikan setelah command line/parent diverifikasi.
+Tidak ada konfigurasi MCP, addon, port, atau setting yang diedit. Sebelum memakai
+fitur editor lagi, target server harus diarahkan secara eksplisit ke salinan kerja.
+
+Audit read-only proyek lama menemukan 48 tracked changes dan banyak file untracked.
+Tanpa snapshot awal, perubahan tersebut tidak diatribusikan seluruhnya ke sesi ini.
+Ada 105 file .import untracked dengan waktu modifikasi dekat peluncuran fallback.
+project.godot sempat diperbarui waktunya, tetapi git diff untuk file itu kosong.
+Scene authored new_map_authoring.tscn berwaktu 2026-11-08 21:03:11, sebelum sesi ini.
+Tidak melakukan reset, clean, restore, atau penghapusan metadata, karena berisiko
+membuang pekerjaan pengguna tanpa baseline. Bukti status/hash sesudah kejadian:
+old-project-status-after-fallback.txt dan old-project-files-after-fallback.json.
+Klaim snapshot asli tetap utuh mengacu pada folder Downloads/laptop_transfer_b32cc50,
+bukan klaim bahwa proyek lama tidak tersentuh editor.
+
+7. BATAS DAN RISIKO YANG TETAP TERBUKA
+- Folder save pribadi tidak dapat dibaca karena batas akses. File sentinel awal
+  yang mencatat daftar kosong bukan bukti folder kosong atau hash save tetap sama.
+  Perlindungan yang terbukti adalah isolasi user://; tidak ada save pribadi disalin.
+- Belum ada full playthrough satu hari/produksi, penerimaan Android, pengujian
+  seluruh proyek, validasi keyboard fisik, atau rekonsiliasi scene laptop terbaru.
+- Integrasi startup/reload authored palm belum selesai; kota enam-source menolak
+  tujuh-source. Fixture HOME sintetis bukan integrasi produksi.
+- Migrasi legacy belum siap: handover mencatat drift satu ULP saat JSON17 ditulis
+  ulang. Runtime17 menolak18; backup .bak berotasi dan bukan arsip rollback permanen.
+  Adapter surgical_home_copy.py hanya riset. Tidak dipakai pada save pribadi.
+- Genuine16 dengan katalog berbeda tetap bukan migrasi yang disetujui.
+- Fungsi work_2, placement/behavior job-board dan Gabi menunggu keputusan desain.
+- Test resource-cart49/clothing-resolver280 dan keseluruhan matriks cloud tidak
+  dijalankan ulang seluruhnya dalam tahap ini.
+
+8. LANJUTAN TERBATAS
+Tahap berikut yang disarankan: satu playthrough awal melalui MCP pada profil QA
+baru, fokus gathering -> hiring/assignment -> produksi -> tidur -> Continue.
+Pertahankan toolbar sesuai keputusan pengguna. Integrasi pohon kurma dan migrasi
+save menjadi tahap terpisah setelah scene terbaru serta kebijakan migrasi jelas.
+Sebelum playtest berikutnya, pastikan server MCP memakai target repo kerja yang
+benar; jangan memanggil fitur editor pada konfigurasi lama yang otomatis membuka
+repo OneDrive. Penghentian server sesi ini tidak mengubah konfigurasi persisten.
+
+Bukti lengkap berada pada folder outputs/qa-evidence di luar repo kerja:
+result JSON per run, stdout/stderr/engine log, snapshot hash, final-source-audit.json,
+QA_SUMMARY.json, dan screenshot MCP. git diff --check PASS; tidak ada file produksi
+atau file terlindungi yang berubah. Tidak ada file existing dihapus atau diganti nama.

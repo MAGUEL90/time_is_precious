@@ -17,7 +17,6 @@ func _run() -> void:
 	TimeComponentManager.current_minute = 0
 	TimeComponentManager.emit_time_signal()
 	worker.satisfaction = 0.5
-	worker.reliability = 0.9
 	merchant = preload("res://scenes/traveling_merchant/traveling_merchant.tscn").instantiate()
 	merchant.position = Vector2(310, 127)
 	add_child(merchant)

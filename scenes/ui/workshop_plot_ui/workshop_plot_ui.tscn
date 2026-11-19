@@ -44,7 +44,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Window" type="NinePatchRect" parent="Root/Center"]
-custom_minimum_size = Vector2(220, 208)
+custom_minimum_size = Vector2(240, 208)
 layout_mode = 2
 texture = SubResource("AtlasTexture_window")
 patch_margin_left = 16
@@ -61,9 +61,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 13
-theme_override_constants/margin_right = 18
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
 [node name="MainVBox" type="VBoxContainer" parent="Root/Center/Window/Margin"]
@@ -71,6 +71,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 1
+
+[node name="ClearingHeaderSpacer" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
+visible = false
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
 
 [node name="TitleHeader" type="Control" parent="Root/Center/Window/Margin/MainVBox"]
 custom_minimum_size = Vector2(0, 12)
@@ -112,7 +117,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
 [node name="BuilderHeader" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 2
 
@@ -125,7 +130,7 @@ text = "Builder team"
 vertical_alignment = 1
 
 [node name="AssignWorkersButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/BuilderHeader"]
-custom_minimum_size = Vector2(52, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
@@ -144,30 +149,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="DurationRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="ClockIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
-custom_minimum_size = Vector2(16, 16)
-layout_mode = 2
-size_flags_vertical = 4
-texture_filter = 1
-texture = ExtResource("5_clock")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="DurationLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/DurationRow"]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudLabelShortcut"
-theme_override_font_sizes/font_size = 6
-text = "—"
-vertical_alignment = 1
-
 [node name="StatusLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
 custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
@@ -181,28 +162,131 @@ autowrap_mode = 3
 layout_mode = 2
 
 [node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CancelButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
-custom_minimum_size = Vector2(44, 16)
-layout_mode = 2
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "Cancel"
-
-[node name="Control" type="Control" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+[node name="DurationRow" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ClockIcon" type="TextureRect" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/DurationRow"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+texture_filter = 1
+texture = ExtResource("5_clock")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DurationLabel" type="Label" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer/DurationRow"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudLabelShortcut"
+theme_override_font_sizes/font_size = 6
+text = "—"
+vertical_alignment = 1
+clip_text = true
 
 [node name="BuildButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/RequirementsPage/Footer"]
-custom_minimum_size = Vector2(52, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 disabled = true
 text = "Build"
+
+[node name="AssignmentChoiceBlocker" type="ColorRect" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.22)
+
+[node name="AssignmentChoiceCenter" type="CenterContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ChoiceWindow" type="NinePatchRect" parent="Root/AssignmentChoiceCenter"]
+custom_minimum_size = Vector2(164, 104)
+layout_mode = 2
+texture = SubResource("AtlasTexture_window")
+patch_margin_left = 16
+patch_margin_top = 16
+patch_margin_right = 16
+patch_margin_bottom = 16
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="ChoiceMargin" type="MarginContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="ChoiceVBox" type="VBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ChoiceTitle" type="Label" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_type_variation = &"HudLabelMain"
+theme_override_font_sizes/font_size = 12
+text = "ASSIGN"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ChoiceOptions" type="HBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="WorkerChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Worker"
+
+[node name="PlayerChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceOptions"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+toggle_mode = true
+text = "Player"
+
+[node name="ChoiceFooter" type="HBoxContainer" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="CancelChoiceButton" type="Button" parent="Root/AssignmentChoiceCenter/ChoiceWindow/ChoiceMargin/ChoiceVBox/ChoiceFooter"]
+custom_minimum_size = Vector2(64, 18)
+layout_mode = 2
+size_flags_vertical = 8
+theme_type_variation = &"HudShortcutButton"
+theme_override_font_sizes/font_size = 6
+text = "Back"
 
 [node name="ProgressPage" type="VBoxContainer" parent="Root/Center/Window/Margin/MainVBox"]
 visible = false
@@ -248,19 +332,13 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="Footer" type="HBoxContainer" parent="Root/Center/Window/Margin/MainVBox/ProgressPage"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
-
-[node name="CloseButton" type="Button" parent="Root/Center/Window/Margin/MainVBox/ProgressPage/Footer"]
-custom_minimum_size = Vector2(44, 16)
-layout_mode = 2
-size_flags_horizontal = 8
-theme_type_variation = &"HudShortcutButton"
-theme_override_font_sizes/font_size = 6
-text = "Close"
+theme_override_constants/separation = 4
 
 [node name="CloseButton" parent="Root/Center/Window/Margin/MainVBox/TitleHeader" instance=ExtResource("4_close")]
 layout_mode = 1
+focus_mode = 2
 anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0

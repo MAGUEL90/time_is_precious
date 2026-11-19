@@ -1,7 +1,6 @@
 extends Node
 
 const CONTENT: PackedScene = preload("res://scenes/content_scene/content_scene.tscn")
-const CITIZEN_ACTOR: PackedScene = preload("res://scenes/citizen_actor/citizen_actor.tscn")
 const WORKER_ID: String = "fire_visual_lifecycle_worker"
 const OTHER_WORKER_ID: String = "fire_visual_lifecycle_worker_shadow"
 
@@ -45,6 +44,8 @@ func _run() -> void:
 	citizen.profession = WorkerData.Profession.LABORER
 	citizen.satisfaction = CitizenData.MIN_APPLICANT_SATISFACTION
 	CitizenManager.add_citizen(citizen)
+	var initial_actor: Node2D = visuals.actors.get(WORKER_ID)
+	_expect(is_instance_valid(initial_actor) and initial_actor.is_visible_in_tree(), "The applicant already has one visible resident actor.")
 	var price: int = WorkerDatabase.get_contract_price(citizen.profession, 3)
 	Inventory.add_item("shekel", price * 2)
 	var worker: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 1, 3)
@@ -61,6 +62,7 @@ func _run() -> void:
 	var actor: Node2D = visuals.ensure_actor(WORKER_ID, Vector2.ZERO)
 	var other_actor: Node2D = visuals.ensure_actor(OTHER_WORKER_ID, Vector2(20, 0))
 	_expect(actor != null and actor.get_meta("worker_id", "") == WORKER_ID, "The hired worker gets a tagged worker visual.")
+	_expect(actor == initial_actor, "Hiring reuses the resident's existing visual.")
 	_expect(other_actor != null and other_actor.get_meta("worker_id", "") == OTHER_WORKER_ID, "A similar-ID hired worker gets its own visual.")
 	if actor == null or other_actor == null:
 		await _finish(content, visuals, worker_callback, original_inventory, original_rates, original_hour, original_minute, original_paused)
@@ -68,14 +70,6 @@ func _run() -> void:
 	actor.show()
 	other_actor.show()
 	var actor_instance_id: int = actor.get_instance_id()
-
-	var citizen_actor: CitizenActor = CITIZEN_ACTOR.instantiate() as CitizenActor
-	content.add_child(citizen_actor)
-	citizen_actor.setup(citizen)
-	citizen_actor.global_position = Vector2(40, 0)
-	citizen_actor.show()
-	_expect(citizen_actor.citizen_data == citizen and citizen_actor.is_visible_in_tree(),
-		"A same-ID CitizenActor is present beside the worker visual.")
 
 	visuals.work_cycles[WORKER_ID] = {"fixture": true}
 	visuals.roaming[WORKER_ID] = {"fixture": true}
@@ -88,26 +82,23 @@ func _run() -> void:
 	var presentation_clean: bool = not visuals.work_cycles.has(WORKER_ID) and not visuals.roaming.has(WORKER_ID) \
 		and not visuals.site_paths.has(WORKER_ID) and not visuals.reed_inside.has(WORKER_ID) \
 		and not visuals.plot_presence.states.has(WORKER_ID) and not visuals.plot_presence.tracked.has(WORKER_ID)
-	_expect(not visuals.actors.has(WORKER_ID) and not actor.is_visible_in_tree() and presentation_clean,
-		"Fire removes only the dismissed worker visual and all of its presentation state while paused.")
+	_expect(visuals.actors.get(WORKER_ID) == actor and actor.is_visible_in_tree() and presentation_clean,
+		"Fire clears work presentation while retaining the same visible resident, even while paused.")
 	_expect(visuals.actors.get(OTHER_WORKER_ID) == other_actor and WorkerDatabase.has_worker_data(OTHER_WORKER_ID)
 		and other_actor.is_visible_in_tree(), "Fire keeps a visible hired worker with a similar ID.")
-	_expect(is_instance_valid(citizen_actor) and citizen_actor.is_inside_tree() and citizen_actor.is_visible_in_tree(),
-		"Fire keeps the same-ID CitizenActor in the tree and visible.")
-
 	get_tree().paused = false
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_expect(not is_instance_valid(actor), "The fired worker node is freed after the paused frame resumes.")
+	_expect(is_instance_valid(actor) and visuals.actors.get(WORKER_ID) == actor, "The resident remains after the paused frame resumes.")
 	_expect(CitizenManager.register_applicant(WORKER_ID, WorkerData.Profession.LABORER), "The dismissed citizen can reapply for the rehire check.")
 	var rehired: WorkerData = WorkerDatabase.hire_applicant(WORKER_ID, 1, 3)
 	_expect(rehired != null and WorkerDatabase.has_worker_data(WORKER_ID), "The dismissed worker can be rehired.")
 	if rehired != null:
 		var rehired_actor: Node2D = visuals.ensure_actor(WORKER_ID, Vector2.ZERO)
 		_expect(rehired_actor != null and is_instance_valid(rehired_actor)
-			and rehired_actor.get_instance_id() != actor_instance_id
+			and rehired_actor.get_instance_id() == actor_instance_id
 			and rehired_actor.get_meta("worker_id", "") == WORKER_ID,
-			"Rehire creates a fresh WorkerVisuals actor for the same worker ID.")
+			"Rehire reuses the same resident visual for the worker ID.")
 		if rehired_actor != null:
 			rehired_actor.show()
 			_expect(rehired_actor.is_visible_in_tree(), "The rehired worker visual can be shown again.")

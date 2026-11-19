@@ -156,7 +156,7 @@ func _test_gather_pause_and_paid_coworker() -> void:
 	var gather_job: Dictionary = schedule.jobs[GATHER_SITE]
 	var due_progress_before_settlement: float = float(gather_job.progress[BLOCKED_GATHERER])
 	var paid_progress_before_settlement: float = float(gather_job.progress[PAID_GATHERER])
-	_expect(due_progress_before_settlement == 59.0 and paid_progress_before_settlement == 59.0,
+	_expect(is_equal_approx(due_progress_before_settlement, 59.0) and is_equal_approx(paid_progress_before_settlement, 59.0),
 		"Both gatherers retain partial work through the minute before the renewal boundary.")
 	site_outputs[IDLE_HAUL_SITE] = 3
 	_set_time(DUE_DAY, 8, 0)

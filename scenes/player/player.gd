@@ -26,13 +26,8 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @export var min_hunger: float = 0.0
 @export var max_hunger: float = 1.0
 @export var fatigue_increase_per_min: float = 0.0005
-@export var focus_loss_per_min: float = 0.00025
-@export var focus_loss_from_fatigue_per_min: float = 0.0005
-@export var focus_loss_from_hunger_per_min: float = 0.00035
 @export var sleep_duration_minutes: int = 420
 @export_range(0.0, 1.0, 0.01) var sleep_fatigue_recovery: float = 0.65
-@export_range(0.0, 1.0, 0.01) var sleep_focus_recovery: float = 0.75
-@export_range(0.0, 1.0, 0.01) var focus: float = 1.0
 @export_range(0, 10000, 1) var current_experience: int = 0
 @export_range(1, 10000, 1) var experience_required: int = 100
 
@@ -44,16 +39,12 @@ signal sleep_completed(duration_minutes: int, recovery_quality: float)
 @export_range(0.0, 1.0, 0.01) var hunger_warning_threshold: float = 0.75
 @export_range(0.0, 1.0, 0.01) var hunger_critical_threshold: float = 0.90
 
-@export_range(0.0, 1.0, 0.01) var focus_warning_threshold: float = 0.30
-@export_range(0.0, 1.0, 0.01) var focus_critical_threshold: float = 0.10
-
 @export_group("")
 
 @export_group("Collapse")
 
 @export_range(0.0, 1.0, 0.01) var collapse_hunger_cost: float = 0.20
 @export_range(0.0, 1.0, 0.01) var collapse_fatigue_recovery: float = 0.30
-@export_range(0.0, 1.0, 0.01) var collapse_focus_recovery: float = 0.25
 
 @export_group("")
 
@@ -89,8 +80,10 @@ var selected_workshop_job: JobData = null
 var claim_menu_claimable_index: int = 0
 var is_sleeping: bool = false
 var last_sleep_day: int = -1
+var last_staged_sleep_result: Dictionary = {}
 var is_collapsing: bool = false
 var last_collapse_day: int = -1
+var _nightmare_effects_applying: bool = false
 
 
 # Lifecycle and time updates
@@ -129,7 +122,6 @@ func on_minute_changed(_minute: int) -> void:
 
 	increase_hunger(hunger_increase_per_min)
 	increase_fatigue(fatigue_increase_per_min)
-	_apply_awake_focus_loss()
 	_check_for_collapse()
 
 # Input routing
@@ -170,10 +162,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	elif current_interactable is PickUpItem:
 		var pickup_item: PickUpItem = current_interactable as PickUpItem
-		pickup_item.on_player_interact(self)
+		# Lock before inventory observers run so a checkpoint cannot capture a
+		# pickup halfway through the interaction.
+		_play_pickup_action()
+		pickup_item.on_player_gather(self)
 		if pickup_item.is_collecting:
 			_on_interactable_deactivated(pickup_item)
-		_play_pickup_action()
 
 	elif current_interactable is JobBoard:
 		var job_board: JobBoard = current_interactable as JobBoard
@@ -183,7 +177,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var sleep_spot: SleepSpot = current_interactable as SleepSpot
 		sleep_spot.on_player_interact(self)
 
-	elif current_interactable.is_in_group("city_storage_areas"):
+	elif current_interactable.is_in_group("city_storage_areas") or current_interactable.is_in_group("city_storage_annex_areas"):
 		current_interactable.on_player_interact(self)
 	elif current_interactable.is_in_group("worksite_stockpiles"):
 		current_interactable.on_player_interact(self)
@@ -363,17 +357,11 @@ func increase_hunger(amount: float) -> bool:
 		return true
 	return false
 
-func get_focus() -> float:
-	return focus
-
 func get_fatigue_percent() -> int:
 	return int(fatigue * 100.0)
 
 func get_hunger_percent() -> int:
 	return int(hunger * 100.0)
-
-func get_focus_percent() -> int:
-	return int(get_focus() * 100.0)
 
 # Workshop storage menu flow
 
@@ -865,26 +853,7 @@ func _play_pickup_action() -> void:
 
 	set_movement_locked(&"pickup", false)
 
-# Focus and experience
-
-func consume_focus(amount: float) -> bool:
-	if debug_disable_player_needs:
-		return amount > 0.0
-	if amount <= 0.0 or focus <= 0.0:
-		return false
-
-	focus = clampf(focus - amount, 0.0, 1.0)
-	condition_changed.emit()
-	return true
-
-func recover_focus(amount: float) -> bool:
-	if amount <= 0.0 or focus >= 1.0:
-		return false
-
-	focus = clampf(focus + amount, 0.0, 1.0)
-	condition_changed.emit()
-	return true
-
+# Experience
 func add_experience(amount: int) -> bool:
 	if amount <= 0 or current_experience >= experience_required:
 		return false
@@ -896,27 +865,6 @@ func add_experience(amount: int) -> bool:
 
 	experience_changed.emit()
 	return true
-
-func _apply_awake_focus_loss() -> void:
-	var fatigue_pressure: float = clampf(
-		(fatigue - 0.5) / 0.5,
-		0.0,
-		1.0
-	)
-
-	var hunger_pressure: float = clampf(
-		(hunger - 0.5) / 0.5,
-		0.0,
-		1.0
-	)
-
-	var total_focus_loss: float = (
-		focus_loss_per_min
-		+ focus_loss_from_fatigue_per_min * fatigue_pressure
-		+ focus_loss_from_hunger_per_min * hunger_pressure
-	)
-
-	consume_focus(total_focus_loss)
 
 # Sleep flow
 
@@ -931,7 +879,7 @@ func sleep() -> bool:
 	return sleep_for_minutes(sleep_duration_minutes)
 
 func sleep_for_minutes(duration_minutes: int) -> bool:
-	if not can_sleep() or duration_minutes <= 0:
+	if not can_sleep() or duration_minutes <= 0 or not time_component_manager.can_advance_time():
 		return false
 
 	var recovery_quality: float = get_sleep_recovery_quality()
@@ -944,17 +892,14 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 	is_sleeping = true
 	set_movement_locked(&"sleep", true)
 
-	time_component_manager.advance_minutes(duration_minutes)
+	if not time_component_manager.advance_minutes(duration_minutes):
+		is_sleeping = false
+		set_movement_locked(&"sleep", false)
+		return false
 	last_sleep_day = TimeComponentManager.current_day
 
 	var fatigue_recovery: float = (
 		sleep_fatigue_recovery
-		* recovery_quality
-		* duration_ratio
-	)
-
-	var focus_recovery: float = (
-		sleep_focus_recovery
 		* recovery_quality
 		* duration_ratio
 	)
@@ -965,12 +910,6 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 		max_fatigue
 	)
 
-	focus = clampf(
-		focus + focus_recovery,
-		0.0,
-		1.0
-	)
-
 	condition_changed.emit()
 
 	is_sleeping = false
@@ -978,6 +917,61 @@ func sleep_for_minutes(duration_minutes: int) -> bool:
 
 	sleep_completed.emit(duration_minutes, recovery_quality)
 	return true
+
+func sleep_staged() -> bool:
+	return await sleep_for_minutes_staged(sleep_duration_minutes)
+
+func sleep_for_minutes_staged(duration_minutes: int) -> bool:
+	last_staged_sleep_result = {"completed": false, "advanced_minutes": 0, "reason": "not_started"}
+	if not can_sleep() or duration_minutes <= 0 or not time_component_manager.can_advance_time():
+		last_staged_sleep_result.reason = "cannot_sleep"
+		return false
+
+	var player_weak: WeakRef = weakref(self)
+	var captured_scene: Node = get_tree().current_scene
+	if captured_scene == null:
+		last_staged_sleep_result.reason = "missing_scene"
+		return false
+	var recovery_quality: float = get_sleep_recovery_quality()
+	is_sleeping = true
+	set_movement_locked(&"sleep", true)
+	var result: Dictionary = await time_component_manager.advance_minutes_staged(
+		duration_minutes,
+		self,
+		Callable(self, "_can_continue_staged_sleep")
+	)
+	var live_player: Player = player_weak.get_ref() as Player
+	if not is_instance_valid(live_player) or live_player != self:
+		return false
+	var actual_minutes: int = maxi(0, int(result.get("advanced_minutes", 0)))
+	last_staged_sleep_result = result.duplicate(true)
+	last_staged_sleep_result["advanced_minutes"] = actual_minutes
+	var completed: bool = bool(result.get("completed", false))
+	if not _is_staged_sleep_context_current(live_player, captured_scene):
+		if live_player.is_inside_tree() and not live_player.is_queued_for_deletion():
+			is_sleeping = false
+			set_movement_locked(&"sleep", false)
+		return false
+	if actual_minutes > 0:
+		last_sleep_day = TimeComponentManager.current_day
+		var duration_ratio: float = clampf(float(actual_minutes) / float(maxi(1, sleep_duration_minutes)), 0.0, 1.0)
+		var fatigue_recovery: float = sleep_fatigue_recovery * recovery_quality * duration_ratio
+		fatigue = clampf(fatigue - fatigue_recovery, min_fatigue, max_fatigue)
+	is_sleeping = false
+	set_movement_locked(&"sleep", false)
+	if actual_minutes > 0:
+		condition_changed.emit()
+		live_player = player_weak.get_ref() as Player
+		if not is_instance_valid(live_player) or live_player != self or not _is_staged_sleep_context_current(live_player, captured_scene):
+			return completed
+		sleep_completed.emit(actual_minutes, recovery_quality)
+	return completed
+
+func _is_staged_sleep_context_current(live_player: Player, captured_scene: Node) -> bool:
+	return is_instance_valid(live_player) and live_player == self and live_player.is_inside_tree() and not live_player.is_queued_for_deletion() and is_instance_valid(captured_scene) and not captured_scene.is_queued_for_deletion() and get_tree().current_scene == captured_scene and captured_scene.is_ancestor_of(self)
+
+func _can_continue_staged_sleep() -> bool:
+	return is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion() and is_sleeping
 
 func can_sleep() -> bool:
 	if is_sleeping:
@@ -1001,19 +995,8 @@ func get_hunger_severity() -> int:
 		return ConditionSeverity.WARNING
 	return ConditionSeverity.NORMAL
 
-func get_focus_severity() -> int:
-	if focus <= focus_critical_threshold:
-		return ConditionSeverity.CRITICAL
-	if focus <= focus_warning_threshold:
-		return ConditionSeverity.WARNING
-	return ConditionSeverity.NORMAL
-
 func has_critical_condition() -> bool:
-	# Hunger affects collapse indirectly by accelerating Focus loss.
-	return (
-		get_fatigue_severity() == ConditionSeverity.CRITICAL
-		or get_focus_severity() == ConditionSeverity.CRITICAL
-	)
+	return get_fatigue_severity() == ConditionSeverity.CRITICAL
 
 # Collapse and Nightmare flow
 
@@ -1027,7 +1010,6 @@ func _check_for_collapse() -> void:
 		collapse()
 
 func _reset_debug_needs() -> void:
-	focus = 1.0
 	fatigue = min_fatigue
 	hunger = min_hunger
 	condition_changed.emit()
@@ -1058,33 +1040,61 @@ func collapse() -> void:
 		last_collapse_day = TimeComponentManager.current_day
 		push_warning("Player failed to enter Nightmare World.")
 
-func apply_nightmare_consequences(total_world_minutes: int) -> void:
+func apply_nightmare_consequences(total_world_minutes: int) -> bool:
+	# Keep the existing synchronous API for callers which require its all-or-
+	# nothing contract. The normal Nightmare return uses staged advancement.
+	if total_world_minutes <= 0 or is_sleeping or _nightmare_effects_applying \
+			or SceneTransition.has_node("NightmareReturnOperation") or not time_component_manager.can_advance_time():
+		return false
 	is_sleeping = true
-	time_component_manager.advance_minutes(total_world_minutes)
+	if not time_component_manager.advance_minutes(total_world_minutes):
+		is_sleeping = false
+		return false
+	return _complete_nightmare_consequences(total_world_minutes) > 0
 
-	hunger = clampf(
-		hunger + collapse_hunger_cost,
-		min_hunger,
-		max_hunger
-	)
 
-	fatigue = clampf(
-		fatigue - collapse_fatigue_recovery,
-		min_fatigue,
-		max_fatigue
-	)
-
-	focus = clampf(
-		focus + collapse_focus_recovery,
-		0.0,
-		1.0
-	)
-
+## Returns 0 if rejected, 1 if applied but completion needs a live Player,
+## or 2 if both the fixed effects and completion signal have been dispatched.
+func _complete_nightmare_consequences(total_world_minutes: int) -> int:
+	if total_world_minutes <= 0 or not is_sleeping or _nightmare_effects_applying:
+		return 0
+	_nightmare_effects_applying = true
+	var player_weak: WeakRef = weakref(self)
+	hunger = clampf(hunger + collapse_hunger_cost, min_hunger, max_hunger)
+	fatigue = clampf(fatigue - collapse_fatigue_recovery, min_fatigue, max_fatigue)
 	is_sleeping = false
 	last_collapse_day = TimeComponentManager.current_day
 	last_sleep_day = TimeComponentManager.current_day
 	condition_changed.emit()
+	# An observer may remove the Player or change scenes synchronously. Keep
+	# the applied effects, but let the return operation deliver the completion
+	# on a valid replacement instead of signalling from a stale Player.
+	var live_player: Player = player_weak.get_ref() as Player
+	var emitted: bool = false
+	if is_instance_valid(live_player) and live_player.is_inside_tree() \
+			and not live_player.is_queued_for_deletion() and get_tree().current_scene != null \
+			and get_tree().current_scene.is_ancestor_of(live_player):
+		emitted = true
+		live_player.collapse_completed.emit(total_world_minutes)
+	live_player = player_weak.get_ref() as Player
+	if is_instance_valid(live_player):
+		live_player._nightmare_effects_applying = false
+	return 2 if emitted else 1
+
+
+## A scene change during condition_changed can defer the signal. It must not
+## reapply the fixed costs or allow a reentrant synchronous Nightmare request.
+func _emit_deferred_nightmare_completion(total_world_minutes: int) -> bool:
+	if total_world_minutes <= 0 or _nightmare_effects_applying:
+		return false
+	_nightmare_effects_applying = true
+	var player_weak: WeakRef = weakref(self)
 	collapse_completed.emit(total_world_minutes)
+	var live_player: Player = player_weak.get_ref() as Player
+	if is_instance_valid(live_player):
+		live_player._nightmare_effects_applying = false
+	return true
+
 
 func _enter_nightmare() -> bool:
 	var nightmare_world: NightmareWorld = (

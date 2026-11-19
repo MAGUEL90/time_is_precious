@@ -8,6 +8,8 @@ const STATE_NAME: String = "CommonTravelingMerchant"
 
 ## Main-map playtest: show the first visit on day zero without changing the template.
 @export var debug_first_day_visit: bool = false
+## Scene introduction gate; the persistent visit ledger remains active.
+@export var world_access_enabled: bool = true
 
 @onready var interactable_label_component: Control = $InteractableLabelComponent
 @onready var interaction_area: Area2D = $InteractionArea
@@ -31,6 +33,10 @@ func _ready() -> void:
 			state.config = state.config.duplicate(true)
 			state.config.first_day = 0
 		WorkStateRuntime.add_child(state)
+	if not world_access_enabled:
+		hide()
+		interaction_area.set_deferred("monitoring", false)
+		$InteractionArea/CollisionShape2D.set_deferred("disabled", true)
 	interaction_area.body_entered.connect(_on_body_entered)
 	interaction_area.body_exited.connect(_on_body_exited)
 	state.changed.connect(_refresh)
@@ -41,7 +47,7 @@ func _ready() -> void:
 	_refresh()
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player:
+	if world_access_enabled and body is Player:
 		player = body
 		if state.is_present():
 			player._on_interactable_activated(self)
@@ -54,6 +60,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player = null
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if not state.is_present() or not is_instance_valid(player) or not player.is_inside_tree():
 		return false
 	if player.is_sleeping or player.is_collapsing or SceneTransition.is_transitioning:
@@ -194,7 +202,7 @@ func _on_trade_requested(item_id: String, quantity: int, buying: bool) -> void:
 		menu.show_result(result.message)
 
 func _refresh() -> void:
-	var present: bool = state.is_present()
+	var present: bool = world_access_enabled and state.is_present()
 	$MerchantVisual.visible = present
 	$VisitNotice/Label.text = state.get_status_text()
 	$VisitNotice.hide()
@@ -214,7 +222,7 @@ func _refresh() -> void:
 func _bind_notification_ui() -> void:
 	var notification_ui: Node = get_tree().get_first_node_in_group("city_notification_ui")
 	if is_instance_valid(notification_ui) and notification_ui.has_method("bind_merchant_state"):
-		notification_ui.call("bind_merchant_state", state)
+		notification_ui.call("bind_merchant_state", state, world_access_enabled)
 
 func _process(_delta: float) -> void:
 	# Catch collapse, fades and teleports even when no physics exit has fired yet.

@@ -15,15 +15,15 @@ const MAX_INTEGER_TEXT_LENGTH: int = 20
 
 const OBJECT_FIELDS: Dictionary = {
 	"CitizenData": [
-		"citizen_id", "display_name", "satisfaction", "reliability",
+		"citizen_id", "display_name", "satisfaction",
 		"food_fulfilled", "clothing_fulfilled", "shelter_fulfilled", "experience",
 		"visual_profile", "population_status", "employment_status", "profession",
 	],
 	"WorkerData": [
 		"worker_id", "display_name", "profession", "profession_xp", "current_order_id", "physical_approach",
-		"current_job_id", "current_work_status", "profession_star", "efficiency",
+		"current_job_id", "current_work_status", "resignation_pending", "profession_star", "efficiency",
 		"payroll_start_day", "payroll_paid_from_day", "payroll_paid_until_day", "payroll_period_rate", "payroll_last_attempt_day", "payroll_contract_days", "payroll_paid_start_minute",
-		"reliability", "wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
+		"wage_shekel_per_day", "food_fulfilled", "clothing_fulfilled",
 		"shelter_fulfilled", "satisfaction",
 	],
 	"VisualProfile": ["skin_tone", "expression", "hair_style", "clothes_id", "accessory"],
@@ -45,6 +45,8 @@ const CONTRACT_FIELDS: Array[String] = ["payroll_contract_days", "payroll_paid_s
 var allow_legacy_contract_fields: bool = false
 var allow_legacy_worker_fields: bool = false
 var allow_legacy_approach_field: bool = false
+var allow_legacy_reliability_field: bool = false
+var allow_legacy_resignation_field: bool = false
 var error: String = ""
 
 
@@ -56,6 +58,30 @@ func encode(value: Variant) -> Variant:
 func decode(data: Variant) -> Variant:
 	error = ""
 	return _decode_value(data, 0)
+
+
+static func encode_float64_hex(value: float) -> String:
+	if not is_finite(value):
+		return ""
+	var bytes := PackedByteArray()
+	bytes.resize(8)
+	bytes.encode_double(0, value)
+	return bytes.hex_encode()
+
+
+static func decode_float64_hex(hex_value: String) -> Variant:
+	if hex_value.length() != 16:
+		return null
+	for index: int in range(hex_value.length()):
+		if not "0123456789abcdef".contains(hex_value.substr(index, 1)):
+			return null
+	var bytes: PackedByteArray = hex_value.hex_decode()
+	if bytes.size() != 8:
+		return null
+	var value: float = bytes.decode_double(0)
+	if not is_finite(value):
+		return null
+	return value
 
 
 func _encode_value(value: Variant, depth: int) -> Variant:
@@ -151,7 +177,14 @@ func _encode_object(value: Object, depth: int) -> Variant:
 			if field_value != null and typeof(field_value) != TYPE_STRING:
 				_fail("WorkOrder.tool_used_instance_id must be null or String.")
 				return null
-		var encoded_field: Variant = _encode_value(field_value, depth + 1)
+		var encoded_field: Variant
+		if approved_name in ["CitizenData", "WorkerData"] and field_name == "satisfaction":
+			if typeof(field_value) != TYPE_FLOAT or not is_finite(field_value):
+				_fail("%s.satisfaction must be a finite float." % approved_name)
+				return null
+			encoded_field = _tagged("float64", {"value": encode_float64_hex(float(field_value))})
+		else:
+			encoded_field = _encode_value(field_value, depth + 1)
 		if not error.is_empty():
 			return null
 		fields[field_name] = encoded_field
@@ -211,6 +244,15 @@ func _decode_tagged_dictionary(data: Dictionary, depth: int) -> Variant:
 				_fail("Vector2 coordinates must be finite.")
 				return null
 			return Vector2(data["x"], data["y"])
+		"float64":
+			if not _has_exact_string_keys(data, [TAG_KEY, "value"]) or typeof(data["value"]) != TYPE_STRING:
+				_fail("Malformed float64 tag.")
+				return null
+			var decoded_float: Variant = decode_float64_hex(data["value"])
+			if decoded_float == null:
+				_fail("Float64 tag must contain canonical finite binary64 bytes.")
+				return null
+			return decoded_float
 		"array":
 			return _decode_array(data, depth)
 		"dictionary":
@@ -301,8 +343,12 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		_fail("Object field map exceeds the %d item limit." % MAX_COLLECTION_SIZE)
 		return null
 	var allowed_fields: Array = OBJECT_FIELDS[type_name].duplicate()
+	if allow_legacy_reliability_field and type_name in ["CitizenData", "WorkerData"]:
+		allowed_fields.append("reliability")
 	if allow_legacy_approach_field and type_name == "WorkerData":
 		allowed_fields.erase("physical_approach")
+	if allow_legacy_resignation_field and type_name == "WorkerData":
+		allowed_fields.erase("resignation_pending")
 	if allow_legacy_worker_fields and type_name == "WorkerData":
 		for field: String in PAYROLL_FIELDS:
 			allowed_fields.erase(field)
@@ -324,6 +370,13 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 		var decoded_field: Variant = _decode_value(field_data[field_name], depth + 1)
 		if not error.is_empty():
 			return null
+		if field_name == "reliability" and type_name in ["CitizenData", "WorkerData"]:
+			# Versions through 9 stored this float. Preserve the old CitizenData
+			# bounds; WorkerData previously accepted any finite float.
+			if typeof(decoded_field) != TYPE_FLOAT or not is_finite(decoded_field) or (type_name == "CitizenData" and (decoded_field < 0.0 or decoded_field > 1.0)):
+				_fail("Invalid legacy %s.reliability." % type_name)
+				return null
+			continue
 		var prepared_field: Variant = _prepare_object_field(instance, type_name, field_name, decoded_field)
 		if not error.is_empty():
 			return null
@@ -333,7 +386,7 @@ func _decode_object(data: Dictionary, depth: int) -> Variant:
 
 func _prepare_object_field(instance: Object, type_name: String, field_name: String, decoded: Variant) -> Variant:
 	if type_name == "WorkerData" and field_name == "physical_approach":
-		if not decoded is Dictionary or not WorkerData.physical_approach_valid(decoded):
+		if not decoded is Dictionary or not WorkerData.physical_approach_valid(decoded, not allow_legacy_resignation_field):
 			_fail("Invalid WorkerData.physical_approach.")
 			return null
 		return decoded

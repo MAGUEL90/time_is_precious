@@ -6,13 +6,18 @@ const CONSTRUCTION_STATE: Script = preload("res://scenes/workshop_plot/workshop_
 const WORKSHOP: PackedScene = preload("res://scenes/workshop/workshop.tscn")
 const HAND_ICON: Texture2D = preload("res://assets/ui/ui_icon/hand_job_icon.png")
 const HAMMER_ICON: Texture2D = preload("res://assets/items/stone_hammer.png")
+const OPEN_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_0.png")
 const BUILT_PLOT: Texture2D = preload("res://assets/ui/building/plot_level_1.png")
+const OPEN_BOARD: Texture2D = preload("res://assets/objects/object_board_0.png")
 const BUILT_BOARD: Texture2D = preload("res://assets/objects/object_board_1.png")
 const INACTIVE_BAR_SHADER: Shader = preload("res://scenes/workshop_plot/inactive_progress_gray.gdshader")
 const WORKER_DUST_SCRIPT: Script = preload("res://scenes/workshop_plot/worker_entry_dust.gd")
+const MAX_MANUAL_CLEARING_MINUTES: int = 180
 
 ## Stable unique identity for this authored plot across map reloads.
 @export var plot_id: String = ""
+## Scene introduction gate; construction identity and production remain active.
+@export var world_access_enabled: bool = true
 @export var worker_dust_enabled: bool = true
 ## Local plot coordinates; keeps activity puffs inside the work area.
 @export var worker_dust_area: Rect2 = Rect2(-14, -14, 28, 36)
@@ -26,6 +31,54 @@ var _arrived_worker_tasks: Dictionary = {}
 var _previous_construction_phase: String = ""
 var _completion_bar_remaining: float = 0.0
 var _inactive_bar_material: ShaderMaterial
+var _desired_plot_monitoring: bool = true
+var _plot_monitoring_sync_queued: bool = false
+var _plot_ready_once: bool = false
+
+
+## The view supplies the building kind; plot_id supplies only its identity.
+func is_citizen_house_plot() -> bool:
+	return false
+
+
+func _enter_tree() -> void:
+	# A parked/detached view can be reattached without another _ready() call.
+	if not _plot_ready_once or not is_instance_valid(construction):
+		return
+	if not construction.bind_plot_view(self, is_citizen_house_plot()):
+		var conflict: String = str(construction.order_id)
+		construction = null
+		_disable_conflicting_plot(conflict)
+		return
+	if not construction.changed.is_connected(_sync_construction):
+		construction.changed.connect(_sync_construction)
+	# Children enter the tree after their parent; refresh spatial data afterward.
+	_refresh_reentered_plot.call_deferred()
+
+
+func _refresh_reentered_plot() -> void:
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(construction):
+		return
+	construction.worker_entry_position = get_worker_entry_position()
+	_sync_construction()
+
+
+func _disable_conflicting_plot(identity: String) -> void:
+	push_warning("Duplicate or mismatched plot identity: " + identity)
+	remove_from_group("workshop_plots")
+	hide()
+	process_mode = Node.PROCESS_MODE_DISABLED
+	# A rejected view must not remain an invisible blocker or interactable.
+	var pending: Array[Node] = [self]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if node is CollisionObject2D:
+			node.set_deferred("collision_layer", 0)
+			node.set_deferred("collision_mask", 0)
+			if node is Area2D:
+				node.set_deferred("monitoring", false)
+				node.set_deferred("monitorable", false)
+		pending.append_array(node.get_children())
 
 func mark_worker_arrived(worker_id: String, task_key: String) -> void:
 	var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -48,7 +101,13 @@ func begin_worker_approach(worker_id: String, task_key: String) -> void:
 		if departures != null and departures.get_child_count() > 0:
 			origin = departures.get_child(0).global_position
 	worker.begin_physical_approach("plot", task_key, construction.order_id, origin, entry)
-	if origin.distance_to(entry) <= 0.1:
+	var scheduled: bool = task_key in [construction.order_id + ":clearing", construction.order_id + ":building"]
+	var production_order: WorkOrder = WorkManager.active_orders.get(task_key)
+	if production_order != null and WorkManager.is_shaping_order(production_order):
+		scheduled = true
+	var minute_of_day: int = TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	var on_shift: bool = minute_of_day >= construction.SHIFT_START and minute_of_day < construction.SHIFT_END
+	if origin.distance_to(entry) <= 0.1 and (not scheduled or on_shift):
 		worker.mark_physical_arrival(task_key)
 
 func get_worker_entry_position() -> Vector2:
@@ -100,6 +159,8 @@ func _has_dust_activity() -> bool:
 	if construction == null:
 		return false
 	if construction.phase in ["clearing", "building"]:
+		if not construction.has_active_worker_at_plot():
+			return false
 		var task_key: String = construction.order_id + ":" + construction.phase
 		for worker_id: String in construction.worker_ids:
 			var worker: WorkerData = WorkerDatabase.get_worker_data(worker_id)
@@ -124,36 +185,47 @@ func _worker_is_at_plot_task(worker: WorkerData, task_key: String) -> bool:
 var player: Player
 var menu: CanvasLayer
 var construction: Node
+var _menu_session_player: Player
+var _menu_session_scene: Node
+var _menu_session_menu: CanvasLayer
 var _previous_paused: bool = false
 var _manual_clearing: bool = false
 signal clearing_finished
 
 func _ready() -> void:
+	_plot_ready_once = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_worker_dust_rng.randomize()
-	add_to_group("workshop_plots")
 	# The authored board anchors both construction and completed-workshop access.
 	interaction_area.position = $Board.position + $Board.offset
 	$InteractableComponent/CollisionShape2D.position = Vector2.ZERO
 	interactable_label_component.position = interaction_area.position + Vector2(-8, -26)
-	interaction_area.body_entered.connect(_on_body_entered)
-	interaction_area.body_exited.connect(_on_body_exited)
 	var identity: String = plot_id if not plot_id.is_empty() else str(name)
 	if identity == "WorkshopPlot":
 		identity = "main_workshop"
 	var state_name: String = "MainWorkshopConstruction" if identity == "main_workshop" else "WorkshopConstruction_" + identity.sha256_text()
-	construction = WorkStateRuntime.get_node_or_null(state_name)
-	if construction == null:
-		construction = CONSTRUCTION_STATE.new()
-		construction.name = state_name
-		construction.order_id = "construction:" + identity
-		WorkStateRuntime.add_child(construction)
+	var next_state: Node = WorkStateRuntime.get_node_or_null(state_name)
+	var created: bool = next_state == null
+	if created:
+		next_state = CONSTRUCTION_STATE.new()
+		next_state.name = state_name
+		next_state.order_id = "construction:" + identity
+		WorkStateRuntime.add_child(next_state)
+	if next_state.get_script() != CONSTRUCTION_STATE or str(next_state.order_id) != "construction:" + identity or not next_state.bind_plot_view(self, is_citizen_house_plot()):
+		if created:
+			next_state.free()
+		_disable_conflicting_plot(identity)
+		return
+	construction = next_state
+	add_to_group("workshop_plots")
+	interaction_area.body_entered.connect(_on_body_entered)
+	interaction_area.body_exited.connect(_on_body_exited)
 	construction.worker_entry_position = get_worker_entry_position()
 	construction.changed.connect(_sync_construction)
 	_sync_construction()
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player and construction.phase != "built":
+	if world_access_enabled and body is Player and construction.phase != "built":
 		player = body
 		player._on_interactable_activated(self)
 
@@ -163,6 +235,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player._on_interactable_deactivated(self)
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if construction == null or construction.phase == "built":
 		return false
 	if not is_instance_valid(player) or not player.is_inside_tree():
@@ -176,7 +250,7 @@ func has_player_access() -> bool:
 	return not shape.disabled and not player_shape.disabled and interaction_area.overlaps_body(player) and shape.shape.collide(shape.global_transform, player_shape.shape, player_shape.global_transform)
 
 func on_player_interact(interacting_player: Player) -> void:
-	if interacting_player != player or is_instance_valid(menu) or not has_player_access():
+	if _manual_clearing or interacting_player != player or is_instance_valid(menu) or not has_player_access():
 		return
 	if not player.can_move or player.current_interactable != self or get_tree().paused:
 		return
@@ -184,10 +258,14 @@ func on_player_interact(interacting_player: Player) -> void:
 	player.set_movement_locked(&"workshop_plot", true)
 	interactable_label_component.hide()
 	menu = PLOT_MENU.instantiate()
+	_menu_session_player = player
+	_menu_session_scene = get_tree().current_scene
+	_menu_session_menu = menu
 	add_child(menu)
-	menu.closed.connect(_on_menu_closed)
+	menu.closed.connect(_on_menu_closed.bind(menu))
 	menu.build_requested.connect(_on_build_requested)
 	menu.clearing_requested.connect(_on_clearing_requested)
+	menu.replacement_requested.connect(_on_replacement_requested)
 	get_tree().paused = true
 	menu.open_menu(construction)
 	get_viewport().set_input_as_handled()
@@ -202,26 +280,46 @@ func _on_build_requested(ids: Array[String]) -> void:
 	else:
 		menu.show_error(str(result.get("message", "Could not start construction.")))
 
+func _on_replacement_requested(ids: Array[String]) -> void:
+	if not is_instance_valid(menu) or not has_player_access():
+		close_menu()
+		return
+	var result: Dictionary = construction.add_replacement_workers(ids)
+	if bool(result.get("success", false)):
+		close_menu()
+	else:
+		menu.show_error(str(result.get("message", "Could not assign workers.")))
+
 func _sync_construction() -> void:
 	_sync_build_progress()
+	var built: bool = construction.phase == "built"
 	$ToBeClean.visible = construction.phase in ["uncleared", "clearing"]
-	$TableResources.visible = construction.phase == "built"
+	$FinishedClayWorkshop.visible = built
+	$TableResources.visible = built
+	# Keep the existing recipe preview above the new ground-sorted artwork.
+	$TableResources.z_index = 1 if built else 0
 	$InteractableLabelComponent/HammerIcon.texture = HAND_ICON if construction.phase in ["uncleared", "clearing"] else HAMMER_ICON
-	if construction.phase == "built":
+	for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
+		art.texture = BUILT_PLOT if built else OPEN_PLOT
+		art.visible = not built
+	$Board.texture = BUILT_BOARD if built else OPEN_BOARD
+	_set_plot_monitoring(not built)
+	if built:
 		close_menu()
 		interactable_label_component.hide()
-		interaction_area.set_deferred("monitoring", false)
 		if is_instance_valid(player):
 			player._on_interactable_deactivated(self)
-		# Regions retain the complete authored texture while sorting rear wall,
-		# side posts and table at their own ground contact points.
-		for art: Sprite2D in [$Plot, $LeftWall, $LeftWallTop, $RightWall, $RightWallTop, $Table, $TableLegs]:
-			art.texture = BUILT_PLOT
-		$Board.texture = BUILT_BOARD
 		$Label.text = ""
-		if not has_node("BuiltWorkshop"):
+		var old_backend: WorkShop = get_node_or_null("BuiltWorkshop") as WorkShop
+		if old_backend != null and old_backend.is_queued_for_deletion():
+			# Save/Continue can restore a built phase while the previous view is
+			# still queued for removal. Recreate it once that node exits the tree.
+			if not old_backend.tree_exited.is_connected(_on_retired_workshop_exited):
+				old_backend.tree_exited.connect(_on_retired_workshop_exited, CONNECT_ONE_SHOT)
+		elif old_backend == null:
 			var workshop: WorkShop = WORKSHOP.instantiate()
 			workshop.name = "BuiltWorkshop"
+			workshop.world_access_enabled = world_access_enabled
 			workshop.set_meta("interaction_highlight_root", self)
 			# Keep the existing production/claim backend; this plot owns its artwork.
 			workshop.get_node("Sprite2D").hide()
@@ -232,12 +330,63 @@ func _sync_construction() -> void:
 			prompt.size = Vector2(16, 16)
 			add_child(workshop)
 			_show_table_resource(workshop)
-	elif construction.phase == "clearing":
-		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing"
-	elif construction.phase == "building":
-		$Label.text = "Contract expired" if construction._all_workers_payroll_blocked() else "Building"
 	else:
-		$Label.text = ""
+		_retire_built_workshop()
+		if construction.phase == "clearing":
+			$Label.text = "No worker" if construction.worker_ids.is_empty() and not construction.clearing_by_player else ("Contract expired" if construction._all_workers_payroll_blocked() and not construction.clearing_by_player else "Clearing")
+		elif construction.phase == "building":
+			$Label.text = "No workers" if construction.worker_ids.is_empty() else ("Contract expired" if construction._all_workers_payroll_blocked() else "Building")
+		else:
+			$Label.text = ""
+	_apply_world_access()
+
+
+func _apply_world_access() -> void:
+	if world_access_enabled:
+		return
+	hide()
+	# Keep state/view bindings, but remove invisible interaction and solid bodies.
+	# Layer masks stay zero even when a keeper's phase sync toggles its shapes.
+	var pending: Array[Node] = [self]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if node is CollisionObject2D:
+			node.set_deferred("collision_layer", 0)
+			node.set_deferred("collision_mask", 0)
+			if node is Area2D:
+				node.set_deferred("monitoring", false)
+				node.set_deferred("monitorable", false)
+		pending.append_array(node.get_children())
+
+
+func _retire_built_workshop() -> void:
+	var workshop: WorkShop = get_node_or_null("BuiltWorkshop") as WorkShop
+	if workshop == null or workshop.is_queued_for_deletion():
+		return
+	if is_instance_valid(workshop.player_reff):
+		workshop.player_reff._on_interactable_deactivated(workshop)
+	workshop.interactable_label_component.hide()
+	workshop.interactable_component.set_deferred("monitoring", false)
+	workshop.queue_free()
+
+
+func _set_plot_monitoring(enabled: bool) -> void:
+	enabled = enabled and world_access_enabled
+	_desired_plot_monitoring = enabled
+	if not _plot_monitoring_sync_queued and interaction_area.monitoring != enabled:
+		_plot_monitoring_sync_queued = true
+		_apply_plot_monitoring.call_deferred()
+
+
+func _apply_plot_monitoring() -> void:
+	_plot_monitoring_sync_queued = false
+	if is_inside_tree() and is_instance_valid(interaction_area) and interaction_area.monitoring != _desired_plot_monitoring:
+		interaction_area.monitoring = _desired_plot_monitoring
+
+
+func _on_retired_workshop_exited() -> void:
+	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(construction) and construction.phase == "built":
+		_sync_construction.call_deferred()
 
 func _sync_build_progress() -> void:
 	var completed: bool = (
@@ -307,15 +456,39 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	if use_player and (player.has_critical_condition() or TimeComponentManager.is_paused):
 		menu.show_error("Recover before working, and resume time.")
 		return
-	var result: Dictionary = construction.start_clearing(ids, use_player)
+	var session_menu: CanvasLayer = menu
+	var session_player: Player = player
+	var session_scene: Node = get_tree().current_scene
+	var session_construction: Node = construction
+	var session_tree: SceneTree = get_tree()
+	if use_player:
+		_manual_clearing = true
+		if not _manual_clearing_context_is_valid(session_menu, session_player, session_scene, session_construction):
+			_manual_clearing = false
+			return
+	var result: Dictionary = session_construction.start_clearing(ids, use_player)
 	if not result.success:
-		menu.show_error(result.message)
+		if use_player:
+			_manual_clearing = false
+		if is_instance_valid(session_menu) and menu == session_menu:
+			session_menu.show_error(result.message)
 		return
 	if not use_player:
 		close_menu()
 		return
-	_manual_clearing = true
-	menu.hide()
+	if not is_instance_valid(self):
+		return
+	var session_phase: String = "clearing"
+	if not _manual_clearing_guard(session_menu, session_player, session_scene, session_construction, session_phase):
+		if is_instance_valid(session_construction) and session_construction.phase == "clearing" and session_construction.clearing_by_player:
+			session_construction.interrupt_player_clearing()
+		_manual_clearing = false
+		_finish_manual_session(session_menu, session_player, session_scene)
+		await session_tree.process_frame
+		if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+			clearing_finished.emit()
+		return
+	session_menu.hide()
 	var cover := CanvasLayer.new()
 	cover.layer = 90
 	var shade := ColorRect.new()
@@ -324,18 +497,70 @@ func _on_clearing_requested(ids: Array[String], use_player: bool) -> void:
 	cover.add_child(shade)
 	add_child(cover)
 	await get_tree().create_timer(0.15, true).timeout
-	# Match manual worksites: existing minute signals charge needs exactly once.
-	# The plot keeps its own restriction if a minute starts a collapse.
-	while construction.phase == "clearing" and is_inside_tree() and not is_queued_for_deletion():
-		if not has_player_access() or player.has_critical_condition():
-			break
-		TimeComponentManager.advance_minutes(1)
-	construction.interrupt_player_clearing()
-	await get_tree().create_timer(0.5, true).timeout
-	cover.queue_free()
+	if not is_instance_valid(self):
+		return
+	var guard: Callable = Callable(self, "_manual_clearing_guard").bind(session_menu, session_player, session_scene, session_construction, session_phase)
+	await TimeComponentManager.advance_minutes_staged(MAX_MANUAL_CLEARING_MINUTES, self, guard)
+	if not is_instance_valid(self):
+		return
+	if is_instance_valid(session_construction) and session_construction.phase == "clearing" and session_construction.clearing_by_player:
+		session_construction.interrupt_player_clearing()
+	if is_inside_tree() and not is_queued_for_deletion() and is_instance_valid(session_scene) and get_tree().current_scene == session_scene:
+		await get_tree().create_timer(0.5, true).timeout
+		if not is_instance_valid(self):
+			return
+	if is_instance_valid(cover):
+		cover.queue_free()
 	_manual_clearing = false
-	close_menu()
+	_finish_manual_session(session_menu, session_player, session_scene)
 	clearing_finished.emit()
+
+# Keep cached objects as Variants here so freed references reach is_instance_valid() instead of failing typed argument checks.
+func _manual_clearing_guard(session_menu: Variant, session_player: Variant, session_scene: Variant, session_construction: Variant, session_phase: String) -> bool:
+	if not _manual_clearing_context_is_valid(session_menu, session_player, session_scene, session_construction):
+		return false
+	if session_phase != "clearing" or session_construction.phase != "clearing" or not session_construction.clearing_by_player:
+		return false
+	return true
+
+func _manual_clearing_context_is_valid(session_menu: Variant, session_player: Variant, session_scene: Variant, session_construction: Variant) -> bool:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_menu) or menu != session_menu or not session_menu.is_inside_tree() or session_menu.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_player) or player != session_player or not session_player.is_inside_tree() or session_player.is_queued_for_deletion():
+		return false
+	if not is_instance_valid(session_scene) or session_scene.is_queued_for_deletion() or get_tree().current_scene != session_scene or not session_scene.is_ancestor_of(self) or not session_scene.is_ancestor_of(session_player):
+		return false
+	if not is_instance_valid(session_construction) or construction != session_construction:
+		return false
+	if not _manual_clearing or session_player.current_interactable != self or not has_player_access() or session_player.has_critical_condition():
+		return false
+	return get_tree().paused and not TimeComponentManager.is_paused
+
+func _finish_manual_session(session_menu: Variant, session_player: Variant, session_scene: Variant) -> void:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion():
+		return
+	if menu != session_menu and _menu_session_menu != session_menu:
+		return
+	if not is_instance_valid(session_scene) or session_scene.is_queued_for_deletion() or not session_scene.is_ancestor_of(self):
+		return
+	if not is_instance_valid(session_player) or player != session_player or not session_player.is_inside_tree() or session_player.is_queued_for_deletion() or (session_player.current_interactable != self and session_player.current_interactable != null):
+		return
+	if is_instance_valid(session_menu) and menu == session_menu and session_menu.is_inside_tree() and not session_menu.is_queued_for_deletion():
+		close_menu()
+		return
+	if menu == session_menu:
+		menu = null
+	if get_tree().current_scene == session_scene:
+		get_tree().paused = _previous_paused
+	session_player.set_movement_locked(&"workshop_plot", false)
+	if get_tree().current_scene == session_scene and has_player_access() and session_player.current_interactable == self:
+		interactable_label_component.show()
+	if _menu_session_menu == session_menu:
+		_menu_session_menu = null
+		_menu_session_player = null
+		_menu_session_scene = null
 
 
 
@@ -343,13 +568,30 @@ func close_menu() -> void:
 	if is_instance_valid(menu):
 		menu.close_menu()
 
-func _on_menu_closed() -> void:
-	menu = null
-	get_tree().paused = _previous_paused
-	if is_instance_valid(player):
-		player.set_movement_locked(&"workshop_plot", false)
-		if has_player_access() and player.current_interactable == self:
+func _on_menu_closed(closed_menu: CanvasLayer) -> void:
+	if menu == closed_menu:
+		menu = null
+	var session_owner_matches: bool = (
+		closed_menu == _menu_session_menu
+		and is_instance_valid(_menu_session_scene)
+		and not _menu_session_scene.is_queued_for_deletion()
+		and _menu_session_scene.is_ancestor_of(self)
+		and is_instance_valid(_menu_session_player)
+		and _menu_session_player == player
+		and _menu_session_player.is_inside_tree()
+		and not _menu_session_player.is_queued_for_deletion()
+		and (_menu_session_player.current_interactable == self or _menu_session_player.current_interactable == null)
+	)
+	if session_owner_matches:
+		if get_tree().current_scene == _menu_session_scene:
+			get_tree().paused = _previous_paused
+		_menu_session_player.set_movement_locked(&"workshop_plot", false)
+		if get_tree().current_scene == _menu_session_scene and has_player_access() and _menu_session_player.current_interactable == self:
 			interactable_label_component.show()
+	if closed_menu == _menu_session_menu:
+		_menu_session_menu = null
+		_menu_session_player = null
+		_menu_session_scene = null
 
 func _exit_tree() -> void:
 	if _manual_clearing and is_instance_valid(construction):
@@ -357,3 +599,7 @@ func _exit_tree() -> void:
 	close_menu()
 	if is_instance_valid(player) and player.is_inside_tree():
 		player._on_interactable_deactivated(self)
+	if is_instance_valid(construction):
+		if construction.changed.is_connected(_sync_construction):
+			construction.changed.disconnect(_sync_construction)
+		construction.unbind_plot_view(self)

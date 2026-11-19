@@ -3,6 +3,8 @@ extends "res://scenes/test_scenes/test_scene_defense_dialogue.gd"
 ## Run only with isolated APPDATA. Optional write/read phases share that sandbox.
 const ARRIVAL_CODEC = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
 const ARRIVAL_VALUES = preload("res://scenes/new_scenes/save_game/city_save_values.gd")
+const ARRIVAL_LEGACY = preload("res://scenes/test_scenes/legacy_reliability_fixture.gd")
+const SHIFT_DRIVER = preload("res://scenes/test_scenes/workshop_shift_test_driver.gd")
 const ARRIVAL_FILE: String = "user://workshop_arrival_schema8_fixture.json"
 const ARRIVAL_WORKER: String = "schema8_fixture_worker"
 const MANAGED_WORKER: String = "schema8_fixture_managed_worker"
@@ -16,6 +18,8 @@ func _run() -> void:
 	TimeComponentManager.is_paused = false
 	get_tree().paused = false
 	await load_content()
+	player.debug_disable_player_needs = true
+	player.debug_disable_fatigue = true
 	arrival_visuals = content.get_node("YSortWorld/WorkerRuntime/WorkerVisuals")
 	arrival_visuals.set_process(false)
 	for candidate: Node in get_tree().get_nodes_in_group("workshop_plots"):
@@ -61,8 +65,8 @@ func _run() -> void:
 	_assert_legacy_migrations()
 	_assert_invalid_approaches()
 	_assert_overlap_accounting()
-	_assert_home_route_pause()
-	TimeComponentManager.advance_minutes(construction.CLEARING_MINUTES - 1)
+	await _assert_home_route_pause()
+	_expect(SHIFT_DRIVER.work_minutes(construction.CLEARING_MINUTES - 1, arrival_visuals, [ARRIVAL_WORKER] as Array[String]), "The cleaner returns as needed to complete the remaining shifts.")
 	_expect(construction.phase == "empty", "Native clearing releases its worker on completion.")
 	for item_id: String in construction.REQUIREMENTS:
 		Inventory.add_item(item_id, construction.REQUIREMENTS[item_id])
@@ -72,7 +76,7 @@ func _run() -> void:
 	TimeComponentManager.advance_minutes(30)
 	_expect(not worker.physical_approach.arrived and construction.completes_at - construction._latest_time == build_duration, "Building cannot advance before physical arrival.")
 	_drive_arrival()
-	TimeComponentManager.advance_minutes(build_duration)
+	_expect(SHIFT_DRIVER.work_minutes(build_duration, arrival_visuals, [ARRIVAL_WORKER] as Array[String]), "The builder returns each shift until the work is complete.")
 	_expect(construction.phase == "built", "Arrived construction keeps its original duration and finishes.")
 	worker.profession = WorkerData.Profession.CRAFTER
 	var job: JobData = preload("res://resources/job_data/mudbrick_make.tres")
@@ -92,14 +96,14 @@ func _run() -> void:
 		_expect(WorkManager.active_orders.has(order.order_id) and order.end_time_total_minutes - WorkManager._last_total_minutes == duration, "Production time jump excludes all prearrival time.")
 		_expect(WorkShopStorage.output_lots.size() == lots_before and int(WorkShopStorage.items.get("wet_mudbrick", 0)) == output_before, "Prearrival time creates no output lot or stored product.")
 		_drive_arrival()
-		TimeComponentManager.advance_minutes(duration)
+		_expect(SHIFT_DRIVER.work_minutes(duration, arrival_visuals, [ARRIVAL_WORKER] as Array[String]), "The production worker returns for each necessary shift.")
 		_expect(not WorkManager.active_orders.has(order.order_id) and WorkShopStorage.output_lots.size() == lots_before + 1, "Only arrived work produces exactly one native held output lot.")
 		if WorkShopStorage.output_lots.size() == lots_before + 1:
 			var lot: Dictionary = WorkShopStorage.output_lots.back()
 			var quantity: int = int(lot.items.get("wet_mudbrick", 0))
 			var base: int = int(job.outputs.get("wet_mudbrick", 0))
 			var multiplier: float = worker.get_satisfaction_work_multiplier()
-			_expect(quantity in [roundi(base * multiplier), roundi(base * multiplier * 0.75)] and not lot.fee_ids.is_empty() and lot.source_id == job.job_id, "Held output retains the native satisfaction/reliability quantity and job fee ownership.")
+			_expect(quantity == roundi(base * multiplier) and not lot.fee_ids.is_empty() and lot.source_id == job.job_id, "Held output retains the Satisfaction-scaled quantity and job fee ownership.")
 	_assert_managed_production_expiry(workshop, job)
 	_finish_arrival()
 
@@ -110,6 +114,7 @@ func _seed_arrival_worker() -> void:
 	person.population_status = CitizenData.PopulationStatus.RESIDENT
 	person.employment_status = CitizenData.EmploymentStatus.HIRED
 	person.profession = WorkerData.Profession.LABORER
+	person.satisfaction = 1.0
 	CitizenManager.citizens_by_id[ARRIVAL_WORKER] = person
 	var worker := WorkerData.new()
 	worker.worker_id = ARRIVAL_WORKER
@@ -139,6 +144,7 @@ func _assert_managed_production_expiry(workshop: Node, job: JobData) -> void:
 	person.profession = job.requirement_profession
 	person.population_status = CitizenData.PopulationStatus.RESIDENT
 	person.employment_status = CitizenData.EmploymentStatus.APPLICANT
+	person.satisfaction = 1.0
 	CitizenManager.citizens_by_id[MANAGED_WORKER] = person
 	var price: int = WorkerDatabase.get_contract_price(person.profession, 3)
 	_expect(price > 0, "Managed arrival case uses the configured profession package price.")
@@ -182,32 +188,42 @@ func _assert_managed_production_expiry(workshop: Node, job: JobData) -> void:
 	var second_expiry: int = worker.get_paid_end_minute()
 	TimeComponentManager.advance_minutes(second_expiry + 15 - previous)
 	arrival_visuals.plot_presence.update(arrival_visuals, 1.0)
-	var expected_remaining: int = remaining - (second_expiry - previous)
-	_expect(worker.is_payroll_blocked() and worker.physical_approach.arrived and worker.current_work_status != WorkerData.WorkStatus.WORKING and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining, "An arrived managed worker contributes only through expiry and then stops working.")
+	var first_shift_end: int = previous - (previous % 1440) + 15 * 60
+	var expected_remaining: int = remaining - mini(second_expiry - previous, first_shift_end - previous)
+	_expect(worker.is_payroll_blocked() and not worker.physical_approach.arrived and worker.physical_approach.arrival_minute == WorkerData.PLOT_DEPARTURE_PENDING
+		and worker.current_work_status != WorkerData.WorkStatus.WORKING and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining,
+		"An arrived worker contributes through the first shift only, then must depart before returning.")
 	wallet_before = int(Inventory.items.get("shekel", 0))
-	var arrival_minute: int = worker.physical_approach.arrival_minute
+	var outbound_pose: Vector2 = worker.physical_approach.position
 	renewed = WorkerDatabase.renew_contract(MANAGED_WORKER, 3)
-	_expect(renewed and int(Inventory.items.get("shekel", 0)) == wallet_before - price and worker.physical_approach.arrival_minute == arrival_minute and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining, "Arrived renewal debits once, preserves historical arrival, and does not backfill its unpaid gap.")
-	arrival_visuals.plot_presence.update(arrival_visuals, 0.0)
-	TimeComponentManager.advance_minutes(1)
-	_expect(worker.current_work_status == WorkerData.WorkStatus.WORKING and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining - 1 and WorkShopStorage.output_lots.size() == lots_before, "Arrived renewal resumes precisely one paid production minute without a duplicate completion.")
+	_expect(renewed and int(Inventory.items.get("shekel", 0)) == wallet_before - price
+		and worker.physical_approach.position == outbound_pose and worker.physical_approach.arrival_minute == WorkerData.PLOT_DEPARTURE_PENDING
+		and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining,
+		"Renewal debits once and preserves the pending departure without backfilling unpaid work.")
+	_expect(SHIFT_DRIVER.work_minutes(1, arrival_visuals, [MANAGED_WORKER] as Array[String]), "The renewed worker physically departs and returns.")
+	_expect(worker.current_work_status == WorkerData.WorkStatus.WORKING and order.end_time_total_minutes - WorkManager._last_total_minutes == expected_remaining - 1 and WorkShopStorage.output_lots.size() == lots_before, "Returned renewal resumes precisely one paid production minute without a duplicate completion.")
 
 func _assert_schema8_roundtrip() -> void:
 	var before: Dictionary = arrival_snapshot.capture(content)
-	_expect(not before.is_empty() and before.schema_version == 8, "Active writer explicitly writes schema8.")
+	_expect(not before.is_empty() and before.schema_version == ARRIVAL_CODEC.VERSION, "Active writer explicitly writes the current schema.")
 	if before.is_empty():
 		return
 	var document: Dictionary = JSON.parse_string(JSON.stringify(before, "", true, true))
-	_expect(arrival_snapshot.prepare(document, content), "Schema8 validates its saved arrived state: " + arrival_snapshot.error)
+	_expect(arrival_snapshot.prepare(document, content), "Current schema validates its saved arrived state: " + arrival_snapshot.error)
 	if not arrival_snapshot.prepared.is_empty():
 		var restored: WorkerData = arrival_snapshot.prepared.workers.workers_by_id[ARRIVAL_WORKER]
 		_expect(restored.physical_approach == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).physical_approach, "Saved position, task, target, and historical arrival survive JSON exactly.")
 
 func _assert_legacy_migrations() -> void:
 	var document: Dictionary = arrival_snapshot.capture(content)
-	for version: int in range(1, 8):
+	for version: int in range(1, 9):
 		var values = ARRIVAL_VALUES.new()
 		var raw: Dictionary = values.decode(document.state)
+		raw.player["focus"] = 0.75
+		# Historical versions recorded both fields on each settled needs result.
+		for result: Dictionary in raw.needs.last_needs_results.values():
+			result["reliability"] = 0.5
+			result["reliability_delta"] = 0.0
 		if version < 7:
 			raw.raid.erase("notification_seen_keys")
 		if version < 6:
@@ -217,21 +233,28 @@ func _assert_legacy_migrations() -> void:
 			raw.erase("pickup_sources")
 			if version == 3:
 				raw["date_palms"] = arrival_snapshot._legacy_palms.capture()
-		var legacy: Dictionary = {"schema_version": version, "scenario": "city_mvp", "location": "city", "state": values.encode(raw)}
+		var legacy: Dictionary = {"schema_version": version, "scenario": "city_mvp", "location": "city", "state": ARRIVAL_LEGACY.encode_v10(values, raw)}
 		if version == 1:
 			legacy.erase("location")
 		_strip_worker_fields(legacy.state, version)
 		_expect(arrival_snapshot.prepare(legacy, content), "Strict v%d migration accepts exactly its historical worker fields: %s" % [version, arrival_snapshot.error])
 		if not arrival_snapshot.prepared.is_empty():
 			var restored: WorkerData = arrival_snapshot.prepared.workers.workers_by_id[ARRIVAL_WORKER]
-			_expect(restored.physical_approach.is_empty() and restored.current_order_id == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).current_order_id, "Legacy active task preserves its previous inside interpretation and reservation.")
-			_expect(arrival_snapshot.prepared.inventory.items == raw.inventory.items and arrival_snapshot.prepared.plots == _migrated_plots(raw.plots), "Legacy migration preserves inventory and construction progress.")
+			var expected_approach: Dictionary = WorkerDatabase.get_worker_data(ARRIVAL_WORKER).physical_approach if version == 8 else {}
+			_expect(restored.physical_approach == expected_approach and restored.current_order_id == WorkerDatabase.get_worker_data(ARRIVAL_WORKER).current_order_id, "Legacy active task preserves its version's approach and reservation.")
+			_expect(arrival_snapshot.prepared.inventory.items == raw.inventory.items and arrival_snapshot.prepared.plots == _migrated_plots(raw.plots, raw.clock), "Legacy migration preserves inventory and construction progress.")
 
-func _migrated_plots(source: Dictionary) -> Dictionary:
+func _migrated_plots(source: Dictionary, clock: Dictionary) -> Dictionary:
 	var result: Dictionary = source.duplicate(true)
 	for plot: Dictionary in result.values():
 		if not plot.has("payroll_work_remainder"):
 			plot["payroll_work_remainder"] = 0
+	# Before schema 12 there was no house. Migration adds its default with the
+	# saved clock cursor, which may differ from today's untouched idle cursor.
+	var house_id: String = "WorkshopConstruction_" + "citizen_house_1".sha256_text()
+	if result.has(house_id):
+		_expect(result[house_id].phase == "uncleared", "The historical fixture has a fresh house.")
+		result[house_id]._latest_time = int(clock.current_day) * 1440 + int(clock.current_hour) * 60 + int(clock.current_minute)
 	return result
 
 func _strip_worker_fields(value: Variant, version: int) -> void:
@@ -239,8 +262,12 @@ func _strip_worker_fields(value: Variant, version: int) -> void:
 		for child: Variant in value:
 			_strip_worker_fields(child, version)
 	elif value is Dictionary:
+		# Versions 1–8 also stored this retired field on both resource types.
+		if value.get("class") in ["CitizenData", "WorkerData"]:
+			value.fields["reliability"] = 0.5
 		if value.get("class") == "WorkerData":
-			value.fields.erase("physical_approach")
+			if version < 8:
+				value.fields.erase("physical_approach")
 			if version < 7:
 				for field: String in ARRIVAL_VALUES.CONTRACT_FIELDS:
 					value.fields.erase(field)
@@ -295,6 +322,12 @@ func _assert_home_route_pause() -> void:
 	_move_actor_to_departure()
 	arrival_plot.begin_worker_approach(ARRIVAL_WORKER, construction.order_id + ":" + construction.phase)
 	arrival_visuals.plot_presence.states.clear()
+	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
+	for frame: int in range(8):
+		if not runtime.navigation_refresh_pending:
+			break
+		await get_tree().process_frame
+	_expect(not runtime.navigation_refresh_pending, "Deferred plot navigation has settled before the home handoff.")
 	var world: Node = content.get_node("YSortWorld")
 	_expect(store.prepare_home_departure(content, arrival_snapshot.HOME_PATH), "Native home handoff retains the worker visual owner.")
 	world.remove_child(arrival_plot)

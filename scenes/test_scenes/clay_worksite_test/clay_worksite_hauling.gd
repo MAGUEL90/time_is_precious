@@ -49,7 +49,9 @@ func begin(id: String, site_id: StringName, now: int, plan: Dictionary = {}) -> 
 		"daily_target": int(plan.get("daily_target", 0)),
 		"delivery_day": -1,
 		"delivered_today": 0,
-		"removing": false
+		"removing": false,
+		# Unlike ordinary removal, this shipment must be accepted before release.
+		"resigning": false
 	}
 
 
@@ -59,7 +61,9 @@ func tick(current: int, eligible: Callable, depleted: Callable, from_minute: int
 		if not routes.has(id):
 			continue
 		var route: Dictionary = routes[id]
-		if route.phase != PHASE_IDLE and from_minute >= 0 and to_minute >= from_minute and payroll_unpaid_minutes_provider.is_valid():
+		# A migrated final shipment, like a resigning shipment, must finish
+		# without requiring a renewal just to release its existing cargo.
+		if route.phase != PHASE_IDLE and not bool(route.get("resigning", false)) and not bool(route.get("legacy_final", false)) and from_minute >= 0 and to_minute >= from_minute and payroll_unpaid_minutes_provider.is_valid():
 			var paused_minutes: int = maxi(int(payroll_unpaid_minutes_provider.call(id, from_minute, to_minute)), 0)
 			route.start += paused_minutes
 			route.arrival += paused_minutes
@@ -86,6 +90,20 @@ func withdraw(id: String) -> bool:
 	return false
 
 
+## End immediately if there is no load. Otherwise retain exactly this shipment
+## until its destination accepts it, without starting any further pickup.
+func resign(id: String) -> bool:
+	if not routes.has(id):
+		return true
+	var route: Dictionary = routes[id]
+	if _cargo_quantity(route) <= 0:
+		routes.erase(id)
+		return true
+	route.removing = true
+	route.resigning = true
+	return false
+
+
 func finished(id: String) -> bool:
 	return not routes.has(id)
 
@@ -97,7 +115,7 @@ func get_visual(id: String, time: float, unpaid_minutes_provider: Callable = Cal
 	var provider: Callable = unpaid_minutes_provider if unpaid_minutes_provider.is_valid() else payroll_unpaid_minutes_provider
 	var visual_time: float = time
 	var payroll_paused: bool = false
-	if provider.is_valid():
+	if provider.is_valid() and not bool(route.get("resigning", false)) and not bool(route.get("legacy_final", false)):
 		var current_minute: int = int(floor(time))
 		if int(provider.call(id, current_minute, current_minute + 1)) > 0:
 			payroll_paused = true
@@ -193,18 +211,30 @@ func _process_due_route(route: Dictionary, id: String, current: int) -> void:
 			route.position = route.target
 			var destination = route.destination
 			var quantity: int = _cargo_quantity(route)
+			if bool(route.get("resigning", false)) and not _valid_object(destination):
+				destination = _destination(route)
+				route.destination = destination
 			if _destination_delivers(destination, route.cargo, route.target):
 				# Destination delivery is atomic. Clear local cargo only after
 				# success so a failed unload can take the same load home.
 				route.cargo.quantity = 0
 				# Count receipt at the scheduled unloading time, never pickup or a
 				# rejected attempt. A new day naturally starts with zero deliveries.
-				var delivery_day: int = int(route.arrival) / 1440
-				if int(route.delivery_day) != delivery_day:
-					route.delivery_day = delivery_day
-					route.delivered_today = 0
-				route.delivered_today += quantity
-				delivered.emit(id, quantity)
+				var credit_delivery: bool = not destination.has_method("awards_delivery_credit") or bool(destination.awards_delivery_credit())
+				if credit_delivery:
+					var delivery_day: int = int(route.arrival) / 1440
+					if int(route.delivery_day) != delivery_day:
+						route.delivery_day = delivery_day
+						route.delivered_today = 0
+					route.delivered_today += quantity
+					delivered.emit(id, quantity)
+				if bool(route.get("resigning", false)):
+					routes.erase(id)
+					return
+			elif bool(route.get("resigning", false)):
+				# The original load remains in cargo. Retry the same destination;
+				# refusal must neither award XP nor strand it at a different owner.
+				return
 			_begin_return(route, int(route.arrival))
 			continue
 		if route.phase != PHASE_RETURNING:
@@ -214,6 +244,16 @@ func _process_due_route(route: Dictionary, id: String, current: int) -> void:
 		route.position = route.origin
 		var return_quantity: int = _cargo_quantity(route)
 		if return_quantity > 0:
+			if bool(route.get("resigning", false)):
+				# This load was rejected before resignation. Carry the same goods
+				# back to their original destination rather than taking a new load.
+				var start_time: int = int(route.arrival)
+				route.phase = PHASE_OUTBOUND
+				route.start = start_time
+				route.arrival = start_time + _travel_minutes(route.origin.distance_to(route.target))
+				route.direction = _direction(route.origin, route.target, str(route.direction))
+				route.destination = _destination(route)
+				continue
 			if not _return_cargo(route.site_id, return_quantity):
 				return
 			route.cargo.quantity = 0
@@ -248,6 +288,10 @@ func _origin(site_id: StringName, id: String) -> Vector2:
 
 
 func _destination(route: Dictionary):
+	# A migrated trip owns its one final delivery target; it must never resolve
+	# a new storage choice or begin another collection.
+	if bool(route.get("legacy_final", false)):
+		return route.get("destination")
 	if not NodePath(route.destination_path).is_empty():
 		return assigned_destination_provider.call(route.destination_path) if assigned_destination_provider.is_valid() else null
 	if destination_provider.is_valid():

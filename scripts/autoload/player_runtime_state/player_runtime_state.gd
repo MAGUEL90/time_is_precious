@@ -8,7 +8,6 @@ func capture(player: Player) -> void:
 	_state = {
 		"fatigue": player.fatigue,
 		"hunger": player.hunger,
-		"focus": player.focus,
 		"current_experience": player.current_experience,
 		"last_sleep_day": player.last_sleep_day,
 		"last_collapse_day": player.last_collapse_day,
@@ -21,7 +20,6 @@ func restore(player: Player) -> void:
 
 	player.fatigue = float(_state.get("fatigue", player.fatigue))
 	player.hunger = float(_state.get("hunger", player.hunger))
-	player.focus = float(_state.get("focus", player.focus))
 
 	player.current_experience = int(
 		_state.get("current_experience", player.current_experience)

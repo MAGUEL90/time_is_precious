@@ -1,11 +1,16 @@
 extends RefCounted
 
-# Approved test balance, deliberately local to the playable fixture.
-const MINUTES_PER_CLAY: int = 10
-const INITIAL_STOCK: int = 72
-const DURATIONS: Array[int] = [180, 360, 540]
+## Emitted only after an Hourly transaction has committed or returned its
+## unfinished output. Daily jobs have their own settlement_finished signal.
+signal stock_settled
+
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+# Retain public aliases used by existing fixtures and callers.
+const MINUTES_PER_CLAY: int = GATHERING_CONFIG.DEFAULT_MINUTES_PER_UNIT
+const INITIAL_STOCK: int = GATHERING_CONFIG.DEFAULT_STOCK
+const DURATIONS: Array[int] = GATHERING_CONFIG.HOURLY_DURATIONS
 const WORKER_CAPACITY: int = 2 # Small worksite; Player occupies one slot.
-const ITEM_ID: String = "clay_lump"
+const ITEM_ID: String = GATHERING_CONFIG.DEFAULT_ITEM_ID
 
 # Defaults retain the existing Clay Site contract; authored markers may override.
 var item_id: String = ITEM_ID
@@ -13,6 +18,13 @@ var minutes_per_unit: float = MINUTES_PER_CLAY
 var daily_stock_min: int = -1
 var daily_stock_max: int = -1
 var stock: int = INITIAL_STOCK
+## Production maps can opt into exhaustible deposits. Prototype fixtures retain
+## their existing daily replenishment unless they explicitly opt in.
+var finite_resource: bool = false
+var deposit_capacity: int = 0
+## Absolute game minutes. -1 means the current deposit is not waiting.
+var respawn_started_at: int = -1
+var respawn_due_at: int = -1
 var working: bool = false
 var participants: Array[String] = []
 var reserved_slots: Callable
@@ -68,7 +80,7 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 	elif working:
 		reason = "Workers are gathering."
 	elif not requested_minutes in DURATIONS:
-		reason = "Choose 3, 6 or 9 hours."
+		reason = GATHERING_CONFIG.duration_choice_message()
 	elif stock <= 0:
 		reason = "Site depleted."
 	elif not is_instance_valid(player) or player.is_queued_for_deletion():
@@ -82,7 +94,7 @@ func preview(requested_minutes: int, player: Player) -> Dictionary:
 			if not participant_unavailable_reason(id).is_empty():
 				reason = "Selected worker is unavailable."
 				break
-	return {"units": units, "minutes": minutes, "duration": requested_minutes, "energy_start": forecast.energy_start, "energy_end": forecast.energy_end, "stock": stock, "reason": reason,
+	return {"units": units, "minutes": minutes, "duration": requested_minutes, "energy_start": forecast.energy_start, "energy_end": forecast.energy_end, "stock": stock, "finite_resource": finite_resource, "deposit_capacity": deposit_capacity, "reason": reason,
 		"to_bag": mini(units, capacity) if includes_player else 0,
 		"to_ground": maxi(units - capacity, 0) if includes_player else units,
 		"worker_capacity": WORKER_CAPACITY, "worker_count": participants.size(),
@@ -119,7 +131,11 @@ func execute(requested_minutes: int, player: Player, owner_node: Node, drop_outp
 		# Advancement emits signals synchronously. Record this minute first so a
 		# cancel from one of those signals stores the elapsed time accurately.
 		result.minutes += 1
-		TimeComponentManager.advance_minutes(1)
+		if not TimeComponentManager.advance_minutes(1):
+			# No clock signal ran, so this proposed minute did not happen.
+			result.minutes -= 1
+			result.interrupted = true
+			break
 		# cancel() can run synchronously from a minute signal during the call above.
 		# Its refund is final; do not earn or settle those units a second time.
 		if _cancelled:
@@ -207,6 +223,7 @@ func _finish() -> void:
 			result.interrupted = true
 	last_result = result.duplicate()
 	_clear_session()
+	stock_settled.emit()
 
 func cancel() -> void:
 	# Unsettled hourly output returns to natural stock on fixture teardown.
@@ -219,6 +236,7 @@ func cancel() -> void:
 		_cancelled = true
 		last_result = _result.duplicate()
 		_clear_session()
+		stock_settled.emit()
 
 func _clear_session() -> void:
 	_drop_output = Callable()

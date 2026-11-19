@@ -37,11 +37,17 @@ func _run() -> void:
 	_expect(get_tree().get_nodes_in_group("city_storage_areas").size() == 1, "One physical City Storage in ContentScene")
 	_expect(area.get_node("Sprite2D").texture.resource_path == "res://assets/ui/building/warehouse_leveL_1.png", "Warehouse asset bound")
 	_expect(area.storage == WorkStateRuntime.get_node("CityToolStorage"), "Existing shared provider retained")
+	# The player interacts at the front board; the separate delivery point is
+	# reserved for incoming cargo and is no longer the player access area.
+	player.global_position = area.get_node("Board").global_position + Vector2(-17, 13)
+	await _settle()
+	_expect(area.has_player_access() and player.current_interactable == area, "Front board is accessible for player interaction")
 	player.global_position = area.delivery_point.global_position
 	await _settle()
-	_expect(area.has_player_access() and player.current_interactable == area, "Entrance and delivery point are accessible")
 	_expect(not player.test_move(player.global_transform, Vector2(0, 1)), "Entrance is not inside building collision")
 	_expect(player.test_move(player.global_transform, Vector2(0, -24)), "Walking north is blocked by building footprint")
+	player.global_position = area.get_node("Board").global_position + Vector2(-17, 13)
+	await _settle()
 	var before: Dictionary = area.storage.items.duplicate(true)
 	await _capture("warehouse-world.png")
 	for attempt in range(2):

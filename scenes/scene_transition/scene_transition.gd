@@ -51,7 +51,7 @@ func run_with_fade(
 	else:
 		show_message(message)
 
-	var action_succeeded: bool = action.call()
+	var action_succeeded: bool = bool(await action.call())
 
 	if action_succeeded and not _pending_spawn_point.is_empty():
 		# Destination nodes are available only after SceneTree finishes the swap.

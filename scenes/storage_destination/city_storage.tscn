@@ -1,5 +1,6 @@
-[gd_scene load_steps=7 format=3 uid="uid://f2jp678rcivk"]
+[gd_scene load_steps=8 format=3 uid="uid://f2jp678rcivk"]
 
+[ext_resource type="Script" path="res://scenes/ui/back_button/back_button.gd" id="tip_back_style"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="1"]
 [ext_resource type="Texture2D" uid="uid://q7kua3jx5bwc" path="res://assets/ui/ui_base/base_24.06.2026.png" id="2"]
 [ext_resource type="PackedScene" uid="uid://d0wn5ml4p5yv4" path="res://scenes/ui/item_grid/item_grid.tscn" id="3_grid"]
@@ -12,7 +13,7 @@ region = Rect2(1, 1, 168, 134)
 
 [node name="CityStorage" type="NinePatchRect"]
 texture_filter = 1
-custom_minimum_size = Vector2(178, 200)
+custom_minimum_size = Vector2(156, 208)
 theme = ExtResource("1")
 texture = SubResource("Panel")
 patch_margin_left = 16
@@ -79,11 +80,12 @@ layout_mode = 2
 theme_override_constants/separation = 2
 
 [node name="Back" type="Button" parent="Margin/Content/Footer"]
-custom_minimum_size = Vector2(44, 16)
+custom_minimum_size = Vector2(64, 18)
 layout_mode = 2
 theme_type_variation = &"HudShortcutButton"
 theme_override_font_sizes/font_size = 6
 text = "Back"
+script = ExtResource("tip_back_style")
 
 [node name="Spacer" type="Control" parent="Margin/Content/Footer"]
 layout_mode = 2

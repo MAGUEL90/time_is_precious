@@ -1,6 +1,7 @@
 extends Node2D
 
 ## Wall caretaker: dialogue requests work; the persistent HUD remains read-only.
+@export var world_access_enabled: bool = true
 const BALLOON: PackedScene = preload("res://dialogue/game_dialogue_balloon/game_dialogue_balloon.tscn")
 const DIALOGUE: DialogueResource = preload("res://dialogue/game_dialogue_conversations/wall_caretaker.dialogue")
 var greeting_balloon: BaseGameDialogueBalloon
@@ -17,13 +18,19 @@ func _ready() -> void:
 	add_to_group("wall_management_spots")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(false)
+	if not world_access_enabled:
+		hide()
+		interaction_area.collision_mask = 0
+		interaction_area.set_deferred("monitoring", false)
+		$InteractionArea/CollisionShape2D.set_deferred("disabled", true)
+		return
 	_dialogue_manager = get_node("/root/DialogueManager")
 	_dialogue_manager.dialogue_ended.connect(_on_dialogue_ended)
 	interaction_area.body_entered.connect(_on_body_entered)
 	interaction_area.body_exited.connect(_on_body_exited)
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player:
+	if world_access_enabled and body is Player:
 		player = body
 		player._on_interactable_activated(self)
 
@@ -34,6 +41,8 @@ func _on_body_exited(body: Node2D) -> void:
 		player = null
 
 func has_player_access() -> bool:
+	if not world_access_enabled:
+		return false
 	if not is_instance_valid(player) or not player.is_inside_tree():
 		return false
 	if player.current_interactable != self or player.is_sleeping or player.is_collapsing:
@@ -133,12 +142,12 @@ func wall_improvement_quote_summary() -> String:
 	var kind: String = str(_quoted_work.get("kind", ""))
 	var materials: String = _format_quote_materials(_quoted_work.get("materials", {}))
 	var duration: String = _format_quote_duration(int(_quoted_work.get("duration_minutes", 0)))
-	var readiness: String = "Ready" if bool(_quoted_work.get("can_start", false)) else "Need supplies"
+	var readiness: String = "Ready" if bool(_quoted_work.get("can_start", false)) else "Need Inventory supplies"
 	match kind:
 		"upgrade":
-			return "Lv.%d: %d HP / DEF %d\n%s\n%s / City Storage\n%s" % [int(_quoted_work.get("target_level", 0)), int(_quoted_work.get("target_hp", 0)), int(_quoted_work.get("target_defend", 0)), materials, duration, readiness]
+			return "Lv.%d: %d HP / DEF %d\n%s\n%s / Inventory\n%s" % [int(_quoted_work.get("target_level", 0)), int(_quoted_work.get("target_hp", 0)), int(_quoted_work.get("target_defend", 0)), materials, duration, readiness]
 		"watchtower":
-			return "Detect %d days early\nUnlocks raider Inspect\n%s\n%s / %s" % [int(_quoted_work.get("warning_days", 0)), materials, duration, readiness]
+			return "Detect %d days early\nUnlocks raider Inspect\n%s\n%s / Inventory\n%s" % [int(_quoted_work.get("warning_days", 0)), materials, duration, readiness]
 		_:
 			return "This project is unavailable."
 
@@ -187,7 +196,7 @@ func wall_work_summary() -> String:
 		var display_name: String = item.display_name.replace("Wood Log", "Wood") if item != null else id
 		parts.append("%d %s" % [int(quote.materials[id]), display_name])
 	var cost: String = " + ".join(parts) if not parts.is_empty() else "No materials"
-	var availability: String = "Uses City Storage." if quote.can_start else "City Storage is short."
+	var availability: String = "Uses Inventory." if quote.can_start else "Inventory is short."
 	return "%s: %d min\n%s\n%s" % [str(quote.kind).capitalize(), int(quote.duration_minutes), cost, availability]
 
 func wall_select_work() -> void:
@@ -244,7 +253,7 @@ func _release_lock() -> void:
 			interactable_label_component.show()
 
 func _fit_dialogue() -> void:
-	# Match the merchant's 176x60 artwork, empty portrait and text/name positions.
+	# Match the merchant's 176x60 artwork and text/name positions.
 	# Reserve space below it for choices so Enter keeps the conversation visible.
 	greeting_balloon.keep_chat_with_responses = true
 	var root: Control = greeting_balloon.chat_box_root
@@ -257,7 +266,7 @@ func _fit_dialogue() -> void:
 	panel.size = Vector2(176, 60)
 	panel.scale = Vector2.ONE
 	greeting_balloon.dialogue_label.add_theme_font_size_override("normal_font_size", 6)
-	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 1)
+	greeting_balloon.dialogue_label.add_theme_constant_override("line_separation", 2)
 	var previous: Control = greeting_balloon.responses_menu
 	var choice: Button = previous.get_node("ResponseExample")
 	previous.remove_child(choice)

@@ -1,59 +1,85 @@
-[gd_scene load_steps=6 format=3 uid="uid://o6w0l75t6qiv"]
+[gd_scene load_steps=21 format=3 uid="uid://o6w0l75t6qiv"]
 
-[ext_resource type="PackedScene" uid="uid://df7f3h4x5gtta" path="res://scenes/base_character_visual/base_character_visual.tscn" id="1_lgvp5"]
-[ext_resource type="Texture2D" uid="uid://b1xlouj0mvsqg" path="res://assets/characters/gabbi/gabbi_hair/gabbi_hair_idle.png" id="2_q7a2i"]
+[ext_resource type="PackedScene" uid="uid://df7f3h4x5gtta" path="res://scenes/base_character_visual/base_character_visual.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scenes/base_character_visual/gabbi_visual.gd" id="2_script"]
+[ext_resource type="Texture2D" path="res://assets/characters/gabbi/gabbi_hair/idle/idle.png" id="hair_idle"]
+[ext_resource type="Texture2D" path="res://assets/characters/gabbi/gabbi_hair/walk/walk.png" id="hair_walk"]
+[ext_resource type="Texture2D" path="res://assets/characters/gabbi/gabbi_clothes/idle/idle.png" id="clothes_idle"]
+[ext_resource type="Texture2D" path="res://assets/characters/gabbi/gabbi_clothes/walk/walk.png" id="clothes_walk"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_c2qkn"]
-atlas = ExtResource("2_q7a2i")
+[sub_resource type="AtlasTexture" id="hair_idle_0"]
+atlas = ExtResource("hair_idle")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="hair_idle_1"]
+atlas = ExtResource("hair_idle")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="hair_walk_0"]
+atlas = ExtResource("hair_walk")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="hair_walk_1"]
+atlas = ExtResource("hair_walk")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="hair_walk_2"]
+atlas = ExtResource("hair_walk")
 region = Rect2(64, 0, 32, 32)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_qj7ts"]
-atlas = ExtResource("2_q7a2i")
+[sub_resource type="AtlasTexture" id="hair_walk_3"]
+atlas = ExtResource("hair_walk")
 region = Rect2(96, 0, 32, 32)
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_xu0kb"]
-animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_c2qkn")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_qj7ts")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_c2qkn")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_qj7ts")
-}],
-"loop": true,
-"name": &"hair_idle_left",
-"speed": 5.0
-}, {
-"frames": [],
-"loop": true,
-"name": &"hair_idle_right",
-"speed": 5.0
-}, {
-"frames": [],
-"loop": true,
-"name": &"hair_walk_left",
-"speed": 5.0
-}, {
-"frames": [],
-"loop": true,
-"name": &"hair_walk_right",
-"speed": 5.0
-}]
+[sub_resource type="SpriteFrames" id="frames_hair"]
+animations = [{"frames": [{"duration": 1.0, "texture": SubResource("hair_idle_0")},{"duration": 1.0, "texture": SubResource("hair_idle_1")},{"duration": 1.0, "texture": SubResource("hair_idle_0")},{"duration": 1.0, "texture": SubResource("hair_idle_1")}], "loop": true, "name": &"hair_idle_right", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("hair_idle_0")},{"duration": 1.0, "texture": SubResource("hair_idle_1")},{"duration": 1.0, "texture": SubResource("hair_idle_0")},{"duration": 1.0, "texture": SubResource("hair_idle_1")}], "loop": true, "name": &"hair_idle_left", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("hair_walk_0")},{"duration": 1.0, "texture": SubResource("hair_walk_1")},{"duration": 1.0, "texture": SubResource("hair_walk_2")},{"duration": 1.0, "texture": SubResource("hair_walk_3")}], "loop": true, "name": &"hair_walk_right", "speed": 6.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("hair_walk_0")},{"duration": 1.0, "texture": SubResource("hair_walk_1")},{"duration": 1.0, "texture": SubResource("hair_walk_2")},{"duration": 1.0, "texture": SubResource("hair_walk_3")}], "loop": true, "name": &"hair_walk_left", "speed": 6.0}]
 
-[node name="GabbiVisual" instance=ExtResource("1_lgvp5")]
+[sub_resource type="AtlasTexture" id="clothes_idle_0"]
+atlas = ExtResource("clothes_idle")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="clothes_idle_1"]
+atlas = ExtResource("clothes_idle")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="clothes_walk_0"]
+atlas = ExtResource("clothes_walk")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="clothes_walk_1"]
+atlas = ExtResource("clothes_walk")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="clothes_walk_2"]
+atlas = ExtResource("clothes_walk")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="clothes_walk_3"]
+atlas = ExtResource("clothes_walk")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="SpriteFrames" id="frames_clothes"]
+animations = [{"frames": [{"duration": 1.0, "texture": SubResource("clothes_idle_0")},{"duration": 1.0, "texture": SubResource("clothes_idle_1")},{"duration": 1.0, "texture": SubResource("clothes_idle_0")},{"duration": 1.0, "texture": SubResource("clothes_idle_1")}], "loop": true, "name": &"gabbi_idle_right", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("clothes_idle_0")},{"duration": 1.0, "texture": SubResource("clothes_idle_1")},{"duration": 1.0, "texture": SubResource("clothes_idle_0")},{"duration": 1.0, "texture": SubResource("clothes_idle_1")}], "loop": true, "name": &"gabbi_idle_left", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("clothes_walk_0")},{"duration": 1.0, "texture": SubResource("clothes_walk_1")},{"duration": 1.0, "texture": SubResource("clothes_walk_2")},{"duration": 1.0, "texture": SubResource("clothes_walk_3")}], "loop": true, "name": &"gabbi_walk_right", "speed": 6.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("clothes_walk_0")},{"duration": 1.0, "texture": SubResource("clothes_walk_1")},{"duration": 1.0, "texture": SubResource("clothes_walk_2")},{"duration": 1.0, "texture": SubResource("clothes_walk_3")}], "loop": true, "name": &"gabbi_walk_left", "speed": 6.0}]
+
+[node name="GabbiVisual" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+clothes_variant = "gabbi"
 
 [node name="ClothesSprite" parent="." index="1"]
 visible = true
+sprite_frames = SubResource("frames_clothes")
+animation = &"gabbi_idle_right"
 
 [node name="HairSprite" parent="." index="4"]
-sprite_frames = SubResource("SpriteFrames_xu0kb")
-animation = &"hair_idle_left"
+position = Vector2(0, 0)
+sprite_frames = SubResource("frames_hair")
+animation = &"hair_idle_right"
 
-[node name="AccessoriesSprite" parent="." index="5"]
-visible = true
+[node name="HeadSprite" parent="." index="2"]
+position = Vector2(0, 0)

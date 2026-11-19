@@ -280,7 +280,7 @@ schema or City Storage policy changed. See
 - Citizen/worker lifecycle exists at prototype level and current city/home checkpoints
   save its supported state. It still needs broader daily-loop validation, balancing,
   and later profession/content expansion.
-- Condition drain, sleep recovery, Collapse/Nightmare penalties, citizen needs pressure, satisfaction/reliability effects and economy values still need tuning.
+- Condition drain, sleep recovery, Collapse/Nightmare penalties, citizen needs pressure, satisfaction effects and economy values still need tuning.
 - Citizen movement at low speeds can appear pixel-stepped because of pixel-snapped transforms.
 - Final warning presentation/audio for critical conditions is not complete.
 - AI NPC quest integration is architecture/design direction only and must not be presented as an implemented gameplay feature.

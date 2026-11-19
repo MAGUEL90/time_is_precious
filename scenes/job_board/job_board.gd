@@ -18,6 +18,8 @@ const JOB_BOARD_UI_SCENE: PackedScene = preload(
 @export var job_data: JobData
 @export var service_fee_shekel: int = 5
 @export var default_daily_wage: int = 1
+## Controls this scene's board access without changing applicants or employment.
+@export var world_access_enabled: bool = true
 
 var player_reff: Player
 var job_board_ui: JobBoardUI
@@ -29,6 +31,11 @@ func _ready() -> void:
 	closed_feedback_label.text = CLOSED_FEEDBACK_TEXT
 	closed_feedback_label.position = CLOSED_FEEDBACK_HOME_POSITION
 	closed_feedback_label.hide()
+	if not world_access_enabled:
+		hide()
+		interactable_component.set_deferred("monitoring", false)
+		$InteractableComponent/CollisionShape2D.set_deferred("disabled", true)
+		return
 
 	player_reff = get_tree().get_first_node_in_group("player") as Player
 
@@ -55,6 +62,8 @@ func _on_interact_range_exited() -> void:
 	interactable_label_component.hide()
 
 func on_player_interact(_player: Player) -> void:
+	if not world_access_enabled:
+		return
 	if not WorkerDatabase.is_job_board_open():
 		_show_closed_feedback()
 		return

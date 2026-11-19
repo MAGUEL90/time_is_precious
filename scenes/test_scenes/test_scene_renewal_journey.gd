@@ -29,13 +29,16 @@ func _run() -> void:
 		await get_tree().process_frame
 	bind_map()
 	var expected: Dictionary = initial_document.duplicate(true)
-	if expected.schema_version == 5:
+	var snapshot_script = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
+	if int(expected.schema_version) < snapshot_script.VERSION:
+		var normalizer = snapshot_script.new()
+		var prepared: bool = normalizer.prepare(expected, get_tree().current_scene)
+		_expect(prepared, "The earned checkpoint can be staged for the current schema.")
 		var values = VALUES.new()
-		var raw: Dictionary = values.decode(expected.state)
-		for p: Dictionary in raw.plots.values():
-			p["payroll_work_remainder"] = 0
-		expected.state = values.encode(raw)
-		expected.schema_version = 6
+		if prepared:
+			expected.state = values.encode(normalizer.prepared)
+			expected.schema_version = snapshot_script.VERSION
+			expected.location = normalizer.prepared_location
 	# Old earned checkpoints can retain a transient idle workshop selector status.
 	var people_values = VALUES.new()
 	var expected_raw: Dictionary = people_values.decode(expected.state)
@@ -45,7 +48,7 @@ func _run() -> void:
 		if prior_citizen != null and prior_citizen.employment_status == CitizenData.EmploymentStatus.ASSIGNED:
 			prior_citizen.employment_status = CitizenData.EmploymentStatus.HIRED
 		expected.state = people_values.encode(expected_raw)
-	_expect(same(expected, restored_snapshot), "Continue restores complete earned state with explicit v5 and idle-selector repair")
+	_expect(same(expected, restored_snapshot), "Continue restores complete earned state with the current save migrations")
 	_expect(worker != null and worker.payroll_paid_from_day >= 0, "Earned worker already has a paid first period")
 	if stopped:
 		return

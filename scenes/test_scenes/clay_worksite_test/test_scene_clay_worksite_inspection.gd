@@ -59,13 +59,13 @@ func _run() -> void:
 	player.condition_changed.emit()
 	_expect(fixture.sites[&"ClaySiteA"].preview(180, player).units == 8, "Three hours at half energy previews eight clay.")
 	_expect(panel.get_node("Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel").text == "Player | Output ~8", "Confirmation displays the energy-adjusted estimate.")
-	_expect(panel.energy_label.text == "Energy -9%" and panel.satiety_label.text == "Satiety -18%", "Show only the selected duration's costs.")
+	_expect(panel.energy_label.text == "Energy -9%" and panel.satiety_label.text == "Belly -18%", "Show only the selected duration's costs.")
 	_expect(not panel.status_label.visible, "Hide normal stock/time/bag breakdown.")
 	panel.hourly_button.pressed.emit()
 	panel.duration_buttons.get_child(1).pressed.emit()
 	panel.next_button.pressed.emit()
 	_expect(panel.get_duration_minutes() == 360 and fixture.sites[&"ClaySiteA"].preview(360, player).units == 14, "Six-hour preset.")
-	_expect(panel.energy_label.text == "Energy -18%" and panel.satiety_label.text == "Satiety -36%", "Six-hour costs remain accurate.")
+	_expect(panel.energy_label.text == "Energy -18%" and panel.satiety_label.text == "Belly -36%", "Six-hour costs remain accurate.")
 	panel.hourly_button.pressed.emit()
 	panel.duration_buttons.get_child(2).pressed.emit()
 	panel.next_button.pressed.emit()
@@ -90,7 +90,12 @@ func _run() -> void:
 		panel.title.text = "Clay Worksite With A Very Long Location Name"
 		await _capture("long-title.png")
 		_expect(panel.title.get_global_rect().end.x <= panel.close_button.global_position.x, "Title leaves Close clear.")
-	_expect(panel.window.size.x == 240 and panel.window.size.y <= 155, "Use the smaller workshop panel bounds.")
+	_expect(panel.window.size.x >= 176 and panel.window.size.x <= 208 and panel.window.size.y <= 155,
+		"Use compact worksite panel bounds while allowing content to fit.")
+	_expect(absf(panel.window.global_position.x + panel.window.size.x * 0.5 - panel.get_viewport_rect().size.x * 0.5) <= 0.5
+		and absf(panel.window.global_position.y + panel.window.size.y * 0.5 - panel.get_viewport_rect().size.y * 0.5) <= 0.5
+		and panel.title.horizontal_alignment == HORIZONTAL_ALIGNMENT_LEFT,
+		"Center the panel and left-align its heading.")
 	_expect(panel.start_button.get_global_rect().end.y <= panel.window.get_global_rect().end.y - 10, "Footer fits window.")
 	await _press("ui_cancel")
 	_expect(not panel.visible and player.can_move and not get_tree().paused, "Closing restores gameplay.")

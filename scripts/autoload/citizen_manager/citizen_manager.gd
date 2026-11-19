@@ -18,8 +18,9 @@ func _ready() -> void:
 			"03", "Sukkalgir", "red_male_01", "dark", "default"))
 	if seed_generated_citizen:
 		var generated_citizen: CitizenData = CitizenGenerator.generate_citizen()
-		generated_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
-		add_citizen(generated_citizen)
+		if generated_citizen != null:
+			generated_citizen.population_status = CitizenData.PopulationStatus.RESIDENT
+			add_citizen(generated_citizen)
 
 func _create_test_citizen(
 	id: String,
@@ -95,6 +96,9 @@ func get_all_residents() -> Array[CitizenData]:
 
 # Employment lifecycle
 
+func is_profession_recruitable(profession: WorkerData.Profession) -> bool:
+	return profession != WorkerData.Profession.NONE
+
 func register_applicant(
 	citizen_id: String,
 	profession: WorkerData.Profession
@@ -106,7 +110,7 @@ func register_applicant(
 	if not citizen_data.can_apply_for_work():
 		return false
 
-	if profession == WorkerData.Profession.NONE:
+	if not is_profession_recruitable(profession):
 		return false
 
 	citizen_data.profession = profession
@@ -137,9 +141,7 @@ func get_all_applicants() -> Array[CitizenData]:
 	var applicants: Array[CitizenData] = []
 
 	for citizen in citizens_by_id.values():
-		if citizen.population_status != CitizenData.PopulationStatus.RESIDENT:
-			continue
-		if citizen.employment_status != CitizenData.EmploymentStatus.APPLICANT:
+		if not citizen.can_be_hired() or not is_profession_recruitable(citizen.profession):
 			continue
 
 		applicants.append(citizen)

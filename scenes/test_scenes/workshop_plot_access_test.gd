@@ -36,8 +36,12 @@ func _run() -> void:
 		for index in range(atlas.get_tiles_count()):
 			var coords: Vector2i = atlas.get_tile_id(index)
 			_expect(coords.x < 18 and coords.y < 16, "Atlas tiles must stay inside the supplied 288x256 texture.")
-	_expect(content.get_node("YSortWorld/WorkerRuntime").sites.size() == 5, "Main map contains five resource sites.")
-	_expect(content.get_node("YSortWorld/WorkerRuntime").storage_destinations.size() == 5, "Each site has a matching stockpile.")
+	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
+	_expect(runtime.sites.size() == 5, "Main map contains five resource sites.")
+	_expect(runtime.storage_destinations.is_empty(), "Resource sites no longer point to material stockpiles.")
+	for stockpile_name: String in ["ClayStorage", "WoodStorage", "ReedStorage", "StrawStorage", "WaterStorage"]:
+		_expect(not runtime.has_node(stockpile_name), stockpile_name + " is not present in the playable map.")
+	_expect(runtime.has_node("CityStorageArea/DeliveryPoint"), "The separate City Storage remains available.")
 	_expect(content.get_node("YSortWorld/WorkshopPlot/Label").text.is_empty(), "Uncleared plot has no debug title.")
 	_expect(not player.debug_disable_player_needs and not player.debug_disable_fatigue, "Normal map startup enables player needs.")
 	# This separate construction access fixture intentionally accelerates multiple days.

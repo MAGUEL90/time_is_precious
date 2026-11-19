@@ -1,19 +1,20 @@
 extends RefCounted
 
-## Version 1 of the isolated clay-worksite prototype save, not a global game save.
+## Isolated clay-worksite prototype save, not a global game save.
 ## Runtime callbacks, node paths, resources and UI drafts never enter the file.
-const VERSION: int = 1
+const VERSION: int = 3
 const SCENARIO: String = "clay_worksite_mvp"
 const WORKER_FIELDS: Dictionary = {
 	"worker_id": "id", "display_name": "text", "profession": [0, 5],
 	"profession_xp": "count", "profession_star": [1, 3],
-	"efficiency": [0.0, 2.0], "reliability": [0.0, 1.0],
+	"efficiency": [0.0, 2.0],
 	"wage_shekel_per_day": "count", "food_fulfilled": "bool",
-	"clothing_fulfilled": "bool", "shelter_fulfilled": "bool", "satisfaction": [0.0, 1.0]
+	"clothing_fulfilled": "bool", "shelter_fulfilled": "bool", "satisfaction": [0.0, 1.0],
+	"resignation_pending": "bool"
 }
 const CITIZEN_FIELDS: Dictionary = {
 	"citizen_id": "id", "display_name": "text", "satisfaction": [0.0, 1.0],
-	"reliability": [0.0, 1.0], "food_fulfilled": "bool", "clothing_fulfilled": "bool",
+	"food_fulfilled": "bool", "clothing_fulfilled": "bool",
 	"shelter_fulfilled": "bool", "experience": [0.0, 1000000000.0],
 	"population_status": [0, 3], "employment_status": [0, 3], "profession": [0, 5]
 }
@@ -24,18 +25,21 @@ const ROUTE_FIELDS: Dictionary = {
 	"site_id": "id", "phase": "text", "cargo": [0, 3], "origin": "vector", "target": "vector",
 	"position": "vector", "start": "count", "arrival": "count", "direction": "text",
 	"destination_id": "id", "daily_target": [1, 9999999], "delivery_day": "day",
-	"delivered_today": "count", "removing": "bool"
+	"delivered_today": "count", "removing": "bool", "resigning": "bool"
 }
 var error: String = ""
 
 func capture(fixture: Node, destinations: Dictionary) -> Dictionary:
 	var daily = fixture.daily
+	if daily.is_settlement_busy():
+		_fail("Wait for worksite settlement.")
+		return {}
 	var data: Dictionary = {
 		"schema_version": VERSION, "scenario": SCENARIO,
 		"clock": {"day": TimeComponentManager.current_day, "hour": TimeComponentManager.current_hour,
 			"minute": TimeComponentManager.current_minute, "weather": TimeComponentManager.current_weather},
 		"workers": {}, "dismissed": {}, "citizens": {}, "tools": fixture.city_tools.units.duplicate(true),
-		"storages": {}, "sites": {}, "jobs": {}, "routes": {}, "journeys": {},
+		"storages": {}, "sites": {}, "jobs": {}, "routes": {}, "journeys": {}, "pending_output": {}, "pending_progress": {},
 		"ledger": {"day": daily.ledger_day, "last_tick": daily.last_tick, "stock_day": daily.last_stock_day,
 			"minutes": daily.minutes_by_worker.duplicate(true), "rng_seed": str(daily.rng.seed), "rng_state": str(daily.rng.state)},
 		"productive_days": fixture.worker_management.productive_days.duplicate(true),
@@ -62,6 +66,10 @@ func capture(fixture: Node, destinations: Dictionary) -> Dictionary:
 		var job: Dictionary = daily.jobs[site_id]
 		data.jobs[str(site_id)] = {"ids": job.ids.duplicate(), "units": job.units,
 			"progress": job.progress.duplicate(), "starts": job.starts.duplicate(), "stats": job.stats.duplicate(true)}
+	for site_id in daily.pending_output:
+		data.pending_output[str(site_id)] = int(daily.pending_output[site_id].quantity)
+	for site_id in daily.pending_progress:
+		data.pending_progress[str(site_id)] = daily.pending_progress[site_id].duplicate()
 	for id: String in fixture.hauling.routes:
 		var route: Dictionary = fixture.hauling.routes[id]
 		var endpoint = fixture._assigned_storage_destination(route.destination_path)
@@ -112,7 +120,7 @@ func restore(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	for site_id: String in data.jobs:
 		var job: Dictionary = data.jobs[site_id].duplicate(true)
 		job.units = int(job.units)
-		job.progress = _int_values(job.progress)
+		job.progress = job.progress.duplicate(true)
 		job.starts = _int_values(job.starts)
 		for id: String in job.stats:
 			job.stats[id].output = int(job.stats[id].output)
@@ -135,12 +143,20 @@ func restore(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 		route.destination = endpoint if route.phase != "idle" else null
 		route.destination_path = fixture.get_path_to(endpoint)
 		route.destination_name = endpoint.display_name
+		route.resigning = bool(route.get("resigning", false))
 		route.erase("destination_id")
 		routes[id] = route
 	WorkerDatabase.workers_by_id = workers
 	WorkerDatabase.dismissed_workers = dismissed
 	CitizenManager.citizens_by_id = citizens
 	daily.jobs = jobs
+	daily.pending_output.clear()
+	for site_id: String in data.get("pending_output", {}):
+		daily.pending_output[StringName(site_id)] = {"quantity": int(data.pending_output[site_id]),
+			"drop": fixture._drop_daily_output.bind(fixture.get_node("WorksiteMarkers/" + site_id))}
+	daily.pending_progress.clear()
+	for site_id: String in data.get("pending_progress", {}):
+		daily.pending_progress[StringName(site_id)] = data.pending_progress[site_id].duplicate()
 	fixture.hauling.routes = routes
 	daily.hauler_setups.clear()
 	for site_id in fixture.sites:
@@ -216,13 +232,16 @@ func restore(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 
 func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	error = ""
-	if not data is Dictionary or not _check(data.get("schema_version"), [VERSION, VERSION]) or not _check(data.get("scenario"), "text") or data.scenario != SCENARIO:
+	if not data is Dictionary or not _check(data.get("schema_version"), [1, VERSION]) or not _check(data.get("scenario"), "text") or data.scenario != SCENARIO:
 		return _fail("Unsupported save version or scenario.")
 	var root_fields: Dictionary = {"schema_version": "count", "scenario": "text", "clock": "map",
 		"workers": "map", "dismissed": "map", "citizens": "map", "tools": "map", "storages": "map",
 		"sites": "map", "jobs": "map", "routes": "map", "journeys": "map", "ledger": "map",
 		"productive_days": "map", "contributions": "map", "journey_day": "day", "ground": "list",
 		"inventory": "map", "inventory_capacity": [0.0, 1000000.0], "player_position": "vector"}
+	if int(data.schema_version) >= 3:
+		root_fields.pending_output = "map"
+		root_fields.pending_progress = "map"
 	if not _record(data, root_fields, "save") or not _record(data.clock, {"day": "count", "hour": [0, 23], "minute": [0, 59], "weather": "text"}, "clock"):
 		return false
 	if data.clock.weather not in ["clear", "cloudy", "rainy", "storm"]:
@@ -230,15 +249,23 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	var day: int = int(data.clock.day)
 	var now: int = day * 1440 + int(data.clock.hour) * 60 + int(data.clock.minute)
 	var known: Dictionary = {}
+	var legacy: bool = int(data.schema_version) == 1
 	for group: String in ["workers", "dismissed"]:
 		for id in data[group]:
-			if not _check(id, "id") or known.has(id) or not _record(data[group][id], WORKER_FIELDS, group):
+			var fields: Dictionary = WORKER_FIELDS.duplicate()
+			if int(data.schema_version) < 3:
+				fields.erase("resignation_pending")
+			if legacy:
+				fields.reliability = [0.0, 1.0]
+			if not _check(id, "id") or known.has(id) or not _record(data[group][id], fields, group):
 				return _fail("Invalid or duplicate worker: " + str(id))
 			if data[group][id].worker_id != id:
 				return _fail("Worker ID mismatch.")
 			known[id] = data[group][id]
 	for id in data.citizens:
 		var fields: Dictionary = CITIZEN_FIELDS.duplicate()
+		if legacy:
+			fields.reliability = [0.0, 1.0]
 		fields.profile = "map"
 		if not _check(id, "id") or not _record(data.citizens[id], fields, "citizen"):
 			return false
@@ -254,6 +281,19 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 	for id: String in data.sites:
 		if not _record(data.sites[id], {"stock": "count"}, "site"):
 			return false
+	for site_id: Variant in data.get("pending_output", {}):
+		if not data.sites.has(site_id) or not _check(data.pending_output[site_id], [1, 1000000000]):
+			return _fail("Invalid pending worksite output.")
+	for site_id: Variant in data.get("pending_progress", {}):
+		if not data.sites.has(site_id) or not data.pending_progress[site_id] is Array:
+			return _fail("Invalid pending gathering site.")
+		var entries: Array = data.pending_progress[site_id]
+		var unit_minutes: float = float(fixture.sites[StringName(site_id)].minutes_per_unit)
+		if entries.is_empty() or entries.size() > 10000:
+			return _fail("Invalid pending gathering progress entries.")
+		for progress: Variant in entries:
+			if not _check(progress, [0.0, unit_minutes]) or float(progress) <= 0.0 or float(progress) >= unit_minutes:
+				return _fail("Invalid pending gathering progress.")
 	for id: String in data.storages:
 		if not _record(data.storages[id], {"quantity": "count", "capacity": "count", "accepting": "bool"}, "storage"):
 			return false
@@ -286,17 +326,24 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 			if not _check(id, "id") or not data.workers.has(id) or assignments.has(id):
 				return _fail("Assigned worker missing or duplicated.")
 			assignments[id] = site_id
-			if not _check(job.starts.get(id), "count") or int(job.starts[id]) % 1440 != 420 or int(job.starts[id]) > (day + 1) * 1440 + 420:
+			# An assignment can start at any minute during the current shift or
+			# be scheduled for 07:00 on the next workday.
+			if not _check(job.starts.get(id), "count") or int(job.starts[id]) % 1440 < fixture.daily.SHIFT_START or int(job.starts[id]) % 1440 >= fixture.daily.SHIFT_END or int(job.starts[id]) > (day + 1) * 1440 + fixture.daily.SHIFT_START:
 				return _fail("Invalid assignment start.")
 			if not _record(job.stats.get(id), {"days": "days", "output": "count"}, "job stats") or not _valid_days(job.stats[id].days, day):
 				return _fail("Invalid productive days.")
 			if data.workers[id].profession == WorkerData.Profession.HAULER and (not data.routes.has(id) or not carts.has(id)):
 				return _fail("Assigned Hauler has no route or exclusive cart.")
 		for id in job.progress:
-			if not job.ids.has(id) or not _check(job.progress[id], [0, 9]):
+			var progress: Variant = job.progress[id]
+			var minutes_per_unit: float = float(fixture.sites[StringName(site_id)].minutes_per_unit)
+			if not job.ids.has(id) or not _check(progress, [0.0, minutes_per_unit]) or float(progress) >= minutes_per_unit:
 				return _fail("Invalid partial gathering progress.")
 	for id in data.routes:
-		if not assignments.has(id) or data.workers[id].profession != WorkerData.Profession.HAULER or not _record(data.routes[id], ROUTE_FIELDS, "route"):
+		var route_fields: Dictionary = ROUTE_FIELDS.duplicate()
+		if int(data.schema_version) < 3:
+			route_fields.erase("resigning")
+		if not assignments.has(id) or data.workers[id].profession != WorkerData.Profession.HAULER or not _record(data.routes[id], route_fields, "route"):
 			return _fail("Invalid Hauler route.")
 		var route: Dictionary = data.routes[id]
 		if route.site_id != assignments[id] or not destinations.has(route.destination_id):
@@ -305,6 +352,10 @@ func validate(data: Variant, fixture: Node, destinations: Dictionary) -> bool:
 			return _fail("Invalid Hauler travel state.")
 		if (route.phase == "idle" and route.cargo != 0) or (route.phase == "outbound" and route.cargo == 0):
 			return _fail("Cargo disagrees with route phase.")
+		if bool(route.get("resigning", false)) and (not route.removing or int(route.cargo) <= 0):
+			return _fail("Invalid pending Hauler resignation.")
+		if int(data.schema_version) >= 3 and bool(route.resigning) != bool(data.workers[id].resignation_pending):
+			return _fail("Hauler route and worker resignation state disagree.")
 		if route.delivery_day > day or route.delivered_today > route.daily_target:
 			return _fail("Invalid daily delivery accounting.")
 		if route.phase != "idle" and not _position(route.target).is_equal_approx(destinations[route.destination_id].get_arrival_position()):
@@ -395,6 +446,8 @@ func _fields(source: Object, fields: Dictionary) -> Dictionary:
 
 func _assign_fields(target: Object, data: Dictionary, fields: Dictionary) -> void:
 	for field: String in fields:
+		if not data.has(field):
+			continue # Fields added after the source save retain their Resource defaults.
 		var rule: Variant = fields[field]
 		var integer_field: bool = (rule is String and rule == "count") or (rule is Array and rule[0] is int)
 		target.set(field, int(data[field]) if integer_field else data[field])

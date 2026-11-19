@@ -1,6 +1,6 @@
 # ARCHITECTURE - Time is Precious
 
-Last updated: 2026-10-18
+Last updated: 2026-11-01
 
 ## Purpose
 
@@ -31,6 +31,62 @@ v1/v2/v3 compatibility paths. Merchant gameplay rolls 1–2 requests per visit
 (wood 3–6 and/or dry bricks 10–20); fixed quantities belong to accounting fixtures.
 The production chain and output uses exist; normal first-playthrough validation
 is tracked separately in `ROADMAP.md`. This clarification changes no architecture.
+
+## Direct worksite supply — 2026-11-04 branch under review
+
+The Game Director's newer direction sends completed Daily worker gathering directly
+to City Storage. The worksite scheduler still owns natural stock, partial work and
+any completed units waiting for a rejected receipt. It retries that receipt on each
+clock tick, including outside the work shift. The content adapter selects the site's
+authored item; CityToolStorage commits the counted stock atomically. The temporary
+city capacity remains the pre-existing effectively unbounded integer range, avoiding
+any change to old balances. Player deposits retain their existing filter. Manual
+player gathering still goes to personal Inventory or its existing overflow ground
+pickup, so initial construction continues to consume player materials.
+
+New Hauler worksite assignments remain disabled. The requested future Hauler role is
+storage-to-storage only; no such route or recruitment UI is implemented by this
+checkpoint. Workshop storage is currently player-owned and does not distinguish
+city-owned lots, so an outward City Storage transfer must not be enabled until its
+ownership, access, cargo, and persistence boundaries are implemented together.
+
+City checkpoint v15 uses worksite snapshot v4 to distinguish this routing change.
+On an older snapshot, already-grounded piles and cargo stay at their prior locations;
+completed but undelivered worksite goods become player-pickable ground piles rather
+than silently becoming city-owned. The original checkpoint remains untouched on
+Continue, and the next successful save retains it in the normal backup. New v15
+pending receipts remain worksite-owned until City Storage accepts them exactly once.
+
+## Worker shifts and needs — 2026-11-01
+
+The approved worker-needs revision uses a 07:00–15:00 game-time shift for
+resource gathering, initial workshop construction and NPC wet-mudbrick shaping.
+Paid workers must reach their assigned plot; their unfinished work and materials
+remain when the shift ends. Drying is a passive `ProcessManager` batch and
+continues outside the shift without an assigned worker.
+
+Basic needs continue to settle once at midnight. A worker who reaches zero
+Satisfaction resigns and forfeits the remaining prepaid contract; unfinished
+work can be continued by a replacement. A Hauler carrying a load completes that
+delivery before departure. The original citizen and worker progression remain,
+and a returning applicant must recover to the existing 50% threshold; rehiring
+requires a newly paid contract. Current city checkpoints use schema v12 and accept earlier schemas;
+they retain pending work and delivery state without rewriting old files on load.
+
+The authored citizen-house plot shares the construction state and worker-presence
+rules with workshop plots. The player or a worker clears it before construction;
+the player may also build in three-hour manual sessions, with normal time-based
+needs and interruption rules. Paused work keeps the paid materials and can be
+resumed by the player or a replacement worker. On completion the persistent
+construction state adds three places to the existing city shelter capacity once.
+Checkpoints through v11 acquire an untouched, uncleared house plot
+without changing their saved shelter capacity. House materials and work duration
+are provisional. The initial applicant and supply bootstrap remains separate work.
+
+Earlier fixed-team and uninterrupted-construction descriptions below represent
+prior checkpoints. The Game Director's 2026-11-01 shift and resignation decisions
+supersede the older 1% minimum and fixed-team statements in `docs/game-concept.md`;
+that protected design document still needs a separately authorized update.
 
 ## Current Architectural Priority
 
@@ -138,7 +194,12 @@ Legacy worker compatibility may exist, but new work should not create additional
 - `ImmigrationManager` evaluates immigration and manages pending batches.
 - Accepted immigrants become residents/citizens.
 - Rejected/left citizens must not consume city resources.
-- `CitySpawner` / `CitizenActor` represent resident data in the world.
+- `CitySpawner` / `CitizenActor` remain available for prototype scenes. On the
+  main city map, the existing `WorkerVisuals` owner projects every registered
+  resident by citizen ID and reuses that same visual for hiring and work.
+  A worker inside a plot is hidden until departure; a departed citizen is
+  removed. Checkpoint and home/city restoration rebuild the projection from
+  the existing citizen and worker records without adding save fields.
 - Visual presentation should stay separate from gameplay authority unless an approved trait system intentionally connects them.
 
 Current immigration approval remains batch-based unless design explicitly changes it.
@@ -194,7 +255,8 @@ if is_hired:
     consume_city_stock()
 ```
 
-Current daily needs/satisfaction/reliability behavior exists at prototype level, but balance remains unfinished.
+Daily needs and Satisfaction exist at prototype level; balance remains unfinished.
+Reliability is retired from the current worker/citizen MVP.
 
 ## Workshop / Production Responsibilities
 
@@ -338,8 +400,8 @@ the affordable recipients at the unchanged one-point/person rate; linked workers
 the result through CitizenData. Food fulfilled/unfulfilled counters include this same set.
 The existing midnight event drives consumption, with per-day and reentrancy guards so time
 skips process every day and repeated notifications cannot eat the same day's ration twice.
-Existing shelter and reliability values are preserved. Satisfaction follows the approved
-daily basic-needs rule in `docs/game-concept.md` section 11.
+Shelter behavior is unchanged. Satisfaction follows the approved daily basic-needs rule
+in `docs/game-concept.md` section 11.
 
 The physical City Storage food summary, legacy GameplayHUD food status and immigration food
 readiness query this same stock/recipient calculation. Full days remaining is whole days
@@ -380,15 +442,25 @@ daily evaluation. Both panels refresh on stock/time/population changes and the c
 refreshing the modal never issues clothing or consumes food.
 
 After all three needs are evaluated, `last_needs_results` stores per-person flags, missing
-needs, clothing days remaining and actual clamped satisfaction/reliability changes.
+needs, clothing days remaining and actual clamped Satisfaction changes.
 `needs_changed` is emitted once after the complete daily result. Worker-management rows
 read `get_worker_needs_summary()`; Worker Hub Details refreshes its visible scrollable
 popup from the signal. Missing evaluation displays unknown needs and current values without
 an invented delta. UI reads never issue clothing or process another day.
 
-This does not implement disk saving. A future persistence snapshot must retain city items,
-prepared portions, clothing allocations and processed-day markers coherently to prevent
-duplication on load.
+The city/home checkpoint retains city items, prepared portions, clothing allocations and
+processed-day markers coherently to prevent duplication on load.
+
+### Satisfaction and worker output
+
+The existing Satisfaction tiers multiply output by 0.85 below 40%, 1.0 from 40% to
+below 75%, and 1.05 from 75% upward. Linked workers use their citizen's current value;
+unlinked workers use their own. Workshop NPC batches round their multiplied output.
+Daily gathering applies the same multiplier to each productive minute and awards only
+completed items. Partial progress carries through the shift and a save/Continue, but an
+unfinished item is not awarded at shift end or depletion. Thus 48 base items at the low
+tier yield 40 completed gathered items, while a single workshop batch rounds to 41.
+Reliability has no active stat, daily update, random output penalty, or UI in the MVP.
 
 ### Approved storage integration direction (staged, not fully implemented)
 
@@ -483,6 +555,13 @@ Its explicit Build materials button tops personal Inventory up to one constructi
 kit using the construction state's requirements. It preserves surplus, preflights
 the complete missing weight and grants nothing automatically. Unlike clock controls,
 supplies remain available in a paused build menu, refreshing via items_changed.
+The explicit resident-needs debug action tops City Storage up to seven days of
+food and one spare garment per current consumer, and raises shelter capacity
+to cover that same set without creating houses or residents. It preserves
+surplus and leaves the normal midnight needs and Satisfaction rules in charge.
+The action does not save by itself; a later checkpoint, including sleep, saves
+these ordinary stock and shelter values. Loading an earlier checkpoint restores
+its original values. No debug flag or new save field is introduced.
 
 UI scripts/scenes may adapt layout, but they must not change `project.godot` display configuration as a local fix.
 
@@ -768,6 +847,19 @@ Schema version 2 adds an explicit `city`/`home` location header; all state keys 
 unchanged. The existing slot filename stays stable. Version-1 city-only files are read
 explicitly as city checkpoints and upgraded by the next successful save. Unsupported
 future versions and the isolated worksite prototype are not silently migrated.
+
+Schema version 9 records player Hunger and Fatigue without Focus. Versions 1–8
+still require a valid legacy Focus value; it is discarded only from the staged
+runtime copy after validation. Continue does not rewrite the old file. A later
+successful checkpoint uses the existing rotation and retains the previous primary
+as its `.bak`. Player Energy remains the inverse presentation of Fatigue, and
+negotiation is temporarily unavailable in the MVP.
+
+Schema version 10 removes retired Reliability fields from workers, citizens, and daily
+needs results. Versions 1–9 validate and discard those fields from the staged runtime
+copy without modifying the original file. A later successful checkpoint writes version
+10 using the existing backup rotation. Isolated worksite saves use their own schema and
+retain fractional gathering progress as well as compatibility with their older version.
 
 For the authored city/home pair, SceneDoor asks CitySave to retain the existing worksite
 subtree under the runtime host before freeing the city. Its frame/input/physics processing

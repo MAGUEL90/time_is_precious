@@ -3,12 +3,61 @@ extends RefCounted
 ## Scene-local snapshot adapter for the authored main-city worksite map.
 ## IDs in this block are checked against the current authored map before they
 ## are used to bind callbacks or endpoints. No saved path is loaded directly.
-const SCHEMA_VERSION: int = 1
+const SCHEMA_VERSION: int = 6
+const SITE_HISTORY = preload("res://scenes/new_scenes/save_game/city_worksite_history.gd")
+const LEGACY_STOCKPILES = preload("res://scenes/content_scene/worksites/legacy_stockpile_layout.gd")
 const MAX_COUNT: int = 1000000000
 const MAX_DAY: int = 694444 # floor(MAX_COUNT / 1440)
 const MAX_POSITION: float = 1000000.0
+const MIN_RESPAWN_DELAY_MINUTES: int = 2880
+const MAX_RESPAWN_DELAY_MINUTES: int = 4320
+const MAX_RESPAWN_MINUTE: int = 9223372036854775807
+const LEGACY_SITE_IDS: Array[String] = ["ClaySiteA", "WoodSite", "ReedSite", "StrawSite", "WaterSite"]
+const NEW_SITE_IDS: Array[String] = ["ClaySiteB", "WoodSiteB", "WoodSiteC", "ReedSiteB", "WoodSiteD", "WoodSiteE"]
 
 var error: String = ""
+var _restored_storage_notifications: Array[WeakRef] = []
+
+
+## An in-flight legacy delivery may finish once, without recreating a stockpile
+## or exposing a new destination in the worksite UI. If a retained City
+## Storage rejects it, leave the same cargo on the ground at its destination.
+class LegacyFinalDestination extends RefCounted:
+	var worksite_ref: WeakRef
+	var native_ref: WeakRef
+	var target: Vector2
+	var display_name: String = "Ground"
+	var receiving: bool = false
+	var credited: bool = true
+
+	func _init(worksite: Node, arrival: Vector2, native: Object = null) -> void:
+		worksite_ref = weakref(worksite)
+		target = arrival
+		if is_instance_valid(native):
+			native_ref = weakref(native)
+			display_name = str(native.display_name)
+
+	func get_arrival_position() -> Vector2:
+		return target
+
+	func awards_delivery_credit() -> bool:
+		return credited
+
+	func try_deliver_at_position(position: Vector2, cargo: Dictionary) -> bool:
+		if receiving or not position.is_equal_approx(target) or int(cargo.get("quantity", 0)) <= 0:
+			return false
+		receiving = true
+		var native: Object = native_ref.get_ref() if native_ref != null else null
+		if is_instance_valid(native) and bool(native.try_deliver_at_position(position, cargo)):
+			receiving = false
+			return true
+		# A rejected City Storage receipt never earned delivery XP previously.
+		credited = native_ref == null
+		var worksite: Node = worksite_ref.get_ref() as Node
+		var dropped: bool = is_instance_valid(worksite) and worksite.is_inside_tree() and not worksite.is_queued_for_deletion() \
+			and bool(worksite._drop_legacy_stockpile_output(int(cargo.quantity), worksite.get_node("GroundOutput").to_local(position), str(cargo.item_id)))
+		receiving = false
+		return dropped
 
 
 func capture(worksite: Node) -> Dictionary:
@@ -18,6 +67,9 @@ func capture(worksite: Node) -> Dictionary:
 		return {}
 	if bool(worksite.get("_working")):
 		_fail("Manual work is still active.")
+		return {}
+	if worksite.daily.is_settlement_busy():
+		_fail("Wait for worksite settlement.")
 		return {}
 	for session in worksite.sites.values():
 		if bool(session.working):
@@ -31,9 +83,30 @@ func capture(worksite: Node) -> Dictionary:
 		if not _valid_id(site_id) or sites.has(site_id) or not _valid_item_id(str(session.item_id)):
 			_fail("The worksite registry contains an unsupported site or item.")
 			return {}
-		sites[site_id] = {"stock": int(session.stock)}
+		var site_record: Dictionary = {"stock": int(session.stock)}
+		var offset: Vector2 = worksite.resource_site_offset(StringName(site_id))
+		# The authored position is the default; omit it to keep old saves near
+		# the codec's file-size limit loadable without changing their meaning.
+		if offset != Vector2.ZERO:
+			site_record["offset"] = offset
+		if int(session.stock) == 0 and bool(session.get("finite_resource")):
+			if not _has_property(session, "respawn_started_at") or not _has_property(session, "respawn_due_at"):
+				_fail("A depleted finite worksite has no saved respawn timer.")
+				return {}
+			var started_at: Variant = session.get("respawn_started_at")
+			var due_at: Variant = session.get("respawn_due_at")
+			if not _valid_respawn_pair(started_at, due_at, int(worksite.daily.now())):
+				_fail("A depleted finite worksite has an invalid respawn timer.")
+				return {}
+			site_record["respawn_started_at"] = started_at
+			site_record["respawn_due_at"] = due_at
+		sites[site_id] = site_record
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
+	for endpoint: StorageDestination in endpoints.values():
+		if endpoint.is_delivery_busy():
+			_fail("Wait for worksite delivery.")
+			return {}
 	var storages: Dictionary = _capture_storages(worksite, endpoints)
 	if not error.is_empty():
 		return {}
@@ -43,7 +116,8 @@ func capture(worksite: Node) -> Dictionary:
 	var routes: Dictionary = _capture_routes(worksite, endpoints)
 	if not error.is_empty():
 		return {}
-	var ground: Array = _capture_ground(worksite)
+	var ground: Array = _capture_ground(worksite, false)
+	var legacy_ground: Array = _capture_ground(worksite, true)
 	if not error.is_empty():
 		return {}
 	var journeys: Dictionary = _capture_journeys(worksite)
@@ -55,6 +129,8 @@ func capture(worksite: Node) -> Dictionary:
 		"sites": sites,
 		"storages": storages,
 		"jobs": jobs,
+		"pending_output": _capture_pending_output(worksite),
+		"pending_progress": _capture_pending_progress(worksite),
 		"ledger": {
 			"day": int(daily.ledger_day),
 			"last_tick": int(daily.last_tick),
@@ -67,46 +143,101 @@ func capture(worksite: Node) -> Dictionary:
 		"productive_days": worksite.worker_management.productive_days.duplicate(true),
 		"routes": routes,
 		"ground": ground,
+		"legacy_ground": legacy_ground,
 		"worker_journeys": journeys,
 		"journey_cache_day": int(worksite.journey_cache_day),
 	}
 	return data
 
 
-func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_workers: Dictionary = {}) -> bool:
+func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_workers: Dictionary = {}, checkpoint_minute: int = -1) -> bool:
 	error = ""
 	if not _has_worksite_context(worksite):
 		return _fail("The current worksite map is unavailable.")
-	if not _has_exact_keys(data, [
+	var expected_fields: Array = [
 		"schema_version", "sites", "storages", "jobs", "ledger", "contributions",
 		"productive_days", "routes", "ground", "worker_journeys", "journey_cache_day",
-	]):
+	]
+	if typeof(data.get("schema_version")) == TYPE_INT and int(data.schema_version) >= 2:
+		expected_fields.append("pending_output")
+		expected_fields.append("pending_progress")
+	if typeof(data.get("schema_version")) == TYPE_INT and int(data.schema_version) >= 3:
+		expected_fields.append("legacy_ground")
+	if not _has_exact_keys(data, expected_fields):
 		return _fail("Invalid worksite snapshot fields.")
-	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) != SCHEMA_VERSION:
+	if typeof(data.schema_version) != TYPE_INT or int(data.schema_version) not in [1, 2, 3, 4, 5, SCHEMA_VERSION]:
 		return _fail("Unsupported worksite snapshot version.")
 	for field: String in ["sites", "storages", "jobs", "ledger", "contributions", "productive_days", "routes", "worker_journeys"]:
 		if typeof(data[field]) != TYPE_DICTIONARY:
 			return _fail("Invalid worksite snapshot map: " + field)
 	if typeof(data.ground) != TYPE_ARRAY or data.ground.size() > 10000:
 		return _fail("Invalid worksite ground output list.")
+	if int(data.schema_version) >= 3 and (typeof(data.legacy_ground) != TYPE_ARRAY or data.legacy_ground.size() > 10000):
+		return _fail("Invalid legacy ground output list.")
 	if not _is_count(data.journey_cache_day, -1, MAX_DAY):
 		return _fail("Invalid worksite commute cache day.")
 
 	var site_ids: Dictionary = _site_registry(worksite)
-	if not _same_keys(data.sites, site_ids):
+	var schema_version: int = int(data.schema_version)
+	if schema_version < 6:
+		var legacy_site_ids: Dictionary = {}
+		for site_id: String in LEGACY_SITE_IDS:
+			if not site_ids.has(site_id) or not worksite.sites.has(StringName(site_id)):
+				return _fail("Legacy worksite registry differs from the saved city.")
+			legacy_site_ids[site_id] = true
+		if not _same_keys(data.sites, legacy_site_ids):
+			return _fail("Legacy worksite registry differs from the saved city.")
+	elif not SITE_HISTORY.plan(data.sites, site_ids).ok:
 		return _fail("Worksite registry differs from the saved city.")
 	for site_id: String in data.sites:
-		if not _has_exact_keys(data.sites[site_id], ["stock"]):
+		if not data.sites[site_id] is Dictionary:
 			return _fail("Invalid worksite stock record.")
-		if not _is_count(data.sites[site_id].stock, 0, MAX_COUNT):
+		var record: Dictionary = data.sites[site_id]
+		var has_offset: bool = record.has("offset")
+		var has_started_at: bool = record.has("respawn_started_at")
+		var has_due_at: bool = record.has("respawn_due_at")
+		var fields: Array = ["stock"]
+		if schema_version >= 5 and has_offset:
+			fields.append("offset")
+		if schema_version >= 6 and has_started_at and has_due_at:
+			fields.append("respawn_started_at")
+			fields.append("respawn_due_at")
+		if not _has_exact_keys(data.sites[site_id], fields):
+			return _fail("Invalid worksite stock record.")
+		if not _is_count(record.stock, 0, MAX_COUNT):
 			return _fail("Invalid worksite stock quantity.")
+		if has_offset and (schema_version < 5 or not _is_vector(record.offset) or not worksite.resource_offset_valid(record.offset, StringName(site_id))):
+			return _fail("Invalid worksite deposit location.")
+		if schema_version >= 6:
+			var session = worksite.sites[StringName(site_id)]
+			var finite_resource: bool = bool(session.get("finite_resource"))
+			if has_started_at != has_due_at:
+				return _fail("A worksite respawn timer must include both timestamps.")
+			if int(record.stock) == 0 and finite_resource:
+				var saved_minute: Variant = checkpoint_minute if checkpoint_minute >= 0 else data.ledger.get("last_tick")
+				if not has_started_at or not _is_count(saved_minute, 0, MAX_COUNT) or not _valid_respawn_pair(record.respawn_started_at, record.respawn_due_at, int(saved_minute)):
+					return _fail("A depleted finite worksite has an invalid respawn timer.")
+			elif has_started_at:
+				return _fail("A worksite respawn timer is only valid for an empty finite deposit.")
 
 	var endpoints: Dictionary = _authored_endpoints(worksite)
+	if int(data.schema_version) < 3:
+		# Old checkpoints describe the five authored destinations removed from
+		# the current map. Their positions are fixed data, never saved paths.
+		var legacy_count: int = 0
+		for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+			if data.storages.has(endpoint_id):
+				legacy_count += 1
+				endpoints[endpoint_id] = worksite.to_global(LEGACY_STOCKPILES.STOCKPILES[endpoint_id].position)
+		if legacy_count != LEGACY_STOCKPILES.STOCKPILES.size():
+			return _fail("Incomplete legacy stockpile registry.")
 	if not _same_keys(data.storages, endpoints):
 		return _fail("Authored storage registry differs from the saved city.")
 	if not _validate_storages(data.storages, worksite, endpoints):
 		return false
 
+	# References must belong to the source snapshot, not sites added later.
+	var saved_site_ids: Dictionary = data.sites
 	var all_workers: Dictionary = {}
 	if not _merge_worker_rosters(all_workers, workers):
 		return false
@@ -116,16 +247,155 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 		return false
 	if int(data.journey_cache_day) > int(data.ledger.stock_day):
 		return _fail("Commute cache day is newer than the worksite ledger.")
-	if not _validate_jobs(data.jobs, worksite, workers, data.routes, site_ids, int(data.ledger.stock_day)):
+	if not _validate_jobs(data.jobs, worksite, workers, data.routes, saved_site_ids, int(data.ledger.stock_day)):
+		return false
+	if not _validate_pending_output(data.get("pending_output", {}), saved_site_ids):
+		return false
+	if not _validate_pending_progress(data.get("pending_progress", {}), saved_site_ids, worksite):
 		return false
 	if not _validate_worker_history(data.contributions, data.productive_days, all_workers, int(data.ledger.stock_day)):
 		return false
-	if not _validate_routes(data.routes, data.jobs, workers, worksite, endpoints, site_ids, int(data.ledger.last_tick)):
+	if not _validate_routes(data.routes, data.jobs, workers, worksite, endpoints, saved_site_ids, int(data.ledger.last_tick), int(data.schema_version)):
 		return false
-	if not _validate_ground(data.ground, worksite, site_ids):
+	if not _validate_ground(data.ground, worksite, saved_site_ids, false):
 		return false
-	if not _validate_journeys(data.worker_journeys, all_workers, site_ids, int(data.journey_cache_day)):
+	if int(data.schema_version) >= 3 and not _validate_ground(data.legacy_ground, worksite, saved_site_ids, true):
 		return false
+	if not _validate_journeys(data.worker_journeys, all_workers, saved_site_ids, int(data.journey_cache_day)):
+		return false
+	return true
+
+
+## Called only on a fully validated staged checkpoint, before applying it.
+## The original file stays untouched until the player's next successful save.
+func migrate_legacy(data: Dictionary, worksite: Node, checkpoint_minute: int = -1) -> bool:
+	if int(data.schema_version) >= SCHEMA_VERSION:
+		return _add_registered_sites(data, worksite)
+	var previous_version: int = int(data.schema_version)
+	if not data.has("pending_output"):
+		data["pending_output"] = {}
+	if not data.has("pending_progress"):
+		data["pending_progress"] = {}
+	if previous_version < 3:
+		data["legacy_ground"] = []
+		for endpoint_id: String in LEGACY_STOCKPILES.STOCKPILES:
+			if not data.storages.has(endpoint_id):
+				continue
+			var record: Dictionary = LEGACY_STOCKPILES.STOCKPILES[endpoint_id]
+			var amount: int = int(data.storages[endpoint_id].quantity)
+			if amount > 0:
+				data.legacy_ground.append({"item_id": str(record.item_id), "quantity": amount,
+					"position": worksite.get_node("GroundOutput").to_local(worksite.to_global(record.position)),
+					"site_id": ""})
+			data.storages.erase(endpoint_id)
+		for route: Dictionary in data.routes.values():
+			route["resigning"] = bool(route.get("resigning", false))
+			route["removing"] = true
+			route["legacy_final"] = true
+	# Before direct delivery, finished but unsettled output was player-pickable.
+	# Preserve its old ownership as separate world piles; do not reinterpret it
+	# as newly city-owned stock. The source file is never rewritten on load.
+	if previous_version < 4:
+		for site_id: String in data.jobs:
+			var job: Dictionary = data.jobs[site_id]
+			if int(job.units) > 0:
+				if not _stage_old_output(data, worksite, site_id, int(job.units)):
+					return false
+				job.units = 0
+		for site_id: String in data.pending_output:
+			if not _stage_old_output(data, worksite, site_id, int(data.pending_output[site_id])):
+				return false
+		data.pending_output.clear()
+	# A legacy zero has no known depletion instant. Give finite deposits the
+	# conservative maximum delay from the saved clock, without consuming RNG.
+	if checkpoint_minute < 0 or checkpoint_minute > MAX_RESPAWN_MINUTE - MAX_RESPAWN_DELAY_MINUTES:
+		for site_id: String in data.sites:
+			var session = worksite.sites[StringName(site_id)]
+			if int(data.sites[site_id].stock) == 0 and bool(session.get("finite_resource")):
+				return _fail("A legacy depleted deposit has no safe checkpoint time.")
+	for site_id: String in data.sites:
+		var session = worksite.sites[StringName(site_id)]
+		var legacy_site: Dictionary = data.sites[site_id]
+		if int(legacy_site.stock) == 0 and bool(session.get("finite_resource")):
+			legacy_site["respawn_started_at"] = checkpoint_minute
+			legacy_site["respawn_due_at"] = checkpoint_minute + MAX_RESPAWN_DELAY_MINUTES
+	# New authored sites are initialized only when present. Capacity comes from
+	# the configured runtime session; no stock is added to city or player stores.
+	var site_ids: Dictionary = _site_registry(worksite)
+	for site_id: String in NEW_SITE_IDS:
+		if not site_ids.has(site_id) or not worksite.sites.has(StringName(site_id)):
+			continue
+		var session = worksite.sites[StringName(site_id)]
+		var capacity: Variant = session.get("deposit_capacity")
+		if typeof(capacity) != TYPE_INT or int(capacity) <= 0:
+			return _fail("A newly authored finite worksite has no configured deposit capacity.")
+		# Missing from the old file means the new authored origin, even if the
+		# currently running city previously moved this site somewhere else.
+		data.sites[site_id] = {"stock": int(capacity)}
+	if not _add_registered_sites(data, worksite):
+		return false
+	# Older deposits had no persistent location. An omitted offset means the
+	# authored marker, so their stock and serialized size are preserved.
+	data.schema_version = SCHEMA_VERSION
+	# The codec stores dictionary entries in order. Match the current capture
+	# shape so a staged migration and a later capture encode identically.
+	var ordered: Dictionary = {}
+	for key: String in ["schema_version", "sites", "storages", "jobs", "pending_output", "pending_progress", "ledger",
+		"contributions", "productive_days", "routes", "ground", "legacy_ground", "worker_journeys", "journey_cache_day"]:
+		ordered[key] = data[key]
+	data.clear()
+	data.merge(ordered)
+	return true
+
+
+## Historical recognition is explicit and independent of the current scene.
+func needs_registry_migration(data: Dictionary, worksite: Node) -> bool:
+	if int(data.get("schema_version", 0)) < SCHEMA_VERSION:
+		return false
+	var plan: Dictionary = SITE_HISTORY.plan(data.get("sites", {}), _site_registry(worksite))
+	return plan.ok and not plan.additions.is_empty()
+
+func _add_registered_sites(data: Dictionary, worksite: Node) -> bool:
+	var plan: Dictionary = SITE_HISTORY.plan(data.sites, _site_registry(worksite))
+	if not plan.ok:
+		return _fail("No registered migration matches the saved worksite registry.")
+	var additions: Dictionary = {}
+	for site_id: String in plan.additions:
+		var session = worksite.sites.get(StringName(site_id))
+		# All additions in the published history are wood deposits. Never
+		# reinterpret a historical ID as a different resource or invent stock.
+		if session == null or str(session.item_id) != "wood_log" or typeof(session.get("deposit_capacity")) != TYPE_INT or int(session.get("deposit_capacity")) <= 0:
+			return _fail("A registered new worksite has an invalid resource or deposit capacity.")
+		additions[site_id] = {"stock": int(session.get("deposit_capacity"))}
+	# Commit additions together only after every new session is checked.
+	data.sites.merge(additions)
+	return true
+
+
+func _stage_old_output(data: Dictionary, worksite: Node, site_id: String, quantity: int) -> bool:
+	var marker: Node2D = _site_marker(worksite, site_id)
+	if not is_instance_valid(marker) or not worksite.sites.has(StringName(site_id)):
+		return _fail("The old worksite output has no authored site.")
+	var position: Vector2 = marker.global_position + Vector2(0, 24)
+	if site_id == "ReedSite":
+		# The authored City Storage board remains available on a parked city
+		# worksite even when its original Player was freed during a home visit.
+		var board: Node2D = worksite.get_node_or_null("CityStorageArea/Board") as Node2D
+		if not is_instance_valid(board):
+			return _fail("The old Reed output has no city access anchor.")
+		var desired: Vector2 = position
+		position = Vector2.INF
+		for offset: Vector2 in [Vector2(0, 13), Vector2(20, 15), Vector2(0, 30), Vector2(-20, 30), Vector2(20, 30)]:
+			var origin: Vector2 = board.global_position + offset
+			if not worksite.worksite_navigation.is_clear(origin):
+				continue
+			position = worksite.worksite_navigation.reachable_point(origin, desired)
+			if position.is_finite():
+				break
+		if not position.is_finite():
+			return _fail("The old Reed output cannot be placed at a reachable point.")
+	data.legacy_ground.append({"item_id": str(worksite.sites[StringName(site_id)].item_id),
+		"quantity": quantity, "position": worksite.get_node("GroundOutput").to_local(position), "site_id": ""})
 	return true
 
 
@@ -133,6 +403,7 @@ func validate(data: Dictionary, worksite: Node, workers: Dictionary, dismissed_w
 ## Root restore owns Inventory, WorkerDatabase, CitizenManager and CityToolStorage.
 func restore(data: Dictionary, worksite: Node) -> void:
 	error = ""
+	_restored_storage_notifications.clear()
 	if not _has_worksite_context(worksite):
 		_fail("The current worksite map is unavailable.")
 		return
@@ -147,7 +418,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		var job: Dictionary = {
 			"ids": saved_job.ids.duplicate(),
 			"order": str(saved_job.order),
-			"drop": Callable(worksite, "_drop_daily_output").bind(_site_marker(worksite, site_id)),
+			"drop": Callable(worksite, "_deliver_daily_output").bind(_site_marker(worksite, site_id)),
 			"units": int(saved_job.units),
 			"progress": saved_job.progress.duplicate(true),
 			"starts": saved_job.starts.duplicate(true),
@@ -158,7 +429,10 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var restored_routes: Dictionary = {}
 	for worker_id: String in data.routes:
 		var saved_route: Dictionary = data.routes[worker_id]
-		var endpoint: StorageDestination = endpoints[str(saved_route.destination_id)]
+		var endpoint: Variant = endpoints.get(str(saved_route.destination_id))
+		var legacy_final: bool = bool(saved_route.get("legacy_final", false))
+		if legacy_final:
+			endpoint = LegacyFinalDestination.new(worksite, saved_route.target, endpoint)
 		var route: Dictionary = {
 			"id": worker_id,
 			"site_id": StringName(saved_route.site_id),
@@ -170,13 +444,15 @@ func restore(data: Dictionary, worksite: Node) -> void:
 			"start": int(saved_route.start),
 			"arrival": int(saved_route.arrival),
 			"direction": str(saved_route.direction),
-			"destination": endpoint if saved_route.phase != "idle" else null,
-			"destination_path": worksite.get_path_to(endpoint),
+			"destination": endpoint if saved_route.phase != "idle" or legacy_final else null,
+			"destination_path": NodePath(saved_route.destination_id),
 			"destination_name": endpoint.display_name,
 			"daily_target": int(saved_route.daily_target),
 			"delivery_day": int(saved_route.delivery_day),
 			"delivered_today": int(saved_route.delivered_today),
 			"removing": bool(saved_route.removing),
+			"resigning": bool(saved_route.get("resigning", false)),
+			"legacy_final": legacy_final,
 		}
 		restored_routes[worker_id] = route
 
@@ -192,7 +468,13 @@ func restore(data: Dictionary, worksite: Node) -> void:
 
 	var daily = worksite.daily
 	for site_id: String in data.sites:
-		worksite.sites[StringName(site_id)].stock = int(data.sites[site_id].stock)
+		var session = worksite.sites[StringName(site_id)]
+		var saved_site: Dictionary = data.sites[site_id]
+		session.stock = int(saved_site.stock)
+		if _has_property(session, "respawn_started_at") and _has_property(session, "respawn_due_at"):
+			session.respawn_started_at = int(saved_site.get("respawn_started_at", -1))
+			session.respawn_due_at = int(saved_site.get("respawn_due_at", -1))
+	worksite.restore_resource_offsets(data.sites)
 	for endpoint_id: String in data.storages:
 		var endpoint: StorageDestination = endpoints[endpoint_id]
 		endpoint.accepting_deliveries = bool(data.storages[endpoint_id].accepting)
@@ -201,7 +483,7 @@ func restore(data: Dictionary, worksite: Node) -> void:
 			storage.capacity = int(data.storages[endpoint_id].capacity)
 			storage.quantity = int(data.storages[endpoint_id].quantity)
 			if storage.has_signal("changed"):
-				storage.emit_signal("changed")
+				_restored_storage_notifications.append(weakref(storage))
 
 	# Draft selections and plans are transient inspector UI state. Active jobs
 	# and routes are restored from their validated persistent records above.
@@ -210,6 +492,15 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		daily.selected[site_key] = []
 	daily.hauler_setups.clear()
 	daily.jobs = restored_jobs
+	daily.pending_output.clear()
+	for site_id: String in data.get("pending_output", {}):
+		daily.pending_output[StringName(site_id)] = {
+			"quantity": int(data.pending_output[site_id]),
+			"drop": Callable(worksite, "_deliver_daily_output").bind(_site_marker(worksite, site_id)),
+		}
+	daily.pending_progress.clear()
+	for site_id: String in data.get("pending_progress", {}):
+		daily.pending_progress[StringName(site_id)] = data.pending_progress[site_id].duplicate()
 	daily.minutes_by_worker = data.ledger.minutes.duplicate(true)
 	daily.ledger_day = int(data.ledger.day)
 	daily.last_tick = int(data.ledger.last_tick)
@@ -225,6 +516,10 @@ func restore(data: Dictionary, worksite: Node) -> void:
 	var ground_output: Node = worksite.get_node("GroundOutput")
 	for pile: Node in ground_output.get_children():
 		pile.free()
+	for saved_pile: Dictionary in data.get("legacy_ground", []):
+		if not bool(worksite.call("_drop_legacy_stockpile_output", int(saved_pile.quantity), saved_pile.position, str(saved_pile.item_id))):
+			_fail("Validated legacy ground output could not be restored.")
+			return
 	for saved_pile: Dictionary in data.ground:
 		var callback: Callable = Callable()
 		if not str(saved_pile.site_id).is_empty():
@@ -245,11 +540,23 @@ func restore(data: Dictionary, worksite: Node) -> void:
 		visuals.roaming.clear()
 		visuals.site_paths.clear()
 		visuals.plot_presence.states.clear()
+		visuals.plot_presence.tracked.clear()
 		visuals.plot_presence.initial_sync = true
 		visuals.last_minute = -1
 		visuals.fraction = 0.0
+		# The city projection is rebuilt after all save owners finish restoring.
+		visuals.call_deferred("sync_city_residents")
 
 	daily._sync_activities()
+
+## The city restore owner calls this only after every owner has been restored.
+func emit_restored_notifications() -> void:
+	var pending: Array[WeakRef] = _restored_storage_notifications.duplicate()
+	_restored_storage_notifications.clear()
+	for reference: WeakRef in pending:
+		var storage: Object = reference.get_ref()
+		if is_instance_valid(storage) and storage.has_signal("changed"):
+			storage.emit_signal("changed")
 
 
 func _capture_jobs(worksite: Node) -> Dictionary:
@@ -272,6 +579,18 @@ func _capture_jobs(worksite: Node) -> Dictionary:
 		}
 	return result
 
+func _capture_pending_output(worksite: Node) -> Dictionary:
+	var result: Dictionary = {}
+	for site_id: Variant in worksite.daily.pending_output:
+		result[str(site_id)] = int(worksite.daily.pending_output[site_id].quantity)
+	return result
+
+func _capture_pending_progress(worksite: Node) -> Dictionary:
+	var result: Dictionary = {}
+	for site_id: Variant in worksite.daily.pending_progress:
+		result[str(site_id)] = worksite.daily.pending_progress[site_id].duplicate()
+	return result
+
 
 func _capture_routes(worksite: Node, endpoints: Dictionary) -> Dictionary:
 	var result: Dictionary = {}
@@ -279,7 +598,8 @@ func _capture_routes(worksite: Node, endpoints: Dictionary) -> Dictionary:
 		var worker_id: String = str(worker_id_value)
 		var route: Dictionary = worksite.hauling.routes[worker_id_value]
 		var destination_id: String = str(NodePath(route.get("destination_path", NodePath(""))))
-		if not endpoints.has(destination_id):
+		var legacy_final: bool = bool(route.get("legacy_final", false))
+		if not endpoints.has(destination_id) and not (legacy_final and LEGACY_STOCKPILES.STOCKPILES.has(destination_id)):
 			_fail("A Hauler uses a destination outside the authored storage choices.")
 			return {}
 		result[worker_id] = {
@@ -297,14 +617,18 @@ func _capture_routes(worksite: Node, endpoints: Dictionary) -> Dictionary:
 			"delivery_day": int(route.get("delivery_day", -1)),
 			"delivered_today": int(route.get("delivered_today", 0)),
 			"removing": bool(route.get("removing", false)),
+			"resigning": bool(route.get("resigning", false)),
+			"legacy_final": legacy_final,
 		}
 	return result
 
 
-func _capture_ground(worksite: Node) -> Array:
+func _capture_ground(worksite: Node, legacy: bool) -> Array:
 	var result: Array = []
 	for pile: Node in worksite.get_node("GroundOutput").get_children():
 		if not pile is PickUpItem or pile.is_queued_for_deletion() or pile.is_collecting:
+			continue
+		if bool(pile.get_meta("legacy_stockpile", false)) != legacy:
 			continue
 		result.append({
 			"item_id": str(pile.item_id),
@@ -394,6 +718,12 @@ func _validate_storages(data: Dictionary, worksite: Node, endpoints: Dictionary)
 		if typeof(record_value) != TYPE_DICTIONARY:
 			return _fail("Invalid authored storage endpoint record.")
 		var record: Dictionary = record_value
+		if typeof(endpoints[endpoint_id]) == TYPE_VECTOR2:
+			if not _has_exact_keys(record, ["shared", "quantity", "capacity", "accepting"]) or record.shared != false or typeof(record.shared) != TYPE_BOOL:
+				return _fail("Invalid legacy stockpile record.")
+			if not _is_count(record.quantity, 0, MAX_COUNT) or not _is_count(record.capacity, 1, MAX_COUNT) or record.quantity > record.capacity or typeof(record.accepting) != TYPE_BOOL:
+				return _fail("Invalid legacy stockpile quantity or capacity.")
+			continue
 		var endpoint: StorageDestination = endpoints[endpoint_id]
 		var storage: Node = endpoint.get_storage()
 		if storage == null or not is_instance_valid(storage):
@@ -508,7 +838,30 @@ func _validate_worker_history(contributions: Dictionary, productive_days: Dictio
 	return true
 
 
-func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, worksite: Node, endpoints: Dictionary, site_ids: Dictionary, saved_time: int) -> bool:
+func _validate_pending_output(data: Variant, site_ids: Dictionary) -> bool:
+	if not data is Dictionary:
+		return _fail("Invalid pending worksite output.")
+	for site_id: Variant in data:
+		if typeof(site_id) != TYPE_STRING or not site_ids.has(site_id) or not _is_count(data[site_id], 1, MAX_COUNT):
+			return _fail("Invalid pending worksite output quantity or site.")
+	return true
+
+func _validate_pending_progress(data: Variant, site_ids: Dictionary, worksite: Node) -> bool:
+	if not data is Dictionary:
+		return _fail("Invalid pending gathering progress.")
+	for site_id: Variant in data:
+		if typeof(site_id) != TYPE_STRING or not site_ids.has(site_id) or not data[site_id] is Array:
+			return _fail("Invalid pending gathering site.")
+		var entries: Array = data[site_id]
+		if entries.is_empty() or entries.size() > 10000:
+			return _fail("Invalid pending gathering progress entries.")
+		var unit_minutes: float = float(worksite.sites[StringName(site_id)].minutes_per_unit)
+		for progress: Variant in entries:
+			if not _is_finite_number(progress) or float(progress) <= 0.0 or float(progress) >= unit_minutes:
+				return _fail("Invalid pending gathering progress value.")
+	return true
+
+func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, worksite: Node, endpoints: Dictionary, site_ids: Dictionary, saved_time: int, schema_version: int) -> bool:
 	var assigned: Dictionary = {}
 	for site_id_value: Variant in jobs:
 		var site_id: String = str(site_id_value)
@@ -527,10 +880,15 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 		if typeof(route_value) != TYPE_DICTIONARY:
 			return _fail("Invalid Hauler route fields.")
 		var route: Dictionary = route_value
-		if not _has_exact_keys(route, [
+		var route_fields: Array = [
 			"site_id", "phase", "cargo", "origin", "target", "position", "start", "arrival",
 			"direction", "destination_id", "daily_target", "delivery_day", "delivered_today", "removing",
-		]):
+		]
+		if schema_version >= 2:
+			route_fields.append("resigning")
+		if schema_version >= 3:
+			route_fields.append("legacy_final")
+		if not _has_exact_keys(route, route_fields):
 			return _fail("Invalid Hauler route fields.")
 		if typeof(route.site_id) != TYPE_STRING or route.site_id != assigned[worker_id] or not site_ids.has(route.site_id):
 			return _fail("Hauler route worksite does not match its assignment.")
@@ -551,7 +909,16 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 			return _fail("Invalid Hauler route times.")
 		if typeof(route.direction) != TYPE_STRING or not ["left", "right"].has(route.direction):
 			return _fail("Invalid Hauler route direction.")
-		if typeof(route.destination_id) != TYPE_STRING or not endpoints.has(route.destination_id):
+		var legacy_final: bool = false
+		if schema_version >= 3:
+			if typeof(route.legacy_final) != TYPE_BOOL:
+				return _fail("Invalid legacy final delivery state.")
+			legacy_final = route.legacy_final
+			if legacy_final and route.removing != true:
+				return _fail("A legacy final delivery must be withdrawing.")
+			if not worksite.daily.allow_haulers and not legacy_final:
+				return _fail("New worksite Hauler routes are unavailable.")
+		if typeof(route.destination_id) != TYPE_STRING or (not endpoints.has(route.destination_id) and not (legacy_final and LEGACY_STOCKPILES.STOCKPILES.has(route.destination_id))):
 			return _fail("Hauler destination is not an authored storage choice.")
 		var saved_day: int = floori(float(saved_time) / 1440.0)
 		if not _is_count(route.daily_target, 1, 9999999) or not _is_count(route.delivery_day, -1, saved_day) or not _is_count(route.delivered_today, 0, int(route.daily_target)):
@@ -560,8 +927,18 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 			return _fail("Hauler delivery count has no delivery day.")
 		if typeof(route.removing) != TYPE_BOOL:
 			return _fail("Invalid Hauler removal state.")
-		var endpoint: StorageDestination = endpoints[route.destination_id]
-		if route.phase != "idle" and not route.target.is_equal_approx(endpoint.get_arrival_position()):
+		if schema_version >= 2 and (typeof(route.resigning) != TYPE_BOOL or (route.resigning and (not route.removing or int(route.cargo.quantity) <= 0))):
+			return _fail("Invalid pending Hauler resignation state.")
+		if schema_version >= 2 and bool(route.resigning) != worker.resignation_pending:
+			return _fail("Hauler route and worker resignation state disagree.")
+		var target: Vector2
+		if not endpoints.has(route.destination_id):
+			target = worksite.to_global(LEGACY_STOCKPILES.STOCKPILES[route.destination_id].position)
+		elif typeof(endpoints[route.destination_id]) == TYPE_VECTOR2:
+			target = endpoints[route.destination_id]
+		else:
+			target = endpoints[route.destination_id].get_arrival_position()
+		if route.phase != "idle" and not route.target.is_equal_approx(target):
 			return _fail("Hauler destination position no longer matches the authored endpoint.")
 	for worker_id: String in assigned:
 		var worker: WorkerData = workers.get(worker_id)
@@ -570,14 +947,17 @@ func _validate_routes(data: Dictionary, jobs: Dictionary, workers: Dictionary, w
 	return true
 
 
-func _validate_ground(piles: Array, worksite: Node, site_ids: Dictionary) -> bool:
+func _validate_ground(piles: Array, worksite: Node, site_ids: Dictionary, legacy: bool) -> bool:
 	for pile: Variant in piles:
-		if not _has_exact_keys(pile, ["item_id", "quantity", "position", "site_id"]):
+		var fields: Array = ["item_id", "quantity", "position", "site_id"]
+		if not _has_exact_keys(pile, fields):
 			return _fail("Invalid ground output record.")
 		if not _valid_item_id(pile.item_id) or not _is_count(pile.quantity, 1, MAX_COUNT) or not _is_vector(pile.position):
 			return _fail("Unknown ground output item or invalid stack values.")
 		if typeof(pile.site_id) != TYPE_STRING:
 			return _fail("Invalid ground output worksite.")
+		if legacy and not pile.site_id.is_empty():
+			return _fail("Invalid legacy ground output kind.")
 		if not pile.site_id.is_empty():
 			if not site_ids.has(pile.site_id) or str(worksite.sites[StringName(pile.site_id)].item_id) != pile.item_id:
 				return _fail("Ground output refers to an unknown worksite or resource.")
@@ -669,6 +1049,17 @@ func _same_keys(left: Dictionary, right: Dictionary) -> bool:
 
 func _is_count(value: Variant, minimum: int, maximum: int) -> bool:
 	return typeof(value) == TYPE_INT and int(value) >= minimum and int(value) <= maximum
+
+
+func _valid_respawn_pair(started_at: Variant, due_at: Variant, checkpoint_minute: int) -> bool:
+	if typeof(started_at) != TYPE_INT or typeof(due_at) != TYPE_INT:
+		return false
+	var started: int = int(started_at)
+	var due: int = int(due_at)
+	if started < 0 or started > checkpoint_minute or due < started or due > MAX_RESPAWN_MINUTE:
+		return false
+	var delay: int = due - started
+	return delay >= MIN_RESPAWN_DELAY_MINUTES and delay <= MAX_RESPAWN_DELAY_MINUTES
 
 
 func _is_finite_number(value: Variant) -> bool:

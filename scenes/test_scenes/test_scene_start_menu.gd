@@ -1,11 +1,13 @@
 extends Node
 
 const MENU = preload("res://scenes/ui/start_menu/start_menu.tscn")
+const SAVE_STATE = preload("res://scenes/new_scenes/save_game/city_save_state.gd")
 const TEST_PATH: String = "user://start_menu_test/checkpoint.json"
 var failures: int = 0
 var menu: CanvasLayer
 var launched: bool = false
 var continued: bool = false
+var continued_snapshot: Dictionary = {}
 var mode: String = "empty"
 
 func _ready() -> void:
@@ -37,7 +39,14 @@ func _run() -> void:
 			_write(path + ".bak", "prior checkpoint")
 	menu = MENU.instantiate()
 	menu.checkpoint_file.path = path
-	menu.session_started.connect(func(was_continue: bool): launched = true; continued = was_continue)
+	menu.session_started.connect(func(was_continue: bool):
+		launched = true
+		continued = was_continue
+		if was_continue:
+			var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+			if store != null:
+				continued_snapshot = store.snapshot.capture(get_tree().current_scene)
+	)
 	get_tree().root.add_child(menu)
 	get_tree().current_scene = menu
 	await _settle()
@@ -53,25 +62,46 @@ func _run() -> void:
 		var store: Node = WorkStateRuntime.get_node("CitySave")
 		var expected_scene: String = store.snapshot.HOME_PATH if mode == "home" else "res://scenes/content_scene/content_scene.tscn"
 		_expect(get_tree().current_scene.scene_file_path == expected_scene, "Continue opens the saved location.")
-		var actual: Dictionary = store.snapshot.capture(get_tree().current_scene)
+		var actual: Dictionary = continued_snapshot
 		var evidence: String = OS.get_environment("TIP_START_CAPTURE_DIR")
 		if not evidence.is_empty():
 			_write(evidence.path_join("actual-" + mode + ".json"), JSON.stringify(actual, "", true, true))
 			_write(evidence.path_join("expected-" + mode + ".json"), JSON.stringify(expected, "", true, true))
 		var codec = preload("res://scenes/new_scenes/save_game/city_save_values.gd").new()
-		var saved_sources: Dictionary = codec.decode(expected.state).pickup_sources
+		var saved_version: int = int(expected.schema_version)
+		var legacy_v8: bool = saved_version == 8
+		if saved_version < SAVE_STATE.VERSION:
+			var normalizer = SAVE_STATE.new()
+			var prepared: bool = normalizer.prepare(expected, get_tree().current_scene)
+			_expect(prepared, "The original checkpoint can be staged for the current schema.")
+			if prepared:
+				expected.state = codec.encode(normalizer.prepared)
+				expected.schema_version = SAVE_STATE.VERSION
+				expected.location = normalizer.prepared_location
+				if legacy_v8:
+					_expect(not normalizer.prepared.player.has("focus"), "Legacy Focus is removed during staging.")
+		var expected_raw: Dictionary = codec.decode(expected.state)
+		var saved_sources: Dictionary = expected_raw.pickup_sources
 		_expect(store.snapshot._sources.capture() == saved_sources, "Continue restores every registered pickup source exactly.")
 		if mode == "city":
-			var view_count: int = 0
+			# These six sources retain their save ledgers but opt out of world
+			# pickups in the authored-map baseline. Continue must preserve both.
 			for index: int in range(6):
 				var palm: Node = get_tree().current_scene.get_node("YSortWorld/DatePalmTree" + ("" if index == 0 else str(index + 1)))
 				var slots: Array = saved_sources[str(palm.state.name)].available
-				view_count += slots.count(true)
-				for slot: int in range(slots.size()):
-					_expect(palm._pickups.has(slot) == slots[slot], "Continue projects the saved slot for " + str(palm.name))
-			_expect(get_tree().get_nodes_in_group("date_palm_pickups").size() == view_count, "Continue creates no duplicate palm views.")
+				_expect(palm.state.available == slots, "Continue retains every saved slot for " + str(palm.name))
+				_expect(not palm.world_view_enabled, "Continue keeps the legacy world view disabled for " + str(palm.name))
+				_expect(palm._pickups.is_empty(), "Continue creates no pickups for the hidden legacy source " + str(palm.name))
+			_expect(get_tree().get_nodes_in_group("date_palm_pickups").all(func(pickup: Node) -> bool: return pickup.get_parent() != get_tree().current_scene.get_node("YSortWorld")), "Continue creates no hidden or duplicate legacy palm views.")
 		_expect(_same_snapshot(actual, expected), "Continue restores the full checkpoint without elapsed time or extra sleep.")
 		_expect(FileAccess.get_file_as_bytes(path) == bytes_before, "Continue never rewrites the checkpoint.")
+		if legacy_v8 and mode == "city":
+			_expect(store.save_checkpoint(), "A later save upgrades the continued v8 checkpoint.")
+			_expect(FileAccess.get_file_as_bytes(path + ".bak") == bytes_before, "The original v8 bytes remain available in the normal backup.")
+			var upgraded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+			var upgraded_raw: Dictionary = codec.decode(upgraded.state)
+			_expect(int(upgraded.schema_version) == SAVE_STATE.VERSION and not upgraded_raw.player.has("focus"), "The new checkpoint omits the retired Focus field.")
+			_expect(store.load_checkpoint() and store.load_checkpoint(), "The upgraded checkpoint loads repeatedly.")
 		await _capture("continued-" + mode)
 	elif mode == "corrupt":
 		menu.continue_button.pressed.emit()

@@ -7,12 +7,6 @@ Galsal: Hi, Do you have something to do??
 		Galsal: You got me!
 		do proceed_contract()
 		
-	- Listen to me (Negotiate)
-		Galsal: You know what? That sound interesting...
-		do try_negotiate_contract()
-		do BaseDialogueManager.dialogue_deactivated.emit()
-		=> END
-
 	- No
 		Galsal: Oh.. okey
 		do BaseDialogueManager.dialogue_deactivated.emit() 

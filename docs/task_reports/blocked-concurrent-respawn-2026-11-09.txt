@@ -1,0 +1,129 @@
+TIME IS PRECIOUS - RESPAWN TERHALANG DAN SUMBER HABIS BERSAMAAN
+Tanggal: 2026-11-09
+Hasil: PASS. 505 pemeriksaan dalam8 proses playtest MCP, ditambah
+FiniteResourceSitesTest headless PASS (exit0,80.03 detik, stderr kosong).
+
+TARGET DAN KEAMANAN
+Snapshot lengkap b32cc505b89c0a0b06d288b1b6ab48fcb9feccce, branch
+test/time-world/laptop-baseline-20261109, pada:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+Sesi MCP baru memakai server lokal1.12.2 dengan -p ke salinan kerja. Setiap proses
+memverifikasi res://, user://, serta PID pemilik port9877 sebelum begin().
+Godot4.5.1 stable, renderer Compatibility/OpenGL untuk playtest utama.
+Tidak memakai computer use atau koneksi editor lama. Semua proses QA sudah ditutup.
+
+Tidak ada perubahan produksi: toolbar, scene, project.godot, addons, balancing,
+aturan penyimpanan, identitas civil, dan format save tetap. Tidak ditemukan bug
+produksi yang terkonfirmasi; tidak ada patch gameplay. Perubahan existing pada
+test start-menu dan laporan dari tahap sebelumnya tetap dipertahankan.
+Tahap ini hanya menambah harness eksternal dan laporan ini. Tidak merge/push/commit.
+
+DUA SKENARIO UTAMA
+1. last-unit: empat sumber diberi fixture stok tersisa1, kemudian unit terakhir
+   masing-masing diambil melalui pergerakan, E, dan tombol Hourly/Next/Start asli.
+   Kayu/clay/reed/air menghasilkan masing-masing1 unit dengan biaya41/21/16/11
+   menit. Empat sumber lalu sama-sama menunggu respawn. Ini menguji transaksi
+   unit terakhir dan deadline yang tumpang tindih; tidak mengulang penghabisan
+   seluruh kapasitas yang sudah diuji pada tahap sebelumnya.
+2. simultaneous: fixture menetapkan empat sumber sebagai transaksi depletion
+   yang sudah committed pada menit600, kemudian signal settlement runtime asli
+   menjadwalkan deadline. Semua depletion dimulai tepat pada menit yang sama.
+   Fixture tidak menambahkan hasil ke inventori; runtime memilih deadline secara
+   normal, tanpa seed/deadline paksa. Ini uji batas scheduler, bukan klaim empat
+   gathering pemain berlangsung paralel.
+
+Kapasitas sumber tetap: WoodSite24, ClaySiteA36, ReedSite40, WaterSite48.
+Stok fixture hanya digunakan untuk menyiapkan kondisi batas tersebut. Posisi,
+kapasitas, RNG, dan aturan refill tidak diubah.
+
+ALUR DAN PEMERIKSAAN
+Setiap skenario menjalani4 proses independen:
+- Writer: menyiapkan empat sumber pending, memeriksa deadline2-3 hari dan tidak
+  berubah pada settlement berulang, berjalan pulang, lalu tidur untuk save HOME.
+- Reader: Continue snapshot HOME; melewati waktu secara terkontrol, tidur lagi
+  sehingga bangun dua menit sebelum deadline paling awal, lalu kembali ke kota.
+  Sebelum deadline, pemain berjalan secara normal masuk tapak WoodSite yang habis.
+  Clock diteruskan sampai seluruh deadline lewat, sambil pemain tetap di tapak.
+  Checkpoint CITY menyimpan kondisi sumber terhalang dan posisi pemain tersebut.
+- Release: Continue checkpoint CITY, memastikan posisi penghalang tetap sama,
+  lalu tiga tick tambahan memastikan sumber tidak tumbuh menembus pemain.
+  Pemain berjalan keluar tapak; tick berikutnya mengizinkan refill sekali.
+  Setelah pemeriksaan anti-duplikasi, pemain pulang dan tidur untuk save HOME.
+- Verifier: Continue lagi, keluar rumah, dan tick clock membuktikan semua stok
+  tetap penuh tanpa refill tambahan atau deadline baru.
+
+Hasil saat pemain masih menghalangi WoodSite, untuk kedua skenario:
+WoodSite0; ClaySiteA36; ReedSite40; WaterSite48.
+Deadline kayu tetap tersimpan walaupun sudah lewat. Collider kayu tetap nonaktif
+dan tidak tumbuh menembus pemain. Sumber kayu yang tertahan tidak menghambat tiga
+sumber lain yang lokasinya clear. Semua sumber tetap di lokasi aslinya.
+Setelah pemain berjalan keluar: stok24/36/40/48; semua timer kembali -1.
+Settlement berulang tidak menggandakan refill atau mengonsumsi RNG lagi.
+
+Deadline teramati (menit absolut game):
+Skenario       Kayu   Clay   Reed   Air
+last-unit      4117   4123   3923   4917
+simultaneous   3803   3908   3995   4344
+Semua deadline tetap persis melalui save/Continue. Skenario simultaneous menguji
+depletion pada menit yang sama dengan deadline independen; bukan deadline yang
+dipaksa jatuh pada menit sama.
+
+Pemeriksaan writer/reader/release/verifier:
+last-unit:59/137/62/18 =276.
+simultaneous:25/124/62/18 =229.
+Total505;8 stderr final kosong. Screenshot MCP kondisi terhalang telah dilihat.
+
+REGRESI PENGHALANG WORKER
+Test existing scenes/test_scenes/test_scene_finite_resource_sites.tscn dijalankan
+headless lewat CLI Godot pada salinan kerja dengan profil QA lain setelah semua
+proses MCP selesai. Ini pemeriksaan tambahan, terpisah dari playtest input utama.
+FiniteResourceSitesTest PASS, termasuk:
+- Actor worker yang terlihat menahan regrowth saat menempati tapak sumber.
+- Posisi physical_approach worker tersimpan menahan regrowth meski actor belum ada.
+- Setelah penghalang disingkirkan, stok penuh/collider pulih pada lokasi yang sama.
+- Sumber tanpa ResourceBase tetap memakai batas visual sebagai pemeriksaan overlap.
+- Beberapa deposit depleted pulih pada lokasi masing-masing tanpa mengubah relasi
+  authored-placeholder mereka.
+Suite ini memakai fixture posisi/stock, kebutuhan nonaktif dan kapasitas besar
+sebagaimana test yang sudah ada; tidak diklaim sebagai playthrough manusia.
+
+SAVE, IDENTITAS, DAN BATAS QA
+Setiap skenario memakai environment APPDATA/LOCALAPPDATA/XDG_* tersendiri:
+outputs/citysave_suite_qa/blocked-multi-last-unit-01/
+outputs/citysave_suite_qa/blocked-multi-simultaneous-01/
+Regresi worker: outputs/citysave_suite_qa/finite-blockers-regression/.
+File utama berada di data/Godot/app_userdata/time_is_precious/blocked_multi/.
+waiting.json, blocked.json, dan restored.json mengarsipkan tiga checkpoint.
+Rantai SHA256 writer->reader->release->verifier cocok; final checkpoint cocok
+dengan restored.json. Continue tidak menulis ulang byte checkpoint saat load.
+Snapshot lengkap dibandingkan pada setiap Continue (toleransi numerik1e-9;
+string float64 hex dibandingkan persis). Nama, rambut, dan warna badan setiap
+civil yang tersimpan juga diperiksa secara eksplisit.
+
+Playtest utama memakai bekal QA melalui aksi inventori, kebutuhan tetap aktif,
+kapasitas100, dan gerak normal tanpa teleport. Auto tick dibekukan untuk ketepatan
+batas menit; work/sleep memakai alur produksi dan menunggu lewat API clock asli.
+Ini bukan validasi survival ekonomi tanpa bekal QA atau menunggu realtime2-3 hari.
+Save pribadi tidak dibaca/dimigrasikan. Hash save pribadi tidak tersedia; isolasi
+user:// dan environment adalah bukti perlindungan pada tahap ini.
+
+Belum diuji: semua variasi bentuk penghalang/bangunan, actor bergerak pada tepat
+frame regrowth, beberapa lokasi terhalang sekaligus oleh banyak actor, deadline
+identik yang dipaksa, pengulangan banyak siklus, Android, dan input perangkat fisik.
+Jerami tetap dinonaktifkan; integrasi kurma tidak termasuk cakupan.
+
+AUDIT DAN BUKTI
+Seluruh3377 file snapshot sumber cocok dengan SHA256SUMS; Git snapshot sumber
+tetap clean. git diff --check salinan kerja PASS. Perubahan existing masih hanya
+test start-menu dari tahap baseline; tidak ada perubahan source game tahap ini.
+
+Relatif terhadap outputs/qa-evidence:
+- blocked-summary.json:8 hasil,505 pemeriksaan, stok, deadline, dan rantai hash.
+- blocked-{last-unit|simultaneous}-{write|read|release|verify}.result.json.
+- File .launch.json, .profile.log, .stdout.log, .stderr.log, .engine.log terkait.
+- blocked-{last-unit|simultaneous}-read.png: kondisi pemain menghalangi sumber.
+- mcp-retarget-transcript.jsonl: target runtime, begin, status, screenshot, quit.
+- finite-blockers-regression.result.json serta stdout/stderr/profile/engine log.
+- final-source-audit.json dan final-file-hashes.json: audit file snapshot.
+Harness eksternal: work/blocked_multi.gd, launch-blocked.ps1, run-blocked.ps1,
+summarize-blocked.ps1, run-working-qa.ps1; memakai helper QA sebelumnya.

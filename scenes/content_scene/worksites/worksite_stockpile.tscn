@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="5_prompt"]
 
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/storage_destination.tscn" id="1_destination"]
-[ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/house_level_1.png" id="2_3232v"]
+[ext_resource type="Texture2D" uid="uid://ctdtjs7jowe3b" path="res://assets/objects/buildings/house_level_1.png" id="2_3232v"]
 [ext_resource type="Script" uid="uid://dvdvgia5npye0" path="res://scenes/content_scene/worksites/worksite_stockpile.gd" id="2_storage"]
 [ext_resource type="Theme" uid="uid://cgbl8ufm3rl2n" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="3_theme"]
 

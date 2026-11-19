@@ -130,7 +130,6 @@ func _run_case(runtime: Node, site_id: StringName, sample_case: Dictionary, case
 	worker.display_name = "Paid output fixture"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.efficiency = 1.0
-	worker.reliability = 1.0
 	worker.food_fulfilled = true
 	worker.clothing_fulfilled = true
 	worker.shelter_fulfilled = true

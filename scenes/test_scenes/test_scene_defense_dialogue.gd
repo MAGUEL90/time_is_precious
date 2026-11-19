@@ -5,6 +5,10 @@ func _run() -> void:
 	TimeComponentManager.set_process(false)
 	TimeComponentManager.is_paused = false
 	get_tree().paused = false
+	var original_inventory: Dictionary = Inventory.items.duplicate(true)
+	var original_capacity: float = Inventory.max_load
+	Inventory.max_load = 100000.0
+	Inventory.items.assign({"stone": 100, "wood_log": 100})
 	await load_content()
 	storage.items = {"stone": 100, "wood_log": 100}
 	player.global_position = wall_spot.global_position + Vector2(0, 15)
@@ -25,7 +29,10 @@ func _run() -> void:
 			break
 	_expect(all_types_seed >= 0, "An Early party can rarely contain all three approved raider types.")
 	state._rng.seed = all_types_seed
+	var city_stock_before_build: Dictionary = storage.items.duplicate(true)
 	_expect(state.request_wall_work(state.get_work_quote()), "Build starts via the shared work ledger.")
+	_expect(Inventory.items == {"stone": 90, "wood_log": 95} and storage.items == city_stock_before_build,
+		"The build charges its player materials immediately and leaves City Storage unchanged.")
 	_set_clock_minute(_clock_minute() + 60)
 	ui.open_details()
 	_expect(ui.construction_progress.progress_bar.value == 60 and not ui.status_detail_label.visible,
@@ -35,6 +42,10 @@ func _run() -> void:
 	await capture_defense("city-hub-supply.png")
 	ui._select_hub_tab(false)
 	ui.close_details()
+	var build_indicator: WallWorldIndicator = content.get_node("RaidBootstrap/WallWorldIndicator")
+	_expect(build_indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18))
+		and build_indicator.work_progress.work_kind == "build" and not build_indicator.health_label.visible,
+		"On the authored map, wall work appears at its caretaker instead of the invisible old wall.")
 	await capture_defense("wall-build-world-polish.png")
 	_set_clock_minute(_clock_minute() + 60)
 	var arrival: int = state._attack_at
@@ -51,17 +62,22 @@ func _run() -> void:
 	await choose("Improve")
 	_expect(_visible_responses(wall_spot.greeting_balloon).has("Wall Lv. 2") and _visible_responses(wall_spot.greeting_balloon).has("Watchtower"), "Improve offers the two independent defense projects.")
 	await choose("Wall Lv. 2")
+	var inventory_before_upgrade: Dictionary = Inventory.items.duplicate(true)
+	var city_stock_before_upgrade: Dictionary = storage.items.duplicate(true)
 	var text: String = wall_spot.greeting_balloon.dialogue_line.text
-	_expect(text.contains("80 HP") and text.contains("DEF 3") and text.contains("20 Stone") and text.contains("10 Wood") and text.contains("4h"), "Upgrade presents its actual benefits, cost and duration before confirmation.")
+	_expect(text.contains("80 HP") and text.contains("DEF 3") and text.contains("20 Stone") and text.contains("10 Wood") and text.contains("4h") and text.contains("Inventory"), "Upgrade presents its actual benefits, Inventory cost and duration before confirmation.")
 	_expect(wall_spot.greeting_balloon.dialogue_label.get_content_height() <= wall_spot.greeting_balloon.dialogue_label.size.y + 1.0, "Upgrade quote fits the existing dialogue text box.")
 	await capture_defense("wall-upgrade-quote.png")
-	var stock_before: Dictionary = storage.items.duplicate(true)
 	await choose("Back")
-	_expect(state._work_kind.is_empty() and storage.items == stock_before, "Back from a quote spends nothing.")
+	_expect(state._work_kind.is_empty() and Inventory.items == inventory_before_upgrade and storage.items == city_stock_before_upgrade, "Back from a quote spends nothing.")
 	await choose("Wall Lv. 2")
 	_choose_response(wall_spot.greeting_balloon, "Start")
 	await _wait_for_greeting_end()
-	_expect(state._work_kind == "upgrade" and state.wall_level == 1, "Native Start begins the upgrade without granting its benefits immediately.")
+	_expect(state._work_kind == "upgrade" and state.wall_level == 1
+		and Inventory.items.get("stone", 0) == int(inventory_before_upgrade.get("stone", 0)) - 20
+		and Inventory.items.get("wood_log", 0) == int(inventory_before_upgrade.get("wood_log", 0)) - 10
+		and storage.items == city_stock_before_upgrade,
+		"Native Start charges the upgrade from Inventory without granting its benefits immediately.")
 	_set_clock_minute(_clock_minute() + 120)
 	var ledger: Node = state
 	content.queue_free()
@@ -76,18 +92,39 @@ func _run() -> void:
 	await choose("Improve")
 	_expect(not _visible_responses(wall_spot.greeting_balloon).has("Wall Lv. 2"), "Completed level upgrade is not offered again.")
 	await choose("Watchtower")
+	var inventory_before_tower: Dictionary = Inventory.items.duplicate(true)
+	var city_stock_before_tower: Dictionary = storage.items.duplicate(true)
 	text = wall_spot.greeting_balloon.dialogue_line.text
-	_expect(text.contains("2 days") and text.contains("Inspect") and text.contains("10 Stone") and text.contains("10 Wood") and text.contains("3h"), "Tower quote shows detection, Inspect, cost and duration.")
+	_expect(text.contains("2 days") and text.contains("Inspect") and text.contains("10 Stone") and text.contains("10 Wood") and text.contains("3h") and text.contains("Inventory"), "Tower quote shows detection, Inspect, Inventory cost and duration.")
 	_expect(wall_spot.greeting_balloon.dialogue_label.get_content_height() <= wall_spot.greeting_balloon.dialogue_label.size.y + 1.0, "Tower quote fits the dialogue text box.")
 	await capture_defense("watchtower-quote.png")
 	_choose_response(wall_spot.greeting_balloon, "Start")
 	await _wait_for_greeting_end()
-	_expect(state._work_kind == "watchtower" and not state.watchtower_built, "Watchtower is a timed project selected through the caretaker.")
+	_expect(state._work_kind == "watchtower" and not state.watchtower_built
+		and Inventory.items.get("stone", 0) == int(inventory_before_tower.get("stone", 0)) - 10
+		and Inventory.items.get("wood_log", 0) == int(inventory_before_tower.get("wood_log", 0)) - 10
+		and storage.items == city_stock_before_tower,
+		"Watchtower is a timed caretaker project paid by Inventory.")
 	_set_clock_minute(_clock_minute() + 90)
 	var indicator: Node2D = content.get_node("RaidBootstrap/WallWorldIndicator")
 	var tower: Node2D = content.get_node("RaidBootstrap/WatchtowerVisual")
-	_expect(indicator.work_progress.work_kind == "watchtower" and indicator.global_position.x == tower.global_position.x,
-		"Watchtower construction has its own icon above the tower location on the map.")
+	var tower_anchor: Node2D = content.get_node("YSortWorld/WatchtowerDisplayAnchor")
+	var runtime: Node = content.get_node("YSortWorld/WorkerRuntime")
+	var base: TileMapLayer = content.get_node("AuthoredMap/Ground/Base")
+	var base2: TileMapLayer = content.get_node("AuthoredMap/Ground/Base2")
+	_expect(base.get_cell_source_id(base.local_to_map(base.to_local(tower_anchor.global_position))) >= 0
+		or base2.get_cell_source_id(base2.local_to_map(base2.to_local(tower_anchor.global_position))) >= 0,
+		"The temporary tower position is on authored land.")
+	for site: Node2D in runtime.get_node("WorksiteMarkers").get_children():
+		for offset: Vector2 in runtime.RESOURCE_OFFSETS:
+			_expect(tower_anchor.global_position.distance_to(site.global_position + offset) > 50.0,
+				"The temporary tower stays clear of a legacy saved position for " + str(site.name))
+	_expect(indicator.work_progress.work_kind == "watchtower"
+		and indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18))
+		and tower.global_position.is_equal_approx(tower_anchor.global_position)
+		and tower.visible and tower.constructing and not state.watchtower_built,
+		"The caretaker shows watchtower progress and a separate scaffold marks the unfinished tower.")
+	await capture_defense("watchtower-work-caretaker.png")
 	ui.open_details()
 	_expect(ui.wall_meter.value == 80 and ui.construction_progress.progress_bar.value == 90,
 		"The actual city panel keeps 80 wall HP while showing a halfway watchtower project.")
@@ -112,11 +149,18 @@ func _run() -> void:
 	_expect(cards.get_child_count() == departing_party.units.size(), "The Inspect panel has one card for each present raider type.")
 	for index: int in range(cards.get_child_count()):
 		var displayed: String = cards.get_child(index).get_node("CardContents/CountLabel").text
-		_expect(displayed == "x %d" % int(departing_party.units[index].count), "Native Inspect quantities match the party ledger.")
+		_expect(displayed == "x%d" % int(departing_party.units[index].count), "Native Inspect quantities match the party ledger.")
 	await capture_defense("raider-inspect-live.png")
 	ui.close_details()
-	_expect(content.get_node("RaidBootstrap/WatchtowerVisual").visible, "Completed watchtower is visible on the actual wall.")
+	_expect(tower.visible and not tower.constructing and tower.global_position.is_equal_approx(tower_anchor.global_position),
+		"The completed watchtower replaces the scaffold at its temporary display position.")
 	await capture_defense("watchtower-world.png")
+	var before_tower_capture: Vector2 = player.global_position
+	player.global_position = tower.global_position + Vector2(-64, -32)
+	await _settle_physics()
+	await capture_defense("watchtower-complete-location.png")
+	player.global_position = before_tower_capture
+	await _settle_physics()
 	await capture_emergency_pulse()
 
 	await _open_wall_greeting()
@@ -125,9 +169,17 @@ func _run() -> void:
 	_expect(not _visible_responses(wall_spot.greeting_balloon).has("Improve"), "Both completed improvements disappear from the project menu.")
 	_choose_response(wall_spot.greeting_balloon, "Not now")
 	await _wait_for_greeting_end()
+	_set_clock_minute(arrival)
+	_expect(state.phase == "attacking" and indicator.visible and indicator.health_label.visible
+		and indicator.health_label.text == "Wall HP" and indicator.progress_bar.value == state.wall_hp
+		and indicator.global_position.is_equal_approx(wall_spot.global_position + Vector2(0, -18)),
+		"An actual raid shows labeled wall HP at the caretaker, not the hidden wall.")
+	await capture_defense("raid-wall-hp-caretaker.png")
 	content.queue_free()
 	await get_tree().process_frame
 	_restore_clock()
+	Inventory.items.assign(original_inventory)
+	Inventory.max_load = original_capacity
 	print("DefenseDialogueTest: ", "PASS" if failures == 0 else "FAIL")
 	get_tree().quit(0 if failures == 0 else 1)
 

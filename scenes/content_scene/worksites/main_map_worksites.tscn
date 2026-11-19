@@ -1,39 +1,87 @@
 [gd_scene load_steps=15 format=3]
 
+; Resource positions on the authored map are temporary, pending layout decisions.
+
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/content_worksites.gd" id="1_runtime"]
 [ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/clay_site_marker.tscn" id="2_site"]
-[ext_resource type="PackedScene" path="res://scenes/content_scene/worksites/worksite_stockpile.tscn" id="3_storage"]
 [ext_resource type="PackedScene" path="res://scenes/test_scenes/ui_sandbox/clay_worksite_inspector/clay_worksite_inspector.tscn" id="4_inspector"]
 [ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_theme"]
 [ext_resource type="Script" path="res://scenes/content_scene/worksites/resource_site_marker.gd" id="6_resource_site"]
 [ext_resource type="Texture2D" path="res://assets/items/clay_lump.png" id="icon_Clay"]
 [ext_resource type="Texture2D" path="res://assets/items/wood_log.png" id="icon_Wood"]
-[ext_resource type="Texture2D" path="res://assets/reed_bundle.png" id="icon_Reed"]
+[ext_resource type="Texture2D" path="res://assets/items/reed_bundle.png" id="icon_Reed"]
 [ext_resource type="Texture2D" path="res://assets/items/straw_bundle.png" id="icon_Straw"]
 [ext_resource type="Texture2D" path="res://assets/items/water_jar.png" id="icon_Water"]
 [ext_resource type="Texture2D" path="res://assets/objects/worksites/clay_site.png" id="site_Clay"]
-[ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site_content.png" id="site_Reed"]
+[ext_resource type="Texture2D" path="res://assets/objects/worksites/reed_site.png" id="site_Reed"]
 
 [ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_area.tscn" id="12_city_storage"]
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/city_storage_annex.tscn" id="13_city_annex"]
 
 [node name="Worksites" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_runtime")
+finite_resource_sites = true
+disabled_world_sites = Array[StringName]([&"StrawSite", &"WaterSite", &"WoodSitePoplar11", &"WoodSiteBorder0", &"WoodSiteBorder1", &"WoodSiteBorder2", &"WoodSiteBorder3", &"WoodSiteBorder4", &"WoodSiteBorder5", &"WoodSiteBorder6", &"WoodSiteB", &"WoodSiteD", &"WoodSiteE", &"WoodSitePoplar7", &"WoodSitePoplar9", &"WoodSitePoplar10", &"WoodSitePoplar20", &"WoodSitePoplar24", &"WoodSitePoplar25", &"WoodSitePoplar26", &"WoodSitePoplar28", &"WoodSitePoplar32", &"WoodSitePoplar33", &"WoodSitePoplar34", &"WoodSitePoplar36", &"WoodSitePoplar37", &"WoodSitePoplar38"])
+resident_roam_rect = Rect2(-12, -3, 100, 16)
+authored_resource_paths = {
+"WoodSite": NodePath("../../AuthoredMap/YSortWorld/Poplar"),
+"WoodSiteB": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSiteB"),
+"WoodSiteC": NodePath("../../AuthoredMap/YSortWorld/Poplar3"),
+"WoodSiteD": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSiteD"),
+"WoodSiteE": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSiteE"),
+"WoodSitePoplar6": NodePath("../../AuthoredMap/YSortWorld/Poplar6"),
+"WoodSitePoplar7": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar7"),
+"WoodSitePoplar8": NodePath("../../AuthoredMap/YSortWorld/Poplar8"),
+"WoodSitePoplar9": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar9"),
+"WoodSitePoplar10": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar10"),
+"WoodSitePoplar11": NodePath("../../AuthoredMap/YSortWorld/RetiredPoplar11"),
+"WoodSitePoplar12": NodePath("../../AuthoredMap/YSortWorld/Poplar12"),
+"WoodSitePoplar13": NodePath("../../AuthoredMap/YSortWorld/Poplar13"),
+"WoodSitePoplar14": NodePath("../../AuthoredMap/YSortWorld/Poplar14"),
+"WoodSitePoplar15": NodePath("../../AuthoredMap/YSortWorld/Poplar15"),
+"WoodSitePoplar16": NodePath("../../AuthoredMap/YSortWorld/Poplar16"),
+"WoodSitePoplar17": NodePath("../../AuthoredMap/YSortWorld/Poplar17"),
+"WoodSitePoplar18": NodePath("../../AuthoredMap/YSortWorld/Poplar18"),
+"WoodSitePoplar19": NodePath("../../AuthoredMap/YSortWorld/Poplar19"),
+"WoodSitePoplar20": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar20"),
+"WoodSitePoplar21": NodePath("../../AuthoredMap/YSortWorld/Poplar21"),
+"WoodSitePoplar22": NodePath("../../AuthoredMap/YSortWorld/Poplar22"),
+"WoodSitePoplar23": NodePath("../../AuthoredMap/YSortWorld/Poplar23"),
+"WoodSitePoplar24": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar24"),
+"WoodSitePoplar25": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar25"),
+"WoodSitePoplar26": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar26"),
+"WoodSitePoplar27": NodePath("../../AuthoredMap/YSortWorld/Poplar27"),
+"WoodSitePoplar28": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar28"),
+"WoodSitePoplar29": NodePath("../../AuthoredMap/YSortWorld/Poplar29"),
+"WoodSitePoplar30": NodePath("../../AuthoredMap/YSortWorld/Poplar30"),
+"WoodSitePoplar31": NodePath("../../AuthoredMap/YSortWorld/Poplar31"),
+"WoodSitePoplar32": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar32"),
+"WoodSitePoplar33": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar33"),
+"WoodSitePoplar34": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar34"),
+"WoodSitePoplar35": NodePath("../../AuthoredMap/YSortWorld/Poplar35"),
+"WoodSitePoplar36": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar36"),
+"WoodSitePoplar37": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar37"),
+"WoodSitePoplar38": NodePath("../../AuthoredMap/YSortWorld/Retired_WoodSitePoplar38"),
+"WoodSiteBorder0": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree0"),
+"WoodSiteBorder1": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree1"),
+"WoodSiteBorder2": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree2"),
+"WoodSiteBorder3": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree3"),
+"WoodSiteBorder4": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree4"),
+"WoodSiteBorder5": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree5"),
+"WoodSiteBorder6": NodePath("../../AuthoredMap/YSortWorld/BorderWorksiteTree6"),
+"ClaySiteA": NodePath("../../AuthoredMap/YSortWorld/ClaySite"),
+"ClaySiteB": NodePath("../../AuthoredMap/YSortWorld/ClaySite2"),
+"ReedSite": NodePath("../../AuthoredMap/YSortWorld/ReedSite"),
+}
 player_path = NodePath("../Player")
 inventory_ui_path = NodePath("../../InventoryUI")
-storage_destinations = Dictionary[StringName, NodePath]({
-&"ClaySiteA": NodePath("ClayStorage"),
-&"WoodSite": NodePath("WoodStorage"),
-&"ReedSite": NodePath("ReedStorage"),
-&"StrawSite": NodePath("StrawStorage"),
-&"WaterSite": NodePath("WaterStorage")
-})
 
 [node name="WorksiteMarkers" type="Node2D" parent="."]
 y_sort_enabled = true
 
 [node name="ClaySiteA" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, -32)
+position = Vector2(-120, -23)
 
 [node name="Footprint" parent="WorksiteMarkers/ClaySiteA" index="0"]
 visible = false
@@ -52,7 +100,7 @@ position = Vector2(17, -7)
 texture = ExtResource("site_Clay")
 
 [node name="WoodSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, 0)
+position = Vector2(-120, 47)
 script = ExtResource("6_resource_site")
 item_id = "wood_log"
 minutes_per_unit = 20.0
@@ -73,7 +121,7 @@ position = Vector2(20, 0)
 texture = ExtResource("icon_Wood")
 
 [node name="ReedSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(-72, 32)
+position = Vector2(-120, 77)
 script = ExtResource("6_resource_site")
 item_id = "reed_bundle"
 minutes_per_unit = 7.5
@@ -95,7 +143,7 @@ position = Vector2(0, -5)
 texture = ExtResource("site_Reed")
 
 [node name="StrawSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(72, -32)
+position = Vector2(120, 37)
 script = ExtResource("6_resource_site")
 item_id = "straw_bundle"
 minutes_per_unit = 10.0
@@ -115,7 +163,7 @@ texture_filter = 1
 texture = ExtResource("icon_Straw")
 
 [node name="WaterSite" parent="WorksiteMarkers" instance=ExtResource("2_site")]
-position = Vector2(72, 0)
+position = Vector2(120, 87)
 script = ExtResource("6_resource_site")
 item_id = "water_jar"
 minutes_per_unit = 5.0
@@ -134,108 +182,960 @@ text = "Water Site"
 texture_filter = 1
 texture = ExtResource("icon_Water")
 
-[node name="ClayStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, -24)
-display_name = "Clay"
+[node name="ClaySiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(-115, 127)
 
-[node name="Sprite2D" parent="ClayStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Clay")
+[node name="Footprint" parent="WorksiteMarkers/ClaySiteB" index="0"]
+visible = false
+scale = Vector2(0.6, 0.6)
 
-[node name="Label" parent="ClayStorage" index="4"]
-offset_left = -20.0
+[node name="Label" parent="WorksiteMarkers/ClaySiteB" index="1"]
+offset_left = -24.0
 offset_top = -24.0
-offset_right = 20.0
+offset_right = 24.0
 offset_bottom = -16.0
-text = "Clay\n0 / 96"
+text = "Clay Site"
 
-[node name="Storage" parent="ClayStorage" index="5"]
-compact_label = true
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/ClaySiteB"]
+texture_filter = 1
+position = Vector2(17, -7)
+texture = ExtResource("site_Clay")
 
-[node name="WoodStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, 8)
-display_name = "Wood"
+[node name="WoodSiteB" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
 
-[node name="Sprite2D" parent="WoodStorage" index="3"]
-position = Vector2(0, -4)
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteB" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteB" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteB"]
+texture_filter = 1
+position = Vector2(20, 0)
 texture = ExtResource("icon_Wood")
 
-[node name="Label" parent="WoodStorage" index="4"]
-offset_left = -20.0
-offset_top = -24.0
-offset_right = 20.0
-offset_bottom = -16.0
-text = "Wood\n0 / 96"
-
-[node name="Storage" parent="WoodStorage" index="5"]
+[node name="WoodSitePoplar33" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
 item_id = "wood_log"
-compact_label = true
+minutes_per_unit = 20.0
 
-[node name="ReedStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(-24, 40)
-display_name = "Reed"
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar33" index="0"]
+scale = Vector2(0.6, 0.6)
 
-[node name="Sprite2D" parent="ReedStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Reed")
-
-[node name="Label" parent="ReedStorage" index="4"]
-offset_left = -20.0
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar33" index="1"]
+offset_left = -4.0
 offset_top = -24.0
-offset_right = 20.0
+offset_right = 44.0
 offset_bottom = -16.0
-text = "Reed\n0 / 96"
+text = "Wood Site"
 
-[node name="Storage" parent="ReedStorage" index="5"]
-item_id = "reed_bundle"
-compact_label = true
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar33"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
 
-[node name="StrawStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(24, -24)
-display_name = "Straw"
+[node name="WoodSitePoplar34" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
 
-[node name="Sprite2D" parent="StrawStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Straw")
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar34" index="0"]
+scale = Vector2(0.6, 0.6)
 
-[node name="Label" parent="StrawStorage" index="4"]
-offset_left = -20.0
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar34" index="1"]
+offset_left = -4.0
 offset_top = -24.0
-offset_right = 20.0
+offset_right = 44.0
 offset_bottom = -16.0
-text = "Straw\n0 / 96"
+text = "Wood Site"
 
-[node name="Storage" parent="StrawStorage" index="5"]
-item_id = "straw_bundle"
-compact_label = true
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar34"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
 
-[node name="WaterStorage" parent="." instance=ExtResource("3_storage")]
-position = Vector2(24, 8)
-display_name = "Water"
+[node name="WoodSitePoplar35" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
 
-[node name="Sprite2D" parent="WaterStorage" index="3"]
-position = Vector2(0, -4)
-texture = ExtResource("icon_Water")
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar35" index="0"]
+scale = Vector2(0.6, 0.6)
 
-[node name="Label" parent="WaterStorage" index="4"]
-offset_left = -20.0
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar35" index="1"]
+offset_left = -4.0
 offset_top = -24.0
-offset_right = 20.0
+offset_right = 44.0
 offset_bottom = -16.0
-text = "Water\n0 / 96"
+text = "Wood Site"
 
-[node name="Storage" parent="WaterStorage" index="5"]
-item_id = "water_jar"
-compact_label = true
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar35"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar36" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar36" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar36" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar36"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar37" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar37" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar37" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar37"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar38" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar38" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar38" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar38"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder0" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder0" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder0" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder0"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder1" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder1" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder1" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder1"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder2" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder2" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder2" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder2"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder3" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder3" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder3" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder3"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder4" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder4" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder4" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder4"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder5" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder5" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder5" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder5"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteBorder6" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteBorder6" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteBorder6" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteBorder6"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar6" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar6" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar6" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar6"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar7" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar7" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar7" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar7"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar8" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar8" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar8" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar8"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar9" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar9" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar9" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar9"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar10" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar10" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar10" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar10"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar11" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar11" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar11" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar11"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar12" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar12" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar12" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar12"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar13" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar13" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar13" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar13"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar14" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar14" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar14" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar14"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar15" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar15" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar15" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar15"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar16" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar16" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar16" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar16"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar17" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar17" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar17" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar17"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar18" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar18" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar18" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar18"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar19" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar19" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar19" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar19"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar20" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar20" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar20" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar20"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar21" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar21" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar21" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar21"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar22" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar22" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar22" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar22"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar23" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar23" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar23" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar23"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar24" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar24" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar24" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar24"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar25" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar25" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar25" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar25"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar26" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar26" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar26" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar26"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar27" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar27" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar27" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar27"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar28" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar28" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar28" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar28"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar29" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar29" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar29" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar29"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar30" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar30" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar30" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar30"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar31" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar31" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar31" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar31"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSitePoplar32" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(65, 127)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSitePoplar32" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSitePoplar32" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSitePoplar32"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteC" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(115, 142)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteC" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteC" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteC"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteD" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(0, 100)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteD" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteD" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteD"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
+
+[node name="WoodSiteE" parent="WorksiteMarkers" instance=ExtResource("2_site")]
+position = Vector2(40, 100)
+script = ExtResource("6_resource_site")
+item_id = "wood_log"
+minutes_per_unit = 20.0
+
+[node name="Footprint" parent="WorksiteMarkers/WoodSiteE" index="0"]
+scale = Vector2(0.6, 0.6)
+
+[node name="Label" parent="WorksiteMarkers/WoodSiteE" index="1"]
+offset_left = -4.0
+offset_top = -24.0
+offset_right = 44.0
+offset_bottom = -16.0
+text = "Wood Site"
+
+[node name="ResourceIcon" type="Sprite2D" parent="WorksiteMarkers/WoodSiteE"]
+texture_filter = 1
+position = Vector2(20, 0)
+texture = ExtResource("icon_Wood")
 
 [node name="WorkerDeparture" type="Marker2D" parent="."]
-position = Vector2(0, 56)
+position = Vector2(216, 3)
 
 [node name="NearSpawn" type="Marker2D" parent="WorkerDeparture"]
 position = Vector2(-8, 8)
 
 [node name="FarSpawn" type="Marker2D" parent="WorkerDeparture"]
 position = Vector2(8, 16)
+
+[node name="ResidentSpawn" type="Marker2D" parent="."]
+position = Vector2(208, -4)
 
 [node name="GroundOutput" type="Node2D" parent="."]
 y_sort_enabled = true
@@ -282,14 +1182,34 @@ autowrap_mode = 2
 
 [node name="CityStorageArea" parent="." instance=ExtResource("12_city_storage")]
 position = Vector2(-120, 55)
+world_access_enabled = false
+
+[node name="Sprite2D" parent="CityStorageArea" index="1"]
+visible = false
+
+[node name="CollisionShape2D" parent="CityStorageArea/BuildingBody" index="0"]
+disabled = true
+
+[node name="Label" parent="CityStorageArea" index="4"]
+visible = true
+offset_left = -26.0
+offset_top = 24.0
+offset_right = 70.0
+offset_bottom = 32.0
+
+[node name="CityStorageAnnex" parent="." instance=ExtResource("13_city_annex")]
+position = Vector2(-40, 67)
+world_access_enabled = false
 
 [editable path="WorksiteMarkers/ClaySiteA"]
 [editable path="WorksiteMarkers/WoodSite"]
 [editable path="WorksiteMarkers/ReedSite"]
 [editable path="WorksiteMarkers/StrawSite"]
 [editable path="WorksiteMarkers/WaterSite"]
-[editable path="ClayStorage"]
-[editable path="WoodStorage"]
-[editable path="ReedStorage"]
-[editable path="StrawStorage"]
-[editable path="WaterStorage"]
+
+[editable path="WorksiteMarkers/ClaySiteB"]
+[editable path="WorksiteMarkers/WoodSiteB"]
+[editable path="WorksiteMarkers/WoodSiteC"]
+[editable path="WorksiteMarkers/WoodSiteD"]
+[editable path="WorksiteMarkers/WoodSiteE"]
+[editable path="CityStorageArea"]

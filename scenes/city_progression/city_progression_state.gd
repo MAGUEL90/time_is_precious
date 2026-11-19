@@ -1,12 +1,16 @@
 extends Node
 
-## Session-only city progress, settled from completed daily needs, never stock previews.
+## City progress settles from completed daily needs, never stock previews.
+## CitySaveState persists this ledger in the city checkpoint.
 signal changed
 
 const DAILY_BONUS: int = 5
 const MISSING_WALL_PENALTY: int = 5
 const BREACH_PENALTY: int = 10
 const SATISFACTION_THRESHOLD: float = 0.70
+# Much smaller than the needs system's 1e-9 precision; compensates only for
+# floating-point arithmetic at the threshold rather than rounding the score.
+const SATISFACTION_COMPARISON_TOLERANCE: float = 0.000000000001
 const LEVEL_TARGET: int = 100
 
 var level: int = 1
@@ -66,7 +70,7 @@ func settle_day(day: int, residents: Array[Dictionary], wall_standing: bool) -> 
 		"day": day,
 		"food": DAILY_BONUS if fed else 0,
 		"clothing": DAILY_BONUS if clothed else 0,
-		"satisfaction": DAILY_BONUS if not residents.is_empty() and satisfaction >= SATISFACTION_THRESHOLD else 0,
+		"satisfaction": DAILY_BONUS if not residents.is_empty() and satisfaction >= SATISFACTION_THRESHOLD - SATISFACTION_COMPARISON_TOLERANCE else 0,
 		"wall": 0 if wall_standing else -MISSING_WALL_PENALTY,
 	}
 	last_daily.total = int(last_daily.food) + int(last_daily.clothing) + int(last_daily.satisfaction) + int(last_daily.wall)

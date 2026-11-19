@@ -4,11 +4,13 @@ extends Area2D
 ## Reusable unloading endpoint. The storage owns item validation and capacity.
 ## Its try_add_item(item_id, quantity) must return bool and reject atomically.
 signal delivery_received(item_id: String, quantity: int)
+static var _active_receipts: int = 0
 
 @export var storage_path: NodePath
 @export var accepting_deliveries: bool = true
 @export var display_name: String = "Storage"
 @onready var arrival_point: Marker2D = $ArrivalPoint
+var _receiving: bool = false
 
 func _ready() -> void:
 	add_to_group("storage_destinations")
@@ -22,6 +24,12 @@ func get_storage() -> Node:
 func is_available() -> bool:
 	var storage: Node = get_storage()
 	return accepting_deliveries and storage != null and storage.has_method("try_add_item")
+
+func is_delivery_busy() -> bool:
+	return _receiving
+
+static func is_any_delivery_busy() -> bool:
+	return _active_receipts > 0
 
 func accepts_cargo(item_id: String, quantity: int) -> bool:
 	var storage: Node = get_storage()
@@ -47,14 +55,26 @@ func try_deliver(carrier: PhysicsBody2D, cargo: Dictionary) -> bool:
 	return _receive(cargo)
 
 func _receive(cargo: Dictionary) -> bool:
-	if not is_available():
+	# The storage may emit a synchronous changed signal before it returns. Hold
+	# both an endpoint lock and a cargo lock so a listener cannot deliver this
+	# same dictionary again, including through a different endpoint.
+	if _receiving or cargo.has("_delivery_in_progress") or not is_available():
 		return false
 	var item_id: String = str(cargo.get("item_id", ""))
 	var quantity: int = int(cargo.get("quantity", 0))
 	if item_id.is_empty() or quantity <= 0:
 		return false
+	_receiving = true
+	_active_receipts += 1
+	cargo["_delivery_in_progress"] = true
 	if not get_storage().call("try_add_item", item_id, quantity):
+		cargo.erase("_delivery_in_progress")
+		_receiving = false
+		_active_receipts -= 1
 		return false
 	cargo["quantity"] = 0
 	delivery_received.emit(item_id, quantity)
+	cargo.erase("_delivery_in_progress")
+	_receiving = false
+	_active_receipts -= 1
 	return true

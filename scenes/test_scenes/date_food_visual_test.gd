@@ -35,7 +35,7 @@ func run() -> void:
 	event.pressed = true
 	player._unhandled_input(event)
 	await get_tree().create_timer(1.0).timeout
-	check(Inventory.items.get("date_cluster", 0) == 1, "Graphical E interaction adds a date")
+	check(Inventory.items.get("date_cluster", 0) == 3, "Graphical E interaction gathers the palm's three dates")
 	var overlay = map.get_node("TimeDebugOverlay")
 	overlay.panel.show()
 	overlay._refresh_controls()

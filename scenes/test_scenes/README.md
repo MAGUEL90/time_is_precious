@@ -10,6 +10,49 @@ Check the engine version first with `godot --version`; pass the full path to the
 4.5.x binary if the default command selects another version. A fresh checkout
 needs `godot --headless --editor --import --path .` before command-line tests.
 
+## Worker shifts and resignation (2026-11-01)
+
+Run with Godot 4.5.1 and an isolated user-data directory. For each multi-process
+case, use the same fresh directory for its phases and run one engine at a time.
+
+| Scene | Coverage / arguments |
+| --- | --- |
+| `test_scene_multi_day_needs_journey.tscn` | Real New Game/Job Board, clearing, construction shifts, shortage and resignation, replacement, ten-day recovery and paid rehire through three Start Menu processes: `-- --needs-journey-phase=write`, `read`, `verify` |
+| `workshop_shift_resignation_test.tscn` | Construction and clearing shifts, midnight resignation, replacement, physical departure and return, conservation |
+| `workshop_resignation_shift_test.tscn` | Shaping shift, zero/pending eligibility, replacement, unlocated legacy work and transactional callbacks |
+| `workshop_resignation_continue_test.tscn` | Real city checkpoint: `-- --workshop-resignation-phase=write`, `read`, `finish` in three processes |
+| `test_scene_resignation_menu_continue.tscn` | Actual Start Menu Continue for the preceding workshop checkpoint immediately after its `write` phase |
+| `test_scene_worksite_resignation_continue.tscn` | Legacy in-flight delivery and retained worker output: `-- --resign-phase=write`, then `read` |
+| `test_scene_worksite_midnight_continue.tscn` | Gathering fraction, midnight resignation and replacement: `-- --midnight-phase=write`, then `read` |
+| `clay_worksite_test/test_scene_worksite_resignation.tscn` | Worksite reentry, pending delivery, tools, ground output and replacement progress |
+| `test_scene_passive_drying_shift.tscn` | Real passive drying across 15:00 and midnight without a worker |
+| `test_scene_applicant_eligibility.tscn`, `test_scene_idle_resignation.tscn`, `test_scene_idle_resignation_save.tscn` | Applicant threshold, prepaid contract forfeiture, recovery, rehire and idle Continue |
+| `test_scene_no_hauler_job_board.tscn` | Actual New Game, Job Board and Continue: `-- --job-board-case=new_write`, `new_read`, `legacy_applicant`, `legacy_worker`; use one fresh isolated profile, in that order |
+| `test_scene_multi_house_runtime.tscn` | Independent house identities, construction, shelter completion and duplicate-ID guard |
+| `test_scene_multi_house_save_migration.tscn` | Synthetic old-save cases: `-- --legacy-house-case=clearing`, `building`, `built`, `pre_house_v11`, `stocked_v12`, or `outbound_v12`. Changed worker destinations are rejected without mutation; compatible `stocked_v12` also exercises partial houses through home Continue |
+| `test_scene_multi_house_needs_continue.tscn` | Two completed houses including home Continue, seven paid workers competing for six places, daily needs and repeated Continue |
+| `test_scene_review_default_save.tscn` | With `TIP_ISOLATED_DATA_ROOT` set to a fresh absolute data root, run `-- --review-save=write`, `read`, then `restart`; checks the distinct map slot and unchanged synthetic old save/recovery files |
+| `test_scene_review_resource_paths.tscn` | Actual player pickup and worker path clearance at each of the five temporary resource sites |
+| `test_scene_time_transaction_guard.tscn` | Clock, sleep, worksite, payroll, delivery and save transaction reentry |
+| `test_scene_multi_worker_navigation.tscn` | Actual Wood Site worker replacement, blocked-route recovery, shared stock, shift boundaries and checkpoint compatibility. Run `-- --navigation-phase=write`, then `read` in separate processes with the same fresh `XDG_DATA_HOME` and `TIP_ISOLATED_DATA_ROOT`; use a separate fresh profile for `--navigation-phase=hire` to test the starting resident hires. |
+| `test_scene_multi_worker_city_supply.tscn` | Two Wood Site workers deliver directly to city stock, Continue without duplication and stop at shift end. Run `-- --navigation-phase=write`, then `read` with the same fresh isolated data root. |
+| `test_scene_city_transport_interruption.tscn` | Loaded courier encounters new obstruction, contract expiry and renewal; checks clear-path movement and stock conservation, including save/load and an active contract extension. Uses isolated data and explicit fixture funds and stock. |
+
+`test_scene_no_stockpile_flow.tscn` exercises the current Daily-worker-to-city
+handoff, existing player-owned construction inputs, full-stack refusal and retry,
+v14 unsettled-output migration and home/Continue conservation. Run its
+`-- --stockpile-phase=write`, `read`, `verify` phases in order with the same fresh
+isolated data directory. It grants ten Shekels for fixture hires; this is not an
+unassisted normal-game playthrough.
+
+The multi-day needs journey is a controlled fixture, not an unassisted run. It
+grants wallet funds and construction materials, seeds the first hired worker at
+10% Satisfaction, and supplies clothing, shelter and later food. Player needs
+are disabled during its accelerated citizen-needs timeline. The player is placed
+at interaction points and worker presence is driven manually while the clock is
+held; this does not measure real-time travel. In the current game, normal sources
+for clothing and shelter have not yet been established.
+
 ## Prepaid worker contracts (2026-10-23)
 
 Use **Godot 4.5.1** and an isolated `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and
@@ -40,19 +83,18 @@ See `docs/task_reports/prepaid-worker-contracts-2026-10-23.md` for evidence and 
 | Scene | Coverage |
 | --- | --- |
 | `main_map_worker_hub_test.tscn` | Current `WorkerRuntime`, K/J modal controls and pause release |
-| `main_map_hauler_start_test.tscn` | Current-map hiring, Cart equipment ownership, reload and dismissal |
+| `main_map_hauler_start_test.tscn` | Historical worksite-Hauler onboarding; current recruitment and worksite rules differ |
 | `debug_production_flow_test.tscn` | Current-map construction and two production cycles using explicit debug supplies |
 | `workshop_label_presentation_test.tscn` | BUILD WORKSHOP margins, keyboard Cancel, worker scrolling, building labels, contract-expiry feedback and completed-workshop E; optional rendered captures via `TIP_MVP_CAPTURE_DIR` |
 | `mudbrick_production_chain_integration_test.tscn` | Held output, rejected empty-wallet payment, fee payment, drying and overdue fees |
 | `population_employment_integration_test.tscn` | Population/employment separation and worker lifecycle |
 
-The current PR #115 map has Clay, Wood, Reed, Straw and Water worksites and
-matching stockpiles under `YSortWorld/WorkerRuntime`. The earlier no-resource-map
-statement described the 2026-10-03 authoring checkpoint. Some worksite tests still
-use `fixtures/content_worksites_map.tscn` or isolated Clay fixtures:
-`resource_worksites_test.tscn` covers resource hauling and withdrawal, while
-`initial_workshop_start_test.tscn` covers gathering, hiring and construction.
-Their fixture setups do not prove the complete current-map economy from zero.
+The current map has Clay, Wood, Reed, Straw and Water worksites under
+`YSortWorld/WorkerRuntime`, but the earlier per-resource stockpiles were removed.
+`resource_worksites_test.tscn` explicitly enables the retired stockpile/Hauler
+behavior on `fixtures/content_worksites_map.tscn`; it is compatibility coverage,
+not a current gameplay route. `initial_workshop_start_test.tscn` covers gathering,
+hiring and construction. These fixtures do not prove the complete economy from zero.
 
 ## Audit regression cases
 
@@ -63,11 +105,12 @@ Their fixture setups do not prove the complete current-map economy from zero.
 | `test_scene_negotiation_needs.tscn` | Negotiation applies only the configured elapsed-time needs costs |
 | `test_scene_inventory_modal_pause.tscn` | Inventory shortcuts, repeated open/close, underlying Workshop pause and exit cleanup |
 | `test_scene_worker_rehire_regression.tscn` | Actual midnight reapplication, preserved profession/XP, first-time defaults and eligibility |
-| `test_scene_city_storage_overflow.tscn` | Atomic deposit/cargo rejection above the integer limit and exact-limit success |
+| `test_scene_city_storage_overflow.tscn` | Atomic deposit, cargo and worksite receipt at the integer limit |
 | `clay_worksite_test/test_scene_clay_worksite_teardown.tscn` | In-flight owner removal, cancellation, freed Player and payout reentry conservation |
 | `test_scene_clock_state_broadcast.tscn` | State refresh updates the time label without needs drain, duplicated work or day ticks; real minute/midnight advancement still works |
 | `test_scene_transition_timing.tscn` | Actual Home ExitDoor transition, movement on both sides of the fade, failed transition restrictions, playable Nightmare timing and return |
 | `test_scene_dialogue_runtime_regression.tscn` | Plugin singleton, runtime compilation, mutation/conditional choices and two real Player/NPC/balloon open/close cycles |
+| `test_scene_city_progression_hub.tscn` | Player-funded wall work, progress and manual Level Up, map reload, raid and dense City Hub layout. The fixture sets and verifies the 1200×675 window / 400×225 logical viewport in headless and graphical runs. |
 
 The existing City Storage supply/content tests expect the approved single,
 unallocated startup Cart. The hauling fixture exposes seven authored destinations;
@@ -88,12 +131,8 @@ Use `mudbrick_main_map_flow_test.tscn` for supplied integration coverage and
 `mvp_first_playthrough.tscn` for normal-start evidence. The old failure is retained
 in the audit report; do not count a timeout/forced shutdown as PASS.
 
-`test_scene_city_progression_hub.tscn` currently fails the dense attack/construction
-viewport check on the imported d6ea244 baseline as well as this branch. Its
-headless capture helper also returns before layout settling; a temporary
-three-frame probe removes the frame-equality failure but not viewport overflow.
-`test_scene_wall_build.tscn` also fails its older caretaker-dialogue assertions.
-See the 2026-10-18 audit evidence; neither is accepted as a passing suite.
+`test_scene_wall_build.tscn` fails its older caretaker-dialogue assertions.
+See the 2026-10-18 audit evidence; it is not accepted as a passing suite.
 
 ## Reading results
 
@@ -226,9 +265,12 @@ For deterministic mid-work persistence coverage, run
 `test_scene_paid_production_continue.tscn` in three separate Godot 4.5.1 processes
 with `-- --production-phase=write`, `continue-shape`, and `continue-dry`, sharing
 fresh isolated XDG data/config/cache paths. This is explicitly a fixture: money,
-materials, clear weather, construction clock placement and production RNG seed
-are test-owned. It verifies pending-worker rejection, exact mid-Shape/mid-Drying
-Continue, distinct payroll/fee balances, and no duplicate output or fee entries.
+materials, food, clothing, shelter and clear weather are test-owned. It buys a
+nine-day contract from the wallet, drives physical arrivals and daily shifts, and
+uses the player's food and sleep APIs with needs enabled. It verifies an unfunded
+hire, rejection of a legacy worker awaiting payment, mid-Shape/mid-Drying
+Continue, distinct city/wallet balances, and no duplicate output or fee entries.
+It is not an unassisted player journey.
 It refuses an existing checkpoint instead of deleting it.
 
 ### Seven-day renewal and payroll pause
@@ -281,12 +323,13 @@ UI evidence, the transient workshop-selection limitation and exact results.
 uses separate Godot4.5.1 processes with one initially empty isolated XDG data
 folder. It distinguishes a transient idle selector from actual worker reservations,
 checks capture/prepare do not mutate the live selection, and verifies direct
-Worker Hub dismissal after Continue. This is a fixture, not an earned-income run.
+Worker Hub dismissal after Continue. The fixture buys prepaid three- and six-day
+contracts and probes the historical v6 shape; it is not an earned-income run.
 
 The dismissal journey above now fires directly after Continue: no workshop
 reselect/release workaround. Old earned checkpoints may differ only in the explicit
 ASSIGNED → HIRED repair for an idle worker with no persistent reservation. New
-snapshots omit that transient status consistently; schema stays v6. See
+snapshots omit that transient status consistently; the current schema is v11. See
 `docs/task_reports/workshop-idle-assignment-2026-10-22.md` for this fix's evidence.
 
 ### Payroll UI readability review
@@ -309,9 +352,11 @@ signal reentry, and compatibility with legacy physical coin receipts.
 `clay_worksite_test/test_scene_city_storage_supply_flow.tscn` also covers the
 physical selector, stale confirmation, access loss, and unchanged item filters.
 
-The older `test_scene_city_food_ui.tscn` is incompatible with the current UI:
-it expects the hidden physical City Supply side panel and ignores two authored
-startup applicants in its consumer count. It is not current UI acceptance evidence.
+`clay_worksite_test/test_scene_city_food_ui.tscn` uses the current ContentScene:
+it opens physical City Storage with E, deposits supplies through its controls,
+and checks the City Hub Food, Clothing and Shelter summaries. It disables the
+two authored startup applicants in this fixture to isolate its consumer counts;
+normal startup applicants remain covered by the main-map tests.
 
 ### Payroll cash-flow balance samples
 

@@ -73,7 +73,7 @@ func _setup_wall_indicator() -> void:
 		return
 	wall_indicator.name = "WallWorldIndicator"
 	add_child(wall_indicator)
-	_wall_indicator_anchor = _get_south_wall_anchor(wall)
+	_wall_indicator_anchor = _get_defense_indicator_anchor(wall)
 	wall_indicator.global_position = _wall_indicator_anchor
 	wall_indicator.bind_state(state)
 
@@ -88,7 +88,20 @@ func _setup_watchtower_visual() -> void:
 	watchtower_visual = preload("res://scenes/raid/watchtower_visual.gd").new()
 	watchtower_visual.name = "WatchtowerVisual"
 	add_child(watchtower_visual)
-	watchtower_visual.global_position = wall.to_global(wall.map_to_local(corner)) + Vector2(0, 7)
+	var review_anchor: Node2D = get_parent().get_node_or_null("YSortWorld/WatchtowerDisplayAnchor") as Node2D
+	if not wall.visible and review_anchor != null:
+		watchtower_visual.global_position = review_anchor.global_position
+	else:
+		watchtower_visual.global_position = wall.to_global(wall.map_to_local(corner)) + Vector2(0, 7)
+
+func _get_defense_indicator_anchor(wall: TileMapLayer) -> Vector2:
+	if not wall.visible:
+		# A hidden wall has no world surface for its progress/HP bar. Attach it
+		# to the existing defense caretaker until the new wall is designed.
+		var caretaker: Node2D = get_parent().get_node_or_null("YSortWorld/WallManagementSpot") as Node2D
+		if caretaker != null:
+			return caretaker.global_position + Vector2(0, -18)
+	return _get_south_wall_anchor(wall)
 
 func _get_south_wall_anchor(wall: TileMapLayer) -> Vector2:
 	var cells: Array[Vector2i] = wall.get_used_cells()
@@ -115,13 +128,16 @@ func _get_south_wall_anchor(wall: TileMapLayer) -> Vector2:
 	return wall.to_global(wall.map_to_local(anchor_cell))
 
 func _refresh_wall_tiles() -> void:
+	var wall: TileMapLayer = get_parent().get_node("YSortWorld/WallStone")
 	if is_instance_valid(watchtower_visual):
-		watchtower_visual.visible = state.watchtower_built
+		var building_tower: bool = not wall.visible and state._work_kind == "watchtower" \
+			and not state.watchtower_built and not state._refund_pending
+		watchtower_visual.set_construction(building_tower)
+		watchtower_visual.visible = state.watchtower_built or building_tower
 	if is_instance_valid(wall_indicator):
 		wall_indicator.global_position = _wall_indicator_anchor
-		if state._work_kind == "watchtower" and not state.is_raid_active() and is_instance_valid(watchtower_visual):
+		if wall.visible and state._work_kind == "watchtower" and not state.is_raid_active() and is_instance_valid(watchtower_visual):
 			wall_indicator.global_position = watchtower_visual.global_position + Vector2(0, -14)
-	var wall: TileMapLayer = get_parent().get_node("YSortWorld/WallStone")
 	var source_id: int = 1 if state.wall_hp > 0 else 0
 	for cell: Vector2i in wall.get_used_cells():
 		if wall.get_cell_source_id(cell) != source_id:

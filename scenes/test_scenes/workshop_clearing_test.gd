@@ -56,8 +56,11 @@ func _run() -> void:
 	await _frames()
 	await _capture("clearing-hand.png")
 	await _interact()
-	_expect(player.current_interactable == plot, "Board edge shows an active hand-job target.")
-	_expect(is_instance_valid(plot.menu), "E opens clearing UI from the visible prompt at the Board edge.")
+	_expect(player.current_interactable == plot, "Keeper range shows an active clearing target.")
+	_expect(is_instance_valid(plot.keeper_dialogue), "E opens the main-workshop keeper greeting.")
+	if is_instance_valid(plot.keeper_dialogue):
+		plot.keeper_dialogue.continued.emit()
+	_expect(is_instance_valid(plot.menu), "Continuing the keeper greeting opens the clearing UI.")
 	if not is_instance_valid(plot.menu):
 		get_tree().quit(1)
 		return
@@ -74,6 +77,9 @@ func _run() -> void:
 	await _frames()
 	await _capture("clearing-hammer.png")
 	await _interact()
+	_expect(is_instance_valid(plot.keeper_dialogue), "The cleared plot opens its keeper greeting.")
+	if is_instance_valid(plot.keeper_dialogue):
+		plot.keeper_dialogue.continued.emit()
 	_expect(plot.menu.materials_list.visible and not plot.menu.player_button.visible, "Cleared plot exposes construction materials and worker-only building.")
 	plot.menu.close_menu()
 	var retained = plot.construction

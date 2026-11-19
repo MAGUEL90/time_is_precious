@@ -9,12 +9,12 @@ atlas = ExtResource("1_rjnhm")
 region = Rect2(199, 51, 138, 44)
 
 [node name="ItemInfoPanelRoot" type="Control"]
-custom_minimum_size = Vector2(260, 0)
+custom_minimum_size = Vector2(260, 40)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 138.0
-offset_bottom = 104.0
-pivot_offset = Vector2(69, 52)
+offset_right = 260.0
+offset_bottom = 40.0
+pivot_offset = Vector2(130, 20)
 theme = ExtResource("1_xk3dt")
 script = ExtResource("2_ki5xe")
 
@@ -44,7 +44,7 @@ pivot_offset = Vector2(115, 28)
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_bottom = 6
 
 [node name="LabelContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2

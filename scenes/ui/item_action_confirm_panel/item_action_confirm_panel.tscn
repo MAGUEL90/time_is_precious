@@ -1,10 +1,11 @@
-[gd_scene load_steps=30 format=3 uid="uid://ce6sxr7vod5kh"]
+[gd_scene load_steps=25 format=3 uid="uid://ce6sxr7vod5kh"]
 
 [ext_resource type="Theme" uid="uid://b30xxcbumi21v" path="res://resources/ui_menu_panel_theme/ui_menu_panel_theme.tres" id="1_my8ml"]
 [ext_resource type="Script" uid="uid://bt4cfdc1f4im6" path="res://scenes/ui/item_action_confirm_panel/item_action_confirm_panel.gd" id="1_p62ln"]
 [ext_resource type="PackedScene" uid="uid://btfndx42r6ojm" path="res://scenes/ui/confirm_cancel_actions_panel/confirm_action_panel.tscn" id="2_ocpmg"]
 [ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_m28rt"]
 [ext_resource type="Texture2D" uid="uid://h3lj0anpnt47" path="res://assets/ui/ui_icon/icon_24.06.2026.png" id="4_ec5cn"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="5_gameplay"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_3u8i1"]
 atlas = ExtResource("3_m28rt")
@@ -56,32 +57,11 @@ region = Rect2(61, 68, 16, 16)
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_m28rt"]
 texture = SubResource("AtlasTexture_v363g")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_2vjfj"]
-atlas = ExtResource("3_m28rt")
-region = Rect2(112, 51, 28, 10)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bpamu"]
-texture = SubResource("AtlasTexture_2vjfj")
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_q3sm3"]
-atlas = ExtResource("3_m28rt")
-region = Rect2(112, 73, 28, 10)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vpnuq"]
-texture = SubResource("AtlasTexture_q3sm3")
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_1ch4j"]
-atlas = ExtResource("3_m28rt")
-region = Rect2(112, 62, 28, 10)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_wyj1f"]
-texture = SubResource("AtlasTexture_1ch4j")
-
 [node name="ItemActionConfirmPanel" type="Control"]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 104.0
-offset_bottom = 80.0
+offset_right = 144.0
+offset_bottom = 88.0
 theme = ExtResource("1_my8ml")
 script = ExtResource("1_p62ln")
 
@@ -226,32 +206,20 @@ theme_override_constants/separation = 4
 alignment = 1
 
 [node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
-custom_minimum_size = Vector2(36, 10)
+custom_minimum_size = Vector2(40, 14)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_styles/normal = SubResource("StyleBoxTexture_bpamu")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_vpnuq")
-theme_override_styles/hover = SubResource("StyleBoxTexture_wyj1f")
-text = "confirm"
+theme = ExtResource("5_gameplay")
+theme_type_variation = &"HudShortcutButton"
+text = "Confirm"
 
 [node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/InitialActions"]
-custom_minimum_size = Vector2(36, 10)
+custom_minimum_size = Vector2(40, 14)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_focus_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_hover_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.36862746, 0.27450982, 0.1882353, 1)
-theme_override_styles/normal = SubResource("StyleBoxTexture_bpamu")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_vpnuq")
-theme_override_styles/hover = SubResource("StyleBoxTexture_wyj1f")
-text = "cancel"
+theme = ExtResource("5_gameplay")
+theme_type_variation = &"HudShortcutButton"
+text = "Cancel"
 
 [node name="ConfirmActions" parent="MarginContainer" instance=ExtResource("2_ocpmg")]
 visible = false

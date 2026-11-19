@@ -25,7 +25,7 @@ func stamp() -> String:
 	return "D%d %02d:%02d" % [TimeComponentManager.current_day, TimeComponentManager.current_hour, TimeComponentManager.current_minute]
 
 func measure(stage: String) -> void:
-	print("FOOD_MEASURE ", JSON.stringify({"seed": seed_value, "trees": tree_count, "stage": stage, "time": stamp(), "hunger": player.hunger, "energy": 1.0 - player.fatigue, "focus": player.focus, "harvested": harvested, "eaten": eaten, "inventory": Inventory.items.get("date_cluster", 0), "remaining": state.remaining_minutes}))
+	print("FOOD_MEASURE ", JSON.stringify({"seed": seed_value, "trees": tree_count, "stage": stage, "time": stamp(), "hunger": player.hunger, "energy": 1.0 - player.fatigue, "harvested": harvested, "eaten": eaten, "inventory": Inventory.items.get("date_cluster", 0), "remaining": state.remaining_minutes}))
 
 func bind_map() -> void:
 	content = get_tree().current_scene
@@ -78,7 +78,8 @@ func harvest_and_eat() -> void:
 			harvested += int(Inventory.items.get("date_cluster", 0)) - before
 			if prior_timer == 0 and candidate.state.remaining_minutes > 0:
 				delays.append(floori(float(candidate.state.remaining_minutes) / 60.0))
-	var qty: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / 0.04))
+	var value: float = ItemDatabase.get_item_data("date_cluster").hunger_reduction
+	var qty: int = mini(int(Inventory.items.get("date_cluster", 0)), floori(player.hunger / value))
 	if qty > 0:
 		var ui = content.get_node("InventoryUI")
 		ui.player_ref = player

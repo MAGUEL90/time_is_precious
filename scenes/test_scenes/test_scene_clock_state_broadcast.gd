@@ -65,7 +65,7 @@ func _run() -> void:
 		_finish()
 		return
 	var work_order: WorkOrder = WorkManager.active_orders[work_order_id] as WorkOrder
-	var initial_needs: Vector3 = _player_needs()
+	var initial_needs: Vector2 = _player_needs()
 
 	TimeComponentManager.emit_time_signal()
 	TimeComponentManager.emit_time_signal()
@@ -80,7 +80,7 @@ func _run() -> void:
 	_expect(minute_signal_count == 0 and hour_signal_count == 0 and day_signal_count == 0,
 		"State broadcasts emit no elapsed minute, hour, or day boundary signals.")
 	_expect(_player_needs() == initial_needs,
-		"Repeated snapshots do not change actual Player hunger, fatigue, or Focus.")
+		"Repeated snapshots do not change actual Player hunger or fatigue.")
 	_expect(work_order.current_status == WorkOrder.Status.RUNNING
 		and WorkManager.active_orders.has(work_order_id)
 		and int(Inventory.items.get("wood_log", 0)) == previous_wood_logs,
@@ -93,8 +93,8 @@ func _run() -> void:
 		and last_snapshot_minute == 59
 		and _time_label_text() == _clock_text(TimeComponentManager.current_day, 23, 59),
 		"Ordinary progression publishes one updated snapshot to time consumers.")
-	_expect(_player_needs_match(0.201, 0.3005, 0.79975),
-		"One elapsed minute applies Player needs and Focus exactly once.")
+	_expect(_player_needs_match(0.201, 0.3005),
+		"One elapsed minute applies Player needs exactly once.")
 	_expect(work_order.current_status == WorkOrder.Status.DONE
 		and not WorkManager.active_orders.has(work_order_id)
 		and int(Inventory.items.get("wood_log", 0)) == previous_wood_logs + 1,
@@ -116,8 +116,8 @@ func _run() -> void:
 		and last_snapshot_minute == 0
 		and _time_label_text() == _clock_text(day_before_midnight + 1, 0, 0),
 		"Midnight publishes one current snapshot to time consumers.")
-	_expect(_player_needs_match(0.201, 0.3005, 0.79975),
-		"Midnight's elapsed minute applies Player needs and Focus exactly once.")
+	_expect(_player_needs_match(0.201, 0.3005),
+		"Midnight's elapsed minute applies Player needs exactly once.")
 	_expect(int(Inventory.items.get("wood_log", 0)) == previous_wood_logs + 1,
 		"The completed work order receives no duplicate output at midnight.")
 	_finish()
@@ -150,15 +150,13 @@ func _set_player_conditions() -> void:
 	player.is_sleeping = false
 	player.hunger = 0.2
 	player.fatigue = 0.3
-	player.focus = 0.8
 
-func _player_needs() -> Vector3:
-	return Vector3(player.hunger, player.fatigue, player.focus)
+func _player_needs() -> Vector2:
+	return Vector2(player.hunger, player.fatigue)
 
-func _player_needs_match(hunger: float, fatigue: float, focus: float) -> bool:
+func _player_needs_match(hunger: float, fatigue: float) -> bool:
 	return is_equal_approx(player.hunger, hunger) \
-		and is_equal_approx(player.fatigue, fatigue) \
-		and is_equal_approx(player.focus, focus)
+		and is_equal_approx(player.fatigue, fatigue)
 
 func _time_label_text() -> String:
 	var clock_label: Label = time_label.get_node(

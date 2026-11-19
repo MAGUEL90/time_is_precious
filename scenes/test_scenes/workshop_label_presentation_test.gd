@@ -18,11 +18,32 @@ func _expect(ok: bool, message: String) -> void:
 
 func _check_footer(panel: WorkshopPlotUI, stage: String) -> void:
 	var frame: Rect2 = panel.window.get_global_rect()
-	for button: Button in [panel.cancel_button, panel.build_button]:
-		var gap: float = frame.end.y - button.get_global_rect().end.y
-		_expect(is_equal_approx(gap, 16.0), stage + ": " + button.name + " keeps a 16-pixel inset from the frame's outer bottom.")
-		_expect(frame.encloses(button.get_global_rect()), stage + ": " + button.name + " stays completely inside the frame.")
-		print("Footer ", stage, " ", button.name, " outer-bottom-gap=", gap)
+	var button: Button = panel.build_button
+	var gap: float = frame.end.y - button.get_global_rect().end.y
+	_expect(is_equal_approx(gap, 16.0), stage + ": " + button.name + " keeps a 16-pixel inset from the frame's outer bottom.")
+	_expect(frame.encloses(button.get_global_rect()), stage + ": " + button.name + " stays completely inside the frame.")
+	print("Footer ", stage, " ", button.name, " outer-bottom-gap=", gap)
+	_check_action_buttons(panel, stage)
+
+func _check_action_buttons(panel: WorkshopPlotUI, stage: String) -> void:
+	var frame: Rect2 = panel.window.get_global_rect()
+	var actions: Array[Button] = [panel.assign_workers_button, panel.player_button,
+		panel.build_button, panel.replacement_button, panel.player_resume_button]
+	var visible_actions: Array[Button] = []
+	for button: Button in actions:
+		if not button.is_visible_in_tree():
+			continue
+		if not visible_actions.is_empty():
+			_expect(button.size.is_equal_approx(visible_actions[0].size), stage + ": action buttons have equal sizes.")
+		_expect(frame.encloses(button.get_global_rect()), stage + ": " + button.name + " stays inside the frame.")
+		var font: Font = button.get_theme_font("font")
+		var text_width: float = font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, button.get_theme_font_size("font_size")).x
+		var style: StyleBox = button.get_theme_stylebox("normal")
+		var available: float = button.size.x - style.get_content_margin(SIDE_LEFT) - style.get_content_margin(SIDE_RIGHT)
+		_expect(text_width <= available, stage + ": " + button.name + " text fits inside the button.")
+		for other: Button in visible_actions:
+			_expect(not button.get_global_rect().intersects(other.get_global_rect()), stage + ": action buttons do not overlap.")
+		visible_actions.append(button)
 
 func _can_focus(panel: WorkshopPlotUI, target: Control) -> bool:
 	panel.assign_workers_button.grab_focus()
@@ -75,13 +96,14 @@ func _run() -> void:
 	print("Build title frame: ", panel.window.get_global_rect(), " title: ", title.get_global_rect())
 	var window_box: Rect2 = panel.window.get_global_rect()
 	_expect(title.text == "BUILD WORKSHOP" and title.get_theme_font_size("font_size") == 12, "Build title and pixel-font size are preserved.")
-	_expect(is_equal_approx(title.get_global_rect().position.y - window_box.position.y, 13.0), "Build title retains its existing visible top margin.")
+	_expect(is_equal_approx(title.get_global_rect().position.y - window_box.position.y, 16.0), "Build title keeps the same 16-pixel inset as the footer.")
 	_expect(title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x <= title.size.x, "Build title fits without horizontal clipping.")
 	_check_footer(panel, "no workers")
-	_expect(panel.assign_workers_button.has_focus() and await _can_focus(panel, panel.cancel_button), "Keyboard focus can reach Cancel from the initial Assign control.")
+	_expect(panel.assign_workers_button.has_focus() and await _can_focus(panel, panel.close_button), "Keyboard focus can reach the X from the initial Assign control.")
+	_expect(panel.close_button.texture_focused != null, "The focused X has a visible keyboard focus state.")
 	await _capture("build-workshop")
 	var worker_ids: Array[String] = []
-	for index: int in range(8):
+	for index: int in range(10):
 		var worker := WorkerData.new()
 		worker.worker_id = "label_fixture_%d" % index
 		worker.display_name = "Builder %d" % index
@@ -93,17 +115,17 @@ func _run() -> void:
 	await get_tree().process_frame
 	var first_card: Control = panel.worker_list.get_child(0)
 	var scrollbar: HScrollBar = panel.worker_scroll.get_h_scroll_bar()
-	_check_footer(panel, "eight workers")
+	_check_footer(panel, "ten workers")
 	var visible_bottom: float = scrollbar.get_global_rect().position.y if scrollbar.visible else panel.worker_scroll.get_global_rect().end.y
-	_expect(panel.worker_list.get_child_count() == 8 and scrollbar.visible, "All eight builders are present in the scrollable row.")
+	_expect(panel.worker_list.get_child_count() == 10 and scrollbar.visible, "All ten builders are present in the scrollable row.")
 	_expect(first_card.get_global_rect().end.y <= visible_bottom + 0.1, "Builder portraits remain fully visible when the horizontal scrollbar is present.")
 	await _capture("build-workshop-workers")
-	var last_card: Control = panel.worker_list.get_child(7)
+	var last_card: Control = panel.worker_list.get_child(9)
 	panel.worker_scroll.ensure_control_visible(last_card)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_expect(last_card.get_global_rect().end.x <= panel.worker_scroll.get_global_rect().end.x + 0.1, "The last builder can be reached by scrolling.")
-	_expect(not panel.build_button.disabled and await _can_focus(panel, panel.build_button) and await _can_focus(panel, panel.cancel_button), "Keyboard focus can reach both enabled footer buttons.")
+	_expect(not panel.build_button.disabled and await _can_focus(panel, panel.build_button) and await _can_focus(panel, panel.close_button), "Keyboard focus can reach Build and the X.")
 	Inventory.items.erase("wood_log")
 	panel._refresh_view()
 	await get_tree().process_frame
@@ -134,15 +156,16 @@ func _run() -> void:
 	panel._refresh_view()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_expect(panel.progress_page.visible and panel.window.get_global_rect().encloses(panel.progress_close_button.get_global_rect()) and panel.progress_close_button.has_focus(), "The progress page keeps its Close button inside the frame and focused.")
+	_expect(panel.progress_page.visible and panel.window.get_global_rect().encloses(panel.close_button.get_global_rect()) and panel.close_button.has_focus(), "The progress page keeps its X inside the frame and focused.")
+	_check_action_buttons(panel, "progress")
 	state.phase = "empty"
 	panel._selected_worker_ids = worker_ids
 	panel._refresh_view()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_expect(not panel.build_button.disabled, "Build is enabled before the Cancel check.")
+	_expect(not panel.build_button.disabled, "Build is enabled before the close check.")
 	var inventory_before_cancel: Dictionary = Inventory.items.duplicate(true)
-	panel.cancel_button.grab_focus()
+	panel.close_button.grab_focus()
 	var event := InputEventAction.new()
 	event.action = "ui_accept"
 	event.pressed = true
@@ -152,7 +175,7 @@ func _run() -> void:
 	event.action = "ui_accept"
 	get_viewport().push_input(event)
 	await get_tree().process_frame
-	_expect(build_requests == 0 and close_requests == 1 and state.phase == "empty" and Inventory.items == inventory_before_cancel, "Cancel closes once without starting construction or consuming inventory.")
+	_expect(build_requests == 0 and close_requests == 1 and state.phase == "empty" and Inventory.items == inventory_before_cancel, "The X closes once without starting construction or consuming inventory.")
 	state.free()
 	for worker_id: String in worker_ids:
 		WorkerDatabase.workers_by_id.erase(worker_id)

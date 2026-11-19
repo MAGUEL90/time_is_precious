@@ -19,13 +19,14 @@ var _pending_remove_id: String = ""
 @onready var title: Label = $Center/TextureWindow/Margin/MainVBox/Header/TitleLabel
 @onready var close_button: TextureButton = $Center/TextureWindow/CloseButton
 @onready var duration_buttons: HBoxContainer = $Center/HourlySetup/Margin/Body/DurationRow/DurationButtons
-const DURATIONS: Array[int] = [180, 360, 540]
-var selected_duration: int = 180
+const GATHERING_CONFIG = preload("res://scenes/content_scene/worksites/gathering_config.gd")
+const DURATIONS: Array[int] = GATHERING_CONFIG.HOURLY_DURATIONS
+var selected_duration: int = DURATIONS[0]
 var busy: bool = false
 var work_mode: String = ""
 var _hourly_setup: bool = false
 var _previous_mode: String = ""
-var _previous_duration: int = 180
+var _previous_duration: int = DURATIONS[0]
 @onready var hourly_setup_panel: NinePatchRect = $Center/HourlySetup
 @onready var next_button: Button = $Center/HourlySetup/Margin/Body/Footer/NextButton
 @onready var back_button: Button = $Center/HourlySetup/Margin/Body/Footer/BackButton
@@ -47,9 +48,17 @@ var _owns_pause: bool = false
 var _preview_provider: Callable
 var _scene_panel_sizes: Dictionary = {}
 var _panel_fit_queued: bool = false
+var reserve_label: Label
 
 func _ready() -> void:
 	hide()
+	reserve_label = Label.new()
+	reserve_label.name = "ReserveLabel"
+	reserve_label.theme_type_variation = &"HudLabelShortcut"
+	reserve_label.add_theme_font_size_override("font_size", 6)
+	var main_box: VBoxContainer = $Center/TextureWindow/Margin/MainVBox
+	main_box.add_child(reserve_label)
+	main_box.move_child(reserve_label, 1)
 	_build_progress_panel()
 	_build_remove_confirmation()
 	progress_button.pressed.connect(func(): _show_progress(true))
@@ -74,7 +83,15 @@ func _ready() -> void:
 	)
 	close_button.pressed.connect(func(): close_requested.emit())
 	start_button.pressed.connect(_request_work)
+	# Reuse the authored button style; configuration owns count, text and minutes.
+	while duration_buttons.get_child_count() < DURATIONS.size():
+		duration_buttons.add_child(duration_buttons.get_child(0).duplicate())
+	while duration_buttons.get_child_count() > DURATIONS.size():
+		var surplus: Node = duration_buttons.get_child(-1)
+		duration_buttons.remove_child(surplus)
+		surplus.queue_free()
 	for index: int in range(duration_buttons.get_child_count()):
+		duration_buttons.get_child(index).text = GATHERING_CONFIG.duration_label(DURATIONS[index])
 		duration_buttons.get_child(index).pressed.connect(select_duration.bind(index))
 	Inventory.items_changed.connect(_refresh_preview)
 
@@ -197,6 +214,15 @@ func _show_roster(open: bool) -> void:
 			if not has_workers:
 				work_mode = ""
 		_refresh_preview()
+		# The assignment layer can leave the centered window's inner MarginContainer
+		# at its taller selection-page size. Reflow the window and its content after
+		# returning so the title keeps its authored top inset on repeated opens.
+		var content_margin: MarginContainer = $Center/TextureWindow/Margin
+		content_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content_margin.update_minimum_size()
+		window.update_minimum_size()
+		$Center.queue_sort()
+		content_margin.queue_sort()
 		if visible:
 			daily_button.grab_focus()
 
@@ -250,6 +276,17 @@ func _request_work() -> void:
 func _refresh_preview() -> void:
 	if not visible:
 		return
+	var reserve_text: String = ""
+	if _preview_provider.is_valid():
+		var reserve: Dictionary = _preview_provider.call(get_duration_minutes())
+		var remaining: int = int(reserve.get("respawn_minutes", -1))
+		if bool(reserve.get("finite_resource", false)) and int(reserve.get("stock", 0)) == 0:
+			if remaining > 0:
+				reserve_text = "Respawn: %dd %02dh" % [remaining / 1440, (remaining % 1440) / 60]
+			elif remaining == 0:
+				reserve_text = "Awaiting safe location"
+	reserve_label.text = reserve_text
+	reserve_label.visible = not reserve_text.is_empty()
 	if _progress_open:
 		_refresh_progress_rows()
 		return
@@ -265,7 +302,7 @@ func _refresh_preview() -> void:
 	$Center/TextureWindow/Margin/MainVBox/Confirmation.visible = not work_mode.is_empty()
 	energy_label.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.visible = hourly
-	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.text = "Duration: %dh" % (selected_duration / 60)
+	$Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel.text = "Duration: " + GATHERING_CONFIG.duration_label(selected_duration)
 	satiety_label.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/ToolEffectLabel.visible = hourly
 	$Center/TextureWindow/Margin/MainVBox/Confirmation/WorkersLabel.visible = hourly or work_mode == "Daily"
@@ -315,10 +352,10 @@ func _refresh_preview() -> void:
 	status_label.visible = not status_label.text.is_empty()
 	if not includes_player:
 		energy_label.text = "Energy --"
-		satiety_label.text = "Satiety --"
+		satiety_label.text = "Belly --"
 		return
 	energy_label.text = "Energy --"
-	satiety_label.text = "Satiety --"
+	satiety_label.text = "Belly --"
 	if not is_instance_valid(_player_ref):
 		return
 	# Forecast normal awake clock drain only. Fixture debug settings may suppress live needs.
@@ -331,7 +368,7 @@ func _refresh_preview() -> void:
 		energy_label.text = "Energy -%.0f%%" % (energy_used / fatigue_span * 100.0)
 	if hunger_span > 0.0:
 		var satiety_used: float = 0.0 if _player_ref.debug_disable_player_needs else maxf(_player_ref.hunger_increase_per_min * minutes, 0.0)
-		satiety_label.text = "Satiety -%.0f%%" % (satiety_used / hunger_span * 100.0)
+		satiety_label.text = "Belly -%.0f%%" % (satiety_used / hunger_span * 100.0)
 
 func _show_daily_duration(plan: Dictionary) -> void:
 	var label: Label = $Center/TextureWindow/Margin/MainVBox/Confirmation/DurationLabel

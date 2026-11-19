@@ -11,6 +11,9 @@ signal unequip_requested(worker_id: String, unit_id: String)
 signal remove_requested(worker_id: String)
 signal goto_requested(worker_id: String)
 signal close_requested
+signal details_requested(worker_id: String)
+signal shared_details_close_requested
+signal shared_action_closed(worker_id: String)
 
 var rows_provider: Callable = Callable()
 var tools_provider: Callable = Callable()
@@ -66,6 +69,7 @@ var can_open: Callable = Callable()
 @onready var details_label: Label = $Root/DetailsWindow/Margin/MainVBox/DetailsScroll/DetailsLabel
 @onready var details_close_button: TextureButton = $Root/DetailsWindow/CloseButton
 
+const SATISFACTION_DISPLAY: Script = preload("res://scenes/ui/satisfaction_display.gd")
 const CONFIRM_SCENE: PackedScene = preload("res://scenes/ui/confirm_discard_panel/confirm_discard_panel.tscn")
 const SEPARATOR_TEXTURE: Texture2D = preload("res://assets/ui/ui_icon/separator_icon_2.png")
 const TOOL_CARD_SCENE: PackedScene = preload("res://scenes/test_scenes/ui_sandbox/worker_control/worker_tool_card.tscn")
@@ -115,6 +119,9 @@ var _fire_block_detector: Control
 var _fire_feedback_footer: Control
 var _fire_block_feedback: Label
 var _fire_block_reason: String = ""
+var _shared_details_active: bool = false
+var _shared_action_active: bool = false
+var _shared_contract_returns_details: bool = false
 
 
 func _ready() -> void:
@@ -150,6 +157,9 @@ func _ready() -> void:
 	tools_accessory_button_2.pressed.connect(_show_tool_picker.bind("accessory"))
 	city_storage_view.get_node("Margin/Content/Header/Categories").category_changed.connect(func(_category): _render_tools_units(_get_worker_rows()))
 	_configure_scrollbars()
+	var status_scroll: ScrollContainer = status_list.get_parent() as ScrollContainer
+	status_scroll.resized.connect(_fit_status_names)
+	status_scroll.get_v_scroll_bar().visibility_changed.connect(_fit_status_names)
 	manage_window.hide()
 	contract_window.hide()
 	details_window.hide()
@@ -197,6 +207,18 @@ func _on_wallet_items_changed() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# The content scene owns its shared details card. Keep the hub's pause,
+	# but route close shortcuts to that card before handling hub popups.
+	if _shared_details_active:
+		if event.is_action_pressed("open_worker_hub"):
+			close()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("ui_cancel") or _is_plain_city_shortcut(event):
+			shared_details_close_requested.emit()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("open_inventory") or event.is_action_pressed("open_work_progress") or event.is_action_pressed("show_player_status"):
+			get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("open_worker_hub"):
 		if visible:
 			close()
@@ -230,16 +252,23 @@ func _input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var active_popup: Control = details_window if details_window.visible else contract_window if contract_window.visible else manage_window
 			if not active_popup.get_global_rect().has_point(event.position):
+				var returning_to_shared: bool = _shared_action_active
 				if contract_window.visible:
 					_close_contract()
 				else:
 					_close_manage()
+				if returning_to_shared:
+					get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 			if contract_window.visible:
 				_close_contract()
 			else:
+				var return_button: Button = _manage_source_button
+				var returning_to_shared: bool = _shared_action_active
 				_close_manage()
+				if not returning_to_shared and is_instance_valid(return_button) and return_button.is_visible_in_tree():
+					return_button.grab_focus()
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
@@ -280,12 +309,59 @@ func close() -> void:
 	_pending_remove_id = ""
 	_pending_remove_row.clear()
 	_renew_feedback_text = ""
+	_shared_details_active = false
+	_shared_action_active = false
+	_shared_contract_returns_details = false
 	_manage_worker_id = ""
 	_close_manage()
 	_close_tools_picker()
 	_restore_pause()
 	visible = false
 	close_requested.emit()
+
+
+func _is_plain_city_shortcut(event: InputEvent) -> bool:
+	return event is InputEventKey and event.pressed and not event.echo \
+		and event.keycode == KEY_C and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed
+
+
+func set_shared_details_active(active: bool) -> void:
+	_shared_details_active = active and visible
+
+
+func restore_shared_details_focus(worker_id: String) -> void:
+	if not visible:
+		return
+	var target: Control
+	if manage_window.visible and _manage_worker_id == worker_id:
+		target = manage_details_button
+	elif _active_tab == "tools":
+		# Tools portrait and info buttons deliberately opt out of focus.
+		target = tools_tab_button
+	else:
+		target = _find_manage_button(worker_id)
+	if is_instance_valid(target) and target.is_visible_in_tree():
+		target.call_deferred("grab_focus")
+
+
+func open_shared_worker_action(worker_id: String, action: String) -> bool:
+	if action not in ["actions", "contract"] or WorkerDatabase.get_worker_data(worker_id) == null:
+		return false
+	if _find_worker(_get_worker_rows(), worker_id).is_empty():
+		return false
+	if not visible:
+		open()
+	if not visible:
+		return false
+	_show_manage(worker_id)
+	if not manage_window.visible:
+		return false
+	_shared_action_active = true
+	_shared_contract_returns_details = action == "contract"
+	if _shared_contract_returns_details:
+		_show_manage_contract()
+		return contract_window.visible
+	return true
 
 
 func refresh() -> void:
@@ -384,6 +460,7 @@ func _render_status(rows: Array) -> void:
 		return
 	for row: Dictionary in rows:
 		status_list.add_child(_make_status_row(row))
+	_fit_status_names.call_deferred()
 
 
 func _make_status_row(row: Dictionary) -> Control:
@@ -393,7 +470,10 @@ func _make_status_row(row: Dictionary) -> Control:
 	row_control.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var name_label := _make_label(str(row.get("name", "Unnamed worker")), 6)
-	name_label.clip_text = false
+	name_label.name = "NameLabel"
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.accessibility_name = name_label.text
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row_control.add_child(name_label)
 	row_control.add_child(_make_separator())
@@ -416,6 +496,30 @@ func _make_status_row(row: Dictionary) -> Control:
 	manage_button.pressed.connect(_show_manage.bind(str(row.get("id", "")), manage_button))
 	row_control.add_child(manage_button)
 	return row_control
+
+
+func _fit_status_names() -> void:
+	# Preserve natural widths for ordinary names; reserve the other controls
+	# before clipping an unusually long name so Manage remains reachable.
+	var status_scroll: ScrollContainer = status_list.get_parent() as ScrollContainer
+	var available_width: float = status_scroll.size.x
+	var scrollbar: VScrollBar = status_scroll.get_v_scroll_bar()
+	if scrollbar.visible:
+		available_width -= scrollbar.size.x
+	for row: Node in status_list.get_children():
+		if not row is HBoxContainer:
+			continue
+		var name_label: Label = row.get_node_or_null("NameLabel") as Label
+		if not is_instance_valid(name_label):
+			continue
+		var reserved: float = float(maxi(row.get_child_count() - 1, 0) * row.get_theme_constant("separation"))
+		for child: Node in row.get_children():
+			if child is Control and child != name_label:
+				reserved += child.get_combined_minimum_size().x
+		var font: Font = name_label.get_theme_font("font")
+		var font_size: int = name_label.get_theme_font_size("font_size")
+		var natural_width: float = ceilf(font.get_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+		name_label.custom_minimum_size.x = minf(natural_width, maxf(0.0, available_width - reserved - 2.0))
 
 
 func _make_separator() -> TextureRect:
@@ -807,7 +911,7 @@ func _show_manage(worker_id: String, source_button: Button = null) -> void:
 	manage_window.show()
 	_position_popup.call_deferred(manage_window, _manage_source_button)
 	_sync_fire_block_detector()
-	manage_fire_button.grab_focus()
+	_focus_first_manage_action()
 
 
 func _update_manage_controls(row: Dictionary) -> void:
@@ -819,6 +923,31 @@ func _update_manage_controls(row: Dictionary) -> void:
 	manage_fire_button.disabled = fire_disabled
 	_sync_fire_block_detector()
 	manage_goto_button.disabled = not bool(row.get("can_goto", false))
+	_configure_manage_focus()
+
+
+func _configure_manage_focus() -> void:
+	var controls: Array[Control] = []
+	for button: Button in [manage_fire_button, manage_goto_button, manage_details_button, manage_contract_button]:
+		if not button.disabled:
+			controls.append(button)
+	for index: int in range(controls.size()):
+		var control: Control = controls[index]
+		var previous: NodePath = control.get_path_to(controls[(index - 1 + controls.size()) % controls.size()])
+		var next: NodePath = control.get_path_to(controls[(index + 1) % controls.size()])
+		control.focus_previous = previous
+		control.focus_next = next
+		control.focus_neighbor_top = previous
+		control.focus_neighbor_left = previous
+		control.focus_neighbor_bottom = next
+		control.focus_neighbor_right = next
+
+
+func _focus_first_manage_action() -> void:
+	for button: Button in [manage_fire_button, manage_goto_button, manage_details_button, manage_contract_button]:
+		if not button.disabled:
+			button.grab_focus()
+			return
 
 
 func _configure_contract_days() -> void:
@@ -1068,6 +1197,14 @@ func _show_manage_details() -> void:
 
 
 func _show_details(worker_id: String, return_tab: String = "") -> void:
+	if details_requested.has_connections():
+		if _shared_action_active:
+			_close_manage()
+			return
+		if return_tab == "tools":
+			_close_tools_picker()
+		details_requested.emit(worker_id)
+		return
 	var row: Dictionary = _find_worker(_get_worker_rows(), worker_id)
 	if row.is_empty():
 		return
@@ -1103,7 +1240,7 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 	var needs_value: Variant = row.get("needs", {})
 	var needs: Dictionary = needs_value if needs_value is Dictionary else {}
 	var evaluated: bool = bool(needs.get("evaluated", false))
-	visuals.get_node("NeedsHeading").text = "Daily needs"
+	visuals.get_node("NeedsHeading").text = "Current needs"
 	for need: String in ["Food", "Clothing", "Shelter"]:
 		var card: VBoxContainer = visuals.get_node("Needs/" + need)
 		var met: bool = bool(needs.get(need.to_lower(), false))
@@ -1125,14 +1262,12 @@ func _render_details(row: Dictionary, reset_scroll: bool = false) -> void:
 		check_icon.visible = evaluated and met
 		status.text = ("Met" if met else "Missing") if evaluated else "-"
 		status.modulate = (Color(0.7, 1.0, 0.6) if met else Color(1.0, 0.55, 0.45)) if evaluated else Color(0.85, 0.8, 0.65)
-	for metric: String in ["Satisfaction", "Reliability"]:
-		var key: String = metric.to_lower()
-		var bar: TextureProgressBar = visuals.get_node(metric + "Bar")
-		var label: Label = visuals.get_node(metric + "Label")
-		bar.value = clampf(float(needs.get(key, 0.0)), 0.0, 1.0) * 100.0
-		bar.tint_progress = Color(0.7, 1.0, 0.6) if key == "satisfaction" else Color(0.6, 0.85, 1.0)
-		bar.visible = needs.has(key)
-		label.text = ("%s: %d%%  %s" % [metric, roundi(bar.value), _format_daily_delta(needs.get(key + "_delta", 0.0)) if evaluated else ""]).strip_edges() if needs.has(key) else metric + ": -"
+	var bar: TextureProgressBar = visuals.get_node("SatisfactionBar")
+	var label: Label = visuals.get_node("SatisfactionLabel")
+	bar.value = clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0
+	bar.tint_progress = Color(0.7, 1.0, 0.6)
+	bar.visible = needs.has("satisfaction")
+	label.text = _format_satisfaction_text(needs) if needs.has("satisfaction") else "Satisfaction: -"
 	if reset_scroll and is_instance_valid(details_scroll):
 		details_scroll.scroll_vertical = 0
 
@@ -1148,19 +1283,16 @@ func _format_details_text(row: Dictionary) -> String:
 	if not needs_value is Dictionary:
 		lines.append("Daily needs: Not evaluated yet")
 		lines.append("Satisfaction: Not evaluated yet")
-		lines.append("Reliability: Not evaluated yet")
 		return "\n".join(lines)
 
 	var needs: Dictionary = needs_value
 	if not bool(needs.get("evaluated", false)):
 		lines.append("Daily needs: Not evaluated yet")
-		lines.append(_format_current_metric("Satisfaction", needs, "satisfaction"))
-		lines.append(_format_current_metric("Reliability", needs, "reliability"))
+		lines.append(_format_satisfaction_text(needs))
 		return "\n".join(lines)
 
 	var day: int = int(needs.get("day", -1))
-	var day_text: String = "Day %d" % day if day >= 0 else "latest"
-	lines.append("Daily needs (%s; last result):" % day_text)
+	lines.append("Current needs:")
 	lines.append("Food: %s" % ("Met" if bool(needs.get("food", false)) else "Missing"))
 	var clothing_text: String = "Met" if bool(needs.get("clothing", false)) else "Missing"
 	var clothing_days_left: int = int(needs.get("clothing_days_left", -1))
@@ -1176,18 +1308,21 @@ func _format_details_text(row: Dictionary) -> String:
 	for missing_name: Variant in missing:
 		missing_names.append(str(missing_name))
 	if not missing_names.is_empty():
-		lines.append("Reason: Missing %s." % ", ".join(missing_names))
+		lines.append("Current status: Missing %s." % ", ".join(missing_names))
 	else:
-		lines.append("Reason: All needs met.")
-	lines.append("Satisfaction: %d%% (%s)" % [roundi(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("satisfaction_delta", 0.0))])
-	lines.append("Reliability: %d%% (%s)" % [roundi(clampf(float(needs.get("reliability", 0.0)), 0.0, 1.0) * 100.0), _format_daily_delta(needs.get("reliability_delta", 0.0))])
+		lines.append("Current status: All needs met.")
+	lines.append("Daily check: Day %d" % day if day >= 0 else "Daily check: Not evaluated yet")
+	lines.append(_format_satisfaction_text(needs))
 	return "\n".join(lines)
 
 
-func _format_current_metric(label: String, summary: Dictionary, key: String) -> String:
-	if not summary.has(key):
-		return "%s: Not evaluated yet" % label
-	return "%s: %d%% (current)" % [label, roundi(clampf(float(summary.get(key, 0.0)), 0.0, 1.0) * 100.0)]
+func _format_satisfaction_text(needs: Dictionary) -> String:
+	if not needs.has("satisfaction"):
+		return "Satisfaction: Unknown"
+	var current_text: String = "%d%% current" % SATISFACTION_DISPLAY.to_percent(clampf(float(needs.get("satisfaction", 0.0)), 0.0, 1.0))
+	if not bool(needs.get("evaluated", false)) or (needs.has("day") and int(needs.day) < 0):
+		return "Satisfaction: %s (check unknown)" % current_text
+	return "Satisfaction: %s (check %s)" % [current_text, _format_daily_delta(needs.get("satisfaction_delta", 0.0))]
 
 
 func _format_daily_delta(value: Variant) -> String:
@@ -1210,6 +1345,9 @@ func _close_details() -> void:
 
 
 func _close_manage() -> void:
+	var returning_id: String = _manage_worker_id if _shared_action_active else ""
+	_shared_action_active = false
+	_shared_contract_returns_details = false
 	_stop_renew_success_animation()
 	_hide_fire_block_feedback()
 	details_window.hide()
@@ -1217,10 +1355,15 @@ func _close_manage() -> void:
 	manage_window.hide()
 	_sync_fire_block_detector()
 	_manage_source_button = null
+	if not returning_id.is_empty():
+		shared_action_closed.emit(returning_id)
 
 
 func _close_contract() -> void:
 	if not contract_window.visible:
+		return
+	if _shared_action_active and _shared_contract_returns_details:
+		_close_manage()
 		return
 	_stop_renew_success_animation()
 	contract_window.hide()
@@ -1469,6 +1612,8 @@ func _cancel_remove_confirmation() -> void:
 	if _confirmation_overlay != null:
 		_confirmation_overlay.hide()
 	_sync_fire_block_detector()
+	if visible and manage_window.visible:
+		_focus_first_manage_action()
 
 
 func _confirm_pending_action() -> void:

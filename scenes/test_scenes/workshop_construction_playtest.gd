@@ -7,6 +7,7 @@ const TEST_WORKER_IDS: Array[String] = [
 	"construction_playtest_two",
 	"construction_playtest_three",
 ]
+const TEST_WORKER_NAMES: Array[String] = ["Naram", "Lugal", "Nabu"]
 
 var _content: Node
 var _construction_state: Variant
@@ -47,7 +48,7 @@ func _seed_fixture_team() -> void:
 	for worker_id: String in TEST_WORKER_IDS:
 		var citizen := CitizenData.new()
 		citizen.citizen_id = worker_id
-		citizen.display_name = "TEST " + worker_id.get_slice("_", 2).capitalize()
+		citizen.display_name = TEST_WORKER_NAMES[TEST_WORKER_IDS.find(worker_id)]
 		citizen.population_status = CitizenData.PopulationStatus.RESIDENT
 		citizen.employment_status = CitizenData.EmploymentStatus.HIRED
 		citizen.profession = WorkerData.Profession.LABORER

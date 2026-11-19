@@ -54,7 +54,7 @@ func _run() -> void:
 				site = worksites.sites[&"ClaySiteA"]
 				worksites._selected_site = worksites.get_node("WorksiteMarkers/ClaySiteA")
 				site.toggle_participant("player")
-			var before: Dictionary = {"fatigue": player.fatigue, "hunger": player.hunger, "focus": player.focus}
+			var before: Dictionary = {"fatigue": player.fatigue, "hunger": player.hunger}
 			var preview: Dictionary = site.preview(180, player)
 			var result: Dictionary = site.execute(180, player, worksites, worksites._drop_output)
 			var quantity: int = int(Inventory.items.get(site.item_id, 0))
@@ -66,7 +66,7 @@ func _run() -> void:
 			print("INCOME_MEASURE ", JSON.stringify({"scenario": scenario, "batch": index + 1, "preview": preview, "result": result,
 				"item": site.item_id, "sale": sale, "inventory": Inventory.items, "merchant": merchant.get_budget(), "stock_left": site.stock,
 				"hour": TimeComponentManager.current_hour, "minute": TimeComponentManager.current_minute,
-				"before": before, "after": {"fatigue": player.fatigue, "hunger": player.hunger, "focus": player.focus},
+				"before": before, "after": {"fatigue": player.fatigue, "hunger": player.hunger},
 				"needs_disabled": player.debug_disable_player_needs, "fatigue_disabled": player.debug_disable_fatigue}))
 			if scenario == "MixedNeeds":
 				var carried_before_pickup: int = int(Inventory.items.get(site.item_id, 0))

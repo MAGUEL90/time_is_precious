@@ -169,7 +169,7 @@ func _test_midshift_assignment_and_reassignment() -> void:
 func _create_fixture(worker_id: String) -> Variant:
 	var worker := WorkerData.new()
 	worker.worker_id = worker_id
-	worker.display_name = worker_id
+	worker.display_name = "Ashur"
 	worker.profession = WorkerData.Profession.LABORER
 	worker.wage_shekel_per_day = 1
 	worker.payroll_start_day = TimeComponentManager.current_day

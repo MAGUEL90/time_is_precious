@@ -3,6 +3,9 @@ extends Resource
 
 enum Profession {NONE, LABORER, CRAFTER, HAULER, FARMER, SCAVENGER}
 enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
+## A plot worker who must complete the existing departure route before return.
+## Negative values are sentinels; actual arrival minutes are always nonnegative.
+const PLOT_DEPARTURE_PENDING: int = -2
 
 @export var worker_id: String = ""
 @export var display_name: String = ""
@@ -11,12 +14,14 @@ enum WorkStatus {IDLE, WORKING, RESTING, WAITING_FOR_RESOURCES, TRAVELLING}
 @export var current_order_id: String = ""
 @export var current_job_id: String = ""
 @export var current_work_status: WorkStatus = WorkStatus.IDLE
+# Set at the zero-Satisfaction boundary. A loaded Hauler finishes its current
+# delivery before leaving, even if needs recover or the game is continued.
+@export var resignation_pending: bool = false
 # Empty is the deliberate legacy interpretation. Nonempty values contain only
 # bounded data in world FEET coordinates, never scene paths or executable values.
 @export var physical_approach: Dictionary = {}
 @export_range(1, 3) var profession_star: int = 1
 @export_range(0.0, 2.0, 0.01) var efficiency: float = 1.0
-@export_range(0.0, 1.0, 0.01) var reliability: float = 1.0
 @export var wage_shekel_per_day: int = 0
 # Last prepaid period and last morning attempt. -1 preserves legacy saves/fixtures.
 @export var payroll_start_day: int = -1
@@ -71,14 +76,6 @@ func get_resolved_satisfaction() -> float:
 
 	return satisfaction
 
-func get_resolved_reliability() -> float:
-	var citizen_data: CitizenData = get_linked_citizen()
-
-	if citizen_data != null:
-		return citizen_data.reliability
-
-	return reliability
-
 func get_satisfaction_work_multiplier() -> float:
 	var resolved_satisfaction: float = get_resolved_satisfaction()
 
@@ -88,16 +85,6 @@ func get_satisfaction_work_multiplier() -> float:
 		return 1.0
 	else:
 		return 0.85
-
-func get_reliability_success_chance() -> float:
-	var resolved_reliability: float = get_resolved_reliability()
-
-	if resolved_reliability >= 0.75:
-		return 0.95
-	elif resolved_reliability >= 0.4:
-		return 0.85
-	else:
-		return 0.65
 
 # Work lifecycle
 
@@ -183,14 +170,17 @@ func begin_physical_approach(kind: String, task: String, owner: String, position
 func matches_physical_approach(kind: String, task: String, owner: String) -> bool:
 	return physical_approach_valid(physical_approach) and not physical_approach.is_empty() and physical_approach.kind == kind and physical_approach.task == task and physical_approach.owner == owner
 
-func mark_physical_arrival(task: String) -> bool:
+func mark_physical_arrival(task: String, simulated_arrival_minute: int = -1) -> bool:
 	if not physical_approach_valid(physical_approach) or physical_approach.is_empty() or physical_approach.task != task or is_payroll_blocked():
 		return false
 	if physical_approach.position.distance_to(physical_approach.target) > 0.1:
 		return false
+	var now: int = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+	if simulated_arrival_minute >= 0 and simulated_arrival_minute != now + 1:
+		return false
 	if not physical_approach.arrived:
 		physical_approach.arrived = true
-		physical_approach.arrival_minute = TimeComponentManager.current_day * 1440 + TimeComponentManager.current_hour * 60 + TimeComponentManager.current_minute
+		physical_approach.arrival_minute = simulated_arrival_minute if simulated_arrival_minute >= 0 else now
 	current_work_status = WorkStatus.WORKING
 	return true
 
@@ -205,7 +195,7 @@ func get_arrived_paid_minutes(from_minute: int, to_minute: int, kind: String, ta
 	# Intersect paid and arrived intervals once; overlapping blocks cannot add up.
 	return to_minute - eligible_from - get_payroll_unpaid_minutes(eligible_from, to_minute)
 
-static func physical_approach_valid(value: Dictionary) -> bool:
+static func physical_approach_valid(value: Dictionary, allow_shift_departure: bool = true) -> bool:
 	if value.is_empty():
 		return true
 	var spec: Dictionary = {"kind": TYPE_STRING, "task": TYPE_STRING, "owner": TYPE_STRING,
@@ -232,4 +222,4 @@ static func physical_approach_valid(value: Dictionary) -> bool:
 	if value.arrived:
 		# Resource workers retain their native work/idle wander after entering.
 		return value.arrival_minute >= 0 and value.arrival_minute <= 1000000000 and (value.kind == "site" or value.position.distance_to(value.target) <= 0.1)
-	return value.arrival_minute == -1
+	return value.arrival_minute == -1 or (allow_shift_departure and value.kind == "plot" and value.arrival_minute == PLOT_DEPARTURE_PENDING)

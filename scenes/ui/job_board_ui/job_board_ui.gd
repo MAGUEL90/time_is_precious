@@ -5,7 +5,6 @@ signal closed
 const CandidateCard = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/ui/job_board_ui/job_board_candidate_card.tscn")
 const INITIAL_APPLICANTS = preload("res://scenes/content_scene/startup/initial_worksites.gd")
-const SCROLL_PANEL: Texture2D = preload("res://assets/ui/ui_panel/brown_panel_16x16.png")
 const PIXEL_FONT: Font = preload("res://assets/font/pixel_rpg.ttf")
 const CHECK_ICON: Texture2D = preload("res://assets/ui/ui_icon/checklist_icon.png")
 const MAX_CONFIRM_NAME_LENGTH: int = 22
@@ -64,7 +63,7 @@ func _ready() -> void:
 	close_button.texture_focused = close_button.texture_hover
 	applicant_list.item_selected.connect(func(_index: int): _refresh_quote())
 	refresh_timer.timeout.connect(_poll_applicants)
-	_style_scrollbar()
+	candidate_scroll.get_v_scroll_bar().custom_minimum_size.x = 8.0
 	_set_button_text_white(cancel_hire_button)
 	_set_button_text_white(confirm_hire_button)
 	confirmation_layer.visible = false
@@ -164,10 +163,23 @@ func _ids(data: Array[CitizenData]) -> PackedStringArray:
 		result.append(citizen.citizen_id)
 	return result
 
+func _board_applicants() -> Array[CitizenData]:
+	var result: Array[CitizenData] = CitizenManager.get_all_applicants()
+	# Keep the new Hauler visible without requiring an initial scroll, and use
+	# the same deterministic order for refresh/poll and selection indices.
+	result.sort_custom(func(a: CitizenData, b: CitizenData) -> bool:
+		var a_hauler: bool = a.profession == WorkerData.Profession.HAULER
+		var b_hauler: bool = b.profession == WorkerData.Profession.HAULER
+		if a_hauler != b_hauler:
+			return a_hauler
+		return a.citizen_id.naturalnocasecmp_to(b.citizen_id) < 0
+	)
+	return result
+
 func _poll_applicants() -> void:
 	if not visible or _hiring:
 		return
-	var current: Array[CitizenData] = CitizenManager.get_all_applicants()
+	var current: Array[CitizenData] = _board_applicants()
 	if _ids(current) != _ids(applicants):
 		_refresh_applicants()
 	else:
@@ -187,7 +199,7 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 		card.queue_free()
 	cards.clear()
 	applicant_list.clear()
-	applicants = CitizenManager.get_all_applicants()
+	applicants = _board_applicants()
 	for citizen: CitizenData in applicants:
 		INITIAL_APPLICANTS.normalize_legacy_applicant_name(citizen)
 		var index: int = applicant_list.add_item("%s | %s" % [citizen.display_name, _get_profession_name(citizen.profession)])
@@ -200,9 +212,24 @@ func _refresh_applicants(preserve_selection: bool = true) -> void:
 		if selected_ids.has(citizen.citizen_id):
 			applicant_list.select(index, false)
 	empty_state_panel.visible = applicants.is_empty()
+	if applicants.is_empty():
+		empty_state_label.text = _get_empty_state_message()
 	candidate_scroll.visible = not applicants.is_empty()
 	_refresh_quote()
 	_restore_scroll.call_deferred(keep_scroll)
+
+func _get_empty_state_message() -> String:
+	for person: CitizenData in CitizenManager.get_all_residents():
+		var can_apply_later: bool = (
+			person.employment_status == CitizenData.EmploymentStatus.UNEMPLOYED
+		) or (
+			person.employment_status == CitizenData.EmploymentStatus.APPLICANT
+			and CitizenManager.is_profession_recruitable(person.profession)
+		)
+		if can_apply_later and person.satisfaction < CitizenData.MIN_APPLICANT_SATISFACTION:
+			var threshold: int = roundi(CitizenData.MIN_APPLICANT_SATISFACTION * 100.0)
+			return "No applicants available.\nProvide Food, Clothing and Shelter.\nSatisfaction recovers gradually; apply at %d%%." % threshold
+	return "No applicants available."
 
 func _restore_scroll(value: int) -> void:
 	candidate_scroll.scroll_vertical = value
@@ -435,7 +462,7 @@ func _quote_for_ids(citizen_ids: PackedStringArray, days: int) -> Dictionary:
 	var valid: bool = not citizen_ids.is_empty() and days in [3, 6, 9] and days in WorkerDatabase.CONTRACT_DAYS
 	for citizen_id: String in citizen_ids:
 		var citizen: CitizenData = _find_applicant(citizen_id)
-		if citizen == null:
+		if citizen == null or CitizenManager.get_citizen(citizen_id) != citizen or not citizen.can_be_hired() or not CitizenManager.is_profession_recruitable(citizen.profession):
 			valid = false
 			break
 		var price: int = WorkerDatabase.get_contract_price(citizen.profession, days)
@@ -463,32 +490,3 @@ func _get_profession_name(profession: WorkerData.Profession) -> String:
 		WorkerData.Profession.FARMER: return "Farmer"
 		WorkerData.Profession.SCAVENGER: return "Scavenger"
 		_: return "Unassigned"
-func _scroll_style(region: Rect2) -> StyleBoxTexture:
-	var atlas := AtlasTexture.new()
-	atlas.atlas = SCROLL_PANEL
-	atlas.region = region
-	var style := StyleBoxTexture.new()
-	style.texture = atlas
-	style.texture_margin_left = 1
-	style.texture_margin_top = 1
-	style.texture_margin_right = 1
-	style.texture_margin_bottom = 1
-	style.content_margin_left = 0
-	style.content_margin_top = 0
-	style.content_margin_right = 0
-	style.content_margin_bottom = 0
-	return style
-
-func _style_scrollbar() -> void:
-	var bar: VScrollBar = candidate_scroll.get_v_scroll_bar()
-	bar.custom_minimum_size.x = 8
-	for state: String in ["scroll", "scroll_focus"]:
-		bar.add_theme_stylebox_override(state, _scroll_style(Rect2(35, 1, 16, 16)))
-	bar.add_theme_stylebox_override("grabber", _scroll_style(Rect2(1, 1, 16, 16)))
-	for state: String in ["grabber_highlight", "grabber_pressed"]:
-		bar.add_theme_stylebox_override(state, _scroll_style(Rect2(18, 1, 16, 16)))
-	var blank := AtlasTexture.new()
-	blank.atlas = SCROLL_PANEL
-	blank.region = Rect2(0, 0, 1, 1)
-	for icon_name: String in ["increment", "increment_highlight", "increment_pressed", "decrement", "decrement_highlight", "decrement_pressed"]:
-		bar.add_theme_icon_override(icon_name, blank)

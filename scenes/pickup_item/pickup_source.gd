@@ -11,6 +11,8 @@ const PICKUP: PackedScene = preload("res://scenes/pickup_item/pickup_item.tscn")
 @export_range(1, 10000, 1) var refill_max_hours: int = 18
 ## Optional authored identity; unique within the owning scene. Never use a runtime instance ID.
 @export var persistence_id: String = ""
+## Disables this source's world-view pickups without changing its shared ledger.
+@export var world_view_enabled: bool = true
 
 var tree_id: String
 @export_range(1, 100, 1) var max_pickups: int = 3
@@ -67,6 +69,12 @@ func _queue_refresh() -> void:
 
 func _refresh() -> void:
 	if not is_inside_tree() or not is_instance_valid(state):
+		return
+	if not world_view_enabled:
+		for pickup in _pickups.values():
+			if is_instance_valid(pickup) and not pickup.is_queued_for_deletion():
+				pickup.queue_free()
+		_pickups.clear()
 		return
 	for slot: int in range(state.available.size()):
 		var existing = _pickups.get(slot)

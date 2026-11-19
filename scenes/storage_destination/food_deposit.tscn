@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scenes/storage_destination/food_deposit.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/objects/barrel.png" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/components/interactable_label_component/interactable_label_component.tscn" id="3"]
+[ext_resource type="Theme" path="res://resources/ui_gameplay_theme/ui_gameplay_theme.tres" id="4"]
+
+[sub_resource type="RectangleShape2D" id="Access"]
+size = Vector2(28, 26)
+
+[node name="FoodDeposit" type="Area2D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1")
+
+[node name="Board" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("2")
+offset = Vector2(0, -5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("Access")
+
+[node name="Caption" type="Label" parent="."]
+z_index = 3
+offset_left = -24.0
+offset_top = 4.0
+offset_right = 24.0
+offset_bottom = 14.0
+mouse_filter = 2
+theme = ExtResource("4")
+theme_type_variation = &"HudLabelShortcut"
+theme_override_constants/outline_size = 2
+text = "Food Deposit"
+horizontal_alignment = 1
+
+[node name="InteractableLabelComponent" parent="." instance=ExtResource("3")]

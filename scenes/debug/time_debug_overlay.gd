@@ -2,7 +2,7 @@ extends CanvasLayer
 
 ## Development-only controls, separate from the gameplay HUD and menus.
 const DATE_PALM_STATE: Script = preload("res://scenes/pickup_item/date_palm_state.gd")
-const SPEEDS: Array[int] = [1, 10, 60]
+const SPEEDS: Array[int] = [1, 10, 25]
 const THEME: Theme = preload("res://resources/ui_gameplay_theme/ui_gameplay_theme.tres")
 const PANEL_ATLAS: Texture2D = preload("res://assets/ui/ui_base/base_24.06.2026.png")
 const CONSTRUCTION_STATE: Script = preload("res://scenes/workshop_plot/workshop_construction_state.gd")
@@ -13,9 +13,11 @@ const DRYING_YARD_UPGRADE_LEVELS: Array[int] = [1, 2]
 const DRYING_YARD_OUTPUT_ITEM_ID: String = "sun_dried_mudbrick"
 const PERSONAL_SHEKEL_TARGET: int = 100
 const WORKER_GUARD_SATISFACTION: float = 0.5
-const WORKER_GUARD_RELIABILITY: float = 0.9
 const DEBUG_INVENTORY_CAPACITY: float = 500.0
 const INVENTORY_BASE_META: StringName = &"debug_inventory_base_capacity"
+const RESIDENT_FOOD_ID: String = "date_cluster"
+const RESIDENT_CLOTHING_ID: String = "simple_clothes"
+const RESIDENT_FOOD_DAYS: int = 7
 
 var speed_multiplier: int = 1
 var panel: PanelContainer
@@ -28,6 +30,8 @@ var materials_button: Button
 var shekel_button: Button
 var production_button: Button
 var wet_inputs_button: Button
+var resident_needs_button: Button
+var resident_needs_status: Label
 var raid_journey_button: Button
 var raid_stage_button: Button
 var raid_journey_label: Label
@@ -40,6 +44,7 @@ var materials_status: Label
 var worker_guard_enabled: bool = false
 var _extra_minutes: float = 0.0
 var _last_status: String = ""
+var _supplying_resident_needs: bool = false
 
 func _ready() -> void:
 	if not OS.is_debug_build():
@@ -125,6 +130,64 @@ func give_shekel() -> bool:
 		"Ready: 100 Shekel in Inventory.",
 		"Bag full. Free space for Shekel."
 	)
+
+## Top up only the missing testing supplies; actual needs update over game time.
+func give_resident_needs() -> bool:
+	if not OS.is_debug_build() or _supplying_resident_needs or not can_supply_materials() or not TimeComponentManager.can_advance_time():
+		return false
+	var storage: Node = WorkStateRuntime.get_node_or_null("CityToolStorage")
+	if not is_instance_valid(storage) or not storage.has_method("debug_supply_resident_needs"):
+		_set_resident_needs_status("City Storage is not ready.")
+		return false
+	var food: Dictionary = CitizenNeedsManager.get_food_supply_summary(storage)
+	var clothing: Dictionary = CitizenNeedsManager.get_clothing_supply_summary(storage)
+	var consumers: int = int(food.consumer_count)
+	if consumers <= 0:
+		_set_resident_needs_status("No residents or workers to supply.")
+		return false
+	if consumers > CityStockManager.MAX_SHELTER_CAPACITY or int(food.daily_need) > storage.MAX_INT_VALUE / RESIDENT_FOOD_DAYS:
+		_set_resident_needs_status("Population is too large for this debug supply.")
+		return false
+	var food_item: ItemData = ItemDatabase.get_item_data(RESIDENT_FOOD_ID)
+	if food_item == null or food_item.food_supply_value <= 0:
+		_set_resident_needs_status("Debug food is unavailable.")
+		return false
+	var missing_points: int = maxi(0, int(food.daily_need) * RESIDENT_FOOD_DAYS - int(food.points))
+	@warning_ignore("integer_division")
+	var food_units: int = missing_points / food_item.food_supply_value
+	if missing_points % food_item.food_supply_value != 0:
+		food_units += 1
+	# Keep spare clothes for every consumer, including allocations expiring tonight.
+	var clothing_units: int = maxi(0, int(clothing.consumer_count) - int(clothing.stock_items))
+	var additions: Dictionary = {}
+	if food_units > 0:
+		additions[RESIDENT_FOOD_ID] = food_units
+	if clothing_units > 0:
+		additions[RESIDENT_CLOTHING_ID] = clothing_units
+	if additions.is_empty() and CityStockManager.shelter_capacity >= consumers:
+		_set_resident_needs_status("Already supplied. Sleep saves debug supplies.")
+		return false
+	_supplying_resident_needs = true
+	var supplied: bool = storage.debug_supply_resident_needs(additions, consumers)
+	_supplying_resident_needs = false
+	if not supplied:
+		_set_resident_needs_status("Supply failed. City Storage remains unchanged.")
+		return false
+	_set_resident_needs_status("Supplied %d. Needs update over time. Sleep saves debug supplies." % consumers)
+	return true
+
+func _set_resident_needs_status(message: String) -> void:
+	resident_needs_status.text = message
+	if panel.visible:
+		_ensure_resident_needs_visible.call_deferred()
+
+func _ensure_resident_needs_visible() -> void:
+	# Let the wrapped status finish resizing before adjusting the scroll.
+	await get_tree().process_frame
+	if panel.visible:
+		var scroll: ScrollContainer = resident_needs_button.get_parent().get_parent() as ScrollContainer
+		if scroll != null:
+			scroll.ensure_control_visible(resident_needs_button)
 
 func set_large_inventory(enabled: bool) -> bool:
 	if not OS.is_debug_build() or not can_supply_materials():
@@ -226,7 +289,7 @@ func give_wall_materials() -> bool:
 	if not OS.is_debug_build() or not can_advance():
 		return false
 	var state: Node = _get_raid_state()
-	if not is_instance_valid(state) or not is_instance_valid(state.storage):
+	if not is_instance_valid(state):
 		return false
 	var quote: Dictionary = state.get_work_quote()
 	# Supply the next eligible improvement when the current wall is already sound.
@@ -236,17 +299,18 @@ func give_wall_materials() -> bool:
 			if not improvement.materials.is_empty():
 				quote = improvement
 				break
-	var available: Dictionary = state.storage.get_available_items()
 	var missing: Dictionary = {}
 	for id: String in quote.materials:
-		var amount: int = maxi(0, int(quote.materials[id]) - int(available.get(id, 0)))
+		var amount: int = maxi(0, int(quote.materials[id]) - int(Inventory.items.get(id, 0)))
 		if amount > 0:
 			missing[id] = amount
 	if missing.is_empty():
 		return false
-	var result: bool = state.storage.refund_materials(missing)
+	var result: bool = Inventory.try_add_bulk_items(missing)
 	if result:
-		materials_status.text = "Wall materials added to City Storage (debug)."
+		materials_status.text = "Wall materials added to Inventory (debug)."
+	else:
+		materials_status.text = "Inventory full. Free space for wall materials."
 	_refresh_controls()
 	return result
 
@@ -364,11 +428,9 @@ func _restore_hired_worker_performance() -> void:
 			continue
 		var worker: WorkerData = worker_value as WorkerData
 		worker.satisfaction = WORKER_GUARD_SATISFACTION
-		worker.reliability = WORKER_GUARD_RELIABILITY
 		var citizen: CitizenData = worker.get_linked_citizen()
 		if citizen != null:
 			citizen.satisfaction = WORKER_GUARD_SATISFACTION
-			citizen.reliability = WORKER_GUARD_RELIABILITY
 
 func _on_time_changed(_day: int, _hour: int, _minute: int, _weather: String) -> void:
 	if worker_guard_enabled:
@@ -459,7 +521,7 @@ func _create_controls() -> void:
 		speed_buttons.append(button)
 	var steps := HBoxContainer.new()
 	column.add_child(steps)
-	for entry in [["+30m", 30], ["+3h", 180], ["+1d", 1440]]:
+	for entry in [["+3h", 180], ["+1d", 1440], ["+3d", 4320]]:
 		var button := _button(entry[0])
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(step_minutes.bind(entry[1]))
@@ -483,6 +545,14 @@ func _create_controls() -> void:
 	shekel_button.pressed.connect(give_shekel)
 	shekel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(shekel_button)
+	resident_needs_status = _label("Debug only. Sleep saves these supplies.")
+	resident_needs_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(resident_needs_status)
+	resident_needs_button = _button("Resident needs: food + clothes + shelter")
+	resident_needs_button.name = "ResidentNeedsDebug"
+	resident_needs_button.tooltip_text = "Adds up to 7 days of food, spare clothes and shelter capacity. Sleep or saving keeps these debug supplies."
+	resident_needs_button.pressed.connect(give_resident_needs)
+	column.add_child(resident_needs_button)
 	inventory_capacity_button = _check_button("Inventory 500")
 	inventory_capacity_button.toggled.connect(set_large_inventory)
 	column.add_child(inventory_capacity_button)
@@ -622,6 +692,8 @@ func _refresh_controls() -> void:
 	production_button.disabled = not can_supply_materials()
 	wet_inputs_button.disabled = not can_supply_materials()
 	shekel_button.disabled = not can_supply_materials()
+	var city_storage: Node = WorkStateRuntime.get_node_or_null("CityToolStorage")
+	resident_needs_button.disabled = not can_supply_materials() or _supplying_resident_needs or not TimeComponentManager.can_advance_time() or not is_instance_valid(city_storage) or not city_storage.has_method("debug_supply_resident_needs")
 	if worker_guard_check_button != null:
 		worker_guard_check_button.set_pressed_no_signal(worker_guard_enabled)
 	_refresh_player_guard_button()

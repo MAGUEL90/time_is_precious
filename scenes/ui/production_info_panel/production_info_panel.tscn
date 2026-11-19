@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://0ai8mbmh2ltj" path="res://assets/ui/ui_base_1/base_1_24.06.2026.png" id="3_mc8l3"]
 [ext_resource type="Texture2D" uid="uid://cjsoii5ex3v20" path="res://assets/ui/ui_icon/right_arrow_icon.png" id="4_arrow"]
 [ext_resource type="Texture2D" uid="uid://jnii0y2a03hi" path="res://assets/ui/ui_icon/separator_icon_2.png" id="5_separator"]
-[ext_resource type="Texture2D" uid="uid://dpcv767o8ce7s" path="res://assets/ui/ui_icon/small_shekel_8x8.png" id="6_shekel"]
+[ext_resource type="Texture2D" path="res://resources/ui_icons/small_shekel.tres" id="6_shekel"]
 [ext_resource type="PackedScene" path="res://scenes/ui/close_icon_button/close_icon_button.tscn" id="7_close"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_pww13"]

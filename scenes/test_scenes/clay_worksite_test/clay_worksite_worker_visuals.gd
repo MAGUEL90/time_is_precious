@@ -1,25 +1,37 @@
 extends Node2D
 
 const VISUAL = preload("res://scenes/worker_visual/base_worker_visual.tscn")
+const FOOTSTEPS = preload("res://scenes/worker_visual/footstep_emitter.gd")
 var actors: Dictionary = {}
 var last_minute: int = -1
 var fraction: float = 0.0
 var work_cycles: Dictionary = {}
 var roaming: Dictionary = {}
 var site_paths: Dictionary = {}
+var reed_exit_paths: Dictionary = {}
 var reed_inside: Dictionary = {}
 var reed_splash: CPUParticles2D
 const FEET_OFFSET := Vector2(0, 16)
 const APPROACH_SPEED: float = 24.0
 var rng := RandomNumberGenerator.new()
 var plot_presence = preload("res://scenes/workshop_plot/workshop_worker_presence.gd").new()
+var resident_spawn: Node2D
+var resident_roam_rect: Rect2 = Rect2()
 @export var idle_min_seconds: float = 0.4
 @export var idle_max_seconds: float = 1.8
 
-func _ready() -> void:
-	rng.randomize()
+func _enter_tree() -> void:
+	add_to_group("staged_time_participants")
+	# The city runtime is reparented on the way home; _ready() is not repeated.
+	if not TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
+		TimeComponentManager.simulated_minute_started.connect(_on_simulated_minute_started)
 	if not WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
 		WorkerDatabase.payroll_changed.connect(_on_worker_roster_changed)
+	if is_instance_valid(resident_spawn):
+		enable_city_residents.call_deferred(resident_spawn)
+
+func _ready() -> void:
+	rng.randomize()
 	# CitySave disables the parked parent, while this retained physical owner
 	# continues hidden approaches using the same real elapsed frame time.
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -27,12 +39,92 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if WorkerDatabase.payroll_changed.is_connected(_on_worker_roster_changed):
 		WorkerDatabase.payroll_changed.disconnect(_on_worker_roster_changed)
+	if TimeComponentManager.simulated_minute_started.is_connected(_on_simulated_minute_started):
+		TimeComponentManager.simulated_minute_started.disconnect(_on_simulated_minute_started)
+	if CitizenManager.citizen_added.is_connected(_on_resident_changed):
+		CitizenManager.citizen_added.disconnect(_on_resident_changed)
+	if CitizenManager.citizen_left.is_connected(_on_resident_changed):
+		CitizenManager.citizen_left.disconnect(_on_resident_changed)
+	if CitizenNeedsManager.needs_changed.is_connected(sync_city_residents):
+		CitizenNeedsManager.needs_changed.disconnect(sync_city_residents)
+
+## The main city shares one visual per citizen with the existing worker owner.
+## Other worksite fixtures keep their original worker-only behavior.
+func enable_city_residents(spawn: Node2D) -> void:
+	resident_spawn = spawn
+	if not CitizenManager.citizen_added.is_connected(_on_resident_changed):
+		CitizenManager.citizen_added.connect(_on_resident_changed)
+	if not CitizenManager.citizen_left.is_connected(_on_resident_changed):
+		CitizenManager.citizen_left.connect(_on_resident_changed)
+	if not CitizenNeedsManager.needs_changed.is_connected(sync_city_residents):
+		CitizenNeedsManager.needs_changed.connect(sync_city_residents)
+	sync_city_residents()
+
+func _on_resident_changed(_citizen: CitizenData) -> void:
+	sync_city_residents()
+
+func sync_city_residents() -> void:
+	if not is_instance_valid(resident_spawn):
+		return
+	_retire_unhired_actors()
+	var residents: Array[CitizenData] = CitizenManager.get_all_residents()
+	var occupied_slots: Dictionary = {}
+	for actor: Node2D in actors.values():
+		if is_instance_valid(actor) and actor.has_meta("resident_spawn_slot"):
+			occupied_slots[int(actor.get_meta("resident_spawn_slot"))] = true
+	var slot: int = 0
+	for citizen: CitizenData in residents:
+		if actors.has(citizen.citizen_id):
+			actors[citizen.citizen_id].set_satisfaction_source(citizen)
+			actors[citizen.citizen_id].set_meta("visual_has_worker", WorkerDatabase.has_worker_data(citizen.citizen_id))
+			continue
+		while occupied_slots.has(slot):
+			slot += 1
+		occupied_slots[slot] = true
+		var offset := Vector2((slot % 5) * 20, (slot / 5) * 18)
+		var actor: Node2D = ensure_actor(citizen.citizen_id, resident_spawn.global_position + offset)
+		if actor == null:
+			continue
+		actor.set_meta("resident_spawn_slot", slot)
+		var worker: WorkerData = WorkerDatabase.get_worker_data(citizen.citizen_id)
+		# The existing work/commute owner decides when assigned people are outside.
+		if worker == null or (not worker.is_reserved() and worker.physical_approach.is_empty()):
+			actor.show()
+			_play(actor, "idle", "right")
+
+func _on_simulated_minute_started(arrival_minute: int) -> void:
+	if not _owns_active_plot_travel() or not get_parent().can_simulate_plot_travel():
+		return
+	plot_presence.update(self, maxf(TimeComponentManager.seconds_per_minute, 0.0), arrival_minute)
+
+func prepare_simulated_minute(arrival_minute: int) -> bool:
+	if not _owns_active_plot_travel():
+		return true
+	var runtime: Node = get_parent()
+	if not runtime.can_simulate_plot_travel():
+		return false
+	plot_presence.update(self, 0.0, arrival_minute, true, true)
+	return not plot_presence.pending_preflight
+
+func _owns_active_plot_travel() -> bool:
+	var runtime: Node = get_parent()
+	if not runtime.has_method("can_simulate_plot_travel"):
+		return false
+	# During a home handoff only the retained city runtime owns physical worker
+	# records. In the city, use only the runtime belonging to the active scene.
+	var store: Node = WorkStateRuntime.get_node_or_null("CitySave")
+	if store != null and is_instance_valid(store.parked_worksite):
+		return runtime == store.parked_worksite
+	var scene: Node = get_tree().current_scene
+	return scene != null and scene.get_node_or_null("YSortWorld/WorkerRuntime") == runtime
 
 func _process(delta: float) -> void:
 	_retire_unhired_actors()
 	if get_tree().paused or TimeComponentManager.is_paused or SceneTransition.is_transitioning:
 		if reed_splash != null:
 			reed_splash.emitting = false
+		return
+	if TimeComponentManager.is_staged_advance_active():
 		return
 	# Restore only actors hidden by this presentation before native owners run.
 	for id: String in reed_inside:
@@ -46,7 +138,8 @@ func _process(delta: float) -> void:
 		last_minute = minute
 	else:
 		fraction = minf(fraction + delta / maxf(TimeComponentManager.seconds_per_minute, 0.001), 0.999)
-	var retained: Array[String] = plot_presence.update(self, delta)
+	var geometry_current: bool = not fixture.has_method("can_simulate_plot_travel") or fixture.can_simulate_plot_travel()
+	var retained: Array[String] = plot_presence.update(self, delta, -1, geometry_current)
 	var plot_workers: Array[String] = retained.duplicate()
 	for site_id in schedule.jobs:
 		var job: Dictionary = schedule.jobs[site_id]
@@ -56,6 +149,20 @@ func _process(delta: float) -> void:
 			retained.append(id)
 			var actor = ensure_actor(id, fixture.worker_spawn(site_id, id))
 			if actor == null:
+				continue
+			# A worker may have just finished or cancelled a city-storage trip.
+			# Active hauling below will set its current cargo label again.
+			if actor.has_node("CargoLabel"):
+				actor.get_node("CargoLabel").text = ""
+			if not schedule.is_site_available(site_id) and not schedule.is_hauler(id):
+				work_cycles.erase(id)
+				roaming.erase(id)
+				site_paths.erase(id)
+				var worker: WorkerData = WorkerDatabase.get_worker_data(id)
+				if worker != null and not worker.physical_approach.is_empty():
+					actor.global_position = worker.physical_approach.position - FEET_OFFSET
+				actor.show()
+				_play(actor, "idle", "right")
 				continue
 			if not fixture.enable_worker_commute:
 				actor.hide()
@@ -83,8 +190,6 @@ func _process(delta: float) -> void:
 				var cargo_name: String = cargo_item.display_name if cargo_item != null else "Clay"
 				actor.get_node("CargoLabel").text = "%s x%d" % [cargo_name, cargo_quantity] if cargo_quantity > 0 else ""
 				continue
-			if actor.has_node("CargoLabel"):
-				actor.get_node("CargoLabel").text = ""
 			var first_day: int = int(job.starts[id]) / 1440
 			if minute < schedule.departure_time(site_id, id, first_day):
 				work_cycles.erase(id)
@@ -108,19 +213,63 @@ func _process(delta: float) -> void:
 				_play(actor, "walk", direction)
 			elif schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
 				roaming.erase(id)
-				_update_work_cycle(id, actor, destination, direction, delta)
+				_update_work_cycle(id, actor, destination, direction, delta, fixture.sites[site_id].item_id == "wood_log")
 			else:
 				work_cycles.erase(id)
 				_roam(id, actor, delta)
+	_city_transport_visual(minute + fraction, retained)
 	for id: String in actors.keys():
 		if not retained.has(id):
 			work_cycles.erase(id)
+			if actors[id].has_node("CargoLabel"):
+				actors[id].get_node("CargoLabel").text = ""
 			if actors[id].visible:
 				_roam(id, actors[id], delta)
 	_update_reed_presence()
 
+func _city_transport_visual(absolute_minute: float, retained: Array[String]) -> Dictionary:
+	var managers: Array[Node] = get_tree().get_nodes_in_group("city_storage_transport")
+	if managers.is_empty():
+		return {}
+	var transport: Node = managers[0]
+	if not transport.has_method("get_visual"):
+		return {}
+	var visual: Dictionary = transport.call("get_visual", absolute_minute)
+	if visual.is_empty():
+		return {}
+	var route_value: Variant = transport.get("route")
+	if not route_value is Dictionary:
+		return {}
+	var worker_id: String = str(route_value.get("worker_id", ""))
+	if worker_id.is_empty():
+		return {}
+	if not retained.has(worker_id):
+		retained.append(worker_id)
+	var actor: Node2D = ensure_actor(worker_id, Vector2(visual.position))
+	if actor == null:
+		return visual
+	actor.show()
+	work_cycles.erase(worker_id)
+	roaming.erase(worker_id)
+	site_paths.erase(worker_id)
+	actor.global_position = Vector2(visual.position)
+	_play(actor, "push_cart" if bool(visual.get("moving", false)) else "idle_cart", str(visual.get("direction", "right")))
+	if not actor.has_node("CargoLabel"):
+		var label := Label.new()
+		label.name = "CargoLabel"
+		label.position = Vector2(0, -8)
+		label.add_theme_font_size_override("font_size", 6)
+		actor.add_child(label)
+	var quantity: int = int(visual.get("carrying", 0))
+	var item_id: String = str(visual.get("item_id", ""))
+	var item: ItemData = ItemDatabase.get_item_data(item_id)
+	var item_name: String = item.display_name if item != null else item_id
+	actor.get_node("CargoLabel").text = "%s x%d" % [item_name, quantity] if quantity > 0 else ""
+	return visual
+
 func _on_worker_roster_changed() -> void:
 	_retire_unhired_actors()
+	sync_city_residents()
 	_update_reed_presence()
 
 func _retire_unhired_actors() -> void:
@@ -134,12 +283,21 @@ func _retire_unhired_actors() -> void:
 			continue
 		if WorkerDatabase.has_worker_data(id):
 			continue
+		var citizen: CitizenData = CitizenManager.get_citizen(id) if is_instance_valid(resident_spawn) else null
+		if citizen != null and citizen.population_status == CitizenData.PopulationStatus.RESIDENT:
+			if bool(actor.get_meta("visual_has_worker", false)):
+				_clear_worker_presentation(id)
+				actor.set_meta("visual_has_worker", false)
+				actor.show()
+				_play(actor, "idle", "right")
+			continue
 		actor.hide()
 		actor.queue_free()
 		actors.erase(id)
 		_clear_worker_presentation(id)
 
 func _clear_worker_presentation(id: String) -> void:
+	reed_exit_paths.erase(id)
 	work_cycles.erase(id)
 	roaming.erase(id)
 	site_paths.erase(id)
@@ -168,9 +326,12 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 	var state: Dictionary = worker.physical_approach
 	actor.global_position = Vector2(state.position) - FEET_OFFSET
 	actor.show()
+	if site_id != &"ReedSite" and _exit_reed_pond(id, actor, delta):
+		state.position = actor.global_position + FEET_OFFSET
+		return true
 	if state.arrived:
 		if schedule.activity(site_id, id) == WorkerData.WorkStatus.WORKING:
-			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta)
+			_update_work_cycle(id, actor, Vector2(state.target) - FEET_OFFSET, "right", delta, fixture.sites[site_id].item_id == "wood_log")
 		else:
 			work_cycles.erase(id)
 			_play(actor, "idle", "right")
@@ -183,11 +344,28 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 		return true
 	var feet: Vector2 = state.position
 	var target: Vector2 = state.target
-	var navigation = fixture.worksite_navigation
+	var navigation = fixture.site_navigation(site_id) if fixture.has_method("site_navigation") else fixture.worksite_navigation
 	var path: Dictionary = site_paths.get(id, {})
-	if path.get("task", "") != task or path.get("target", Vector2.INF) != target:
-		path = {"task": task, "target": target, "points": navigation.route(feet, target), "next": 1}
+	if path.get("task", "") != task or path.get("target", Vector2.INF) != target or int(path.get("revision", -1)) != navigation.revision or int(path.get("navigation_id", -1)) != navigation.get_instance_id():
+		# Cache failed searches too, but retry whenever authored geometry changes.
+		# A blocked route is never treated as an arrival or retried every frame.
+		path = {"task": task, "target": target, "revision": navigation.revision, "navigation_id": navigation.get_instance_id(), "points": PackedVector2Array(), "next": 1}
+		if fixture.has_method("begin_site_approach_route"):
+			path["request"] = fixture.begin_site_approach_route(feet, target, site_id)
+		else:
+			path.points = fixture.site_approach_route(feet, target, site_id) if fixture.has_method("site_approach_route") else navigation.route(feet, target)
 		site_paths[id] = path
+	if path.has("request"):
+		var request: RefCounted = path.request
+		fixture.step_site_approach_route(request)
+		if request.status == "pending":
+			_play(actor, "idle", "right")
+			return true
+		if request.status == "invalidated":
+			site_paths.erase(id)
+			return true
+		path.points = request.path if request.status == "found" else PackedVector2Array()
+		path.erase("request")
 	var remaining: float = APPROACH_SPEED * delta
 	var points: PackedVector2Array = path.points
 	while int(path.next) < points.size() and remaining > 0.0001:
@@ -204,6 +382,8 @@ func _physical_site_step(site_id: StringName, id: String, actor: Node2D, delta: 
 		feet = step
 	state.position = feet
 	actor.global_position = feet - FEET_OFFSET
+	if site_id == &"ReedSite" and navigation != fixture.worksite_navigation and not fixture.worksite_navigation.is_clear(feet):
+		actor.set_meta("reed_pond_exit", true)
 	if feet.distance_to(target) < 0.1 and navigation.is_clear(feet):
 		if worker.mark_physical_arrival(task):
 			site_paths.erase(id)
@@ -216,18 +396,29 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	if actors.has(id):
 		return actors[id]
 	var worker: WorkerData = WorkerDatabase.get_worker_data(id)
-	if worker == null:
+	var citizen: CitizenData = CitizenManager.get_citizen(id) if is_instance_valid(resident_spawn) else (worker.get_linked_citizen() if worker != null else null)
+	if worker == null and (citizen == null or citizen.population_status != CitizenData.PopulationStatus.RESIDENT):
 		return null
 	var actor = VISUAL.instantiate()
 	actor.set_meta("worker_id", id)
-	var citizen: CitizenData = worker.get_linked_citizen()
+	actor.set_meta("visual_has_worker", worker != null)
 	var profile: VisualProfile = citizen.visual_profile if citizen != null and citizen.visual_profile != null else VisualProfile.new()
-	actor.skin_tone = "light" if get_parent().daily.is_hauler(id) else profile.skin_tone
+	# Native cart layers now retain the linked identity in both city and standalone scenes.
+	actor.skin_tone = profile.skin_tone
+	actor.expression = profile.expression
 	actor.clothes_id = profile.clothes_id
 	actor.hair_style = profile.hair_style
 	actor.accessory = profile.accessory
 	add_child(actor)
-	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if not worker.physical_approach.is_empty() else spawn_position
+	actor.set_satisfaction_source(citizen if citizen != null else worker)
+	actor.global_position = Vector2(worker.physical_approach.position) - FEET_OFFSET if worker != null and not worker.physical_approach.is_empty() else spawn_position
+	if worker != null and not worker.physical_approach.is_empty():
+		var normal = get_parent().worksite_navigation
+		var feet: Vector2 = actor.global_position + FEET_OFFSET
+		var reed_nav = normal.for_reed_site()
+		# This also restores a worker reassigned while leaving the reed pond.
+		if reed_nav != normal and not normal.is_clear(feet) and reed_nav.is_clear(feet):
+			actor.set_meta("reed_pond_exit", true)
 	var foot := Node2D.new()
 	foot.name = "FootSort"
 	foot.position = FEET_OFFSET
@@ -235,22 +426,26 @@ func ensure_actor(id: String, spawn_position: Vector2) -> Node2D:
 	for child: Node in actor.get_children():
 		if child is AnimatedSprite2D:
 			child.reparent(foot, true)
+	var footsteps: Node = FOOTSTEPS.new()
+	footsteps.name = "Footsteps"
+	actor.add_child(footsteps)
 	actor.y_sort_enabled = true
-	_apply_work_identity(actor)
 	actor.hide()
 	actors[id] = actor
 	return actor
 
 func _roam(id: String, actor: Node2D, delta: float) -> void:
+	if _exit_reed_pond(id, actor, delta):
+		return
 	if not roaming.has(id):
-		roaming[id] = {"target": actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55)), "idle": 0.0, "direction": "right"}
+		roaming[id] = {"target": _roam_target(actor, true), "idle": 0.0, "direction": "right"}
 	var state: Dictionary = roaming[id]
 	if state.idle > 0.0:
 		state.idle -= delta
 		_play(actor, "idle", state.direction)
 		return
 	if actor.global_position.distance_to(state.target) < 0.1:
-		state.target = Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
+		state.target = _roam_target(actor, false)
 		state.idle = rng.randf_range(idle_min_seconds, idle_max_seconds)
 		_play(actor, "idle", state.direction)
 		return
@@ -265,16 +460,73 @@ func _roam(id: String, actor: Node2D, delta: float) -> void:
 	actor.global_position = step
 	_play(actor, "walk", state.direction)
 
+# After Reed work, leave that one pond before returning to ordinary roaming.
+# The flag is presentation-only and can also be reconstructed from a saved
+# in-flight Reed approach when its visual actor is recreated.
+func _exit_reed_pond(id: String, actor: Node2D, delta: float) -> bool:
+	if not actor.has_meta("reed_pond_exit"):
+		return false
+	var fixture: Node = get_parent()
+	var normal = fixture.worksite_navigation
+	var feet: Vector2 = actor.global_position + FEET_OFFSET
+	if normal.is_clear(feet):
+		actor.remove_meta("reed_pond_exit")
+		reed_exit_paths.erase(id)
+		return false
+	var allowed = normal.for_reed_site()
+	if allowed == normal or not allowed.is_clear(feet):
+		_play(actor, "idle", "right")
+		return true
+	var path: Dictionary = reed_exit_paths.get(id, {})
+	if int(path.get("revision", -1)) != normal.revision or int(path.get("actor_id", -1)) != actor.get_instance_id():
+		var destination: Vector2 = normal.reed_exit_target(feet)
+		var points: PackedVector2Array = allowed.route(feet, destination) if destination != Vector2.INF else PackedVector2Array()
+		path = {"revision": normal.revision, "actor_id": actor.get_instance_id(), "points": points, "next": 1}
+		reed_exit_paths[id] = path
+	var points: PackedVector2Array = path.points
+	var remaining: float = APPROACH_SPEED * delta
+	while int(path.next) < points.size() and remaining > 0.0001:
+		var next: Vector2 = points[int(path.next)]
+		if feet.distance_to(next) < 0.01:
+			path.next += 1
+			continue
+		var step: Vector2 = feet.move_toward(next, remaining)
+		if not allowed.segment_clear(feet, step):
+			reed_exit_paths.erase(id)
+			break
+		remaining -= feet.distance_to(step)
+		_play(actor, "walk", "left" if step.x < feet.x else "right")
+		feet = step
+	actor.global_position = feet - FEET_OFFSET
+	if normal.is_clear(feet):
+		actor.remove_meta("reed_pond_exit")
+		reed_exit_paths.erase(id)
+	elif points.is_empty():
+		_play(actor, "idle", "right")
+	return true
+func _roam_target(actor: Node2D, initial: bool) -> Vector2:
+	# Scope the idle stroll only. Assignment/hauling owners keep their routes.
+	if is_instance_valid(resident_spawn) and resident_roam_rect.has_area():
+		return resident_spawn.global_position + Vector2(
+			rng.randf_range(resident_roam_rect.position.x, resident_roam_rect.end.x),
+			rng.randf_range(resident_roam_rect.position.y, resident_roam_rect.end.y))
+	if initial:
+		return actor.global_position + Vector2(rng.randf_range(-45, 45), rng.randf_range(25, 55))
+	return Vector2(rng.randf_range(-170, 170), rng.randf_range(-70, 75)) + get_parent().global_position
+
 func _play(actor: Node2D, action: String, direction: String) -> void:
 	# The hauling branch requests cart poses; commute and post-work roaming do not.
-	actor.play_visual(actor.skin_tone, "base", action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
+	var footsteps: Node = actor.get_node_or_null("Footsteps")
+	if footsteps != null:
+		footsteps.set_walking(action == "walk", direction)
+	actor.play_visual(actor.skin_tone, actor.expression, action, direction, actor.accessory, actor.clothes_id, actor.hair_style)
 	var foot: Node = actor.get_node_or_null("FootSort")
 	if foot != null:
 		for child: Node in actor.get_children():
 			if child is AnimatedSprite2D:
 				child.reparent(foot, true)
 
-func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float) -> void:
+func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: String, delta: float, wood: bool = false) -> void:
 	if _reed_working(id):
 		work_cycles.erase(id)
 		return
@@ -305,7 +557,7 @@ func _update_work_cycle(id: String, actor: Node2D, center: Vector2, direction: S
 		duration = _phase_duration(cycle, actor)
 	var action: String = "idle"
 	if cycle.phase == 1 or cycle.phase == 2:
-		action = "work"
+		action = "chop_wood" if wood else "work"
 	elif cycle.phase == 4:
 		action = "walk"
 		actor.global_position = cycle.origin.lerp(cycle.target, cycle.elapsed / duration)
@@ -323,18 +575,6 @@ func _phase_duration(cycle: Dictionary, actor: Node2D) -> float:
 	if cycle.phase == 4:
 		return maxf(cycle.origin.distance_to(cycle.target) / 10.0, 0.1)
 	return maxf(cycle.idle, 0.1)
-
-func _apply_work_identity(actor: Node2D) -> void:
-	# Missing work overlays stay consistently absent; linked citizen data is intact.
-	if not _has_work_identity(actor, actor.hair_sprite, actor.hair_style):
-		actor.hair_style = "default"
-		actor._hide_layer(actor.hair_sprite)
-	if not _has_work_identity(actor, actor.clothes_sprite, actor.clothes_id):
-		actor.clothes_id = "default"
-		actor._hide_layer(actor.clothes_sprite)
-
-func _has_work_identity(actor: Node2D, layer: AnimatedSprite2D, identity: String) -> bool:
-	return actor._has_playable_animation(layer, "%s_work_left" % identity) and actor._has_playable_animation(layer, "%s_work_right" % identity)
 
 func _reed_working(id: String) -> bool:
 	var fixture: Node = get_parent()

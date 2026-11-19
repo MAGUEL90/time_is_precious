@@ -7,6 +7,7 @@ func _ready() -> void:
 
 func _run() -> void:
 	_check_back_navigation_controls()
+	await _check_back_confirmation_layout()
 	_check_storage_presentation()
 	var production = load("res://scenes/ui/workshop_production_ui/workshop_production_ui.tscn").instantiate()
 	add_child(production)
@@ -100,6 +101,55 @@ func _check_back_navigation_controls() -> void:
 	_expect(not choice.close_button.visible, "Dynamic Back confirmation has no duplicate Close.")
 	choice.setup("Confirmation", "Confirm", "Cancel", true)
 	_expect(choice.close_button.visible, "A confirmation without Back retains its configured Close.")
+	choice.queue_free()
+
+func _check_back_confirmation_layout() -> void:
+	var choice: ActionChoicePanel = load("res://scenes/ui/action_choice_panel/action_choice_panel.tscn").instantiate()
+	add_child(choice)
+	choice.position = Vector2(80, 80)
+	choice.size = Vector2(240, 64)
+	var selected: Array[int] = [0, 0]
+	choice.primary_selected.connect(func(): selected[0] += 1)
+	choice.secondary_selected.connect(func(): selected[1] += 1)
+	choice.setup("Unlock held output?\nFee: 9999", "Pay", "Back", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var panel_rect: Rect2 = choice.get_global_rect()
+	var back_rect: Rect2 = choice.secondary_button.get_global_rect()
+	_expect(choice.secondary_button.icon == load("res://assets/ui/ui_icon/back_button.png")
+		and choice.secondary_button.size == Vector2(64, 18)
+		and choice.primary_button.size == Vector2(64, 18),
+		"Dynamic Back uses the native icon and matches the paired action size.")
+	_expect(is_equal_approx(back_rect.position.x - panel_rect.position.x, 6.0)
+		and is_equal_approx(panel_rect.end.y - back_rect.end.y, 6.0)
+		and not back_rect.intersects(choice.primary_button.get_global_rect())
+		and choice.message_label.get_global_rect().end.y <= back_rect.position.y,
+		"A secondary Back remains at the lower left without overlapping the message or primary action.")
+	choice.secondary_button.pressed.emit()
+	_expect(selected == [0, 1], "Moving Back preserves the secondary action signal.")
+	choice.setup("Return?", "Back", "Continue", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	back_rect = choice.primary_button.get_global_rect()
+	_expect(is_equal_approx(back_rect.position.x - panel_rect.position.x, 6.0)
+		and is_equal_approx(panel_rect.end.y - back_rect.end.y, 6.0)
+		and choice.primary_button.icon == load("res://assets/ui/ui_icon/back_button.png")
+		and choice.secondary_button.icon == null,
+		"A primary Back also appears at the lower left.")
+	choice.primary_button.pressed.emit()
+	_expect(selected == [1, 1], "Moving Back preserves the primary action signal.")
+	choice.setup("Confirm?", "Confirm", "Cancel", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_expect(choice.close_button.visible
+		and choice.primary_button.get_global_rect().position.x < choice.secondary_button.get_global_rect().position.x
+		and not choice.back_spacer.visible
+		and choice.primary_button.icon == null and choice.secondary_button.icon == null
+		and choice.primary_button.custom_minimum_size == Vector2(44, 16)
+		and choice.secondary_button.custom_minimum_size == Vector2(44, 16)
+		and not choice.primary_button.has_theme_stylebox_override("normal")
+		and not choice.secondary_button.has_theme_stylebox_override("normal"),
+		"Reusing the panel without Back restores its original actions, styles and Close.")
 	choice.queue_free()
 
 func _check_storage_presentation() -> void:

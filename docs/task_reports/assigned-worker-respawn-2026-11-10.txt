@@ -1,0 +1,109 @@
+TIME IS PRECIOUS - ASSIGNMENT AKTIF SAAT COLLIDER RESPAWN
+Tanggal: 2026-11-10
+Hasil: PASS dalam cakupan yang diuji. 129 pemeriksaan (86/27/16), sembilan
+percobaan batas, 54 catatan tahap, dan tiga proses game independen.
+Tidak ditemukan bug produksi yang terbukti; tidak ada patch gameplay.
+
+TARGET DAN ISOLASI
+Snapshot lengkap b32cc505b89c0a0b06d288b1b6ab48fcb9feccce, branch tetap
+test/time-world/laptop-baseline-20261109 pada:
+C:/Users/Hendro/Documents/Codex/2026-11-09/halo-aku-ingin-melanjutkan-pengembangan-game/outputs/Time-is-Precious-project
+MCP menggunakan server lokal dengan -p ke salinan kerja. res://, user://, serta
+PID pemilik port 9877 diverifikasi sebelum begin pada ketiga proses.
+Godot 4.5.1 stable, Compatibility/OpenGL. Tidak menggunakan computer use.
+Profil baru: outputs/citysave_suite_qa/blocked-multi-assigned-assigned-01.
+APPDATA, LOCALAPPDATA, XDG data/config/cache dan temp diisolasi; engine probe
+memverifikasi user:// sebelum launch. Save personal tidak dibuka/digunakan.
+
+SKENARIO
+Civil existing initial_workshop_laborer direkrut melalui hire_applicant dengan
+kontrak sembilan hari; fixture memberi 9 shekel, pembayaran kontrak aktual 3.
+daily.toggle dan daily.start asli menugaskannya ke ClaySiteA. Target canonical
+tetap (255, -165.5). Assignment/order tidak diganti saat pengujian respawn.
+Uji memakai backend hiring/assignment asli, bukan klik manual panel perekrutan.
+
+WoodSite dijadikan sumber habis yang melintang pada rute menuju clay.
+Fixture mengatur stok nol, deadline satu menit berikutnya, dan posisi awal
+physical_approach. Ini pengujian batas, bukan pengulangan depletion penuh atau
+durasi respawn 2-3 hari. Kapasitas, kecepatan, aturan produksi dan schema tetap.
+Target tugas selalu asli. Cache rute dibangun dengan fungsi native pada delta 0
+dan diperiksa benar-benar melintasi polygon Wood yang sedang habis. Langkah
+perjalanan sesudah setup dijalankan oleh WorkerVisuals._process asli.
+
+Sembilan kombinasi:
+- Posisi dekat luar zona penghalang, lebih jauh di luar, dan sudah di dalamnya.
+- Pemicu sebelum owner visual, sesudah owner visual, atau dari physics callback.
+Priority hanya diubah pada callback QA. Worker selalu terverifikasi TRAVELLING,
+belum arrived, dan masih memegang order yang sama.
+
+HASIL BATAS COLLIDER
+Lima percobaan: worker menempati zona penghalang lebih dulu; stok Wood tetap nol
+dan collider tetap nonaktif. Ini mencakup tiga fixture posisi sudah terisi.
+Empat percobaan: respawn lebih dulu; collider aktif, revision navigasi meningkat,
+cache rute lama dibuang, lalu rute baru dibangun pada revision yang benar.
+Keempat rute baru tetap dapat mencapai tujuan dan tidak memotong polygon Wood.
+
+Per urutan:
+before_owner: 2 tertahan oleh worker, 1 refill dengan rute dihitung ulang.
+after_owner:  2 tertahan oleh worker, 1 refill dengan rute dihitung ulang.
+physics_first: 1 tertahan oleh worker, 2 refill dengan rute dihitung ulang.
+
+Tidak ditemukan overlap sumber penuh dengan posisi worker. Collider dan stok
+konsisten sesudah flush deferred. Posisi visual dan physical_approach tersimpan
+sesuai pada seluruh 54 event. Tidak ada perpindahan worker di sela tahap deferred
+yang diamati. Assignment, target dan status perjalanan tetap utuh.
+Stok/progress clay tidak bertambah selama sembilan percobaan: belum ada produksi
+sebelum kedatangan fisik.
+
+SAVE, CONTINUE, PRODUKSI DAN TIDUR
+1. Writer menyelesaikan sembilan percobaan. Worker berjalan keluar dari Wood;
+   clock mengizinkan refill menjadi 24 dengan collider aktif. Checkpoint CITY
+   disimpan saat worker masih dalam perjalanan, bukan sudah tiba.
+   Posisi tersimpan (118.047119140625, -202.864227294922); clay masih 36.
+2. Reader menjalankan Continue pada proses baru. Snapshot lengkap dibandingkan
+   sebelum clock berjalan; kontrak, assignment dan target tetap sama. Worker
+   meneruskan perjalanan native selama 172 frame observasi tanpa overlap Wood,
+   lalu tiba di target asli dan berstatus WORKING.
+   Sepuluh menit melalui clock asli menghasilkan tepat satu clay: stok deposit
+   turun satu, City Storage bertambah satu, tas Player tidak menerima duplikat.
+   Player kemudian berjalan pulang dan tidur melalui interaksi asli. Assignment
+   tetap berjalan sesuai shift selama waktu tidur; stok clay akhirnya 7.
+3. Verifier Continue lagi dalam proses baru, memeriksa snapshot dan identitas,
+   assignment tetap ada, keluar rumah, lalu tick kota. Stok akhir tetap
+   Wood 24 / Clay 7 / Reed 40 / Water 48; timer Wood selesai (-1).
+
+Kedua rantai hash checkpoint sesuai dan Continue tidak menulis ulang bytes:
+CITY in-flight:
+3614bf1a9c3cf4ccbb0381369a169a570f5063f7b8d5953ed71d8f7af896a0e1
+HOME setelah tidur:
+b40b4d2ddc8a4aa8942f6844eb579944b1995ce826b1225575559dd482f14c58
+Nama, rambut dan skin tone ketiga civil tetap sesuai sebelum/sesudah dan Continue.
+Ketiga stderr final kosong. Tidak ada percobaan harness gagal pada tahap ini.
+
+BATAS CAKUPAN
+- Satu Laborer dengan daily assignment ClaySiteA melewati collider WoodSite.
+  Belum mencakup hauling/cart, assignment workshop, beberapa worker sekaligus,
+  atau respawn deposit yang menjadi tujuan assignment itu sendiri.
+- Posisi awal, stok/deadline batas dan dana perekrutan adalah fixture QA.
+  Kebutuhan Player dan tas 100 tetap aktif; 40 date_cluster diberikan sebelum
+  tidur untuk kebutuhan uji. Ini bukan playthrough tanpa grant.
+- Tidak menguji setiap variasi FPS/lag atau save tepat di tengah flush deferred.
+  Save mid-travel dan save setelah tidur benar-benar diuji lintas proses.
+- Bukti bebas overlap berlaku pada event/frame yang diamati dalam skenario ini.
+
+AUDIT PERUBAHAN
+3.377 berkas manifest snapshot asli masih cocok; source Git tetap bersih.
+Perubahan tracked di salinan kerja tetap test_scene_start_menu.gd dari baseline
+sebelumnya. Tahap ini menambah harness eksternal dan laporan ini saja.
+Toolbar, scene authored, project.godot, addons, kode produksi, aturan permainan
+dan format save tidak diubah. git diff --check lulus. Tidak commit/push/merge.
+
+BUKTI DI outputs/qa-evidence
+assigned-summary.json: agregat, hasil rute, stok, dan rantai hash.
+moving-assigned-{write,read,verify}.result.json: hasil tiap proses dan 54 event.
+edge-assigned-{write,read,verify}.{launch.json,profile.log,stdout.log,stderr.log}.
+mcp-retarget-transcript.jsonl: verifikasi target dan perintah MCP.
+assigned-harness-hashes.json dan final-source-audit.json.
+Prefix moving/edge pada nama berkas berasal dari helper QA sebelumnya; semua
+proses tahap ini menggunakan profil assigned baru yang disebut di atas.
+Harness: work/assigned_edge.gd, launch-assigned.ps1, summarize-assigned.ps1.

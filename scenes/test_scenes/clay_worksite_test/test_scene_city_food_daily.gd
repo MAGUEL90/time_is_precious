@@ -251,7 +251,6 @@ func _test_duplicate_day_and_reentrant_callback() -> void:
 	CitizenNeedsManager.process_daily_needs()
 	var after_first: int = _provider_points()
 	var satisfaction_after_first: float = resident.satisfaction
-	var reliability_after_first: float = resident.reliability
 	CitizenNeedsManager.process_daily_food_needs()
 	CitizenNeedsManager.process_daily_needs()
 	CitizenNeedsManager.on_new_day_started(TimeComponentManager.current_day)
@@ -260,7 +259,7 @@ func _test_duplicate_day_and_reentrant_callback() -> void:
 		provider.disconnect("changed", reentrant_callback)
 	_expect(after_first == 1 and after_duplicate == 1, "Duplicate same-day food and full-needs calls must not consume twice.")
 	_expect(CitizenNeedsManager.last_food_fulfilled_count == 1 and resident.food_fulfilled, "Duplicate-day calls must preserve the first allocation result.")
-	_expect(is_equal_approx(resident.satisfaction, satisfaction_after_first) and is_equal_approx(resident.reliability, reliability_after_first), "Duplicate-day callbacks must not reapply satisfaction or reliability effects.")
+	_expect(is_equal_approx(resident.satisfaction, satisfaction_after_first), "Duplicate-day callbacks must not reapply the satisfaction effect.")
 	_expect(reentrant_hits[0] > 0, "The provider transaction must exercise the reentrant callback guard.")
 
 

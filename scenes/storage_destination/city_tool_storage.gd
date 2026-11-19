@@ -316,11 +316,11 @@ func accepts_item(item_id: String) -> bool:
 		or item_id == "stone" or item_id == "wood_log"
 	)
 
-func get_depositable_items() -> Array[Dictionary]:
+func get_depositable_items(food_only: bool = false) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for item_id: String in _get_registered_item_ids():
 		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-		if not accepts_item(item_id):
+		if not accepts_item(item_id) or (food_only and not _is_ready_food(item_data)):
 			continue
 		var quantity_value: Variant = Inventory.items.get(item_id, 0)
 		if not quantity_value is int or int(quantity_value) <= 0:
@@ -357,7 +357,7 @@ func deposit_from_inventory(item_id: String, quantity: int = 1) -> Dictionary:
 	return result
 
 func deposit_items_from_inventory(selected_items: Dictionary, shekel_to_treasury: bool = false) -> Dictionary:
-	if _transfer_in_progress:
+	if _transfer_in_progress or Inventory._bulk_transaction_in_progress:
 		return _transfer_result(false, "A City Storage transfer is already in progress.")
 	var selection: Dictionary = _validate_selection(selected_items)
 	if not bool(selection.ok):
@@ -421,7 +421,70 @@ func has_capacity_for(item_id: String, quantity: int) -> bool:
 	return _can_receive_item(item_id, quantity)
 
 func try_add_item(item_id: String, quantity: int) -> bool:
-	if not has_capacity_for(item_id, quantity):
+	return _try_add_item(item_id, quantity, false)
+
+## Daily worksite production belongs to the city. Its authored resource may be
+## raw material, so this path is separate from player deposits and deliveries.
+func try_add_worksite_output(item_id: String, quantity: int) -> bool:
+	return _try_add_item(item_id, quantity, true)
+
+## Storage-to-storage hauling is limited to counted physical stock. Shekel and
+## unique equipment stay outside this transfer boundary.
+func get_city_transfer_available(item_id: String) -> int:
+	if _transfer_in_progress or not _is_city_transfer_item(item_id):
+		return 0
+	var quantity: Variant = items.get(item_id, 0)
+	if not quantity is int or int(quantity) < 0:
+		return 0
+	return int(quantity)
+
+func can_take_city_transfer(item_id: String, quantity: int) -> bool:
+	return not _transfer_in_progress and quantity > 0 \
+		and _is_city_transfer_item(item_id) and _has_valid_counted_stacks() \
+		and get_city_transfer_available(item_id) >= quantity
+
+func take_city_transfer(item_id: String, quantity: int) -> bool:
+	if not can_take_city_transfer(item_id, quantity):
+		return false
+	var next_items: Dictionary = items.duplicate(true)
+	var remaining: int = int(next_items[item_id]) - quantity
+	if remaining > 0:
+		next_items[item_id] = remaining
+	else:
+		next_items.erase(item_id)
+	_transfer_in_progress = true
+	items = next_items
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
+func can_receive_city_transfer(item_id: String, quantity: int) -> bool:
+	return not _transfer_in_progress and quantity > 0 \
+		and _is_city_transfer_item(item_id) and _can_receive_item(item_id, quantity, true)
+
+func receive_city_transfer(item_id: String, quantity: int) -> bool:
+	if not can_receive_city_transfer(item_id, quantity):
+		return false
+	var next_items: Dictionary = items.duplicate(true)
+	var stored: Variant = next_items.get(item_id, 0)
+	if not stored is int or int(stored) < 0:
+		return false
+	var total: Dictionary = _safe_nonnegative_add(int(stored), quantity)
+	if not bool(total.ok):
+		return false
+	next_items[item_id] = int(total.value)
+	var next_units: Dictionary = units.duplicate(true)
+	_commit_city_receipt(next_units, next_items, _unit_sequence)
+	return true
+
+func _is_city_transfer_item(item_id: String) -> bool:
+	if item_id.is_empty() or item_id == "shekel" or SUPPORTED_ITEM_IDS.has(item_id):
+		return false
+	var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+	return item_data != null and item_data.category != ItemEnums.ItemCategory.EQUIPMENT
+
+func _try_add_item(item_id: String, quantity: int, worksite_output: bool) -> bool:
+	if not _can_receive_item(item_id, quantity, worksite_output):
 		return false
 	var next_units: Dictionary = units.duplicate(true)
 	var next_items: Dictionary = items.duplicate(true)
@@ -446,6 +509,55 @@ func try_add_item(item_id: String, quantity: int) -> bool:
 	_commit_city_receipt(next_units, next_items, next_sequence)
 	return true
 
+## Explicit debug supply. Commit food, clothing and shelter together so a
+## storage observer never sees only part of the testing setup.
+func debug_supply_resident_needs(additions: Dictionary, minimum_shelter: int) -> bool:
+	if not OS.is_debug_build() or _transfer_in_progress:
+		return false
+	if minimum_shelter < 0 or minimum_shelter > CityStockManager.MAX_SHELTER_CAPACITY \
+		or CityStockManager.shelter_capacity < 0 or CityStockManager.shelter_capacity > CityStockManager.MAX_SHELTER_CAPACITY:
+		return false
+	var food_state: Dictionary = _validated_food_state()
+	var clothing_state: Dictionary = _validated_clothing_state()
+	if not bool(food_state.ok) or not bool(clothing_state.ok):
+		return false
+	var food_points: int = int(food_state.total_points)
+	var clothing_count: int = int(clothing_state.count)
+	var next_items: Dictionary = items.duplicate(true)
+	for key: Variant in additions:
+		if not key is String or not additions[key] is int or int(additions[key]) <= 0:
+			return false
+		var item_id: String = key
+		var quantity: int = int(additions[key])
+		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
+		if not _can_receive_item(item_id, quantity):
+			return false
+		if _is_ready_food(item_data):
+			var points: Dictionary = _safe_nonnegative_product(quantity, item_data.food_supply_value)
+			if not bool(points.ok):
+				return false
+			var total: Dictionary = _safe_nonnegative_add(food_points, int(points.value))
+			if not bool(total.ok):
+				return false
+			food_points = int(total.value)
+		elif CLOTHING_ITEM_IDS.has(item_id):
+			var total: Dictionary = _safe_nonnegative_add(clothing_count, quantity)
+			if not bool(total.ok):
+				return false
+			clothing_count = int(total.value)
+		else:
+			return false
+		next_items[item_id] = int(next_items.get(item_id, 0)) + quantity
+	if additions.is_empty() and minimum_shelter <= CityStockManager.shelter_capacity:
+		return false
+	_transfer_in_progress = true
+	items = next_items
+	if minimum_shelter > CityStockManager.shelter_capacity:
+		CityStockManager.add_shelter_capacity(minimum_shelter - CityStockManager.shelter_capacity)
+	changed.emit()
+	_transfer_in_progress = false
+	return true
+
 func add_tool_unit(unit_id: String, tool_id: String, display_name: String) -> bool:
 	if _transfer_in_progress or unit_id.is_empty() or tool_id.is_empty() or units.has(unit_id):
 		return false
@@ -465,6 +577,12 @@ func allocate(unit_id: String, worker_id: String) -> bool:
 func release(unit_id: String, worker_id: String) -> bool:
 	if _transfer_in_progress or not units.has(unit_id) or units[unit_id].worker_id != worker_id:
 		return false
+	# A cart belongs to an active inter-storage shipment until its cargo has
+	# settled and the courier has been released, even while the worker rests.
+	if units[unit_id].tool_id == "cart" and is_inside_tree():
+		var transport: Node = get_node_or_null("/root/WorkStateRuntime/CityStorageTransport")
+		if transport != null and transport.has_method("has_worker") and transport.has_worker(worker_id):
+			return false
 	units[unit_id].worker_id = ""
 	changed.emit()
 	return true
@@ -624,10 +742,10 @@ func _get_available_quantity(item_id: String) -> int:
 		return 0
 	return int(stored_quantity)
 
-func _can_receive_item(item_id: String, quantity: int) -> bool:
+func _can_receive_item(item_id: String, quantity: int, worksite_output: bool = false) -> bool:
 	if _transfer_in_progress or item_id.is_empty() or quantity <= 0:
 		return false
-	if not accepts_item(item_id):
+	if ItemDatabase.get_item_data(item_id) == null or (not worksite_output and not accepts_item(item_id)):
 		return false
 	if not _has_valid_counted_stacks():
 		return false

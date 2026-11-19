@@ -37,6 +37,9 @@ func _ready() -> void:
 	)
 
 	CitizenManager.citizen_added.connect(_on_citizen_added)
+	CitizenManager.citizen_left.connect(_on_citizen_added)
+	# Checkpoint restore replaces the registry before broadcasting needs_changed.
+	CitizenNeedsManager.needs_changed.connect(_update_population)
 	_update_population()
 
 # Bar setup and animation

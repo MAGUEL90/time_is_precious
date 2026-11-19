@@ -6,6 +6,7 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/pickup_item/pickup_item.
 const DAILY_PICKUP_SCRIPT = preload("res://scenes/test_scenes/clay_worksite_test/clay_worksite_daily_pickup.gd")
 const WORK_FADE_SECONDS: float = 0.15
 const WORK_BLACKOUT_SECONDS: float = 1.0
+const WOOD_WORK_PRESENTATION_SECONDS: float = 3.0 # Three visual loops; no extra game minutes.
 signal work_finished
 const INSPECTION_DISTANCE: float = 32.0 # Fixture interaction reach, not production tuning.
 @export var prepare_overflow_test: bool = false
@@ -54,6 +55,7 @@ func _ready() -> void:
 		sites[site.name].reserved_slots = daily.active_count.bind(site.name)
 	daily.setup(sites)
 	city_tools = _create_city_tool_storage()
+	daily.equipment_storage = city_tools
 	for index: int in range(test_hauler_carts):
 		city_tools.add_tool_unit("test_cart_%d" % index, "cart", "Cart %d" % (index + 1))
 	worker_management = preload("res://scenes/test_scenes/clay_worksite_test/clay_worker_management.gd").new()
@@ -235,7 +237,6 @@ func _prepare_nightmare_test() -> void:
 		return
 	player.fatigue = 0.89
 	player.hunger = 0.0
-	player.focus = 1.0
 	player.condition_changed.emit()
 	player.global_position = $WorksiteMarkers/ClaySiteA.global_position
 
@@ -312,7 +313,6 @@ func _prepare_overflow_test() -> void:
 		return
 	player.fatigue = 0.5
 	player.hunger = 0.0
-	player.focus = 1.0
 	player.condition_changed.emit()
 	var clay: ItemData = ItemDatabase.get_item_data("clay_lump")
 	if clay == null or clay.weight <= 0.0:
@@ -327,16 +327,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _working or not player.can_move or player.is_collapsing or player.is_sleeping or SceneTransition.is_transitioning or inventory_ui.visible or get_tree().paused:
 		return
-	# Let existing pickups own E when a ground stack is focused.
-	if _pickup_focused or (is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem):
+	# Existing interactables retain ownership of E, just as for the highlight.
+	if _pickup_focused or is_instance_valid(player.current_interactable):
 		return
-	var nearest: Marker2D = null
-	var nearest_distance: float = INSPECTION_DISTANCE
-	for site: Marker2D in $WorksiteMarkers.get_children():
-		var distance: float = player.global_position.distance_to(site.global_position)
-		if distance <= nearest_distance:
-			nearest = site
-			nearest_distance = distance
+	var nearest: Marker2D = _nearest_interaction_site()
 	if nearest == null:
 		return
 	_open_site_panel(nearest)
@@ -365,7 +359,7 @@ func _preview_work(minutes: int) -> Dictionary:
 				reason = "Selected worker is unavailable."
 		if reason.is_empty():
 			reason = daily.start_reason(_selected_site.name)
-		return {"units": 0, "minutes": 0, "reason": reason, "worker_count": ids.size() + active_ids.size(),
+		return {"units": 0, "minutes": 0, "stock": session.stock, "finite_resource": session.finite_resource, "deposit_capacity": session.deposit_capacity, "respawn_minutes": maxi(session.respawn_due_at - daily.now(), 0) if session.respawn_due_at >= 0 else -1, "reason": reason, "worker_count": ids.size() + active_ids.size(),
 			"active_count": active_ids.size(), "has_draft": not ids.is_empty(),
 			"worker_progress": daily.progress_rows(_selected_site.name),
 			"worker_capacity": 2, "includes_player": false, "working": false,
@@ -375,7 +369,9 @@ func _preview_work(minutes: int) -> Dictionary:
 				DailySchedule.SHIFT_START % 60, floori(DailySchedule.SHIFT_END / 60.0),
 				DailySchedule.SHIFT_END % 60]}
 	session.participants.assign(["player"])
-	return session.preview(minutes, player)
+	var preview: Dictionary = session.preview(minutes, player)
+	preview["respawn_minutes"] = maxi(session.respawn_due_at - daily.now(), 0) if session.respawn_due_at >= 0 else -1
+	return preview
 
 func _get_roster() -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
@@ -402,7 +398,7 @@ func _start_work(minutes: int) -> void:
 		inspector.refresh_team()
 		return
 	if inspector.work_mode == "Daily":
-		if daily.start(_selected_site.name, _drop_daily_output.bind(_selected_site)):
+		if daily.start(_selected_site.name, _deliver_daily_output.bind(_selected_site)):
 			_close_inspector()
 		else:
 			inspector.refresh_team()
@@ -416,20 +412,33 @@ func _start_work(minutes: int) -> void:
 	interruption_message.hide()
 	blackout.modulate.a = 0.0
 	blackout.show()
+	var wood_animation: bool = sites[_selected_site.name].item_id == "wood_log"
+	if wood_animation:
+		# Live stock/condition refreshes can show child panels again. Keep the
+		# modal input owner active, but hide its whole presentation until done.
+		inspector.modulate.a = 0.0
 	await _fade_work(1.0)
 	if is_queued_for_deletion():
 		return
+	if wood_animation:
+		player.player_visual.begin_wood_work("right", blackout)
 	# Keep the modal restriction during the time skip; collapse owns a separate lock.
 	last_work_result = sites[_selected_site.name].execute(minutes, player, self, _drop_output)
+	if wood_animation and last_work_result.interrupted:
+		player.player_visual.end_wood_work()
+		blackout.modulate.a = 1.0
 	if last_work_result.interrupted:
 		var reason: String = "Too exhausted to continue." if player.is_collapsing else "Work interrupted."
 		interruption_message.text = "%s\nWorked %d min." % [reason, int(last_work_result.minutes)]
 		interruption_message.show()
-	await get_tree().create_timer(WORK_BLACKOUT_SECONDS, true).timeout
+	await get_tree().create_timer(WOOD_WORK_PRESENTATION_SECONDS if wood_animation and not last_work_result.interrupted else WORK_BLACKOUT_SECONDS, true).timeout
+	if wood_animation:
+		player.player_visual.end_wood_work()
 	if player.is_collapsing:
 		# Close behind opaque black, then resume the existing faint/Nightmare flow.
 		# Keep our cover until the global transition owns an opaque frame.
 		inspector.close_panel()
+		inspector.modulate.a = 1.0
 		player.set_movement_locked(&"worksite", false)
 		$FixtureNotes/Label.hide()
 		while player.is_collapsing and SceneTransition.fade_overlay.modulate.a < 0.999:
@@ -451,6 +460,7 @@ func _start_work(minutes: int) -> void:
 	_working = false
 	inspector.set_busy(false)
 	_close_inspector()
+	inspector.modulate.a = 1.0
 	inspector.window.show()
 	$FixtureNotes/Label.text = "Gathered %d units in %d min%s\nApproach a site and press E to work" % [
 		int(last_work_result.units), int(last_work_result.minutes),
@@ -468,6 +478,11 @@ func _fade_work(alpha: float) -> void:
 func _drop_output(quantity: int) -> bool:
 	var resource_id: String = sites[_selected_site.name].item_id if is_instance_valid(_selected_site) else "clay_lump"
 	return _drop_output_at(quantity, $GroundOutput.to_local(player.global_position + Vector2(0, 16)), Callable(), resource_id)
+
+## The isolated worksite fixture still creates ground output. Content maps may
+## choose another owner for new Daily production without changing old piles.
+func _deliver_daily_output(quantity: int, site: Marker2D) -> bool:
+	return _drop_daily_output(quantity, site)
 
 func _drop_daily_output(quantity: int, site: Marker2D) -> bool:
 	if not is_inside_tree() or is_queued_for_deletion():
@@ -505,27 +520,40 @@ func _drop_output_at(quantity: int, drop_position: Vector2, return_remainder: Ca
 func _process(_delta: float) -> void:
 	_pickup_focused = is_instance_valid(player.current_interactable) and player.current_interactable is PickUpItem
 	var nearest: Marker2D = null
-	var distance: float = INSPECTION_DISTANCE
 	if player.can_move and not _working and not inspector.visible and not inventory_ui.visible and not player.is_collapsing and not SceneTransition.is_transitioning and not is_instance_valid(player.current_interactable):
-		for site: Marker2D in $WorksiteMarkers.get_children():
-			var candidate: float = player.global_position.distance_to(site.global_position)
-			if candidate <= distance:
-				nearest = site
-				distance = candidate
+		nearest = _nearest_interaction_site()
 	if nearest != _highlighted_site:
 		_highlighted_site = nearest
 		_site_highlight.select(nearest)
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").visible = site == nearest
-		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+		if site.name not in [&"ClaySiteA", &"ReedSite"] and site.get("item_id") != "wood_log":
 			site.get_node("Label").visible = site != nearest
+
+## One eligibility and nearest-site rule owns both the E action and prompt.
+## Grove overlap expands only Wood; every other site retains its old radius.
+func _nearest_interaction_site() -> Marker2D:
+	if not is_instance_valid(player) or is_instance_valid(player.current_interactable):
+		return null
+	var nearest: Marker2D = null
+	var nearest_distance: float = INF
+	for site: Marker2D in $WorksiteMarkers.get_children():
+		if not daily.is_site_available(site.name):
+			continue
+		var distance: float = player.global_position.distance_to(site.global_position)
+		var area: Area2D = site.get_node_or_null("WoodInteractionArea") as Area2D
+		var eligible: bool = area.overlaps_body(player) if area != null else distance <= INSPECTION_DISTANCE
+		if eligible and distance <= nearest_distance:
+			nearest = site
+			nearest_distance = distance
+	return nearest
 
 func _hide_prompts() -> void:
 	_site_highlight.clear()
 	_highlighted_site = null
 	for site: Marker2D in $WorksiteMarkers.get_children():
 		site.get_node("InteractPrompt").hide()
-		if site.name not in [&"ClaySiteA", &"ReedSite"]:
+		if site.name not in [&"ClaySiteA", &"ReedSite"] and site.get("item_id") != "wood_log":
 			site.get_node("Label").show()
 
 func _draw() -> void:

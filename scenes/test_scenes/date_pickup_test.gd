@@ -35,10 +35,10 @@ func run() -> void:
 	event.pressed = true
 	player._unhandled_input(event)
 	dates[0].on_player_interact(player)
-	check(Inventory.items.get("date_cluster", 0) == 1, "Repeated interaction cannot duplicate")
+	check(Inventory.items.get("date_cluster", 0) == 3, "A single E gathers this palm; repeated interaction cannot duplicate")
 	dates[1].on_player_interact(player)
 	dates[2].on_player_interact(player)
-	check(Inventory.items.get("date_cluster", 0) == 3, "Three pickups enter inventory")
+	check(Inventory.items.get("date_cluster", 0) == 3, "The same three pickups cannot be collected twice")
 	await get_tree().create_timer(0.6).timeout
 	check(not is_instance_valid(dates[0]), "Collected pickup removed")
 	var legacy = load("res://scenes/pickup_item/pickup_item.tscn").instantiate()
@@ -50,7 +50,8 @@ func run() -> void:
 	player.fatigue = 0.5
 	ui.player_ref = player
 	await ui._execute_use_item("date_cluster", 1)
-	check(is_equal_approx(player.hunger, 0.46), "Existing date hunger effect")
+	check(is_equal_approx(player.hunger, 0.46), "A date cluster restores four Belly points")
+	check(is_equal_approx(player.fatigue, 0.49), "A date cluster restores one Energy point")
 	check(Inventory.items.get("date_cluster", 0) == 2, "Eating consumes date")
 	print("DatePickupTest: ", "PASS" if failures == 0 else "FAIL")
 	var feedback_deadline: int = Time.get_ticks_msec() + 5000
