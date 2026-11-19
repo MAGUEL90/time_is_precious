@@ -316,11 +316,11 @@ func accepts_item(item_id: String) -> bool:
 		or item_id == "stone" or item_id == "wood_log"
 	)
 
-func get_depositable_items() -> Array[Dictionary]:
+func get_depositable_items(food_only: bool = false) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for item_id: String in _get_registered_item_ids():
 		var item_data: ItemData = ItemDatabase.get_item_data(item_id)
-		if not accepts_item(item_id):
+		if not accepts_item(item_id) or (food_only and not _is_ready_food(item_data)):
 			continue
 		var quantity_value: Variant = Inventory.items.get(item_id, 0)
 		if not quantity_value is int or int(quantity_value) <= 0:

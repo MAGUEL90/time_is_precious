@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=4 uid="uid://cjv8ulk47168m"]
+[gd_scene load_steps=18 format=4 uid="uid://cjv8ulk47168m"]
 
 [ext_resource type="TileSet" uid="uid://bqjt5tuwqj8fs" path="res://resources/tile_map_resources/map_authoring_tileset_02_11_2026.tres" id="1_tiles"]
 [ext_resource type="Texture2D" uid="uid://yutg1ax64b0w" path="res://assets/ui/building/to_be_clean_1.png" id="2_bgb48"]
@@ -16,6 +16,8 @@
 [ext_resource type="Texture2D" uid="uid://d23w7vrcrysw7" path="res://assets/objects/ground_torch.png" id="14_1jn4d"]
 [ext_resource type="Script" uid="uid://cfhgitgo0318e" path="res://scenes/map_authoring/clay_authoring_preview.gd" id="15_clay_preview"]
 [ext_resource type="Script" path="res://scenes/map_authoring/clay_authoring_handle.gd" id="16_clay_handle"]
+
+[ext_resource type="PackedScene" path="res://scenes/storage_destination/food_deposit.tscn" id="17_food_post"]
 
 [node name="NewMapAuthoring" type="Node2D"]
 
@@ -252,6 +254,9 @@ position = Vector2(113, -202)
 texture = ExtResource("11_300sm")
 script = ExtResource("12_palm_spawner")
 pickup_texture = ExtResource("13_dates_pickup")
+
+[node name="FoodDeposit" parent="YSortWorld" instance=ExtResource("17_food_post")]
+position = Vector2(158, -204)
 
 [node name="GroundTorch" type="Sprite2D" parent="."]
 position = Vector2(198, -155)

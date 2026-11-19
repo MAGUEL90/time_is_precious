@@ -927,7 +927,6 @@ func _create_hub_tabs() -> void:
 	city_event_label = _small_label(supply_view, "")
 	city_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	city_event_label.hide()
-	_small_label(supply_view, "Deposit goods at City Storage.")
 	supply_view.hide()
 	CitizenNeedsManager.needs_changed.connect(_on_supply_changed)
 	Inventory.items_changed.connect(_on_supply_changed)
